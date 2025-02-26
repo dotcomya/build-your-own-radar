@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My TechRadar</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tech-radar@latest/dist/tech-radar.css"> <!-- Style -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tech-radar@latest/dist/tech-radar.css">
 </head>
 <body>
     <h1>Welcome to My TechRadar</h1>
@@ -24,35 +24,4 @@
                 // Convertir le CSV en format JSON
                 const rows = csvData.split('\n');
                 const header = rows[0].split(','); // La première ligne est l'entête
-                const data = rows.slice(1).map(row => {
-                    const values = row.split(',');
-                    let techData = {};
-                    header.forEach((key, i) => {
-                        techData[key] = values[i]; // Créer un objet avec les données
-                    });
-                    return techData;
-                });
-
-                console.log('Données converties en JSON :', data); // Affiche les données JSON converties
-                
-                // Créer une structure de données pour le radar
-                const radarData = {
-                    sectors: [
-                        {
-                            name: "Languages & Frameworks",
-                            technologies: data.map(item => ({
-                                name: item.Technologie, // Nom de la technologie
-                                category: item.Catégorie  // Catégorie
-                            }))
-                        }
-                    ]
-                };
-
-                // Afficher le radar avec les données
-                const radar = new TechRadar({ data: radarData });
-                radar.render(); // On utilise la méthode `render()` sur l'objet TechRadar
-            })
-            .catch(err => console.error('Erreur de récupération des données :', err));
-    </script>
-</body>
-</html>
+               
