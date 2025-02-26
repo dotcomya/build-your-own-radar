@@ -4,9 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My TechRadar</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tech-radar@latest/dist/tech-radar.css">
 </head>
 <body>
     <h1>Welcome to My TechRadar</h1>
-    <p>Here is my custom TechRadar!</p>
+    <div id="radar"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tech-radar@latest/dist/tech-radar.js"></script>
+    <script>
+        // Remplace cette URL par l'URL de ton Google Sheet publié
+        const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT.../pub?output=csv';
+        
+        fetch(googleSheetUrl)
+            .then(response => response.text())
+            .then(csvData => {
+                // Convertir le CSV en un format JSON pour le radar
+                const rows = csvData.split('\n');
+                const header = rows[0].split(','); // On suppose que la première ligne contient les titres
+                const data = rows.slice(1).map(row => {
+                    const values = row.split(',');
+                    let techData = {};
+                    header.forEach((key, i) => {
+                        techData[key] = values[i];
+                    });
+                    return techData;
+                });
+                
+                // Si tu souhaites afficher les données dans un radar
+                new TechRadar({ data: data }).render();
+            })
+            .catch(err => console.error('Erreur lors de la récupération des données :', err));
+    </script>
 </body>
 </html>
