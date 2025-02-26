@@ -12,29 +12,40 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tech-radar@latest/dist/tech-radar.js"></script>
     <script>
-        // URL de ton Google Sheet publié
-        const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSALvjRecumaooC5rKhyeEpQVI-5MDVMp-39JOh_avGtdODpLsJsImXadKVU_VNAfP6hhjOFnxN8Uku/pub?output=csv'; // Remplace cette URL par celle de ton Sheet
+        const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSALvjRecumaooC5rKhyeEpQVI-5MDVMp-39JOh_avGtdODpLsJsImXadKVU_VNAfP6hhjOFnxN8Uku/pub?output=csv'; // Remplace cette URL par la tienne
 
-        // Récupérer les données du Google Sheet (au format CSV)
         fetch(googleSheetUrl)
-            .then(response => response.text()) // Récupérer les données en texte (CSV)
+            .then(response => response.text()) // Lire le CSV
             .then(csvData => {
                 // Convertir le CSV en format JSON
                 const rows = csvData.split('\n');
-                const header = rows[0].split(','); // La première ligne contient les titres
+                const header = rows[0].split(','); // La première ligne est l'entête
                 const data = rows.slice(1).map(row => {
                     const values = row.split(',');
                     let techData = {};
                     header.forEach((key, i) => {
-                        techData[key] = values[i];
+                        techData[key] = values[i]; // Créer un objet avec les données
                     });
                     return techData;
                 });
 
-                // Afficher le radar avec les données extraites
-                new TechRadar({ data: data }).render();
+                // Créer une structure de données pour le radar
+                const radarData = {
+                    sectors: [
+                        {
+                            name: "Languages & Frameworks",
+                            technologies: data.map(item => ({
+                                name: item.Technologie, // Nom de la technologie
+                                category: item.Catégorie  // Catégorie
+                            }))
+                        }
+                    ]
+                };
+
+                // Afficher le radar avec les données
+                new TechRadar({ data: radarData }).render();
             })
-            .catch(err => console.error('Erreur lors de la récupération des données :', err));
+            .catch(err => console.error('Erreur de récupération des données :', err));
     </script>
 </body>
 </html>
