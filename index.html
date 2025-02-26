@@ -17,44 +17,62 @@
         // URL directe vers ton Google Sheet en CSV
         const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSALvjRecumaooC5rKhyeEpQVI-5MDVMp-39JOh_avGtdODpLsJsImXadKVU_VNAfP6hhjOFnxN8Uku/pub?output=csv';
 
-        fetch(googleSheetUrl)
-            .then(response => response.text()) // Lire le CSV
-            .then(csvData => {
-                console.log('Données récupérées :', csvData); // Affiche les données CSV dans la console
+        // Fonction pour convertir CSV en JSON
+        function csvToJSON(csv) {
+            const lines = csv.split("\n");
+            const result = [];
+            const headers = lines[0].split(","); // Premières lignes comme headers
+
+            for (let i = 1; i < lines.length; i++) {
+                const obj = {};
+                const currentLine = lines[i].split(",");
                 
-                // Convertir le CSV en format JSON
-                const rows = csvData.split('\n');
-                const header = rows[0].split(','); // La première ligne est l'entête
-                const data = rows.slice(1).map(row => {
-                    const values = row.split(',');
-                    let techData = {};
-                    header.forEach((key, i) => {
-                        techData[key.trim()] = values[i]?.trim() || ''; // Créer un objet avec les données
-                    });
-                    return techData;
+                headers.forEach((header, index) => {
+                    obj[header.trim()] = currentLine[index]?.trim() || ""; // Assure-toi d'avoir une valeur valide
                 });
 
-                console.log('Données converties en JSON :', data); // Affiche les données JSON converties
+                result.push(obj);
+            }
 
-                // Créer une structure de données pour le radar
+            return result;
+        }
+
+        // Récupérer et afficher les données du Google Sheet
+        fetch(googleSheetUrl)
+            .then(response => response.text())
+            .then(csvData => {
+                console.log('Données CSV récupérées :', csvData); // Affiche les données CSV dans la console
+
+                const jsonData = csvToJSON(csvData); // Convertir en JSON
+
+                // Assurer que les données ont bien été converties
+                console.log('Données JSON converties :', jsonData); 
+
+                // Structure des données pour le radar
                 const radarData = {
                     sectors: [
                         {
-                            name: "Techniques", // Utilisation de "Techniques" comme secteur
-                            technologies: data.map(item => ({
+                            name: "Techniques", // Secteur : Techniques
+                            technologies: jsonData.map(item => ({
                                 name: item.name, // Nom de la technologie
-                                category: item.ring,  // Catégorie
-                                description: item.description // Description avec balises HTML
+                                category: item.ring,  // Catégorie (ring)
+                                description: item.description // Description (HTML inclus)
                             }))
                         }
                     ]
                 };
 
-                // Afficher le radar avec les données
+                // Vérifier que les données de radar sont bien formatées
+                console.log('Structure du radarData :', radarData);
+
+                // Affichage du radar
                 const radar = new TechRadar({ data: radarData });
-                radar.render(); // On utilise la méthode `render()` pour afficher le radar
+                radar.render(); // Méthode pour afficher le radar
             })
-            .catch(err => console.error('Erreur de récupération des données :', err));
+            .catch(err => {
+                console.error('Erreur de récupération des données :', err);
+                alert('Erreur de récupération des données, vérifie la console pour plus d\'informations.');
+            });
     </script>
 </body>
 </html>
