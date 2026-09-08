@@ -99,7 +99,43 @@ export function xml(str) {
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
 }
 
-export function download(blob, filename) {
+/**
+ * Remet un fichier à l'utilisateur.
+ *
+ * Deux contextes possibles : servie depuis un serveur classique, la page
+ * déclenche un téléchargement par lien ; publiée sur claude.ai, elle passe par
+ * la capacité `downloads` de l'hôte, qui demande confirmation au visiteur.
+ * On tente d'abord l'hôte, et l'on retombe sur le lien s'il est absent.
+ *
+ * @returns {Promise<'saved'|'downloaded'|'declined'>}
+ */
+export async function download(blob, filename) {
+  const host = await hostDownloads()
+  if (host) {
+    try {
+      await host.save({ filename, data: blob })
+      return 'saved'
+    } catch (err) {
+      // Un refus explicite du visiteur n'est pas une erreur à contourner.
+      if (err && err.code === 'declined') return 'declined'
+      if (err && ['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'].includes(err.code)) {
+        return linkDownload(blob, filename)
+      }
+      throw err
+    }
+  }
+  return linkDownload(blob, filename)
+}
+
+/** Capacité de téléchargement de l'hôte, ou null hors de ce contexte. */
+async function hostDownloads() {
+  try {
+    if (typeof window === 'undefined' || !window.claude || typeof window.claude.use !== 'function') return null
+    return await window.claude.use('downloads')
+  } catch { return null }
+}
+
+function linkDownload(blob, filename) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -108,4 +144,5 @@ export function download(blob, filename) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 4000)
+  return 'downloaded'
 }

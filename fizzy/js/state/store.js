@@ -42,6 +42,34 @@ class Store {
     const ids = Object.keys(this.scenarios)
     if (this.currentId && this.scenarios[this.currentId]) this.load(this.currentId, { silent: true })
     else if (ids.length) this.load(ids[0], { silent: true })
+    else this.seedDemo()
+  }
+
+  /**
+   * Premier lancement : plutôt qu'un formulaire vide, on charge un scénario
+   * d'exemple complet. L'outil se montre en fonctionnement dès l'ouverture, et
+   * l'exemple est explicitement signalé comme tel dans l'interface.
+   */
+  seedDemo() {
+    const scenario = scenarioFromTemplate('saas', 'Exemple — Abonnement SaaS')
+    scenario.meta.isDemo = true
+    scenario.meta.company = 'Nova Analytics'
+    scenario.meta.sector = 'Logiciel en abonnement'
+    scenario.meta.level = 'intermediate'
+    this.scenarios[scenario.meta.id] = scenario
+    this.currentId = scenario.meta.id
+    this.scenario = scenario
+    this.recompute()
+    return scenario
+  }
+
+  /** L'utilisateur reprend l'exemple à son compte : il cesse d'en être un. */
+  adoptDemo(name) {
+    this.update((s) => {
+      s.meta.isDemo = false
+      if (name) s.meta.name = name
+    }, { label: "Reprise de l'exemple" })
+    this.persist()
   }
 
   subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) }

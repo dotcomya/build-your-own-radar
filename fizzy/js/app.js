@@ -59,8 +59,10 @@ function render({ preserveScroll = false } = {}) {
   const activeId = preserveScroll ? document.activeElement?.dataset?.fieldKey : null
   currentRoute = key
 
-  // Sans profil ni scénario, on passe par l'accueil.
-  if (!store.hasProfile() || !store.scenario || key === '' || key === 'demarrer') {
+  // On n'impose l'accueil que s'il n'y a rien à montrer : avec un scénario
+  // d'exemple chargé, l'outil s'ouvre directement en fonctionnement.
+  const needsOnboarding = !store.scenario || key === 'demarrer' || (key === '' && !store.scenario)
+  if (needsOnboarding || (!store.hasProfile() && !store.scenario)) {
     clear(root).appendChild(renderOnboarding(navigate))
     document.title = 'Fizzy — Business plan'
     window.scrollTo(0, 0)
@@ -228,9 +230,11 @@ store.subscribe((_, reason) => {
   else if (reason === 'data') render({ preserveScroll: true })
 })
 
-if (!location.hash) location.hash = '#/'
+if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/'
 render()
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+// Le service worker n'accompagne que la version auto-hébergée : la page
+// publiée n'en sert pas et tenterait un enregistrement voué à l'échec.
+if (window.__FIZZY_HAS_SW__ && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))
 }

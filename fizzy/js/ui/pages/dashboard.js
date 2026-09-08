@@ -4,7 +4,7 @@ import { h, euro, pct, num, helpButton, monthLabel, yearLabel } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import store from '../../state/store.js'
 
-export function renderDashboard(navigate) {
+export function renderDashboard(navigate, refresh) {
   const r = store.result
   const s = store.scenario
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun scénario chargé.'))
@@ -13,6 +13,8 @@ export function renderDashboard(navigate) {
   const p = r.pnl
 
   return h('div', { class: 'content' },
+    s.meta.isDemo && demoBanner(navigate, refresh),
+
     h('div', { class: 'page-head' },
       h('h1', {}, s.meta.name),
       h('p', {}, describe(r)),
@@ -76,6 +78,27 @@ export function renderDashboard(navigate) {
       h('div', { class: 'card-head' }, h('h2', {}, 'Compte de résultat résumé'), h('span', { class: 'spacer' }),
         h('button', { class: 'btn btn-sm', onClick: () => navigate('#/resultats') }, 'Détail complet')),
       h('div', { class: 'table-wrap' }, summaryTable(r, level)),
+    ),
+  )
+}
+
+/**
+ * Bandeau d'exemple : l'outil s'ouvre sur un scénario complet pour se montrer
+ * en fonctionnement, mais le visiteur doit savoir que ces chiffres ne sont pas
+ * les siens, et pouvoir partir sur les siens en un geste.
+ */
+function demoBanner(navigate, refresh) {
+  return h('div', { class: 'note', style: { marginBottom: '16px' } },
+    h('div', { class: 'row-wrap', style: { gap: '12px' } },
+      h('div', { class: 'spacer', style: { minWidth: '240px' } },
+        h('div', { class: 'note-title' }, 'Vous regardez un exemple'),
+        h('div', {}, "Les chiffres de ce scénario sont fictifs : ils servent à montrer comment tout s'articule. Modifiez-les librement, ou repartez d'une page blanche."),
+      ),
+      h('button', {
+        class: 'btn btn-primary',
+        onClick: () => { store.adoptDemo(); refresh() },
+      }, 'Partir de cet exemple'),
+      h('button', { class: 'btn', onClick: () => navigate('#/demarrer') }, 'Créer le mien'),
     ),
   )
 }

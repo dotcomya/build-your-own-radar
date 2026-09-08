@@ -17,21 +17,32 @@ export function renderBusinessCase(navigate, refresh) {
   const y = pickYear(r.pnl)
   const k = r.kpis
 
-  const doPptx = () => {
+  // Selon le contexte, le fichier est remis par l'hôte (qui demande
+  // confirmation au visiteur) ou téléchargé directement par le navigateur :
+  // download() choisit, et renvoie ce qui s'est réellement passé.
+  const announce = (outcome, done) => {
+    if (outcome === 'declined') toast('Téléchargement annulé.')
+    else toast(done, 'ok')
+  }
+  const fail = (e) => toast(`Export impossible : ${(e && (e.message || e.code)) || e}`, 'err')
+
+  const doPptx = async () => {
     try {
-      const n = exportPptx(s, r, store.profile)
-      toast(`Présentation de ${n} diapositives téléchargée.`, 'ok')
-    } catch (e) {
-      toast(`Export impossible : ${e.message}`, 'err')
-    }
+      const { slides, outcome } = await exportPptx(s, r, store.profile)
+      announce(outcome, `Présentation de ${slides} diapositives prête.`)
+    } catch (e) { fail(e) }
   }
-  const doJson = () => {
-    download(new Blob([store.exportJSON()], { type: 'application/json' }), `${slug(s.meta.name)}-fizzy.json`)
-    toast('Scénario exporté.', 'ok')
+  const doJson = async () => {
+    try {
+      const outcome = await download(new Blob([store.exportJSON()], { type: 'application/json' }), `${slug(s.meta.name)}-fizzy.json`)
+      announce(outcome, 'Scénario exporté.')
+    } catch (e) { fail(e) }
   }
-  const doCsv = () => {
-    download(new Blob(['﻿' + buildCsv(r)], { type: 'text/csv;charset=utf-8' }), `${slug(s.meta.name)}-previsionnel.csv`)
-    toast('Tableau exporté.', 'ok')
+  const doCsv = async () => {
+    try {
+      const outcome = await download(new Blob(['\ufeff' + buildCsv(r)], { type: 'text/csv;charset=utf-8' }), `${slug(s.meta.name)}-previsionnel.csv`)
+      announce(outcome, 'Tableau exporté.')
+    } catch (e) { fail(e) }
   }
 
   return h('div', { class: 'content' },
@@ -287,4 +298,5 @@ function buildCsv(r) {
 const b = (t) => h('strong', {}, t)
 /** « l'année 3 » : forme élidée, à employer après « dès », « de », « à ». */
 const theYear = (y) => `l'année ${y + 1}`
-const slug = (s) => String(s || 'business-plan').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase()
+/** Nom de fichier : décompose les accents puis retire les diacritiques. */
+const slug = (s) => String(s || 'business-plan').normalize('NFD').replace(/[\u0300-\u036F]/g, '').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase()

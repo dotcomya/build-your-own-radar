@@ -51,6 +51,29 @@ python3 -m http.server 8000
 Les modules ES natifs imposent un serveur HTTP : ouvrir `index.html` par
 `file://` ne fonctionnera pas.
 
+### Version en fichier unique
+
+Pour héberger l'application sans serveur de modules, ou l'ouvrir depuis une clé
+USB, `build.mjs` produit un HTML autonome — CSS et JavaScript intégrés, aucune
+requête réseau hormis la police :
+
+```bash
+node build.mjs          # dist/fizzy.html, document complet
+node build.mjs --body    # sans <html>/<head>, si l'hôte fournit l'en-tête
+```
+
+Au premier lancement, l'application s'ouvre sur un scénario d'exemple complet
+plutôt que sur un formulaire vide : le bandeau du tableau de bord permet soit de
+le reprendre à son compte, soit de repartir d'une page blanche.
+
+### Téléchargements
+
+Servie depuis un serveur classique, la page déclenche les exports par un lien de
+téléchargement. Publiée sur un hôte qui expose la capacité `downloads`, elle
+passe par celui-ci, et le visiteur confirme l'enregistrement. `download()` dans
+`js/export/zip.js` choisit selon le contexte et retombe sur le lien si l'hôte
+n'offre rien.
+
 ## Organisation
 
 ```

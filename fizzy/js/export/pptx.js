@@ -432,8 +432,8 @@ export function buildDeck(scenario, result, profile) {
   return slides
 }
 
-/** Assemble et déclenche le téléchargement du fichier .pptx. */
-export function exportPptx(scenario, result, profile) {
+/** Assemble le fichier .pptx et le remet à l'utilisateur. */
+export async function exportPptx(scenario, result, profile) {
   shapeId = 1
   const slides = buildDeck(scenario, result, profile)
   const n = slides.length
@@ -457,9 +457,11 @@ export function exportPptx(scenario, result, profile) {
   })
 
   const blob = createZip(files)
-  const safe = (scenario.meta.name || 'business-plan').replace(/[^\w\sÀ-ÿ-]/g, '').replace(/\s+/g, '-').toLowerCase()
-  download(blob, `${safe}-business-plan.pptx`)
-  return n
+  // Plage À-ÿ écrite en échappements : le littéral reste en ASCII et
+  // ne dépend pas de l'encodage sous lequel le fichier est lu ou servi.
+  const safe = (scenario.meta.name || 'business-plan').replace(/[^\w\s\u00C0-\u00FF-]/g, '').replace(/\s+/g, '-').toLowerCase()
+  const outcome = await download(blob, `${safe}-business-plan.pptx`)
+  return { slides: n, outcome }
 }
 
 // ─────────────────────────── Parties fixes du paquet ───────────────────────

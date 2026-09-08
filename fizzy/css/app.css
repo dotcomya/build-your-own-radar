@@ -5,6 +5,11 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  /* La page assume un rendu clair : on épingle le schéma pour que les champs,
+     listes déroulantes et barres de défilement natives suivent, y compris chez
+     un visiteur dont le système est réglé en sombre. */
+  color-scheme: light;
+
   --ink-900: #0a0f1c;
   --ink-800: #131a2b;
   --ink-700: #1f2940;
