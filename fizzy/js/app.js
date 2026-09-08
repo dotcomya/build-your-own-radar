@@ -10,6 +10,8 @@ import { h, clear, setDrawerHost, toast, euro } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
 import { LEVEL_META } from './state/schema.js'
+import { PERSONAS, getPersona } from './ui/personas.js'
+import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
@@ -71,9 +73,11 @@ function render({ preserveScroll = false } = {}) {
 
   const page = PAGES[key] || PAGES['tableau-de-bord']
   if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
+  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/tableau-de-bord'); return }
 
   const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render))
-  clear(root).appendChild(h('div', { class: 'shell' }, rail(key), main, tabbar(key)))
+  clear(root).appendChild(h('div', { class: 'shell' },
+    rail(key), main, tabbar(key), impactRail(render)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)
@@ -95,7 +99,8 @@ function rail(active) {
       h('div', {}, h('div', { class: 'rail-name' }, 'Fizzy'), h('div', { class: 'rail-tag' }, 'Business plan')),
     ),
     ...GROUPS.flatMap((group) => {
-      const keys = group.keys.filter((k) => PAGES[k].levels.includes(store.level))
+      const allowed = getPersona(store.persona).pages
+      const keys = group.keys.filter((k) => PAGES[k].levels.includes(store.level) && allowed.includes(k))
       if (!keys.length) return []
       return [
         group.title && h('div', { class: 'rail-section' }, group.title),
@@ -109,6 +114,25 @@ function rail(active) {
         }),
       ]
     }),
+    // Sur mobile, la barre supérieure n'a pas la place du sélecteur de
+    // profondeur : il trouve sa place ici, dans le menu.
+    getPersona(store.persona).hasDepth && h('div', { class: 'rail-levels' },
+      h('div', { class: 'rail-section' }, 'Profondeur'),
+      h('div', { class: 'levels', style: { width: '100%' } },
+        ...Object.entries(LEVEL_META).map(([k, v]) => h('button', {
+          class: `level-btn ${store.level === k ? 'active' : ''}`,
+          style: { flex: '1' },
+          'aria-label': `Niveau ${v.label}`,
+          onClick: () => {
+            store.setLevel(k)
+            document.getElementById('rail')?.classList.remove('open')
+            render()
+            toast(`${v.label} \u2014 ${v.tagline}`)
+          },
+        }, h('span', { class: 'lvl-short', 'aria-hidden': 'true' }, v.short || v.label))),
+      ),
+    ),
+
     h('div', { class: 'rail-foot' },
       h('button', { class: 'rail-link', onClick: () => { navigate('#/demarrer') } },
         h('span', { class: 'ico' }, '＋'), h('span', {}, 'Nouveau projet')),
@@ -135,15 +159,15 @@ function topbar(page) {
       h('h1', {}, page.label),
     ),
     h('span', { class: 'spacer' }),
-    h('div', { class: 'levels', title: LEVEL_META[store.level]?.description },
-      // Les deux libellés coexistent dans le DOM, l'affichage bascule en CSS
-      // selon la largeur : on nomme le bouton pour que les lecteurs d'écran
-      // n'entendent pas le libellé deux fois.
+    personaSwitch(),
+    // La profondeur ne concerne que le fondateur : les autres metiers ont un
+    // perimetre defini par leur fonction, pas par un curseur de detail.
+    getPersona(store.persona).hasDepth && h('div', { class: 'levels desktop-only', title: LEVEL_META[store.level]?.description },
       ...Object.entries(LEVEL_META).map(([k, v]) => h('button', {
         class: `level-btn ${store.level === k ? 'active' : ''}`,
         'aria-label': `Niveau ${v.label}`,
         'aria-pressed': store.level === k ? 'true' : 'false',
-        onClick: () => { store.setLevel(k); render(); toast(`Niveau ${v.label} — ${v.tagline}`) },
+        onClick: () => { store.setLevel(k); render(); toast(`${v.label} — ${v.tagline}`) },
       },
         h('span', { class: 'lvl-long', 'aria-hidden': 'true' }, v.label),
         h('span', { class: 'lvl-short', 'aria-hidden': 'true' }, v.short || v.label))),
@@ -153,9 +177,64 @@ function topbar(page) {
   )
 }
 
+/** Selecteur de metier : ouvre un menu decrivant ce que chaque vue apporte. */
+function personaSwitch() {
+  const current = getPersona(store.persona)
+  const button = h('button', {
+    class: 'persona-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false',
+    onClick: (e) => { e.stopPropagation(); togglePersonaMenu(button) },
+  },
+    h('span', { class: 'persona-code' }, current.code),
+    h('span', { class: 'persona-name' }, current.label),
+    h('span', { 'aria-hidden': 'true', style: { fontSize: '9px', opacity: '.6' } }, '\u25BE'),
+  )
+  return h('div', { class: 'persona-switch' }, button)
+}
+
+function togglePersonaMenu(button) {
+  if (document.querySelector('.persona-menu')) { closePersonaMenu(); return }
+
+  const menu = h('div', { class: 'persona-menu', role: 'menu' },
+    ...Object.entries(PERSONAS).map(([key, p]) => h('button', {
+      class: `persona-option ${store.persona === key ? 'active' : ''}`,
+      role: 'menuitem',
+      onClick: () => {
+        closePersonaMenu()
+        store.setPersona(key)
+        if (p.forceLevel) store.setLevel(p.forceLevel)
+        // Une vue metier n'ouvre pas une page qu'elle ne contient pas.
+        if (!p.pages.includes(route())) navigate('#/tableau-de-bord')
+        else render()
+        toast(`${p.label} \u2014 ${p.tagline}`)
+      },
+    },
+      h('div', { class: 'persona-option-name' }, h('span', { class: 'persona-code' }, p.code), p.label),
+      h('div', { class: 'persona-option-tag' }, p.tagline),
+      h('div', { class: 'persona-option-brief' }, p.brief),
+    )),
+  )
+  document.body.appendChild(menu)
+  button.setAttribute('aria-expanded', 'true')
+  button.classList.add('open')
+  setTimeout(() => {
+    document.addEventListener('click', closePersonaMenu, { once: true })
+    document.addEventListener('keydown', escapePersonaMenu)
+  }, 0)
+}
+
+function closePersonaMenu() {
+  document.querySelector('.persona-menu')?.remove()
+  document.querySelectorAll('.persona-btn').forEach((b) => {
+    b.classList.remove('open'); b.setAttribute('aria-expanded', 'false')
+  })
+  document.removeEventListener('keydown', escapePersonaMenu)
+}
+const escapePersonaMenu = (e) => { if (e.key === 'Escape') closePersonaMenu() }
+
 function tabbar(active) {
-  const keys = Object.keys(PAGES).filter((k) => PAGES[k].tab && PAGES[k].levels.includes(store.level))
-  keys.push('business-case')
+  const allowed = getPersona(store.persona).pages
+  const keys = Object.keys(PAGES).filter((k) => PAGES[k].tab && PAGES[k].levels.includes(store.level) && allowed.includes(k))
+  if (allowed.includes('business-case')) keys.push('business-case')
   return h('nav', { class: 'tabbar' },
     ...keys.map((k) => h('button', {
       class: `tab ${active === k ? 'active' : ''}`,
@@ -224,7 +303,7 @@ function currentValue(key) {
 // ────────────────────────────────── Démarrage ──────────────────────────────
 window.addEventListener('hashchange', render)
 store.subscribe((_, reason) => {
-  if (reason === 'scenario' || reason === 'profile') render()
+  if (reason === 'scenario' || reason === 'profile') { resetLiveNumbers(); render() }
   // Une modification de données relance le calcul : on redessine la page pour
   // que les indicateurs suivent, en conservant la position de lecture.
   else if (reason === 'data') render({ preserveScroll: true })

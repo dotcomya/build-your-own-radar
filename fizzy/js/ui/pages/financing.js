@@ -2,7 +2,7 @@
 
 import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel } from '../dom.js'
 import { uid } from '../../state/schema.js'
-import { areaChart, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 
 export function renderFinancing(navigate, refresh) {
@@ -37,7 +37,7 @@ export function renderFinancing(navigate, refresh) {
     r && h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Trajectoire de trésorerie'), helpButton('tresorerie')),
       h('div', { class: 'card-body' },
-        areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? '#d97a06' : '#05a578' }),
+        areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
         r.kpis.fundingNeed > 0 && h('div', { class: 'note warn mt' },
           h('div', { class: 'note-title' }, `Il manque ${euro(r.kpis.fundingNeed)}`),
           `Votre solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : augmenter les apports ci-dessous, négocier des acomptes clients plus élevés dans l'onglet Offre, ou décaler des recrutements et investissements.`),

@@ -5,9 +5,20 @@
 
 import { svg, h, euro, num, monthLabel, yearLabel } from './dom.js'
 
-export const PALETTE = ['#5f3fee', '#05a578', '#d97a06', '#1a7fd4', '#e0335a', '#7d4bd1', '#0d9488', '#b45309']
-const GRID = '#e6eaf0'
-const AXIS = '#8290a6'
+/**
+ * Palette catégorielle, validée : bande de clarté, plancher de chroma,
+ * séparation sous déficience de vision des couleurs et contraste sur fond
+ * clair. L'ordre est fixe — une série garde sa teinte quel que soit le nombre
+ * de séries affichées.
+ */
+export const PALETTE = ['#1B3BFF', '#C2410C', '#0E9A6B', '#9333EA', '#A16207', '#0891B2', '#BE123C', '#0369A1']
+
+/** Couleurs de statut, réservées : jamais employées comme teinte de série. */
+export const STATUS = { gain: '#0A7A54', loss: '#C4142F', warn: '#9A5B00', signal: '#1B3BFF' }
+
+const GRID = '#E2E5E2'
+const AXIS = '#78838C'
+const SURFACE = '#FFFFFF'
 
 function scaleY(min, max, height, pad) {
   const span = max - min || 1
@@ -49,14 +60,14 @@ export function barChart({ series, categories, height = 220, line = null, format
       const v = s.values[i] || 0
       const x = cx - (barW * series.length) / 2 + barW * j
       const top = Math.min(y(v), y(0)), hgt = Math.abs(y(v) - y(0))
-      nodes.push(svg('rect', { x, y: top, width: barW - 2, height: Math.max(1, hgt), rx: 3, fill: s.color || PALETTE[j % PALETTE.length] },
+      nodes.push(svg('rect', { x, y: top, width: Math.max(2, barW - 3), height: Math.max(1, hgt), rx: 2, fill: s.color || PALETTE[j % PALETTE.length] },
         svg('title', {}, `${s.label} · ${cat} : ${euro(v)}`)))
     })
   })
   if (line) {
     const pts = line.values.map((v, i) => `${pad.l + groupW * (i + 0.5)},${y(v)}`).join(' ')
-    nodes.push(svg('polyline', { points: pts, fill: 'none', stroke: line.color || '#0a0f1c', 'stroke-width': 2, 'stroke-dasharray': line.dashed ? '5 4' : null, 'stroke-linejoin': 'round' }))
-    line.values.forEach((v, i) => nodes.push(svg('circle', { cx: pad.l + groupW * (i + 0.5), cy: y(v), r: 3.5, fill: '#fff', stroke: line.color || '#0a0f1c', 'stroke-width': 2 },
+    nodes.push(svg('polyline', { points: pts, fill: 'none', stroke: line.color || '#0B0E10', 'stroke-width': 2, 'stroke-dasharray': line.dashed ? '5 4' : null, 'stroke-linejoin': 'round' }))
+    line.values.forEach((v, i) => nodes.push(svg('circle', { cx: pad.l + groupW * (i + 0.5), cy: y(v), r: 3.5, fill: '#fff', stroke: line.color || '#0B0E10', 'stroke-width': 2 },
       svg('title', {}, `${line.label} · ${categories[i]} : ${euro(v)}`))))
   }
   const chart = svg('svg', { class: 'chart', viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet', role: 'img' }, ...nodes)
@@ -64,7 +75,7 @@ export function barChart({ series, categories, height = 220, line = null, format
 }
 
 /** Courbe de trésorerie ou de tout flux mensuel, avec zone sous la courbe. */
-export function areaChart({ values, startDate, height = 220, color = '#5f3fee', label = 'Trésorerie', markZero = true, formatter = (v) => euro(v, { compact: true }) }) {
+export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', label = 'Trésorerie', markZero = true, formatter = (v) => euro(v, { compact: true }) }) {
   const width = 720
   const pad = { t: 14, r: 14, b: 28, l: 58 }
   let max = Math.max(0, ...values), min = Math.min(0, ...values)
@@ -76,7 +87,7 @@ export function areaChart({ values, startDate, height = 220, color = '#5f3fee', 
 
   const nodes = []
   for (const t of ticks) {
-    nodes.push(svg('line', { x1: pad.l, x2: width - pad.r, y1: y(t), y2: y(t), stroke: t === 0 && markZero ? '#e0335a' : GRID, 'stroke-width': 1, 'stroke-dasharray': t === 0 && markZero ? '4 3' : null }))
+    nodes.push(svg('line', { x1: pad.l, x2: width - pad.r, y1: y(t), y2: y(t), stroke: t === 0 && markZero ? STATUS.loss : GRID, 'stroke-width': 1, 'stroke-dasharray': t === 0 && markZero ? '4 3' : null }))
     nodes.push(svg('text', { x: pad.l - 8, y: y(t) + 4, 'text-anchor': 'end', fill: AXIS, 'font-size': 11 }, formatter(t)))
   }
   for (let i = 0; i < values.length; i += 6) {
@@ -93,7 +104,7 @@ export function areaChart({ values, startDate, height = 220, color = '#5f3fee', 
   // Point bas signalé : c'est le chiffre qui détermine le besoin de financement.
   const lowIndex = values.indexOf(Math.min(...values))
   if (values[lowIndex] < 0) {
-    nodes.push(svg('circle', { cx: x(lowIndex), cy: y(values[lowIndex]), r: 4.5, fill: '#e0335a', stroke: '#fff', 'stroke-width': 2 },
+    nodes.push(svg('circle', { cx: x(lowIndex), cy: y(values[lowIndex]), r: 5, fill: STATUS.loss, stroke: SURFACE, 'stroke-width': 2 },
       svg('title', {}, `Point bas : ${euro(values[lowIndex])} en ${monthLabel(lowIndex, startDate)}`)))
   }
   values.forEach((v, i) => nodes.push(svg('rect', { x: x(i) - innerW / values.length / 2, y: pad.t, width: innerW / values.length, height: height - pad.t - pad.b, fill: 'transparent' },
@@ -126,7 +137,9 @@ export function stackedBar({ series, categories, height = 220, formatter = (v) =
       const v = Math.max(0, s.values[i] || 0)
       if (v <= 0) return
       const top = y(acc + v), bottom = y(acc)
-      nodes.push(svg('rect', { x: cx - barW / 2, y: top, width: barW, height: Math.max(1, bottom - top), fill: s.color || PALETTE[j % PALETTE.length] },
+      // 2 px de fond entre deux segments : sans cela les aplats se confondent.
+      const height = Math.max(1, bottom - top - 2)
+      nodes.push(svg('rect', { x: cx - barW / 2, y: top, width: barW, height, fill: s.color || PALETTE[j % PALETTE.length] },
         svg('title', {}, `${s.label} · ${cat} : ${euro(v)}`)))
       acc += v
     })
@@ -182,7 +195,7 @@ export function donut({ items, size = 170, formatter = (v) => euro(v, { compact:
 }
 
 /** Ligne simple, utile pour une évolution d'effectif ou de volumes. */
-export function sparkline({ values, width = 120, height = 32, color = '#5f3fee' }) {
+export function sparkline({ values, width = 120, height = 32, color = '#1B3BFF' }) {
   const max = Math.max(...values, 1), min = Math.min(...values, 0)
   const span = max - min || 1
   const pts = values.map((v, i) => `${(width * i) / Math.max(1, values.length - 1)},${height - ((v - min) / span) * height}`).join(' ')

@@ -36,7 +36,9 @@ export function svg(tag, props = {}, ...children) {
   return el
 }
 
-export const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); return el }
+// replaceChildren vide en une opération : un removeChild en boucle échoue si un
+// gestionnaire de blur déclenche un nouveau rendu pendant qu'on retire les nœuds.
+export const clear = (el) => { el.replaceChildren(); return el }
 export const qs = (sel, root = document) => root.querySelector(sel)
 
 // ───────────────────────────────── Formats ────────────────────────────────

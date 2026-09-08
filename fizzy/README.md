@@ -17,10 +17,24 @@ tout le reste, et tout est lié : changer un budget publicitaire modifie le
 nombre de clients, donc le chiffre d'affaires, donc la TVA, le besoin en fonds
 de roulement, l'impôt et la trésorerie — immédiatement.
 
-- **Trois niveaux de lecture.** *Facile* pour se projeter en dix minutes,
-  *Intermédiaire* pour piloter plusieurs offres et le financement, *Expert*
-  pour le bilan, le BFR, le CIR et le statut JEI. Le modèle calculé est toujours
-  le même ; seul le nombre de leviers exposés change.
+- **Six vues métier.** Fondateur, direction financière, marketing, ressources
+  humaines, produit, conseil. Chacune pose sa question, affiche ses indicateurs
+  et — surtout — expose *ses leviers* : des curseurs branchés sur de vrais
+  champs du modèle. Un CMO bouge son budget, un DRH décale une embauche, et
+  l'EBITDA du groupe bouge sous leurs yeux. La monnaie commune est l'euro
+  d'EBITDA, ce qui rend les arbitrages comparables entre fonctions.
+- **Rétroaction immédiate.** Tirer un curseur recalcule le modèle entier
+  pendant le geste. Un rail permanent compare l'état courant à un repère —
+  écart de chiffre d'affaires, d'EBITDA, de point mort, de financement — que
+  l'on peut réinitialiser à tout moment. Chaque levier affiche sa chaîne de
+  causalité : *prix → CA → marge brute → EBITDA → trésorerie*.
+- **L'outil prend position.** Chaque vue s'ouvre sur une phrase qui tranche —
+  « Vous vendez à perte », « Il manque 30 237 € en décembre » — puis explique
+  ce qui la fonde. Un prévisionnel qui ne dit rien ne sert à rien.
+- **Trois profondeurs pour le fondateur.** *Facile* pour se projeter en dix
+  minutes, *Intermédiaire* pour piloter plusieurs offres et le financement,
+  *Expert* pour le bilan, le BFR, le CIR et le statut JEI. Le modèle calculé
+  est toujours le même ; seul le nombre de leviers exposés change.
 - **Salaires.** Vous saisissez un brut mensuel, Fizzy calcule le coût réel :
   cotisations patronales, réduction générale dégressive jusqu'à 3 SMIC,
   exonération JEI, régimes du stage, de l'alternance et du dirigeant TNS.
@@ -91,7 +105,13 @@ fizzy/
     state/
       schema.js           valeurs par défaut, bornes de saisie, modèles, contrôles
       store.js            profils, scénarios, sauvegarde, historique
-    ui/                   composants, graphiques SVG, glossaire, pages
+    ui/
+      personas.js         vues métier : leviers, indicateurs, périmètre
+      levers.js           curseurs branchés sur le modèle, recalcul pendant le geste
+      impact.js           repère, écarts, rail d'impact, valeurs animées
+      charts.js           graphiques SVG, palette catégorielle validée
+      glossary.js         définitions, formules, usage
+      pages/              une fonction de rendu par page
     export/               écriture ZIP et génération PowerPoint (OOXML)
 ```
 
@@ -115,9 +135,13 @@ dossier bancaire ou toute levée de fonds.**
 ## Vérification du modèle
 
 L'identité comptable sert de test : sur les six modèles sectoriels fournis,
-`total actif − total passif = 0 €` sur les cinq exercices. Un écart signalerait
-un flux modélisé au compte de résultat mais absent de la trésorerie, ou
-l'inverse.
+`total actif − total passif` reste sous 10⁻⁸ € sur les cinq exercices — du
+bruit de virgule flottante. Un écart réel signalerait un flux modélisé au
+compte de résultat mais absent de la trésorerie, ou l'inverse.
+
+La palette des graphiques est validée par script, pas à l'œil : bande de
+clarté, plancher de chroma, séparation des paires adjacentes sous les trois
+déficiences de vision des couleurs, et contraste sur le fond clair.
 
 ## Licence
 

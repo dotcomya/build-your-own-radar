@@ -38,6 +38,10 @@ class Store {
     this.future = []
     this.saveTimer = null
     this.saveState = 'idle'
+    // Repère : instantané des indicateurs auquel tout est comparé, pour que
+    // l'effet d'une modification reste lisible après plusieurs changements.
+    this.baseline = null
+    this.baselineLabel = null
 
     const ids = Object.keys(this.scenarios)
     if (this.currentId && this.scenarios[this.currentId]) this.load(this.currentId, { silent: true })
@@ -60,6 +64,7 @@ class Store {
     this.currentId = scenario.meta.id
     this.scenario = scenario
     this.recompute()
+    this.setBaseline("l'ouverture")
     return scenario
   }
 
@@ -73,6 +78,17 @@ class Store {
   }
 
   subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn) }
+
+  /** Fige la situation courante comme point de comparaison. */
+  setBaseline(label = "l'ouverture") {
+    this.baseline = snapshot(this.result)
+    this.baselineLabel = label
+  }
+
+  get persona() { return this.scenario?.meta?.persona || 'founder' }
+  setPersona(key) {
+    this.update((s) => { s.meta.persona = key }, { label: 'Changement de vue' })
+  }
   emit(reason = 'change') { for (const fn of this.listeners) fn(this, reason) }
 
   // ───────────────────────────── Profil ────────────────────────────────
@@ -99,6 +115,7 @@ class Store {
     this.history = []; this.future = []
     this.persist()
     this.recompute()
+    this.setBaseline("la création")
     this.emit('scenario')
     return scenario
   }
@@ -111,6 +128,7 @@ class Store {
     this.history = []; this.future = []
     write(KEY_CURRENT, id)
     this.recompute()
+    this.setBaseline("l'ouverture")
     if (!silent) this.emit('scenario')
     return this.scenario
   }
@@ -248,6 +266,23 @@ class Store {
   }
 }
 
+/**
+ * Instantané des indicateurs suivis par le rail d'impact.
+ * Volontairement restreint : comparer tout le modèle n'apprendrait rien.
+ */
+function snapshot(result) {
+  if (!result) return null
+  const i = result.pnl.netResult.findIndex((v) => v > 0)
+  const y = i >= 0 ? i : 2
+  return {
+    year: y,
+    revenue: result.pnl.revenue[y],
+    ebitda: result.pnl.ebitda[y],
+    breakEven: result.kpis.breakEven[y],
+    fundingNeed: result.kpis.fundingNeed,
+  }
+}
+
 /** Migration ascendante des scénarios enregistrés par une version antérieure. */
 function migrate(scenario) {
   const s = JSON.parse(JSON.stringify(scenario))
@@ -260,6 +295,7 @@ function migrate(scenario) {
   s.opex = s.opex || []
   s.capex = s.capex || []
   s.assumptions = s.assumptions || { stockDays: 0 }
+  if (!s.meta.persona) s.meta.persona = 'founder'
   s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [], ...(s.financing || {}) }
   for (const a of s.activities) {
     a.volumes = a.volumes || { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0, manual: [] }

@@ -4,7 +4,7 @@
  */
 
 import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField } from '../dom.js'
-import { barChart, areaChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'
 import { download } from '../../export/zip.js'
 import store from '../../state/store.js'
@@ -90,7 +90,7 @@ export function renderBusinessCase(navigate, refresh) {
       ),
       h('div', { class: 'card' },
         h('div', { class: 'card-head' }, h('h2', {}, 'Trésorerie')),
-        h('div', { class: 'card-body' }, areaChart({ values: r.cash.balance, startDate: r.startDate, color: k.fundingNeed > 0 ? '#d97a06' : '#05a578' })),
+        h('div', { class: 'card-body' }, areaChart({ values: r.cash.balance, startDate: r.startDate, color: k.fundingNeed > 0 ? STATUS.warn : STATUS.gain })),
       ),
     ),
 

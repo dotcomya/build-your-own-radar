@@ -38,13 +38,13 @@ if (stray.length) {
 }
 
 const body = `<title>Fizzy</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 ${css}
 </style>
 
 <div id="app">
-  <div style="display:grid;place-items:center;min-height:100dvh;font-family:Inter,system-ui,sans-serif;color:#5b6880">
+  <div style="display:grid;place-items:center;min-height:100dvh;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#5b6880">
     <div style="text-align:center">
       <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#8168f4,#4c2fd4);display:grid;place-items:center;color:#fff;font-weight:800;font-size:24px;margin:0 auto 14px">F</div>
       <div>Chargement...</div>

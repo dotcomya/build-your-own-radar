@@ -1,7 +1,7 @@
 /** États financiers : résultat, trésorerie, bilan, BFR, fiscalité. */
 
 import { h, euro, pct, num, helpButton, monthLabel, yearLabel } from '../dom.js'
-import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 
 const TABS = {
@@ -137,7 +137,7 @@ function cashView(r, level, refresh) {
     h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Solde de trésorerie'), helpButton('tresorerie')),
       h('div', { class: 'card-body' },
-        areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? '#d97a06' : '#05a578' }),
+        areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
       ),
     ),
     h('div', { class: 'card' },
