@@ -3,6 +3,7 @@
 import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, PALETTE } from '../charts.js'
+import { vocabulary, getSector } from '../../state/sectors.js'
 import store from '../../state/store.js'
 
 export function renderOffer(navigate, refresh) {
@@ -42,6 +43,7 @@ export function renderOffer(navigate, refresh) {
 }
 
 function activityCard(a, index, r, level, open, refresh) {
+  const voc = vocabulary(store.scenario)
   const isOpen = open.has(a.id)
   const detail = r?.revenue.perActivity.find((x) => x.id === a.id)
   const totalRevenue = detail ? detail.total.reduce((x, y) => x + y, 0) : 0
@@ -97,8 +99,8 @@ function activityCard(a, index, r, level, open, refresh) {
 
       section('Prix et coût de revient'),
       h('div', { class: 'grid grid-4' },
-        numberField({ label: 'Prix de vente unitaire', field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', hint: 'Prix payé une fois, à la commande.', onInput: (v) => set({ unitPrice: v }) }),
-        numberField({ label: 'Coût de revient unitaire', field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: "Ce que la vente vous coûte directement.", onInput: (v) => set({ unitCost: v }) }),
+        numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', hint: `Ce que paie un ${voc.client} pour une ${voc.one}.`, onInput: (v) => set({ unitPrice: v }) }),
+        numberField({ label: `Coût de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: `Ce qu'une ${voc.one} vous coûte directement : achats, sous-traitance, consommables.`, onInput: (v) => set({ unitCost: v }) }),
         numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '€ HT', hint: 'Laissez à 0 si vente ponctuelle.', onInput: (v) => set({ recurringPrice: v }) }),
         numberField({ label: 'Coût mensuel récurrent', field: 'recurringPrice', value: a.recurringCost, suffix: '€ HT', hint: 'Hébergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
       ),
@@ -140,6 +142,7 @@ function activityCard(a, index, r, level, open, refresh) {
 
 function volumesEditor(a, setVolumes, level, detail) {
   const v = a.volumes || {}
+  const voc = vocabulary(store.scenario)
   const isManual = v.mode === 'manual'
   return h('div', {},
     level !== 'easy' && h('div', { class: 'row mb' },
@@ -153,9 +156,9 @@ function volumesEditor(a, setVolumes, level, detail) {
       : h('div', {},
           h('div', { class: 'grid grid-4' },
             numberField({ label: 'Premier mois de vente', field: 'month', value: v.launchMonth, suffix: 'M', hint: 'Mois 0 = démarrage.', onInput: (x) => setVolumes({ launchMonth: x }) }),
-            numberField({ label: 'Ventes le premier mois', field: 'startUnits', value: v.startUnits, suffix: 'unités', onInput: (x) => setVolumes({ startUnits: x }) }),
+            numberField({ label: `${voc.many[0].toUpperCase()}${voc.many.slice(1)} le premier mois`, field: 'startUnits', value: v.startUnits, suffix: voc.many, onInput: (x) => setVolumes({ startUnits: x }) }),
             numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
-            numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: 'unités', hint: 'Vide = pas de limite.', onInput: (x) => setVolumes({ cap: x }) }),
+            numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que vous ne pouvez physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
           level === 'advanced' && h('div', { class: 'grid grid-2 mt' },
             numberField({
@@ -165,7 +168,7 @@ function volumesEditor(a, setVolumes, level, detail) {
             }),
           ),
           detail && h('div', { class: 'note plain mt' },
-            `Volumes projetés : ${num(sumRange(detail.volumes, 0, 12))} unités en année 1, ${num(sumRange(detail.volumes, 12, 24))} en année 2, ${num(sumRange(detail.volumes, 48, 60))} en année 5.`),
+            `Projection : ${num(sumRange(detail.volumes, 0, 12))} ${voc.many} ${voc.verb} en année 1, ${num(sumRange(detail.volumes, 12, 24))} en année 2, ${num(sumRange(detail.volumes, 48, 60))} en année 5.`),
         ),
   )
 }

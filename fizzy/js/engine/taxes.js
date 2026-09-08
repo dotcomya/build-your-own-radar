@@ -10,7 +10,7 @@ import { MONTHS, YEARS, zeros, byYear } from './revenue.js'
  * TVA mensuelle : collectée sur les encaissements, déductible sur les achats,
  * reversée (ou remboursée) le mois suivant. Le crédit de TVA est reporté.
  */
-export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCash, capexCash, fiscal = {} }) {
+export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCash, capexCash, exempt = false, fiscal = {} }) {
   const ctx = fiscalContext(fiscal)
   const generic = ctx.get('vatRates').normal
   const lag = ctx.get('vatPaymentLagMonths')
@@ -28,8 +28,14 @@ export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCa
     const cash = purchaseCash[i] || zeros()
     for (let m = 0; m < MONTHS; m++) deductible[m] += cash[m] * rate
   })
-  for (let m = 0; m < MONTHS; m++) {
-    deductible[m] += (opexCash[m] || 0) * generic + (capexCash[m] || 0) * generic
+  // Une activité exonérée ne facture pas de TVA, mais ne la récupère pas non
+  // plus : la taxe payée sur les achats, le matériel et le loyer reste à sa
+  // charge. C'est le cas des professions médicales, de la formation déclarée
+  // et des associations non assujetties.
+  if (!exempt) {
+    for (let m = 0; m < MONTHS; m++) {
+      deductible[m] += (opexCash[m] || 0) * generic + (capexCash[m] || 0) * generic
+    }
   }
 
   // Solde mensuel : TVA due reversée le mois suivant, crédit remboursé dès
@@ -39,6 +45,9 @@ export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCa
   const paid = zeros()
   const refunded = zeros()
   const creditCarried = zeros()
+  // Crédit dont le remboursement est demandé mais pas encore encaissé : c'est
+  // une créance sur le Trésor, symétrique de la dette de TVA à reverser.
+  const refundReceivable = zeros()
   let carry = 0
 
   for (let m = 0; m < MONTHS; m++) {
@@ -52,6 +61,7 @@ export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCa
       const credit = -balance
       if (credit >= REFUND_THRESHOLD) {
         carry = 0
+        refundReceivable[m] = credit
         if (m + lag < MONTHS) refunded[m + lag] += credit
       } else {
         carry = credit
@@ -59,7 +69,7 @@ export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCa
     }
     creditCarried[m] = carry
   }
-  return { collected, deductible, net, paid, refunded, creditCarried }
+  return { collected, deductible, net, paid, refunded, creditCarried, refundReceivable }
 }
 
 /**

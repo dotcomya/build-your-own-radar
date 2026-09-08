@@ -2,7 +2,8 @@
 
 import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton } from '../dom.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR } from '../../engine/fiscal-fr-2026.js'
-import { LEVEL_META, TEMPLATES } from '../../state/schema.js'
+import { LEVEL_META } from '../../state/schema.js'
+import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
 import store from '../../state/store.js'
 
@@ -22,7 +23,15 @@ export function renderSettings(navigate, refresh) {
         h('div', { class: 'grid grid-2' },
           textField({ label: 'Nom du scénario', value: s.meta.name, onInput: (v, o) => store.update((sc) => { sc.meta.name = v }, { label: 'Renommage', ...(o || {}) }) }),
           textField({ label: 'Société', value: s.meta.company, placeholder: 'Nom commercial', onInput: (v, o) => store.update((sc) => { sc.meta.company = v }, { label: 'Société', ...(o || {}) }) }),
-          textField({ label: "Secteur d'activité", value: s.meta.sector, placeholder: 'Ex. logiciel B2B, restauration', onInput: (v, o) => store.update((sc) => { sc.meta.sector = v }, { label: 'Secteur', ...(o || {}) }) }),
+          selectField({
+            label: "Type d'activité", value: s.meta.sectorKey || '',
+            options: [{ value: '', label: '— Aucun —' }, ...SECTOR_KEYS.map((k) => ({ value: k, label: SECTORS[k].label }))],
+            hint: "Détermine le vocabulaire, le régime de TVA, les repères de marché et les alertes. Changer ce choix ne modifie pas vos chiffres.",
+            onInput: (v) => store.update((sc) => {
+              sc.meta.sectorKey = v || null
+              if (v && SECTORS[v].vat.exempt) sc.meta.vatExempt = true
+            }, { label: "Type d'activité" }),
+          }),
           selectField({
             label: 'Forme juridique', value: s.meta.legalForm,
             options: ['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'Entreprise individuelle'].map((v) => ({ value: v, label: v })),

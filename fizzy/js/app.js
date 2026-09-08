@@ -23,6 +23,7 @@ import { renderFinancing } from './ui/pages/financing.js'
 import { renderResults } from './ui/pages/results.js'
 import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
+import { renderFounder } from './ui/pages/founder.js'
 
 const PAGES = {
   'tableau-de-bord': { label: 'Tableau de bord', icon: '◱', render: renderDashboard, levels: ['easy', 'intermediate', 'advanced'], tab: true },
@@ -32,6 +33,7 @@ const PAGES = {
   charges: { label: 'Charges', icon: '▦', render: renderCosts, levels: ['easy', 'intermediate', 'advanced'] },
   financement: { label: 'Financement', icon: '◇', render: renderFinancing, levels: ['easy', 'intermediate', 'advanced'] },
   resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'], tab: true },
+  'mon-revenu': { label: 'Ce que je touche', icon: '◉', render: renderFounder, levels: ['easy', 'intermediate', 'advanced'], tab: true },
   'business-case': { label: 'Business case', icon: '◆', render: renderBusinessCase, levels: ['easy', 'intermediate', 'advanced'] },
   reglages: { label: 'Réglages', icon: '⚙', render: renderSettings, levels: ['easy', 'intermediate', 'advanced'] },
 }
@@ -39,7 +41,7 @@ const PAGES = {
 const GROUPS = [
   { title: 'Piloter', keys: ['tableau-de-bord'] },
   { title: 'Construire', keys: ['offre', 'marketing', 'equipe', 'charges', 'financement'] },
-  { title: 'Analyser', keys: ['resultats', 'business-case'] },
+  { title: 'Analyser', keys: ['resultats', 'mon-revenu', 'business-case'] },
   { title: '', keys: ['reglages'] },
 ]
 

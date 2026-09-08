@@ -55,10 +55,9 @@ class Store {
    * l'exemple est explicitement signalé comme tel dans l'interface.
    */
   seedDemo() {
-    const scenario = scenarioFromTemplate('saas', 'Exemple — Abonnement SaaS')
+    const scenario = scenarioFromTemplate('logiciel', 'Exemple — Logiciel en abonnement')
     scenario.meta.isDemo = true
     scenario.meta.company = 'Nova Analytics'
-    scenario.meta.sector = 'Logiciel en abonnement'
     scenario.meta.level = 'intermediate'
     this.scenarios[scenario.meta.id] = scenario
     this.currentId = scenario.meta.id

@@ -1,7 +1,8 @@
 /** Accueil : création du profil puis choix d'un point de départ. */
 
 import { h, textField, selectField, toast } from '../dom.js'
-import { TEMPLATES, LEVEL_META } from '../../state/schema.js'
+import { LEVEL_META } from '../../state/schema.js'
+import { sectorsByFamily, SECTORS } from '../../state/sectors.js'
 import store from '../../state/store.js'
 
 export function renderOnboarding(navigate) {
@@ -50,15 +51,15 @@ function chooseStart(navigate) {
   const existing = store.list()
   const start = (template) => {
     const level = store.profile?.role === 'consultant' ? 'advanced' : store.profile?.role === 'student' ? 'easy' : 'intermediate'
-    const s = store.create({ template, level, name: template ? TEMPLATES[template].label : (store.profile?.company || 'Mon business plan') })
+    const s = store.create({ template, level, name: template ? SECTORS[template].label : (store.profile?.company || 'Mon business plan') })
     toast(`« ${s.meta.name} » créé.`, 'ok')
     navigate('#/tableau-de-bord')
   }
 
-  return h('div', { class: 'content', style: { maxWidth: '900px', paddingTop: '5vh' } },
+  return h('div', { class: 'content', style: { maxWidth: '1080px', paddingTop: '4vh' } },
     h('div', { class: 'page-head' },
       h('h1', {}, `Bonjour ${store.profile?.name || ''}`.trim()),
-      h('p', {}, "Partez d'un modèle proche de votre activité — vous modifierez tout ensuite — ou d'une page blanche."),
+      h('p', {}, "Choisissez votre métier : Fizzy en tire le vocabulaire, le régime de TVA, les repères de marge et les pièges à éviter. Tout reste modifiable ensuite."),
     ),
 
     existing.length > 0 && h('div', { class: 'card mb' },
@@ -79,28 +80,35 @@ function chooseStart(navigate) {
       ),
     ),
 
-    h('h2', { class: 'mb' }, 'Choisir un modèle'),
-    h('div', { class: 'grid grid-3' },
-      ...Object.entries(TEMPLATES).map(([key, tpl]) => h('button', {
-        class: 'card',
-        style: { textAlign: 'left', cursor: 'pointer', padding: '0', border: '1px solid var(--ink-200)', background: 'var(--paper)', font: 'inherit' },
-        onClick: () => start(key),
-      },
-        h('div', { class: 'card-body' },
-          h('div', { style: { fontSize: '22px', color: 'var(--brand-600)', marginBottom: '8px' } }, tpl.icon),
-          h('h3', {}, tpl.label),
-          h('p', { class: 'small muted', style: { margin: '5px 0 0' } }, tpl.description),
-        ),
-      )),
-      h('button', {
-        class: 'card',
-        style: { textAlign: 'left', cursor: 'pointer', padding: '0', border: '1px dashed var(--ink-300)', background: 'transparent', font: 'inherit' },
-        onClick: () => start(null),
-      },
-        h('div', { class: 'card-body' },
-          h('div', { style: { fontSize: '22px', color: 'var(--ink-400)', marginBottom: '8px' } }, '＋'),
-          h('h3', {}, 'Page blanche'),
-          h('p', { class: 'small muted', style: { margin: '5px 0 0' } }, 'Tout construire depuis zéro.'),
+    h('h2', { class: 'mb' }, 'Votre activité'),
+    h('p', { class: 'muted', style: { marginTop: '-8px', marginBottom: '18px', maxWidth: '68ch' } },
+      "Chaque métier a sa TVA, son régime social, ses repères de marge et ses pièges. Choisissez le vôtre : Fizzy adapte le vocabulaire, les hypothèses et les alertes."),
+
+    ...sectorsByFamily().map((family) => h('div', { class: 'family' },
+      h('div', { class: 'family-head' }, h('span', { class: 'eyebrow' }, family.label)),
+      h('div', { class: 'sector-grid' },
+        ...family.sectors.map((sector) => h('button', {
+          class: 'sector-card',
+          onClick: () => start(sector.key),
+        },
+          h('span', { class: 'sector-glyph' }, sector.glyph),
+          h('span', { class: 'sector-name' }, sector.label),
+          h('span', { class: 'sector-tag' }, sector.tagline),
+          h('span', { class: 'sector-meta' },
+            h('span', { class: 'chip chip-quiet' }, sector.vat.exempt ? 'TVA exonérée' : sector.vat.label),
+            h('span', { class: 'chip chip-quiet' }, sector.legal.forms[0]),
+          ),
+        )),
+      ),
+    )),
+
+    h('div', { class: 'family' },
+      h('div', { class: 'family-head' }, h('span', { class: 'eyebrow' }, 'Autre')),
+      h('div', { class: 'sector-grid' },
+        h('button', { class: 'sector-card sector-blank', onClick: () => start(null) },
+          h('span', { class: 'sector-glyph' }, '+'),
+          h('span', { class: 'sector-name' }, 'Page blanche'),
+          h('span', { class: 'sector-tag' }, "Tout construire depuis zéro, sans hypothèse de métier."),
         ),
       ),
     ),

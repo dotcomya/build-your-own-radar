@@ -17,6 +17,24 @@ tout le reste, et tout est lié : changer un budget publicitaire modifie le
 nombre de clients, donc le chiffre d'affaires, donc la TVA, le besoin en fonds
 de roulement, l'impôt et la trésorerie — immédiatement.
 
+- **Quinze types d'activité.** Logiciel, développeur indépendant, conseil,
+  avocat, cabinet médical, kinésithérapie, dentaire, restaurant, e-commerce,
+  fleuriste, commerce de détail, coiffure, coach sportif, formation,
+  association. Chacun apporte son vocabulaire — un kinésithérapeute compte des
+  séances, pas des « unités » —, son régime de TVA et son statut social, ses
+  repères de marge observés, et les pièges propres au métier. Un cabinet
+  médical est exonéré de TVA : il ne la facture pas, mais ne la récupère pas
+  non plus, ce que le modèle applique réellement.
+- **Ce que touche le dirigeant.** Le seul chiffre que les prévisionnels
+  n'affichent jamais : ce qui reste sur le compte personnel une fois payés
+  l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu.
+  Barème progressif avec quotient familial et plafonnement, arbitrage entre
+  rémunération et dividendes, cotisations TNS sur les dividendes du gérant
+  majoritaire de SARL. La page montre le chemin complet de l'argent et combien
+  l'entreprise doit produire pour laisser un euro dans la poche.
+- **Alertes de métier.** Vos chiffres sont confrontés aux ordres de grandeur du
+  secteur : une marge de 42 % est excellente en commerce de détail, alarmante
+  en logiciel. Les alertes disent ce qu'il faut en conclure et où agir.
 - **Six vues métier.** Fondateur, direction financière, marketing, ressources
   humaines, produit, conseil. Chacune pose sa question, affiche ses indicateurs
   et — surtout — expose *ses leviers* : des curseurs branchés sur de vrais
@@ -101,12 +119,15 @@ fizzy/
       payroll.js          brut → coût employeur → net
       revenue.js          volumes, chiffre d'affaires, encaissements
       taxes.js            TVA, impôts de production, CIR/CII, JEI, IS
+      founder.js          revenu du dirigeant : IR, quotient familial, flat tax
       engine.js           orchestrateur : SIG, trésorerie, BFR, bilan, ratios
     state/
-      schema.js           valeurs par défaut, bornes de saisie, modèles, contrôles
+      schema.js           valeurs par défaut, bornes de saisie, contrôles
+      sectors.js          quinze profils de métier : régime, repères, pièges
       store.js            profils, scénarios, sauvegarde, historique
     ui/
       personas.js         vues métier : leviers, indicateurs, périmètre
+      nudges.js           repères sectoriels, alertes, pièges, cadre réglementaire
       levers.js           curseurs branchés sur le modèle, recalcul pendant le geste
       impact.js           repère, écarts, rail d'impact, valeurs animées
       charts.js           graphiques SVG, palette catégorielle validée

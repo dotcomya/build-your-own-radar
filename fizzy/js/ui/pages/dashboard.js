@@ -12,6 +12,8 @@ import { barChart, areaChart, donut, stackedBar, PALETTE, YEAR_CATEGORIES, STATU
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
 import { referenceYear } from '../impact.js'
+import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
+import { getSector, vocabulary } from '../../state/sectors.js'
 import store from '../../state/store.js'
 
 export function renderDashboard(navigate, refresh) {
@@ -22,8 +24,10 @@ export function renderDashboard(navigate, refresh) {
   const persona = getPersona(store.persona)
   const level = store.level
   const y = referenceYear(r)
+  const sector = getSector(s.meta.sectorKey)
   const board = metricBoard(persona, r)
   const levers = activeLevers(persona, s)
+  const advice = nudges(s, r)
 
   // Pendant qu'un curseur bouge, on réécrit les valeurs en place plutôt que de
   // redessiner : le geste ne doit jamais être interrompu.
@@ -34,7 +38,7 @@ export function renderDashboard(navigate, refresh) {
 
     h('section', { class: 'persona-banner' },
       h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)', marginBottom: '7px' } },
-        `${persona.label} · ${yearLabel(y)}`),
+        [sector?.label, persona.label, yearLabel(y)].filter(Boolean).join(' · ')),
       h('div', { class: 'persona-question' }, persona.question),
       h('p', { class: 'persona-answer' }, verdictFor(persona, r, y).headline),
     ),
@@ -48,7 +52,14 @@ export function renderDashboard(navigate, refresh) {
 
     issuesPanel(navigate),
 
+    advice.length > 0 && h('div', { class: 'mt' }, nudgePanel(advice, navigate)),
+
     h('div', { class: 'grid grid-2 mt' }, ...personaCharts(persona, r, level)),
+
+    sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
+      sectorTraps(s),
+      sectorRegime(s),
+    ),
 
     level !== 'easy' && r.revenue.campaigns.length > 0 && ['cmo', 'founder', 'consultant'].includes(store.persona) && marketingPanel(r),
 

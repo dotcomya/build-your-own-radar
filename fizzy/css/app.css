@@ -616,3 +616,125 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .pulse { animation: none; }
 }
+
+/* ─────────────────── Revenu du dirigeant : le chiffre final ─────────────── */
+/* Le seul écran où un nombre a le droit d'être énorme : c'est la réponse à la
+   question que tout le monde pose et qu'aucun prévisionnel n'affiche. */
+.takehome { display: grid; grid-template-columns: minmax(280px, 1fr) 2fr; border: 1px solid var(--rule); border-top: 3px solid var(--signal); background: var(--surface); }
+.takehome-hero { padding: 26px 28px; border-right: 1px solid var(--rule); }
+.takehome-value {
+  font-family: var(--mono); font-size: 46px; font-weight: 600; letter-spacing: -.05em;
+  color: var(--ink); line-height: 1; margin: 10px 0 6px; white-space: nowrap;
+}
+.takehome-sub { font-size: 12.5px; color: var(--ink-4); }
+.takehome-split { display: grid; grid-template-columns: repeat(3, 1fr); }
+.takehome-cell { padding: 26px 20px; border-right: 1px solid var(--rule); }
+.takehome-cell:last-child { border-right: 0; }
+.takehome-cell-value { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -.04em; margin: 10px 0 6px; color: var(--ink); white-space: nowrap; }
+
+/* Cascade : chaque marche est un prélèvement nommé */
+.flow { display: flex; flex-direction: column; }
+.flow-step { padding: 9px 16px; border-bottom: 1px solid var(--rule); }
+.flow-step:last-child { border-bottom: 0; }
+.flow-line { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.flow-label { font-size: 13px; color: var(--ink-2); }
+.flow-value { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flow-note { font-size: 11.5px; color: var(--ink-4); margin-top: 3px; }
+.flow-start { background: var(--surface-2); }
+.flow-start .flow-label, .flow-start .flow-value { font-weight: 600; }
+.flow-info .flow-label, .flow-info .flow-value { color: var(--ink-4); font-size: 12.5px; }
+.flow-cost .flow-value { color: var(--loss); }
+.flow-gain .flow-value { color: var(--gain); }
+.flow-subtotal { background: var(--surface-2); border-top: 1px solid var(--rule); }
+.flow-subtotal .flow-label, .flow-subtotal .flow-value { font-weight: 600; }
+.flow-total { background: var(--ink); }
+.flow-total .flow-label { color: #fff; font-weight: 600; }
+.flow-total .flow-value { color: #fff; font-size: 19px; font-weight: 600; letter-spacing: -.03em; }
+
+@media (max-width: 860px) {
+  .takehome { grid-template-columns: 1fr; }
+  .takehome-hero { border-right: 0; border-bottom: 1px solid var(--rule); padding: 20px; }
+  .takehome-value { font-size: 34px; }
+  .takehome-split { grid-template-columns: 1fr; }
+  .takehome-cell { border-right: 0; border-bottom: 1px solid var(--rule); padding: 16px 20px; }
+}
+
+/* ══════════════════════ Métier : choix, repères, pièges ══════════════════
+   Le nudge a son propre registre visuel : pas une carte de plus, mais une
+   marge d'annotation — comme une note portée à côté d'un chiffre par
+   quelqu'un qui connaît le métier. */
+
+/* ─── Choix du métier ─── */
+.family { margin-bottom: 26px; }
+.family-head { border-bottom: 2px solid var(--rule-strong); padding-bottom: 6px; margin-bottom: 14px; }
+.sector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 12px; }
+.sector-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  text-align: left; padding: 16px; cursor: pointer; font: inherit;
+  background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong);
+  transition: border-color .13s, transform .1s, box-shadow .13s;
+}
+.sector-card:hover { border-color: var(--ink); transform: translateY(-2px); box-shadow: 4px 4px 0 var(--ink); }
+.sector-card:active { transform: translateY(0); box-shadow: none; }
+.sector-glyph { font-size: 21px; color: var(--signal); line-height: 1; margin-bottom: 3px; }
+.sector-name { font-family: var(--display); font-weight: 700; font-size: 15.5px; color: var(--ink); letter-spacing: -.017em; }
+.sector-tag { font-size: 12px; color: var(--ink-4); line-height: 1.42; flex: 1; }
+.sector-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.sector-blank { border-style: dashed; border-top-style: dashed; }
+.sector-blank .sector-glyph { color: var(--ink-4); }
+
+/* ─── Repères de marché ─── */
+.bench {
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 6px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase;
+  border: 1px solid var(--rule); color: var(--ink-4); white-space: nowrap;
+}
+.bench-dot { width: 5px; height: 5px; flex: none; background: currentColor; }
+.bench-ok { border-color: var(--gain); color: var(--gain); }
+.bench-low { border-color: var(--warn); color: var(--warn); }
+.bench-high { border-color: var(--loss); color: var(--loss); }
+
+/* ─── Alertes contextuelles ─── */
+.nudges { border-top: 2px solid var(--rule-strong); background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong); }
+.nudges-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--rule); color: var(--ink-4);
+}
+.nudge {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: start;
+  padding: 14px 16px 14px 20px; border-bottom: 1px solid var(--rule); position: relative;
+}
+.nudge:last-child { border-bottom: 0; }
+/* Le trait de gauche porte la gravité : c'est la seule couleur du bloc. */
+.nudge::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; background: var(--ink-5); }
+.nudge-bad::before { background: var(--loss); }
+.nudge-watch::before { background: var(--warn); }
+.nudge-info::before { background: var(--signal); }
+.nudge-title { font-family: var(--display); font-weight: 700; font-size: 14.5px; color: var(--ink); letter-spacing: -.014em; }
+.nudge-body { grid-column: 1; margin: 0; font-size: 12.8px; color: var(--ink-3); line-height: 1.52; max-width: 78ch; }
+.nudge .btn { grid-row: 1 / span 2; align-self: center; }
+
+/* ─── Pièges du métier ─── */
+.traps { display: flex; flex-direction: column; }
+.trap { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.trap:last-child { border-bottom: 0; }
+/* Numérotation : il y a bien une séquence, du plus fréquent au plus subtil. */
+.trap-index { font-family: var(--mono); font-size: 11px; color: var(--surface); background: var(--ink); padding: 2px 5px; height: fit-content; letter-spacing: .02em; }
+.trap-title { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 3px; letter-spacing: -.014em; }
+.trap-body { margin: 0; font-size: 12.8px; color: var(--ink-3); line-height: 1.55; }
+
+/* ─── Cadre réglementaire ─── */
+.regime { display: flex; flex-direction: column; }
+.regime-row { display: grid; grid-template-columns: 74px 1fr; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.regime-row:last-child { border-bottom: 0; }
+.regime-row .eyebrow { color: var(--ink-4); padding-top: 3px; }
+.regime-row strong { font-size: 13.5px; color: var(--ink); }
+.regime-note { margin: 5px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.55; }
+
+@media (max-width: 860px) {
+  .sector-grid { grid-template-columns: 1fr; }
+  .sector-card:hover { transform: none; box-shadow: none; }
+  .nudge { grid-template-columns: 1fr; }
+  .nudge .btn { grid-row: auto; justify-self: start; margin-top: 8px; }
+  .regime-row { grid-template-columns: 1fr; gap: 5px; }
+}

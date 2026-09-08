@@ -61,6 +61,7 @@ export function compute(scenario) {
     purchaseCash: rev.perActivity.map((a) => a.variableCash),
     opexCash: opex.total,
     capexCash: capex.spendMonthly,
+    exempt: scenario.meta?.vatExempt === true,
     fiscal,
   })
 
@@ -372,7 +373,8 @@ export function balanceSheet({ capex, amortisationY, bfr, cash, financing, netRe
     const netFixed = grossFixed - cumAmort
     const receivables = bfr.receivables[m]
     const stock = bfr.stock[m]
-    const vatCredit = vat.creditCarried[m]
+    // Crédit reporté et remboursement demandé sont tous deux des créances.
+    const vatCredit = vat.creditCarried[m] + vat.refundReceivable[m]
     const treasury = cash.balance[m]
     const taxCredit = credits[y].total
     const assets = netFixed + receivables + stock + vatCredit + Math.max(0, treasury) + taxCredit

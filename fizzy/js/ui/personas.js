@@ -216,7 +216,7 @@ export const PERSONAS = {
     hasDepth: true,
     metrics: ['revenue', 'ebitda', 'breakEven', 'netResult', 'fundingNeed', 'runway'],
     levers: ['price', 'subscription', 'growth', 'budget', 'salary', 'hireMonth'],
-    pages: ['tableau-de-bord', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'mon-revenu', 'business-case', 'reglages'],
     question: "Ce modèle tient-il debout ?",
   },
   cfo: {
@@ -225,7 +225,7 @@ export const PERSONAS = {
     brief: "Trésorerie, besoin en fonds de roulement, point mort et fiscalité. Ce qui décide si l'entreprise passe l'année.",
     metrics: ['fundingNeed', 'cashLow', 'peakBfr', 'breakEven', 'runway', 'corporateTax'],
     levers: ['paymentLag', 'deposit', 'openingCash', 'fixedCost', 'hireMonth'],
-    pages: ['tableau-de-bord', 'financement', 'resultats', 'charges', 'offre', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'financement', 'resultats', 'charges', 'offre', 'mon-revenu', 'business-case', 'reglages'],
     question: "À quel moment manque-t-il de l'argent, et combien ?",
   },
   cmo: {
@@ -234,7 +234,7 @@ export const PERSONAS = {
     brief: "Budgets, canaux, coût d'acquisition et valeur client. Combien coûte un euro de chiffre d'affaires.",
     metrics: ['cac', 'ltv', 'ltvCac', 'revenue', 'ebitda', 'arpu'],
     levers: ['budget', 'conversion', 'growth', 'price'],
-    pages: ['tableau-de-bord', 'marketing', 'offre', 'resultats', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'marketing', 'offre', 'resultats', 'mon-revenu', 'business-case', 'reglages'],
     question: "Chaque euro investi en acquisition en rapporte-t-il plus d'un ?",
   },
   chro: {
@@ -243,7 +243,7 @@ export const PERSONAS = {
     brief: "Masse salariale chargée, calendrier des recrutements, seuils d'effectif et dispositifs d'exonération.",
     metrics: ['payrollCost', 'payrollRatio', 'headcount', 'breakEven', 'jeiSaving', 'runway'],
     levers: ['salary', 'headcount', 'hireMonth'],
-    pages: ['tableau-de-bord', 'equipe', 'charges', 'resultats', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'equipe', 'charges', 'resultats', 'mon-revenu', 'business-case', 'reglages'],
     question: "Cette équipe est-elle finançable au rythme prévu ?",
   },
   cpo: {
@@ -252,7 +252,7 @@ export const PERSONAS = {
     brief: "Prix, coût de revient, récurrence et rétention. Ce que chaque unité vendue laisse dans la caisse.",
     metrics: ['grossMargin', 'marginRate', 'arpu', 'recurringShare', 'revenue', 'ebitda'],
     levers: ['price', 'subscription', 'unitCost', 'churn', 'startUnits'],
-    pages: ['tableau-de-bord', 'offre', 'marketing', 'resultats', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'offre', 'marketing', 'resultats', 'mon-revenu', 'business-case', 'reglages'],
     question: "Chaque vente laisse-t-elle assez pour payer la structure ?",
   },
   consultant: {
@@ -261,7 +261,7 @@ export const PERSONAS = {
     brief: "Le modèle complet, sans filtre : bilan, BFR, crédits d'impôt, sensibilité et exports.",
     metrics: ['revenue', 'ebitda', 'breakEven', 'peakBfr', 'fundingNeed', 'netResult'],
     levers: ['price', 'growth', 'unitCost', 'salary', 'paymentLag', 'fixedCost'],
-    pages: ['tableau-de-bord', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'business-case', 'reglages'],
+    pages: ['tableau-de-bord', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'mon-revenu', 'business-case', 'reglages'],
     forceLevel: 'advanced',
     question: "Où se cassent les hypothèses ?",
   },

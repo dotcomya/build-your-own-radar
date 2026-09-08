@@ -197,6 +197,56 @@ export const PARAMS = {
     confidence: 'to-verify',
     note: "Entreprise de moins de 8 ans consacrant au moins 15 % de ses charges à la R&D. L'avantage porte uniquement sur l'exonération de cotisations patronales (assurances sociales et allocations familiales), plafonnée à 4,5 SMIC par salarié et 5 PASS par établissement et par an. L'exonération d'impôt sur les sociétés a été supprimée pour les entreprises créées à compter du 1er janvier 2024. Le seuil de dépenses de R&D a été relevé pour les créations récentes : à confirmer selon la date de création.",
   },
+  // ───────────────────── Fiscalité personnelle du dirigeant ────────────────
+  incomeTaxBrackets: {
+    value: [
+      { upTo: 11497, rate: 0 },
+      { upTo: 29315, rate: 0.11 },
+      { upTo: 83823, rate: 0.30 },
+      { upTo: 180294, rate: 0.41 },
+      { upTo: Infinity, rate: 0.45 },
+    ],
+    unit: '€',
+    label: "Barème de l'impôt sur le revenu",
+    confidence: 'to-verify',
+    note: "Barème par part de quotient familial. Les limites de tranches sont revalorisées chaque année sur l'inflation : celles retenues ici sont les dernières connues et doivent être confirmées pour l'imposition des revenus 2026.",
+  },
+  salaryAllowance: {
+    value: { rate: 0.1, min: 504, max: 14426 },
+    unit: '%',
+    label: 'Abattement de 10 % sur les salaires',
+    confidence: 'to-verify',
+    note: "Déduction forfaitaire pour frais professionnels, plancher et plafond revalorisés annuellement. Le dirigeant peut opter pour les frais réels si ceux-ci sont supérieurs.",
+  },
+  familyQuotientCap: {
+    value: 1791,
+    unit: '€ par demi-part',
+    label: 'Plafonnement du quotient familial',
+    confidence: 'to-verify',
+    note: "Avantage maximal procuré par chaque demi-part supplémentaire au-delà d'une part (deux pour un couple). Au-delà, l'économie d'impôt est écrêtée.",
+  },
+  flatTax: {
+    value: { total: 0.30, incomeTax: 0.128, socialCharges: 0.172 },
+    unit: '%',
+    label: 'Prélèvement forfaitaire unique (flat tax)',
+    confidence: 'stable',
+    note: "30 % sur les dividendes et revenus de capitaux mobiliers : 12,8 % d'impôt sur le revenu et 17,2 % de prélèvements sociaux. Le contribuable peut opter pour le barème progressif, avec un abattement de 40 % sur les dividendes, si cela lui est plus favorable.",
+  },
+  dividendAllowance: {
+    value: 0.4,
+    unit: '%',
+    label: 'Abattement sur dividendes au barème',
+    confidence: 'stable',
+    note: "Abattement de 40 % applicable aux dividendes lorsque le contribuable renonce au prélèvement forfaitaire unique et opte pour le barème progressif.",
+  },
+  tnsDividendThreshold: {
+    value: 0.1,
+    unit: '% du capital',
+    label: 'Seuil de cotisations TNS sur dividendes',
+    confidence: 'stable',
+    note: "Pour un gérant majoritaire de SARL ou d'EURL, la fraction des dividendes excédant 10 % du capital social, des primes d'émission et des sommes en compte courant est soumise aux cotisations sociales des indépendants au lieu des prélèvements sociaux de 17,2 %. Les présidents de SAS ne sont pas concernés.",
+  },
+
   deMinimis: {
     value: { ceiling: 300000, windowYears: 3 },
     unit: '€',

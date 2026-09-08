@@ -135,6 +135,7 @@ export function emptyScenario(name = 'Mon business plan') {
       id: uid('scn'), name, company: '', sector: '', legalForm: 'SAS',
       startDate: `${Math.max(2026, year)}-01-01`, level: 'easy',
       jeiClaimed: false, reducedCorporateTax: true, companyAgeYears: 0,
+      sectorKey: null, vatExempt: false, nonProfit: false, persona: 'founder',
       createdAt: Date.now(), updatedAt: Date.now(),
     },
     fiscal: {},
@@ -145,106 +146,12 @@ export function emptyScenario(name = 'Mon business plan') {
     capex: [],
     financing: { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [] },
     assumptions: { stockDays: 0 },
+    // Ce que le dirigeant retire réellement : part du capital, situation
+    // fiscale du foyer et politique de distribution.
+    founder: { memberId: null, equityShare: 1, taxParts: 1, dividendPayout: 0, dividendRegime: 'pfu', majorityManager: false, otherIncome: 0 },
   }
 }
 
-/**
- * Modèles sectoriels : un point de départ crédible plutôt qu'une page blanche.
- */
-export const TEMPLATES = {
-  saas: {
-    label: 'SaaS / Abonnement', icon: '◈',
-    description: "Revenu récurrent mensuel, acquisition payante, marge brute élevée.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Abonnement Pro', unitPrice: 0, recurringPrice: 49, contractMonths: 24, churnMonthly: 0.03, unitCost: 0, recurringCost: 6, paymentLag: 0, deposit: 1, volumes: { mode: 'growth', launchMonth: 1, startUnits: 8, monthlyGrowth: 0.12, cap: '', manual: [] } })]
-      s.marketing = [newCampaign({ name: 'Acquisition payante', channel: 'ads', activityId: s.activities[0].id, monthlyBudget: 2000, model: 'cpc', cpc: 1.8, visitToLead: 0.04, leadToClient: 0.15, startMonth: 1, durationMonths: 59 })]
-      s.team = [
-        newTeamMember({ role: 'Fondateur — produit', contractType: 'cdi', status: 'cadre', monthlyGross: 3200, rdShare: 0.6, innovShare: 0.2 }),
-        newTeamMember({ role: 'Développeur', contractType: 'cdi', status: 'cadre', monthlyGross: 3800, startMonth: 3, rdShare: 0.8 }),
-      ]
-      s.capex = [newCapex({ label: 'Postes de travail', amount: 6000, amortYears: 3, rdShare: 0.7 })]
-      s.opex = baseOpex('software')
-      s.financing.equityFounders = [{ month: 0, amount: 20000 }]
-      s.meta.jeiClaimed = true
-    },
-  },
-  services: {
-    label: 'Conseil / Agence', icon: '◇',
-    description: "Vente au projet, facturation avec acompte, masse salariale dominante.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Mission de conseil', unitPrice: 9000, recurringPrice: 0, contractMonths: 0, deliveryLag: 2, paymentLag: 1, deposit: 0.3, milestone: 0.3, unitCost: 800, volumes: { mode: 'growth', launchMonth: 0, startUnits: 1, monthlyGrowth: 0.06, cap: 8, manual: [] } })]
-      s.team = [
-        newTeamMember({ role: 'Fondateur — associé', contractType: 'cdi', status: 'cadre', monthlyGross: 3500 }),
-        newTeamMember({ role: 'Consultant', contractType: 'cdi', status: 'cadre', monthlyGross: 3000, startMonth: 6 }),
-      ]
-      s.marketing = [newCampaign({ name: 'Prospection', channel: 'outbound', activityId: s.activities[0].id, monthlyBudget: 800, model: 'cpl', cpl: 60, leadToClient: 0.12, durationMonths: 59 })]
-      s.opex = baseOpex('office')
-      s.financing.equityFounders = [{ month: 0, amount: 10000 }]
-    },
-  },
-  ecommerce: {
-    label: 'E-commerce', icon: '◆',
-    description: "Panier moyen, marge sur achat, stock et publicité.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Vente en ligne', unitPrice: 65, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 28, costPaymentLag: 1, volumes: { mode: 'growth', launchMonth: 0, startUnits: 120, monthlyGrowth: 0.1, cap: '', manual: [] } })]
-      s.marketing = [newCampaign({ name: 'Publicité produits', channel: 'ads', activityId: s.activities[0].id, monthlyBudget: 3000, model: 'cac', cac: 22, durationMonths: 59 })]
-      s.team = [newTeamMember({ role: 'Fondateur', contractType: 'tns', monthlyGross: 2200 })]
-      s.assumptions.stockDays = 45
-      s.opex = baseOpex('software')
-      s.capex = [newCapex({ label: 'Site et logistique', amount: 12000, amortYears: 3 })]
-      s.financing.equityFounders = [{ month: 0, amount: 25000 }]
-      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 30000, month: 1, rate: 0.04, months: 60, graceMonths: 3 }]
-    },
-  },
-  deeptech: {
-    label: 'Deeptech / R&D', icon: '◉',
-    description: "Recherche longue, subventions, crédit d'impôt recherche, statut JEI.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Licence technologique', unitPrice: 40000, recurringPrice: 1500, contractMonths: 36, deliveryLag: 3, paymentLag: 2, deposit: 0.2, milestone: 0.3, unitCost: 3000, volumes: { mode: 'growth', launchMonth: 14, startUnits: 1, monthlyGrowth: 0.07, cap: 4, manual: [] } })]
-      s.team = [
-        newTeamMember({ role: 'Directeur scientifique', contractType: 'cdi', status: 'cadre', monthlyGross: 4200, rdShare: 0.9, youngDoctor: true }),
-        newTeamMember({ role: 'Ingénieur R&D', contractType: 'cdi', status: 'cadre', monthlyGross: 3600, startMonth: 2, rdShare: 0.95, count: 2 }),
-      ]
-      s.opex = baseOpex('lab')
-      s.capex = [newCapex({ label: 'Équipement de laboratoire', amount: 80000, amortYears: 5, rdShare: 1 })]
-      s.financing.equityFounders = [{ month: 0, amount: 50000 }]
-      s.financing.grants = [{ id: uid('grt'), label: "Subvention d'innovation", amount: 90000, month: 2, months: 12 }]
-      s.financing.advances = [{ id: uid('adv'), label: 'Avance remboursable', amount: 120000, month: 6, repayStartMonth: 36, repayMonths: 24 }]
-      s.meta.jeiClaimed = true
-    },
-  },
-  retail: {
-    label: 'Commerce / Restauration', icon: '▣',
-    description: "Ticket moyen, encaissement immédiat, loyer et équipe fixes.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Ventes au comptoir', unitPrice: 18, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 6, vatRateSales: 0.1, volumes: { mode: 'growth', launchMonth: 1, startUnits: 900, monthlyGrowth: 0.04, cap: 3000, manual: [] } })]
-      s.team = [
-        newTeamMember({ role: 'Gérant', contractType: 'tns', monthlyGross: 2000 }),
-        newTeamMember({ role: 'Employé polyvalent', contractType: 'cdi', monthlyGross: 1900, count: 2, startMonth: 1 }),
-      ]
-      s.opex = baseOpex('shop')
-      s.capex = [newCapex({ label: 'Aménagement et matériel', amount: 60000, amortYears: 7, month: 0 })]
-      s.financing.equityFounders = [{ month: 0, amount: 30000 }]
-      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 70000, month: 0, rate: 0.042, months: 84, graceMonths: 3 }]
-      s.assumptions.stockDays = 15
-    },
-  },
-  marketplace: {
-    label: 'Marketplace / Commission', icon: '⬡',
-    description: "Volume d'affaires intermédié, revenu en pourcentage, effet de réseau.",
-    apply(s) {
-      s.activities = [newActivity({ name: 'Commission sur transactions', unitPrice: 12, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 2, volumes: { mode: 'growth', launchMonth: 2, startUnits: 300, monthlyGrowth: 0.14, cap: '', manual: [] } })]
-      s.marketing = [
-        newCampaign({ name: 'Acquisition acheteurs', channel: 'ads', activityId: s.activities[0].id, monthlyBudget: 2500, model: 'cac', cac: 9, startMonth: 2, durationMonths: 58 }),
-        newCampaign({ name: 'Parrainage', channel: 'referral', activityId: s.activities[0].id, monthlyBudget: 600, model: 'cac', cac: 15, startMonth: 6, durationMonths: 54 }),
-      ]
-      s.team = [newTeamMember({ role: 'Fondateur', contractType: 'cdi', status: 'cadre', monthlyGross: 3000, rdShare: 0.4 })]
-      s.opex = baseOpex('software')
-      s.financing.equityFounders = [{ month: 0, amount: 15000 }]
-      s.financing.equityInvestors = [{ month: 8, amount: 300000 }]
-    },
-  },
-}
 
 /** Charges de fonctionnement types, pour qu'un modèle ne démarre jamais à zéro. */
 function baseOpex(profile) {
@@ -274,9 +181,23 @@ function baseOpex(profile) {
 }
 
 export function scenarioFromTemplate(key, name) {
-  const s = emptyScenario(name || TEMPLATES[key]?.label || 'Mon business plan')
-  const tpl = TEMPLATES[key]
-  if (tpl) { tpl.apply(s); s.meta.template = key }
+  const s = emptyScenario(name || 'Mon business plan')
+  const sector = SECTORS[key]
+  if (!sector) return s
+
+  s.meta.sectorKey = key
+  s.meta.name = name || sector.label
+  s.meta.legalForm = sector.legal.forms[0]
+  sector.build(s)
+
+  // Le régime de TVA du secteur prime sur les valeurs par défaut de l'offre.
+  if (sector.vat.exempt) s.meta.vatExempt = true
+  for (const a of s.activities) {
+    if (a.vatRateSales === undefined || a.vatRateSales === null) a.vatRateSales = sector.vat.sales
+  }
+  // Un gérant majoritaire de SARL ou d'EURL subit les cotisations TNS sur ses
+  // dividendes : la case est cochée d'office pour ces formes.
+  s.founder.majorityManager = ['SARL', 'EURL'].includes(s.meta.legalForm)
   return s
 }
 
@@ -325,3 +246,7 @@ export function validate(scenario, result) {
 }
 
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n))
+
+// Importé en fin de module : sectors.js consomme les fabriques ci-dessus.
+import { SECTORS } from './sectors.js'
+export { SECTORS }
