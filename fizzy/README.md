@@ -81,8 +81,13 @@ de roulement, l'impôt et la trésorerie — immédiatement.
 - **Indicateurs expliqués.** Point mort, EBITDA, BFR, CAF, autonomie, LTV/CAC :
   chaque notion s'ouvre sur une fiche qui dit ce que c'est, comment Fizzy la
   calcule, à quoi elle sert, et rappelle la valeur du scénario en cours.
-- **Exports.** Une présentation PowerPoint de dix diapositives prête à
-  présenter, le prévisionnel complet en CSV, et une sauvegarde JSON du scénario.
+- **Exports.** Une présentation PowerPoint d'une douzaine de diapositives prête
+  à présenter, le prévisionnel complet en CSV, et une sauvegarde JSON du
+  scénario. Le document dit exactement ce que dit l'écran, parce qu'il lit les
+  mêmes fonctions : il s'ouvre sur le verdict, pose les mêmes repères sur la
+  même courbe de trésorerie, chiffre les mêmes actions et se termine sur ce que
+  touche le dirigeant. Le fichier est écrit sans bibliothèque : un .pptx est une
+  archive ZIP de XML OpenXML, et les courbes y sont de vraies polylignes.
 - **Mémoire.** Profil et scénarios enregistrés dans le navigateur, sauvegarde
   automatique, annulation, navigation sans perte. Rien ne quitte l'appareil.
 - **Mobile.** Interface adaptative, barre d'onglets tactile, installable comme
@@ -139,6 +144,8 @@ fizzy/
       taxes.js            TVA, impôts de production, CIR/CII, JEI, IS
       founder.js          revenu du dirigeant : IR, quotient familial, flat tax
       simulate.js         actions candidates, rejouées et chiffrées sur le modèle
+      milestones.js       les moments qui comptent dans un scénario
+      verdict.js          le jugement en un mot, et le chiffre qui décide
       engine.js           orchestrateur : SIG, trésorerie, BFR, bilan, ratios
     state/
       schema.js           valeurs par défaut, bornes de saisie, contrôles
@@ -154,7 +161,13 @@ fizzy/
       glossary.js         définitions, formules, usage
       pages/              une fonction de rendu par page
     export/               écriture ZIP et génération PowerPoint (OOXML)
+    format.js             nombres, euros, mois, exercice de référence
 ```
+
+`format.js` et les trois modules du moteur qui portent un jugement —
+`verdict.js`, `milestones.js`, `simulate.js` — ne dépendent d'aucune couche
+d'affichage. C'est ce qui permet au PowerPoint exporté de dire mot pour mot ce
+que dit l'écran, plutôt que d'en donner une seconde version.
 
 Le moteur est une fonction pure : `compute(scénario)` renvoie tous les états.
 Il est donc rejouable à chaque frappe sans effet de bord, et testable seul.

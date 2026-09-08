@@ -123,8 +123,8 @@ function waterfall(income, r, y) {
     ),
     row.costPerEuro && row.costPerEuro > 0 ? h('div', { class: 'panel-body', style: { paddingTop: 0 } },
       h('div', { class: 'note plain' },
-        h('div', { class: 'note-title' }, `${euro(row.costPerEuro)} pour un euro dans votre poche`),
-        `L'entreprise doit dégager ${euro(row.costPerEuro)} de valeur pour vous laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
+        h('div', { class: 'note-title' }, `${num(row.costPerEuro, 2)} € pour un euro dans votre poche`),
+        `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour vous laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
     ) : null,
   )
 }
@@ -256,7 +256,7 @@ function headline(income, r, y) {
   }
   const parts = []
   parts.push(`${euro(row.monthly)} par mois, net de tout : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`)
-  if (row.costPerEuro) parts.push(`L'entreprise produit ${euro(row.costPerEuro)} de valeur pour chaque euro qui arrive chez vous.`)
+  if (row.costPerEuro) parts.push(`L'entreprise produit ${num(row.costPerEuro, 2)} € de valeur pour chaque euro qui arrive chez vous.`)
   if (sector) parts.push(`Référence ${sector.label.toLowerCase()}.`)
   return parts.join(' ')
 }

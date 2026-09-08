@@ -50,36 +50,12 @@ export const qs = (sel, root = document) => root.querySelector(sel)
  */
 export const narrow = () => (typeof window !== 'undefined' ? window.innerWidth : 1200) < 760
 
-// ───────────────────────────────── Formats ────────────────────────────────
-const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
-const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })
-const nf2 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })
-
-export function euro(n, { sign = false, compact = false } = {}) {
-  if (n === null || n === undefined || !Number.isFinite(n)) return '—'
-  // Math.round(-0.2) vaut -0, qu'Intl rend « -0 € » : on le neutralise.
-  const v = Math.round(n) === 0 ? 0 : Math.round(n)
-  if (compact && Math.abs(v) >= 1000) {
-    const abs = Math.abs(v)
-    if (abs >= 1000000) return `${sign && v > 0 ? '+' : ''}${nf1.format(v / 1000000)} M€`
-    return `${sign && v > 0 ? '+' : ''}${nf0.format(v / 1000)} k€`
-  }
-  return `${sign && v > 0 ? '+' : ''}${nf0.format(v)} €`
-}
-export const num = (n, d = 0) => (Number.isFinite(n) ? (d === 0 ? nf0 : d === 1 ? nf1 : nf2).format(n) : '—')
-export function pct(n, d = 1) {
-  if (n === null || n === undefined || !Number.isFinite(n)) return '—'
-  return `${(d === 0 ? nf0 : nf1).format(n * 100)} %`
-}
-export const monthName = (m) => ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][m % 12]
-
-export function monthLabel(index, startDate) {
-  const d = new Date(startDate || '2026-01-01')
-  const total = d.getMonth() + index
-  const year = d.getFullYear() + Math.floor(total / 12)
-  return `${monthName(total % 12)} ${String(year).slice(2)}`
-}
-export const yearLabel = (y) => `Année ${y + 1}`
+// Les formats vivent dans js/format.js : le moteur et l'export PowerPoint en
+// ont besoin sans rien devoir à l'interface. Importés puis réexportés — et non
+// simplement relayés — car ce module s'en sert aussi, et un renvoi
+// « export … from » ne crée aucune liaison locale.
+import { euro, num, pct, monthName, monthLabel, yearLabel } from '../format.js'
+export { euro, num, pct, monthName, monthLabel, yearLabel }
 
 // ────────────────────────────── Champ de saisie ───────────────────────────
 import { BOUNDS, clampField } from '../state/schema.js'

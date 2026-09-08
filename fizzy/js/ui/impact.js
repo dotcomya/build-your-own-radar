@@ -11,6 +11,7 @@
  */
 
 import { h, euro, pct, num, clear } from './dom.js'
+import { referenceYear } from '../format.js'
 import { METRICS } from './personas.js'
 import store from '../state/store.js'
 
@@ -22,12 +23,11 @@ const TRACKED = [
   { key: 'fundingNeed', label: 'Financement', higher: false },
 ]
 
-/** Année de lecture : la première rentable, sinon la troisième. */
-export function referenceYear(result) {
-  if (!result) return 2
-  const i = result.pnl.netResult.findIndex((v) => v > 0)
-  return i >= 0 ? i : 2
-}
+// Année de lecture : définie dans js/format.js, avec les autres notions que le
+// moteur et l'export partagent avec l'interface. Importée puis réexportée, et
+// non simplement relayée : ce module s'en sert aussi lui-même, et un renvoi
+// « export … from » ne crée aucune liaison locale.
+export { referenceYear }
 
 /** Extrait les valeurs suivies d'un résultat. */
 export function snapshotOf(result) {
