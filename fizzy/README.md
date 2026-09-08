@@ -32,6 +32,24 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   rémunération et dividendes, cotisations TNS sur les dividendes du gérant
   majoritaire de SARL. La page montre le chemin complet de l'argent et combien
   l'entreprise doit produire pour laisser un euro dans la poche.
+- **Un verdict, pas un tableau.** Le tableau de bord s'ouvre sur un mot —
+  *fragile*, *tendu*, *solide* — la phrase qui l'explique, et le seul chiffre
+  qui décide : le montant à réunir avant la date où la caisse touche le fond,
+  ou, quand le modèle tient, ce qui tombe chaque mois sur votre compte. Les
+  états financiers restent à un pli de là, repliés.
+- **La frise des cinq ans.** Une courbe de trésorerie annotée remplace la
+  grille de chiffres : l'embauche, la levée, le point bas, le mois où
+  l'exploitation s'autofinance, le premier exercice bénéficiaire. Les repères
+  se répartissent en couloirs et un repère qui ne trouve pas sa place est
+  abandonné plutôt que superposé — sur un écran étroit, la frise est
+  recomposée, pas rétrécie.
+- **Ce qui changerait le plus.** Dix actions candidates — doubler le budget
+  publicitaire, décaler une embauche, augmenter le prix de 10 %, allonger les
+  délais fournisseurs — sont chacune appliquées à une copie du scénario, le
+  modèle entier est rejoué, et l'écart obtenu est mesuré : EBITDA, besoin de
+  financement, point mort. Le classement qui en sort n'est pas une règle
+  générale mais le résultat de *votre* modèle. Un clic applique, la barre du
+  bas mesure l'écart, l'annulation reste disponible.
 - **Alertes de métier.** Vos chiffres sont confrontés aux ordres de grandeur du
   secteur : une marge de 42 % est excellente en commerce de détail, alarmante
   en logiciel. Les alertes disent ce qu'il faut en conclure et où agir.
@@ -120,6 +138,7 @@ fizzy/
       revenue.js          volumes, chiffre d'affaires, encaissements
       taxes.js            TVA, impôts de production, CIR/CII, JEI, IS
       founder.js          revenu du dirigeant : IR, quotient familial, flat tax
+      simulate.js         actions candidates, rejouées et chiffrées sur le modèle
       engine.js           orchestrateur : SIG, trésorerie, BFR, bilan, ratios
     state/
       schema.js           valeurs par défaut, bornes de saisie, contrôles
@@ -127,6 +146,7 @@ fizzy/
       store.js            profils, scénarios, sauvegarde, historique
     ui/
       personas.js         vues métier : leviers, indicateurs, périmètre
+      story.js            frise des cinq ans, repères annotés, jauges de métier
       nudges.js           repères sectoriels, alertes, pièges, cadre réglementaire
       levers.js           curseurs branchés sur le modèle, recalcul pendant le geste
       impact.js           repère, écarts, rail d'impact, valeurs animées

@@ -6,7 +6,7 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, toast, euro } from './ui/dom.js'
+import { h, clear, setDrawerHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
 import { LEVEL_META } from './state/schema.js'
@@ -245,7 +245,8 @@ function tabbar(active) {
   )
 }
 
-const shortLabel = (l) => ({ 'Tableau de bord': 'Pilotage', 'Offre et clients': 'Offre', 'États financiers': 'Résultats', 'Business case': 'Dossier' }[l] || l)
+const shortLabel = (l) => ({ 'Tableau de bord': 'Pilotage', 'Offre et clients': 'Offre', 'États financiers': 'Résultats', 'Ce que je touche': 'Ma paie',
+  'Business case': 'Dossier' }[l] || l)
 
 // ───────────────────────────── Tiroir du glossaire ─────────────────────────
 setDrawerHost((key) => {
@@ -301,6 +302,16 @@ function currentValue(key) {
     h('div', { class: 'note-title' }, 'Dans votre scénario'),
     value)
 }
+
+// Certains dessins sont composés différemment sur un écran étroit : ils sont
+// donc redessinés quand la fenêtre franchit la limite, et à ce moment-là seul.
+// Redessiner à chaque pixel de redimensionnement coûterait cher pour rien.
+let wasNarrow = narrow()
+window.addEventListener('resize', () => {
+  if (narrow() === wasNarrow) return
+  wasNarrow = narrow()
+  render({ preserveScroll: true })
+})
 
 // ────────────────────────────────── Démarrage ──────────────────────────────
 window.addEventListener('hashchange', render)

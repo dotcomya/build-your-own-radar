@@ -41,6 +41,15 @@ export function svg(tag, props = {}, ...children) {
 export const clear = (el) => { el.replaceChildren(); return el }
 export const qs = (sel, root = document) => root.querySelector(sel)
 
+/**
+ * Vrai sur un écran étroit — téléphone en portrait, fenêtre réduite.
+ *
+ * Le CSS suffit pour reflow du texte, mais pas pour un dessin : un graphique
+ * doit être *composé* autrement, pas seulement mis à l'échelle. Les vues qui
+ * en dépendent interrogent cette fonction au moment où elles se construisent.
+ */
+export const narrow = () => (typeof window !== 'undefined' ? window.innerWidth : 1200) < 760
+
 // ───────────────────────────────── Formats ────────────────────────────────
 const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
 const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })

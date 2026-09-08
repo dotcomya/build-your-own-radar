@@ -1,19 +1,22 @@
 /**
- * Tableau de bord, décliné par métier.
+ * Tableau de bord.
  *
- * Chaque persona voit d'abord la question dont il répond, puis ses
- * indicateurs, puis ses leviers. Bouger un levier recalcule le modèle entier
- * pendant le geste : les indicateurs changent sous les doigts, et le rail
- * d'impact mesure le chemin parcouru depuis le repère.
+ * Un tableau de bord dirige l'attention ; il ne déverse pas. L'ordre de
+ * lecture est donc imposé : d'abord un verdict, ensuite l'histoire des cinq
+ * ans, puis ce qu'il faut faire — chiffré. Le détail vient après, replié,
+ * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, narrow } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
 import { referenceYear } from '../impact.js'
+import { storyline, gauge } from '../story.js'
+import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
-import { getSector, vocabulary } from '../../state/sectors.js'
+import { getSector } from '../../state/sectors.js'
+import { founderIncome } from '../../engine/founder.js'
 import store from '../../state/store.js'
 
 export function renderDashboard(navigate, refresh) {
@@ -22,195 +25,281 @@ export function renderDashboard(navigate, refresh) {
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
 
   const persona = getPersona(store.persona)
-  const level = store.level
-  const y = referenceYear(r)
   const sector = getSector(s.meta.sectorKey)
-  const board = metricBoard(persona, r)
-  const levers = activeLevers(persona, s)
-  const advice = nudges(s, r)
+  const y = referenceYear(r)
+  const health = assess(r, s)
 
-  // Pendant qu'un curseur bouge, on réécrit les valeurs en place plutôt que de
-  // redessiner : le geste ne doit jamais être interrompu.
-  const live = (provisional) => board.updateWith(provisional)
-
-  return h('div', { class: 'content' },
+  return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
 
-    h('section', { class: 'persona-banner' },
-      h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)', marginBottom: '7px' } },
-        [sector?.label, persona.label, yearLabel(y)].filter(Boolean).join(' · ')),
-      h('div', { class: 'persona-question' }, persona.question),
-      h('p', { class: 'persona-answer' }, verdictFor(persona, r, y).headline),
-    ),
+    verdictHero(health, r, s, y, persona, sector),
 
-    board,
-
-    levers.length > 0 && h('div', { class: 'grid grid-2', style: { marginTop: '18px', alignItems: 'start' } },
-      leverPanel(levers, { onLive: live, onDone: refresh }),
-      verdictPanel(persona, r, y, navigate),
-    ),
-
-    issuesPanel(navigate),
-
-    advice.length > 0 && h('div', { class: 'mt' }, nudgePanel(advice, navigate)),
-
-    h('div', { class: 'grid grid-2 mt' }, ...personaCharts(persona, r, level)),
-
-    sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
-      sectorTraps(s),
-      sectorRegime(s),
-    ),
-
-    level !== 'easy' && r.revenue.campaigns.length > 0 && ['cmo', 'founder', 'consultant'].includes(store.persona) && marketingPanel(r),
-
-    h('section', { class: 'panel mt' },
+    h('section', { class: 'panel story-panel' },
       h('div', { class: 'card-head' },
-        h('h2', {}, 'Compte de résultat'),
+        h('div', {},
+          h('h2', {}, 'Les cinq ans qui viennent'),
+          h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
+        ),
         h('span', { class: 'spacer' }),
-        h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Tout voir'),
+        h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
       ),
-      h('div', { class: 'table-wrap' }, summaryTable(r, level)),
+      // La frise se dessine dans un cadre adapté à la largeur disponible :
+      // rétrécir un dessin de bureau rendrait ses annotations illisibles.
+      storyline(r, s, { compact: narrow() }),
     ),
+
+    actionsPanel(r, s, navigate, refresh),
+
+    sector && gaugePanel(r, s, sector, y),
+
+    nudgesSection(s, r, navigate),
+
+    detailDisclosure(persona, r, s, y, sector, navigate, refresh),
   )
 }
 
-/* ────────────────────────────── Verdicts ─────────────────────────────── */
+/* ───────────────────────────── Diagnostic ─────────────────────────────── */
 
 /**
- * L'outil prend position. Un prévisionnel qui ne dit rien ne sert à rien :
- * chaque persona reçoit une phrase qui tranche, puis ce qui la fonde.
+ * État de santé en un mot, avec ce qui le motive.
+ * L'ordre des tests est celui de la gravité : on meurt de trésorerie avant de
+ * mourir de rentabilité.
  */
-export function verdictFor(persona, r, y) {
+export function assess(r, s) {
   const k = r.kpis, p = r.pnl
-  switch (persona.code) {
-    case 'CFO': {
-      // Un BFR négatif n'est pas un besoin : les clients financent le cycle.
-      // Le dire, plutôt que d'annoncer « un besoin de 0 € à financer ».
-      const bfrNote = k.peakBfr > 0
-        ? `Le besoin en fonds de roulement culmine à ${euro(k.peakBfr)} : ce montant reste immobilisé en permanence dans le cycle et se couvre par des ressources stables, pas par du découvert.`
-        : `Votre cycle dégage des ressources au lieu d'en consommer : encaissant avant de payer, vos clients financent l'exploitation. C'est un atout, à condition que les conditions de paiement tiennent quand vous grandirez.`
-      if (k.fundingNeed > 0) return {
-        tone: 'bad',
-        headline: `Il manque ${euro(k.fundingNeed)} en ${monthLabel(k.cashLow.month, r.startDate)}.`,
-        body: `Une exploitation rentable ne paie pas les salaires du mois où la caisse est vide. Trois leviers, du plus rapide au plus lent : l'acompte client, le délai fournisseur, le décalage des embauches. ${bfrNote}`,
-      }
-      return {
-        tone: 'good',
-        headline: `La trésorerie tient, au plus bas à ${euro(k.cashLow.value)}.`,
-        body: `Le solde ne passe jamais sous zéro sur l'horizon modélisé. ${bfrNote}`,
-      }
+  const y = referenceYear(r)
+
+  if (k.marginRate[y] <= 0 && p.revenue[y] > 0) {
+    return {
+      word: 'Ne tient pas', tone: 'bad',
+      line: 'Vous vendez à perte.',
+      body: "Le coût de revient dépasse le prix de vente : chaque unité supplémentaire creuse le résultat, et aucun point mort n'existe. Rien d'autre ne compte tant que ce n'est pas corrigé.",
+      figure: { label: 'Marge unitaire', value: euro(k.marginRate[y] * (p.revenue[y] / Math.max(1, r.revenue.units.reduce((a, b) => a + b, 0)))), tone: 'bad' },
     }
-    case 'CMO': {
-      if (!k.ltvCacRatio) return {
-        tone: 'watch',
-        headline: "Aucune acquisition payante n'est modélisée.",
-        body: "Sans campagne, la croissance repose entièrement sur la courbe saisie dans l'offre — une hypothèse que personne ne pourra challenger. Branchez un budget sur un entonnoir pour rendre l'acquisition discutable.",
-      }
-      if (k.ltvCacRatio < 1) return {
-        tone: 'bad',
-        headline: `Chaque client coûte ${euro(k.cac)} et en rapporte ${euro(k.ltv)}.`,
-        body: `Vous perdez de l'argent à chaque acquisition : augmenter le budget aggraverait mécaniquement les pertes. Avant de dépenser plus, travaillez la conversion ou le prix — les deux améliorent le rapport sans coûter un euro de média.`,
-      }
-      if (k.ltvCacRatio < 3) return {
-        tone: 'watch',
-        headline: `Un client rapporte ${num(k.ltvCacRatio, 1)} fois ce qu'il coûte.`,
-        body: `L'acquisition est rentable mais le retour est lent. Le seuil communément retenu est de 3. Gagner dix points de conversion vaut mieux que doubler le budget : c'est le même chiffre d'affaires pour moitié moins de média.`,
-      }
-      return {
-        tone: 'good',
-        headline: `Un client rapporte ${num(k.ltvCacRatio, 1)} fois ce qu'il coûte.`,
-        body: `Au-dessus du seuil de 3, l'acquisition finance sa propre croissance. La question devient : jusqu'où pouvez-vous pousser le budget avant que le coût par client ne se dégrade ?`,
-      }
+  }
+  if (p.revenue.every((v) => v === 0)) {
+    return {
+      word: 'À chiffrer', tone: 'neutral',
+      line: "Aucun revenu n'est encore modélisé.",
+      body: "Renseignez ce que vous vendez, à quel prix et à combien de clients : tout le reste en découle.",
+      figure: { label: 'Chiffre d\'affaires', value: '—', tone: 'neutral' },
     }
-    case 'CHRO': {
-      const ratio = k.payrollRatio[y]
-      if (ratio > 0.6) return {
-        tone: 'bad',
-        headline: `La masse salariale absorbe ${pct(ratio, 0)} du chiffre d'affaires.`,
-        body: `Au-delà de 60 %, la structure devient difficile à financer sans levée. Coût employeur : ${euro(p.payroll[y])} en ${yearLabel(y).toLowerCase()}, pour un point mort à ${k.breakEven[y] ? euro(k.breakEven[y]) : '—'}. Décaler une embauche de trois mois libère souvent tout le besoin de financement.`,
-      }
-      return {
-        tone: 'good',
-        headline: `L'équipe pèse ${pct(ratio, 0)} du chiffre d'affaires.`,
-        body: `Coût employeur de ${euro(p.payroll[y])} en ${yearLabel(y).toLowerCase()} pour ${num(r.payroll.headcount[Math.min(59, y * 12 + 11)])} personnes. Rappel utile en arbitrage : entre le brut affiché et le coût réel, il y a ${pct(r.payroll.gross[11] > 0 ? r.payroll.employerCharges[11] / r.payroll.gross[11] : 0, 0)} d'écart.`,
-      }
+  }
+  if (k.fundingNeed > 0 && k.firstProfitableYear === null) {
+    return {
+      word: 'Ne tient pas', tone: 'bad',
+      line: `Pas de rentabilité en cinq ans, et ${euro(k.fundingNeed)} à trouver.`,
+      body: "Le modèle consomme sans jamais basculer. Soit les volumes sont sous-estimés, soit la structure est trop lourde pour ce marché. En l'état, aucun financeur ne suivra.",
+      figure: { label: 'Il manque', value: euro(k.fundingNeed), tone: 'bad' },
     }
-    case 'CPO': {
-      const rate = k.marginRate[y]
-      if (rate <= 0) return {
-        tone: 'bad',
-        headline: 'Vous vendez à perte.',
-        body: "Le coût de revient dépasse le prix de vente : chaque unité supplémentaire creuse le résultat, et aucun point mort ne peut être calculé. Rien d'autre ne compte tant que ce n'est pas corrigé.",
-      }
-      if (rate < 0.3) return {
-        tone: 'watch',
-        headline: `Chaque euro vendu n'en laisse que ${euro(rate)}.`,
-        body: `Avec ${pct(rate)} de marge, il faut ${euro(k.breakEven[y] || 0)} de chiffre d'affaires pour couvrir la structure. Un modèle à faible marge est viable, mais il exige un volume que le plan doit démontrer.`,
-      }
-      return {
-        tone: 'good',
-        headline: `Chaque euro vendu en laisse ${euro(rate)}.`,
-        body: `Une marge de ${pct(rate)} laisse de la place pour financer la structure et l'acquisition. Le point mort s'établit à ${euro(k.breakEven[y] || 0)} : chaque vente au-delà tombe presque entière en résultat.`,
-      }
+  }
+  if (k.fundingNeed > 0) {
+    return {
+      word: 'Fragile', tone: 'watch',
+      line: `Rentable en année ${k.firstProfitableYear + 1}, à condition de tenir jusque-là.`,
+      body: `La trésorerie descend à ${euro(k.cashLow.value)} en ${monthLabel(k.cashLow.month, r.startDate)}. Réunir ce montant avant cette date est la seule question qui compte aujourd'hui.`,
+      figure: { label: 'À réunir avant ' + monthLabel(k.cashLow.month, r.startDate), value: euro(k.fundingNeed), tone: 'watch' },
     }
-    default: {
-      // Fondateur et conseil : le diagnostic d'ensemble, sans complaisance.
-      if (k.marginRate[y] <= 0) return {
-        tone: 'bad',
-        headline: 'Ce modèle ne tient pas.',
-        body: "La marge sur coûts variables est nulle ou négative : vendre davantage aggrave la perte. Aucun point mort n'existe. Reprenez le prix ou le coût de revient avant toute autre chose.",
-      }
-      if (k.fundingNeed > 0 && k.firstProfitableYear === null) return {
-        tone: 'bad',
-        headline: `Pas de rentabilité en cinq ans, et ${euro(k.fundingNeed)} à trouver.`,
-        body: `Le modèle consomme sans jamais basculer. Soit les volumes sont sous-estimés, soit la structure de coûts est trop lourde pour ce marché. En l'état, le dossier ne passera pas devant un financeur.`,
-      }
-      if (k.fundingNeed > 0) return {
-        tone: 'watch',
-        headline: `Rentable dès l'année ${k.firstProfitableYear + 1}, à condition de tenir jusque-là.`,
-        body: `Le modèle bascule, mais la trésorerie descend à ${euro(k.cashLow.value)} en ${monthLabel(k.cashLow.month, r.startDate)} : il faut ${euro(k.fundingNeed)} pour franchir ce creux. C'est la seule question qui compte avant le premier euro de chiffre d'affaires.`,
-      }
-      if (k.firstProfitableYear === null) return {
-        tone: 'watch',
-        headline: "La trésorerie tient, la rentabilité non.",
-        body: `Vous ne manquerez pas d'argent, mais aucun exercice n'est bénéficiaire sur l'horizon. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.`,
-      }
-      return {
-        tone: 'good',
-        headline: `Rentable dès l'année ${k.firstProfitableYear + 1}, sans financement complémentaire.`,
-        body: `${euro(p.revenue[y])} de chiffre d'affaires en ${yearLabel(y).toLowerCase()}, ${euro(p.ebitda[y])} d'EBITDA, point mort à ${euro(k.breakEven[y] || 0)}. Le modèle se finance seul — vérifiez maintenant que les volumes projetés sont défendables.`,
-      }
+  }
+  if (k.firstProfitableYear === null) {
+    return {
+      word: 'À consolider', tone: 'watch',
+      line: 'La trésorerie tient, la rentabilité non.',
+      body: "Vous ne manquerez pas d'argent, mais aucun exercice n'est bénéficiaire. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.",
+      figure: { label: 'EBITDA année 5', value: euro(p.ebitda[4]), tone: 'watch' },
     }
+  }
+  // Le modèle se finance seul : le chiffre décisif devient ce que touche le dirigeant.
+  let takeHome = null
+  try {
+    const income = founderIncome(s, r)
+    const row = income.rows.find((x) => x.disposable > 0) || income.rows[y]
+    if (row && row.disposable > 0) takeHome = row.monthly
+  } catch { /* sans dirigeant modélisé, on retombe sur l'EBITDA */ }
+
+  return {
+    word: 'Solide', tone: 'good',
+    line: `Rentable dès l'année ${k.firstProfitableYear + 1}, sans financement complémentaire.`,
+    body: `${euro(p.revenue[y])} de chiffre d'affaires, ${euro(p.ebitda[y])} d'EBITDA, point mort à ${euro(k.breakEven[y] || 0)}. Le modèle se finance seul — reste à démontrer que les volumes sont atteignables.`,
+    figure: takeHome !== null
+      ? { label: 'Pour vous, par mois', value: euro(takeHome), tone: 'good', link: '#/mon-revenu' }
+      : { label: `EBITDA ${yearLabel(y).toLowerCase()}`, value: euro(p.ebitda[y]), tone: 'good' },
   }
 }
 
-function verdictPanel(persona, r, y, navigate) {
-  const v = verdictFor(persona, r, y)
-  return h('section', { class: `verdict ${v.tone}` },
-    h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)', marginBottom: '8px' } }, 'Lecture'),
-    h('div', { class: 'verdict-line' }, v.headline),
-    h('p', { class: 'verdict-body' }, v.body),
-    h('div', { class: 'row-wrap', style: { marginTop: '14px' } },
-      ...suggestedActions(persona, r).map(([label, route]) =>
-        h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate(route) }, label)),
+function verdictHero(health, r, s, y, persona, sector) {
+  return h('section', { class: `hero hero-${health.tone}` },
+    h('div', { class: 'hero-main' },
+      h('div', { class: 'hero-eyebrow' },
+        [sector?.label, s.meta.company, persona.label].filter(Boolean).join(' · ')),
+      h('h1', { class: 'hero-word' }, health.word),
+      h('p', { class: 'hero-line' }, health.line),
+      h('p', { class: 'hero-body' }, health.body),
+    ),
+    h('div', { class: 'hero-figure' },
+      h('div', { class: 'hero-figure-label' }, health.figure.label),
+      h('div', { class: 'hero-figure-value num' }, health.figure.value),
+      health.figure.link && h('a', { class: 'hero-figure-link', href: health.figure.link }, 'Voir le détail'),
     ),
   )
 }
 
-function suggestedActions(persona, r) {
-  const k = r.kpis
-  const actions = []
-  if (k.fundingNeed > 0) actions.push(['Financement', '#/financement'])
-  if (k.marginRate[2] < 0.3) actions.push(["Prix et coûts", '#/offre'])
-  if (persona.code === 'CMO' || (k.ltvCacRatio && k.ltvCacRatio < 3)) actions.push(['Campagnes', '#/marketing'])
-  if (persona.code === 'CHRO' || k.payrollRatio[2] > 0.5) actions.push(['Équipe', '#/equipe'])
-  actions.push(['États financiers', '#/resultats'])
-  return actions.slice(0, 3)
+/* ──────────────────────── Actions déjà chiffrées ──────────────────────── */
+
+/**
+ * Ce qu'il faut faire, et ce que ça rapporte.
+ * Chaque proposition est obtenue en rejouant le modèle complet, pas estimée.
+ */
+function actionsPanel(r, s, navigate, refresh) {
+  let suggestion
+  try { suggestion = suggestActions(s, r) } catch { return null }
+  if (!suggestion.best.length) return null
+
+  const apply = (key, label) => {
+    store.update((sc) => applyAction(sc, key), { label })
+    refresh()
+  }
+
+  return h('section', { class: 'panel actions-panel' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, 'Ce qui changerait le plus'),
+        h('div', { class: 'tiny muted' },
+          suggestion.shortOfCash
+            ? 'Classé par ce que cela libère en trésorerie'
+            : "Classé par ce que cela ajoute à l'EBITDA"),
+      ),
+    ),
+    h('div', { class: 'actions' },
+      ...suggestion.best.map((a, i) => h('article', { class: 'action' },
+        h('span', { class: 'action-rank num' }, String(i + 1)),
+        h('div', { class: 'action-main' },
+          h('h3', { class: 'action-label' }, a.label),
+          a.detail && h('div', { class: 'action-detail num' }, a.detail),
+          h('p', { class: 'action-why' }, a.rationale),
+        ),
+        h('div', { class: 'action-gains' },
+          gainRow('EBITDA', a.delta.ebitda, true),
+          a.delta.fundingNeed !== 0 && gainRow('Financement', a.delta.fundingNeed, false),
+          a.delta.breakEven !== null && a.delta.breakEven !== 0 && gainRow('Point mort', a.delta.breakEven, false),
+          a.delta.founderMonthly !== 0 && gainRow('Pour vous', a.delta.founderMonthly, true, '/mois'),
+        ),
+        h('button', { class: 'btn btn-sm', onClick: () => apply(a.key, a.label) }, 'Appliquer'),
+      )),
+    ),
+    h('div', { class: 'panel-body', style: { paddingTop: '0' } },
+      h('p', { class: 'tiny muted', style: { margin: 0 } },
+        "Chaque estimation rejoue le modèle entier avec la modification. Appliquer reste réversible : la barre du bas mesure l'écart et l'annulation est disponible."),
+    ),
+  )
 }
 
-/* ────────────────────────────── Graphiques ───────────────────────────── */
+/** Une ligne de gain : le sens du bien dépend de l'indicateur. */
+function gainRow(label, delta, higherIsBetter, suffix = '') {
+  if (!Number.isFinite(delta) || Math.round(delta) === 0) return null
+  const good = higherIsBetter ? delta > 0 : delta < 0
+  return h('div', { class: `gain ${good ? 'gain-good' : 'gain-bad'}` },
+    h('span', { class: 'gain-label' }, label),
+    h('span', { class: 'gain-value num' }, `${delta > 0 ? '+' : ''}${euro(delta, { compact: Math.abs(delta) >= 100000 })}${suffix}`),
+  )
+}
 
-function personaCharts(persona, r, level) {
+/* ─────────────────────── Position dans le métier ──────────────────────── */
+
+function gaugePanel(r, s, sector, y) {
+  const b = sector.benchmarks || {}
+  const k = r.kpis, p = r.pnl
+  const gauges = []
+
+  if (b.grossMargin && p.revenue[y] > 0) {
+    gauges.push(gauge({ label: 'Marge brute', value: k.marginRate[y], range: b.grossMargin }))
+  }
+  if (b.payrollRatio && p.revenue[y] > 0) {
+    const denom = sector.resourcesIncludeGrants ? p.revenue[y] + p.grants[y] : p.revenue[y]
+    if (denom > 0) gauges.push(gauge({ label: 'Masse salariale', value: p.payroll[y] / denom, range: b.payrollRatio, invert: true }))
+  }
+  if (b.overheadRatio && p.revenue[y] > 0) {
+    const ownDraw = sector.ownerIsProfit
+      ? (s.team || []).filter((m) => m.contractType === 'tns').reduce((a, m) => a + (Number(m.monthlyGross) || 0) * 12, 0)
+      : 0
+    const overhead = Math.max(0, p.payroll[y] - ownDraw) + p.external[y] + p.duties[y] + p.amortisation[y]
+    gauges.push(gauge({ label: 'Charges de structure', value: overhead / p.revenue[y], range: b.overheadRatio, invert: true }))
+  }
+  if (b.churn) {
+    const a = (s.activities || []).find((x) => (Number(x.recurringPrice) || 0) > 0)
+    if (a) gauges.push(gauge({ label: 'Attrition mensuelle', value: Number(a.churnMonthly) || 0, range: b.churn, invert: true, format: (v) => pct(v, 1) }))
+  }
+  if (b.ltvCac && k.ltvCacRatio !== null) {
+    gauges.push(gauge({ label: 'LTV / CAC', value: k.ltvCacRatio, range: b.ltvCac, format: (v) => `${num(v, 1)}×` }))
+  }
+  if (b.rentRatio && p.revenue[y] > 0) {
+    const rent = (s.opex || []).filter((o) => /loyer|local|bureau|cabinet|salle/i.test(o.label))
+      .reduce((a, o) => a + (Number(o.monthlyAmount) || 0) * 12, 0)
+    if (rent > 0) gauges.push(gauge({ label: 'Loyer', value: rent / p.revenue[y], range: b.rentRatio, invert: true }))
+  }
+
+  if (!gauges.length) return null
+  return h('section', { class: 'panel' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, `Où vous situez-vous ?`),
+        h('div', { class: 'tiny muted' }, `Comparé aux ordres de grandeur observés — ${sector.label.toLowerCase()}`),
+      ),
+    ),
+    h('div', { class: 'gauges' }, ...gauges),
+  )
+}
+
+function nudgesSection(s, r, navigate) {
+  const advice = nudges(s, r)
+  const issues = store.issues.filter((i) => i.level === 'error')
+  if (!advice.length && !issues.length) return null
+  return h('div', { class: 'stack' },
+    issues.length > 0 && h('div', { class: 'note danger' },
+      h('div', { class: 'note-title' }, `${issues.length} point${issues.length > 1 ? 's' : ''} à corriger`),
+      h('div', { class: 'stack', style: { gap: '6px', marginTop: '6px' } },
+        ...issues.slice(0, 3).map((i) => h('div', { class: 'row', style: { alignItems: 'flex-start' } },
+          h('div', { class: 'spacer' },
+            h('div', { style: { fontWeight: '500' } }, i.message),
+            i.hint && h('div', { class: 'tiny muted' }, i.hint)),
+          i.page && h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate(`#/${i.page}`) }, 'Corriger'),
+        )),
+      ),
+    ),
+    advice.length > 0 && nudgePanel(advice, navigate),
+  )
+}
+
+/* ────────────────────────────── Le détail ─────────────────────────────── */
+
+/**
+ * Tout ce qui précède répond à « que dois-je faire ». Ce bloc répond à
+ * « montrez-moi les chiffres » — pour qui veut vérifier, et seulement alors.
+ */
+function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
+  const board = metricBoard(persona, r)
+  const levers = activeLevers(persona, s)
+  const open = detailDisclosure.open ?? false
+
+  const details = h('details', { class: 'detail-block', open: open || null },
+    h('summary', { class: 'detail-summary' },
+      h('span', { class: 'detail-title' }, 'Voir les chiffres'),
+      h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs, vos leviers, la structure des coûts`),
+    ),
+    h('div', { class: 'detail-body' },
+      board,
+      levers.length > 0 && h('div', { class: 'mt' },
+        leverPanel(levers, { onLive: (provisional) => board.updateWith(provisional), onDone: refresh })),
+      h('div', { class: 'grid grid-2 mt' }, ...personaCharts(persona, r)),
+      sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
+        sectorTraps(s), sectorRegime(s)),
+    ),
+  )
+  details.addEventListener('toggle', () => { detailDisclosure.open = details.open })
+  return details
+}
+
+function personaCharts(persona, r) {
   const k = r.kpis, p = r.pnl
   const trajectory = panel("Chiffre d'affaires et résultat", 'Cinq exercices',
     barChart({
@@ -222,9 +311,6 @@ function personaCharts(persona, r, level) {
       ],
       line: k.breakEven.some((v) => v) ? { label: 'Point mort', values: k.breakEven.map((v) => v || 0), color: STATUS.loss, dashed: true } : null,
     }))
-
-  const cash = panel('Trésorerie', 'Solde de fin de mois, 60 mois',
-    areaChart({ values: r.cash.balance, startDate: r.startDate, color: k.fundingNeed > 0 ? STATUS.warn : STATUS.gain }))
 
   const costs = panel('Structure des coûts', 'Par exercice',
     stackedBar({
@@ -250,20 +336,15 @@ function personaCharts(persona, r, level) {
       ],
     }))
 
+  const bfr = panel('Besoin en fonds de roulement', r.kpis.peakBfr > 0 ? 'Immobilisé dans le cycle' : 'Ressource dégagée par le cycle',
+    areaChart({ values: r.bfr.total, startDate: r.startDate, color: r.kpis.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
+
   switch (persona.code) {
-    case 'CFO': return [cash, panel(
-      'Besoin en fonds de roulement',
-      r.kpis.peakBfr > 0 ? 'Immobilisé dans le cycle' : 'Ressource dégagée par le cycle',
-      areaChart({ values: r.bfr.total, startDate: r.startDate, color: r.kpis.peakBfr > 0 ? PALETTE[1] : STATUS.gain, markZero: true }),
-      h('p', { class: 'tiny muted', style: { margin: '10px 0 0' } },
-        r.kpis.peakBfr > 0
-          ? "Au-dessus de zéro, l'argent est immobilisé : créances clients et stocks financés en attendant l'encaissement."
-          : "Sous zéro, le cycle dégage de la trésorerie : vous encaissez avant de payer vos fournisseurs."),
-    )]
+    case 'CFO': return [bfr, costs]
     case 'CMO': return [trajectory, mix]
     case 'CHRO': return [payroll, costs]
     case 'CPO': return [trajectory, mix]
-    default: return [trajectory, cash]
+    default: return [trajectory, costs]
   }
 }
 
@@ -273,8 +354,6 @@ function panel(title, subtitle, ...body) {
     h('div', { class: 'panel-body' }, ...body),
   )
 }
-
-/* ───────────────────────────── Compléments ───────────────────────────── */
 
 function demoBanner(navigate, refresh) {
   return h('div', { class: 'note', style: { marginBottom: '18px' } },
@@ -289,86 +368,8 @@ function demoBanner(navigate, refresh) {
   )
 }
 
-function issuesPanel(navigate) {
-  const issues = store.issues.filter((i) => i.level !== 'info')
-  if (!issues.length) return null
-  const errors = issues.filter((i) => i.level === 'error')
-  return h('div', { class: `note ${errors.length ? 'danger' : 'warn'} mt` },
-    h('div', { class: 'note-title' }, errors.length ? `${errors.length} point${errors.length > 1 ? 's' : ''} à corriger` : `${issues.length} point${issues.length > 1 ? 's' : ''} de vigilance`),
-    h('div', { class: 'stack', style: { gap: '7px', marginTop: '7px' } },
-      ...issues.slice(0, 4).map((i) => h('div', { class: 'row', style: { alignItems: 'flex-start', gap: '8px' } },
-        h('div', { class: 'spacer' },
-          h('div', { style: { fontWeight: '500' } }, i.message),
-          i.hint && h('div', { class: 'tiny muted' }, i.hint),
-        ),
-        i.page && h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate(`#/${i.page}`) }, 'Corriger'),
-      )),
-    ),
-  )
-}
-
-function marketingPanel(r) {
-  const k = r.kpis
-  const totalClients = r.revenue.campaigns.reduce((a, x) => a + x.totalClients, 0)
-  return h('section', { class: 'panel mt' },
-    h('div', { class: 'card-head' }, h('h2', {}, 'Acquisition client'), h('span', { class: 'spacer' }),
-      k.ltvCacRatio && h('span', { class: `chip ${k.ltvCacRatio >= 3 ? 'chip-pos' : k.ltvCacRatio >= 1 ? 'chip-warn' : 'chip-neg'}` }, `LTV/CAC ${num(k.ltvCacRatio, 1)}×`)),
-    h('div', { class: 'table-wrap' },
-      h('table', { class: 'data' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Campagne'), h('th', {}, 'Budget'), h('th', {}, 'Clients'), h('th', {}, 'CAC'), h('th', {}, 'Part'))),
-        h('tbody', {},
-          ...r.revenue.campaigns.map((c) => h('tr', {},
-            h('td', {}, c.name),
-            h('td', { class: 'num' }, euro(c.totalSpend)),
-            h('td', { class: 'num' }, num(c.totalClients)),
-            h('td', { class: 'num' }, c.cac ? euro(c.cac) : '—'),
-            h('td', { class: 'num pct' }, totalClients > 0 ? pct(c.totalClients / totalClients, 0) : '—'),
-          )),
-          h('tr', { class: 'total' },
-            h('td', {}, 'Total'),
-            h('td', { class: 'num' }, euro(r.revenue.campaigns.reduce((a, c) => a + c.totalSpend, 0))),
-            h('td', { class: 'num' }, num(totalClients)),
-            h('td', { class: 'num' }, k.cac ? euro(k.cac) : '—'),
-            h('td', {}, ''),
-          ),
-        ),
-      ),
-    ),
-  )
-}
-
-function summaryTable(r, level) {
-  const p = r.pnl
-  const rows = [
-    ["Chiffre d'affaires", p.revenue, ''],
-    ['Achats et charges variables', p.variableCost.map((v) => -v)],
-    ['Marge brute', p.grossMargin, 'highlight', 'margeBrute'],
-    ['Charges externes', p.external.map((v) => -v)],
-    ['Charges de personnel', p.payroll.map((v) => -v)],
-    ['Impôts et taxes', p.duties.map((v) => -v)],
-    ...(p.grants.some((v) => v) ? [["Subventions d'exploitation", p.grants]] : []),
-    ['EBITDA', p.ebitda, 'highlight', 'ebitda'],
-    ['Amortissements', p.amortisation.map((v) => -v)],
-    ["Résultat d'exploitation", p.ebit, '', 'ebit'],
-    ...(level !== 'easy' ? [['Charges financières', p.interest.map((v) => -v)]] : []),
-    ...(level === 'advanced' && p.credits.some((v) => v) ? [["Crédits d'impôt", p.credits, '', 'cir']] : []),
-    ['Impôt sur les sociétés', p.corporateTax.map((v) => -v), '', 'is'],
-    ['Résultat net', p.netResult, 'total'],
-  ]
-  return h('table', { class: 'data' },
-    h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
-    h('tbody', {},
-      ...rows.map(([label, values, cls, glossaryKey]) => h('tr', { class: cls || '' },
-        h('td', {}, h('span', { class: 'rowlabel' }, label, glossaryKey && helpButton(glossaryKey))),
-        ...values.map((v) => h('td', { class: `num ${v < 0 ? 'muted' : ''}` }, euro(v))),
-      )),
-    ),
-  )
-}
-
 const yearly = (arr) => Array.from({ length: 5 }, (_, y) => arr.slice(y * 12, y * 12 + 12).reduce((a, b) => a + b, 0))
 
-/** Année de référence, réexportée pour les autres pages. */
 export const pickYear = (pnl) => {
   const i = pnl.netResult.findIndex((v) => v > 0)
   return i >= 0 ? i : 2
