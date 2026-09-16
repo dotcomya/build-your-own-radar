@@ -11,8 +11,8 @@ bilans, plan de financement — deviennent un moteur de calcul et une interface
 utilisable sans connaissance comptable.
 
 Fizzy s'adresse à un fondateur qui doit produire un business plan défendable
-sans avoir fait d'école de commerce. La saisie reste élémentaire ; la sortie
-doit tenir devant une banque, un business angel ou un fonds.
+sans avoir fait d'école de commerce. L'entrée tient en onze questions ; la
+sortie doit tenir devant une banque, un business angel ou un fonds.
 
 ## Ce que ça fait
 
@@ -21,6 +21,15 @@ tout le reste, et tout est lié : changer un budget publicitaire modifie le
 nombre de clients, donc le chiffre d'affaires, donc la TVA, le besoin en fonds
 de roulement, l'impôt et la trésorerie — immédiatement.
 
+- **Onze questions, une par écran.** Un prévisionnel demande une soixantaine de
+  chiffres ; les demander tous sur le même écran est ce qui fait abandonner. On
+  en demande onze, dans l'ordre où elles se répondent, et Fizzy déduit le reste.
+  Une question par écran, le vocabulaire du fondateur et non celui du comptable
+  — « vous démarrez avec combien ? » plutôt que « plan de financement initial »
+  —, et à droite l'écho de ce que la réponse vient de produire : combien
+  rapporte un client, combien il en faut pour être à l'équilibre. C'est ce qui
+  distingue ce parcours d'un formulaire : on voit le modèle se construire.
+  L'application s'ouvre vide ; l'exemple existe, mais il se demande.
 - **Un parcours, pas un formulaire.** Neuf étapes en trois actes — ce que tu
   vends, ce que ça coûte, l'argent — posées sur un rail de ronds reliés par des
   flèches. Chaque rond mène à la page où l'on saisit ses chiffres, et son état
@@ -201,6 +210,7 @@ fizzy/
       charts.js           graphiques SVG, palette catégorielle validée
       glossary.js         définitions, formules, usage
       pages/              une fonction de rendu par page
+        setup.js          les onze questions, hors de la charpente de l'app
     export/               écriture ZIP et génération PowerPoint (OOXML)
     format.js             nombres, euros, mois, exercice de référence
 ```

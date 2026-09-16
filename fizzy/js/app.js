@@ -26,6 +26,7 @@ import { renderSettings } from './ui/pages/settings.js'
 import { renderFounder } from './ui/pages/founder.js'
 import { renderJourney } from './ui/pages/journey.js'
 import { renderModel } from './ui/pages/model.js'
+import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { journey, points } from './engine/journey.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
 import { renderAccount } from './ui/pages/account.js'
@@ -75,8 +76,15 @@ function render({ preserveScroll = false } = {}) {
 
   // On n'impose l'accueil que s'il n'y a rien à montrer : avec un scénario
   // d'exemple chargé, l'outil s'ouvre directement en fonctionnement.
-  const needsOnboarding = !store.scenario || key === 'demarrer' || (key === '' && !store.scenario)
-  if (needsOnboarding || (!store.hasProfile() && !store.scenario)) {
+  // Le parcours guidé vit hors de la charpente : pas de rail, pas d'onglets,
+  // rien d'autre que la question en cours. C'est ce qui le rend lisible.
+  if (key === 'creer') {
+    clear(root).appendChild(renderSetup(navigate, render))
+    document.title = 'Fizzy — Votre business plan'
+    return
+  }
+
+  if (!store.scenario || key === 'demarrer' || key === '') {
     clear(root).appendChild(renderOnboarding(navigate))
     document.title = 'Fizzy — Business plan'
     window.scrollTo(0, 0)
@@ -146,8 +154,8 @@ function rail(active) {
     ),
 
     h('div', { class: 'rail-foot' },
-      h('button', { class: 'rail-link', onClick: () => { navigate('#/demarrer') } },
-        h('span', { class: 'ico' }, '＋'), h('span', {}, 'Nouveau projet')),
+      h('button', { class: 'rail-link', onClick: () => { resetSetup(); navigate('#/creer') } },
+        h('span', { class: 'ico' }, '＋'), h('span', {}, 'Nouveau plan')),
       h('button', {
         class: 'rail-account', onClick: () => { navigate('#/compte'); document.getElementById('rail')?.classList.remove('open') },
       },

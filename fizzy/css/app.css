@@ -1491,3 +1491,207 @@ i.swatch.split-margin { background: var(--gain); }
 @media (max-width: 860px) {
   .audience { border-right: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   L'ACCUEIL ET LE PARCOURS GUIDÉ
+
+   Deux écrans qui n'appartiennent pas à l'application : ils la précèdent. Pas
+   de rail, pas d'onglets, pas d'indicateurs. Une question, un champ, un bouton.
+   Tout ce qui n'aide pas à répondre à la question en cours est retiré.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.landing {
+  min-height: 100dvh; display: grid; grid-template-rows: 1fr auto;
+  place-items: center; padding: 40px 20px 24px; background: var(--paper);
+}
+.landing-inner { width: 100%; max-width: 480px; text-align: center; }
+.landing-mark {
+  width: 46px; height: 46px; margin: 0 auto 26px;
+  display: grid; place-items: center; background: var(--ink); color: #fff;
+  font-family: var(--display); font-weight: 800; font-size: 23px;
+}
+.landing-title {
+  font-size: clamp(32px, 6vw, 46px); letter-spacing: -.04em; line-height: 1.02;
+  margin-bottom: 14px;
+}
+.landing-line {
+  font-size: 15.5px; color: var(--ink-3); line-height: 1.55;
+  max-width: 40ch; margin: 0 auto 30px;
+}
+.landing-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.landing-actions .btn-lg { min-width: 220px; }
+/* L'exemple : présent, mais visiblement secondaire. */
+.landing-example {
+  border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; color: var(--ink-4); text-decoration: underline;
+  text-underline-offset: 3px; padding: 2px 4px;
+}
+.landing-example:hover { color: var(--ink); }
+
+.landing-resume {
+  margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--rule); text-align: left;
+}
+.landing-resume-tag {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px;
+}
+.landing-resume-item {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  width: 100%; border: 0; border-bottom: 1px solid var(--rule); background: none;
+  cursor: pointer; font: inherit; text-align: left; padding: 9px 2px; color: var(--ink-2);
+}
+.landing-resume-item:last-child { border-bottom: 0; }
+.landing-resume-item:hover { color: var(--signal-ink); }
+.landing-resume-when { font-family: var(--mono); font-size: 10.5px; color: var(--ink-5); flex: none; }
+.landing-foot {
+  margin: 0; font-size: 11.5px; color: var(--ink-5); text-align: center; max-width: 46ch;
+}
+
+/* ───────────────────────────── Le parcours guidé ─────────────────────────── */
+
+.setup { min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
+
+.setup-bar { height: 2px; background: var(--rule); flex: none; }
+.setup-bar-fill { height: 100%; background: var(--signal); transition: width .4s var(--ease); }
+
+.setup-top {
+  display: flex; align-items: center; gap: 14px; flex: none;
+  padding: 14px 20px; max-width: 1100px; width: 100%; margin: 0 auto;
+}
+.setup-back, .setup-skip {
+  border: 0; background: none; cursor: pointer; font: inherit; color: var(--ink-4);
+  padding: 4px 6px; font-size: 13px;
+}
+.setup-back { font-size: 17px; line-height: 1; }
+.setup-back:disabled { opacity: .22; cursor: default; }
+.setup-back:not(:disabled):hover, .setup-skip:hover { color: var(--ink); }
+.setup-skip { margin-left: auto; }
+.setup-count {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-4);
+}
+
+.setup-stage {
+  flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 238px;
+  gap: 40px; align-items: start; align-content: start;
+  max-width: 1100px; width: 100%; margin: 0 auto; padding: 6vh 20px 60px;
+}
+.setup-card { max-width: 620px; }
+
+.setup-q {
+  font-size: clamp(27px, 4.6vw, 42px); letter-spacing: -.04em; line-height: 1.04;
+  margin-bottom: 12px;
+}
+.setup-help {
+  font-size: 14px; color: var(--ink-3); line-height: 1.55; max-width: 52ch; margin-bottom: 26px;
+}
+.setup-body { margin-bottom: 26px; }
+.setup-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 52ch; }
+
+.setup-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.setup-hint { font-size: 12px; color: var(--ink-5); }
+
+/* Le champ : grand, seul, déjà au focus. */
+.setup-field { display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid var(--ink); }
+.setup-input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: none; padding: 6px 0 10px;
+  font-family: var(--display); font-size: clamp(28px, 5vw, 40px); font-weight: 700;
+  letter-spacing: -.035em; color: var(--ink);
+}
+.setup-input::placeholder { color: var(--ink-5); font-weight: 600; }
+.setup-suffix {
+  flex: none; font-family: var(--mono); font-size: 13px; color: var(--ink-4); white-space: nowrap;
+}
+
+/* Les choix : deux ou trois cartes, jamais une liste déroulante. */
+.setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.setup-choice {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  padding: 14px 15px; border: 1px solid var(--rule); background: var(--surface);
+  cursor: pointer; font: inherit; text-align: left; transition: border-color .12s, background .12s;
+}
+.setup-choice:hover { border-color: var(--ink-5); }
+.setup-choice-label { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); }
+.setup-choice-note { font-size: 11.5px; color: var(--ink-4); line-height: 1.4; }
+.setup-choice.active { border-color: var(--ink); background: var(--ink); }
+.setup-choice.active .setup-choice-label { color: #fff; }
+.setup-choice.active .setup-choice-note { color: #A8B1B8; }
+
+/* Le choix du métier : quinze pastilles, lisibles d'un coup d'œil. */
+.setup-sectors { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 8px; }
+.setup-sector {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 12px; border: 1px solid var(--rule); background: var(--surface);
+  cursor: pointer; font: inherit; text-align: left; transition: border-color .12s, background .12s;
+}
+.setup-sector:hover { border-color: var(--ink-5); }
+.setup-sector-glyph { font-size: 15px; color: var(--ink-5); line-height: 1; flex: none; }
+.setup-sector-name {
+  font-size: 12.8px; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.setup-sector.active { border-color: var(--ink); background: var(--ink); }
+.setup-sector.active .setup-sector-name { color: #fff; }
+.setup-sector.active .setup-sector-glyph { color: var(--signal); }
+
+/* Les frais : une case, un libellé, un montant modifiable. */
+.setup-costs { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+.setup-cost {
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--rule); padding: 3px 0;
+}
+.setup-cost-toggle {
+  display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left; padding: 9px 2px;
+}
+.setup-cost-box {
+  width: 19px; height: 19px; flex: none; display: grid; place-items: center;
+  border: 1.5px solid var(--rule); color: #fff; font-size: 11px;
+}
+.setup-cost.on .setup-cost-box { background: var(--ink); border-color: var(--ink); }
+.setup-cost-label { font-size: 14px; color: var(--ink-3); }
+.setup-cost.on .setup-cost-label { color: var(--ink); font-weight: 500; }
+.setup-cost-amount {
+  width: 92px; flex: none; border: 1px solid var(--rule); background: var(--surface);
+  padding: 6px 8px; text-align: right; font-size: 13px; outline: 0;
+}
+.setup-cost-amount:focus { border-color: var(--signal); }
+.setup-cost-hint { flex: none; font-size: 11.5px; color: var(--ink-5); padding-right: 9px; }
+
+/* L'écho : ce que la réponse vient de produire. */
+.setup-echo {
+  position: sticky; top: 24px;
+  border-left: 2px solid var(--rule); padding-left: 16px;
+}
+.setup-echo-tag {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-5); margin-bottom: 10px;
+}
+.setup-echo-row {
+  display: flex; flex-direction: column; gap: 1px; padding: 7px 0;
+  font-size: 12px; color: var(--ink-4); border-bottom: 1px solid var(--rule);
+}
+.setup-echo-row:last-child { border-bottom: 0; }
+.setup-echo-row .num { font-size: 15px; color: var(--ink); font-weight: 600; letter-spacing: -.02em; }
+.setup-echo-row.strong .num { color: var(--signal-ink); font-size: 19px; }
+.setup-echo-row.bad .num { color: var(--loss); }
+
+/* L'écran final. */
+.setup-card.is-last { max-width: 560px; }
+.setup-results { border-top: 1px solid var(--rule); margin-bottom: 20px; }
+.setup-result {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 13px 0; border-bottom: 1px solid var(--rule);
+}
+.setup-result-label { font-size: 13.5px; color: var(--ink-3); }
+.setup-result-value { font-size: 20px; font-weight: 600; letter-spacing: -.03em; color: var(--ink); }
+.setup-result.ok .setup-result-value { color: var(--gain); }
+.setup-result.warn .setup-result-value { color: var(--warn); }
+
+@media (max-width: 900px) {
+  .setup-stage { grid-template-columns: 1fr; gap: 26px; padding-top: 2vh; }
+  .setup-echo {
+    position: static; border-left: 0; border-top: 1px solid var(--rule);
+    padding: 16px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px;
+  }
+  .setup-echo-tag { grid-column: 1 / -1; }
+}

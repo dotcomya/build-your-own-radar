@@ -1,117 +1,54 @@
-/** Accueil : création du profil puis choix d'un point de départ. */
+/** L'accueil : commencer, ou reprendre. */
 
-import { h, textField, selectField, toast } from '../dom.js'
-import { LEVEL_META } from '../../state/schema.js'
-import { sectorsByFamily, SECTORS } from '../../state/sectors.js'
+import { h, toast } from '../dom.js'
+import { resetSetup } from './setup.js'
 import store from '../../state/store.js'
 
+/**
+ * L'accueil.
+ *
+ * Une phrase, un bouton. L'exemple existe — il rassure — mais il est à côté et
+ * en petit : ce que le fondateur doit faire, c'est commencer le sien.
+ */
 export function renderOnboarding(navigate) {
-  return store.hasProfile() ? chooseStart(navigate) : createProfile(navigate)
-}
+  const existing = store.list().filter((p) => !store.scenarios[p.id]?.meta?.isDemo)
 
-function createProfile(navigate) {
-  const draft = { name: '', company: '', role: '' }
-  const submit = () => {
-    if (!draft.name.trim()) { toast('Indiquez au moins votre prénom.', 'err'); return }
-    store.saveProfile(draft)
-    navigate('#/demarrer')
-  }
-  return h('div', { class: 'content', style: { maxWidth: '560px', paddingTop: '8vh' } },
-    h('div', { class: 'center mb' },
-      h('div', { class: 'rail-logo', style: { width: '52px', height: '52px', fontSize: '26px', margin: '0 auto 16px', borderRadius: '15px' } }, 'F'),
-      h('h1', {}, 'Bienvenue sur Fizzy'),
-      h('p', { class: 'muted', style: { marginTop: '8px' } },
-        "Construisez un business plan qui tient debout : des chiffres liés entre eux, la fiscalité française appliquée automatiquement, et de quoi convaincre un banquier."),
-    ),
-    h('div', { class: 'card' },
-      h('div', { class: 'card-body stack' },
-        textField({ label: 'Votre prénom', value: draft.name, placeholder: 'Camille', onInput: (v) => { draft.name = v } }),
-        textField({ label: 'Nom du projet ou de la société', value: draft.company, placeholder: 'Optionnel', onInput: (v) => { draft.company = v } }),
-        selectField({
-          label: 'Votre profil', value: draft.role,
-          options: [
-            { value: '', label: '— Sélectionnez —' },
-            { value: 'student', label: "Étudiant, je découvre" },
-            { value: 'founder', label: "Entrepreneur, je lance mon projet" },
-            { value: 'manager', label: "Dirigeant, je pilote mon entreprise" },
-            { value: 'consultant', label: "Consultant ou expert-comptable" },
-          ],
-          hint: "Fizzy adapte le niveau de détail proposé par défaut.",
-          onInput: (v) => { draft.role = v },
-        }),
-        h('button', { class: 'btn btn-primary btn-lg btn-block', onClick: submit }, 'Commencer'),
-        h('p', { class: 'tiny muted center', style: { margin: 0 } },
-          "Vos données restent sur votre appareil. Aucun compte, aucun serveur, aucun envoi."),
-      ),
-    ),
-  )
-}
+  return h('div', { class: 'landing' },
+    h('div', { class: 'landing-inner' },
+      h('div', { class: 'landing-mark' }, 'F'),
+      h('h1', { class: 'landing-title' }, 'Faites votre business plan'),
+      h('p', { class: 'landing-line' },
+        'Onze questions. Fizzy s’occupe des cotisations, de la TVA, des impôts et de la trésorerie.'),
 
-function chooseStart(navigate) {
-  const existing = store.list()
-  const start = (template) => {
-    const level = store.profile?.role === 'consultant' ? 'advanced' : store.profile?.role === 'student' ? 'easy' : 'intermediate'
-    const s = store.create({ template, level, name: template ? SECTORS[template].label : (store.profile?.company || 'Mon business plan') })
-    toast(`« ${s.meta.name} » créé.`, 'ok')
-    navigate('#/parcours')
-  }
-
-  return h('div', { class: 'content', style: { maxWidth: '1080px', paddingTop: '4vh' } },
-    h('div', { class: 'page-head' },
-      h('h1', {}, `Bonjour ${store.profile?.name || ''}`.trim()),
-      h('p', {}, "Choisissez votre métier : Fizzy en tire le vocabulaire, le régime de TVA, les repères de marge et les pièges à éviter. Tout reste modifiable ensuite."),
-    ),
-
-    existing.length > 0 && h('div', { class: 'card mb' },
-      h('div', { class: 'card-head' }, h('h2', {}, 'Reprendre'), h('span', { class: 'spacer' })),
-      h('div', { class: 'card-body', style: { paddingTop: '6px' } },
-        ...existing.slice(0, 4).map((s) => h('div', { class: 'item' },
-          h('div', {
-            class: 'item-head',
-            onClick: () => { store.load(s.id); navigate('#/parcours') },
+      h('div', { class: 'landing-actions' },
+        h('button', {
+          class: 'btn btn-primary btn-lg',
+          onClick: () => { resetSetup(); navigate('#/creer') },
+        }, 'Commencer'),
+        h('button', {
+          class: 'landing-example',
+          onClick: () => {
+            const demo = store.seedDemo()
+            toast('Exemple chargé — modifiez-le librement.')
+            navigate('#/parcours')
           },
-            h('div', { class: 'spacer' },
-              h('div', { class: 'item-title' }, s.name),
-              h('div', { class: 'item-meta' }, `${LEVEL_META[s.level]?.label || s.level} · modifié ${relative(s.updatedAt)}`),
-            ),
-            h('span', { class: 'disclose' }, '›'),
-          ),
-        )),
+        }, 'ou voir un exemple'),
       ),
-    ),
 
-    h('h2', { class: 'mb' }, 'Votre activité'),
-    h('p', { class: 'muted', style: { marginTop: '-8px', marginBottom: '18px', maxWidth: '68ch' } },
-      "Chaque métier a sa TVA, son régime social, ses repères de marge et ses pièges. Choisissez le vôtre : Fizzy adapte le vocabulaire, les hypothèses et les alertes."),
-
-    ...sectorsByFamily().map((family) => h('div', { class: 'family' },
-      h('div', { class: 'family-head' }, h('span', { class: 'eyebrow' }, family.label)),
-      h('div', { class: 'sector-grid' },
-        ...family.sectors.map((sector) => h('button', {
-          class: 'sector-card',
-          onClick: () => start(sector.key),
+      existing.length ? h('div', { class: 'landing-resume' },
+        h('span', { class: 'landing-resume-tag' }, 'Reprendre'),
+        ...existing.slice(0, 3).map((p) => h('button', {
+          class: 'landing-resume-item',
+          onClick: () => { store.load(p.id); navigate('#/parcours') },
         },
-          h('span', { class: 'sector-glyph' }, sector.glyph),
-          h('span', { class: 'sector-name' }, sector.label),
-          h('span', { class: 'sector-tag' }, sector.tagline),
-          h('span', { class: 'sector-meta' },
-            h('span', { class: 'chip chip-quiet' }, sector.vat.exempt ? 'TVA exonérée' : sector.vat.label),
-            h('span', { class: 'chip chip-quiet' }, sector.legal.forms[0]),
-          ),
+          h('span', {}, p.name),
+          h('span', { class: 'landing-resume-when' }, relative(p.updatedAt)),
         )),
-      ),
-    )),
-
-    h('div', { class: 'family' },
-      h('div', { class: 'family-head' }, h('span', { class: 'eyebrow' }, 'Autre')),
-      h('div', { class: 'sector-grid' },
-        h('button', { class: 'sector-card sector-blank', onClick: () => start(null) },
-          h('span', { class: 'sector-glyph' }, '+'),
-          h('span', { class: 'sector-name' }, 'Page blanche'),
-          h('span', { class: 'sector-tag' }, "Tout construire depuis zéro, sans hypothèse de métier."),
-        ),
-      ),
+      ) : null,
     ),
+
+    h('p', { class: 'landing-foot' },
+      'Fiscalité française. Vos chiffres restent les vôtres — export libre à tout moment.'),
   )
 }
 

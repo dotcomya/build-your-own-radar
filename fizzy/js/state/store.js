@@ -50,16 +50,19 @@ class Store {
     this.baseline = null
     this.baselineLabel = null
 
+    // Rien n'est chargé d'office : un premier lancement s'ouvre sur une page
+    // blanche et une seule question. L'exemple existe, mais il se demande.
     const ids = Object.keys(this.scenarios)
     if (this.currentId && this.scenarios[this.currentId]) this.load(this.currentId, { silent: true })
     else if (ids.length) this.load(ids[0], { silent: true })
-    else this.seedDemo()
   }
 
   /**
-   * Premier lancement : plutôt qu'un formulaire vide, on charge un scénario
-   * d'exemple complet. L'outil se montre en fonctionnement dès l'ouverture, et
-   * l'exemple est explicitement signalé comme tel dans l'interface.
+   * L'exemple, à la demande.
+   *
+   * Il n'est plus chargé au démarrage : arriver sur le modèle de quelqu'un
+   * d'autre ne dit pas quoi faire. Mais pouvoir en ouvrir un d'un clic lève le
+   * doute sur ce que l'outil produit, alors il reste — à côté, et en petit.
    */
   seedDemo() {
     const scenario = scenarioFromTemplate('logiciel', 'Exemple — Logiciel en abonnement')
@@ -99,6 +102,7 @@ class Store {
 
   // ───────────────────────────── Profil ────────────────────────────────
   hasProfile() { return !!(this.profile && this.profile.name) }
+
   saveProfile(profile) {
     pushProfile(profile)
     this.profile = { ...(this.profile || {}), ...profile, updatedAt: Date.now() }
