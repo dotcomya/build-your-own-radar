@@ -29,6 +29,7 @@ import { renderModel } from './ui/pages/model.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { journey, points } from './engine/journey.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
+import { guideBar } from './ui/guide.js'
 import { renderAccount } from './ui/pages/account.js'
 
 const PAGES = {
@@ -97,7 +98,7 @@ function render({ preserveScroll = false } = {}) {
 
   const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render))
   clear(root).appendChild(h('div', { class: 'shell' },
-    rail(key), main, tabbar(key), impactRail(render)))
+    rail(key), main, guideBar(key, navigate), tabbar(key), impactRail(render)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)

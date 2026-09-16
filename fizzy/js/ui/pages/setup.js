@@ -29,23 +29,31 @@ import store from '../../state/store.js'
 /** Le poste du fondateur dans l'équipe, quel que soit le mot employé. */
 const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
 
-/** Où en est le parcours. Conservé entre deux rendus de la page. */
-const flow = { index: 0, started: false }
+/**
+ * Où en est le parcours.
+ *
+ * `touched` retient les questions auxquelles l'utilisateur a effectivement
+ * répondu. Ça sert à une chose précise : une valeur encore suggérée par le
+ * métier est présélectionnée, pour que la première touche la remplace ; une
+ * valeur qu'il a saisie ne l'est plus, pour qu'il puisse la corriger sans la
+ * perdre.
+ */
+const flow = { index: 0, touched: new Set() }
 
-export function resetSetup() { flow.index = 0; flow.started = false }
+export function resetSetup() { flow.index = 0; flow.touched = new Set() }
 
 /* ──────────────────────────────── Les écrans ────────────────────────────── */
 
 const STEPS = [
   {
-    key: 'metier',
+    key: 'metier', short: 'Votre métier',
     question: 'Vous faites quoi ?',
     help: "Le métier commande la TVA, votre statut et les repères de marge. C'est le seul choix qui change tout le reste.",
     render: sectorPicker,
     ready: (s) => !!s?.meta?.sectorKey,
   },
   {
-    key: 'nom',
+    key: 'nom', short: 'Le nom',
     question: 'Ça s’appelle comment ?',
     help: 'Le nom de votre projet. Vous pourrez le changer quand vous voudrez.',
     render: (ctx) => field(ctx, {
@@ -56,7 +64,7 @@ const STEPS = [
     ready: () => true,
   },
   {
-    key: 'offre',
+    key: 'offre', short: 'Ce que vous vendez',
     question: 'Vous vendez quoi ?',
     help: (s) => `Une ${vocabulary(s).one}, un forfait, un abonnement — dites-le comme vous le diriez à un client.`,
     render: (ctx) => field(ctx, {
@@ -67,56 +75,56 @@ const STEPS = [
     ready: () => true,
   },
   {
-    key: 'prix',
+    key: 'prix', short: 'Le prix',
     question: 'Vous le vendez combien ?',
     help: 'Hors taxes, le prix que le client voit sur la facture.',
     render: priceScreen,
     ready: (s) => (Number(s?.activities?.[0]?.unitPrice) || 0) > 0 || (Number(s?.activities?.[0]?.recurringPrice) || 0) > 0,
   },
   {
-    key: 'cout',
+    key: 'cout', optional: true, short: 'Le coût de revient',
     question: 'Ça vous coûte combien à produire ?',
     help: "Tout ce qui augmente quand vous en vendez un de plus : matières, sous-traitance, commission, livraison. Zéro est une réponse valable.",
     render: costScreen,
     ready: () => true,
   },
   {
-    key: 'clients',
+    key: 'clients', short: 'Les premiers clients',
     question: 'Combien de clients le premier mois ?',
     help: "Pas une ambition : ce que vous pouvez livrer et facturer dès le début. C'est le chiffre le plus discuté d'un business plan.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
   {
-    key: 'croissance',
+    key: 'croissance', optional: true, short: 'La croissance',
     question: 'Ça grandit à quelle vitesse ?',
     help: 'Fizzy freine automatiquement la courbe dans la durée — aucune croissance ne tient cinq ans au même rythme.',
     render: growthScreen,
     ready: () => true,
   },
   {
-    key: 'salaire',
+    key: 'salaire', optional: true, short: 'Votre rémunération',
     question: 'Vous vous payez combien par mois ?',
     help: "Brut. Fizzy calcule les cotisations. Un plan où le fondateur ne se paie pas n'est pas prudent — il est faux.",
     render: salaryScreen,
     ready: () => true,
   },
   {
-    key: 'frais',
+    key: 'frais', optional: true, short: 'Les frais fixes',
     question: 'Vos frais tous les mois',
     help: 'Cochez ce qui vous concerne. Les montants sont des ordres de grandeur pour votre métier — corrigez-les.',
     render: costsScreen,
     ready: () => true,
   },
   {
-    key: 'depart',
+    key: 'depart', optional: true, short: 'La mise de départ',
     question: 'Vous démarrez avec combien ?',
     help: "L'argent déjà disponible : votre apport, celui de vos associés. On verra plus tard s'il en manque.",
     render: cashScreen,
     ready: () => true,
   },
   {
-    key: 'fin',
+    key: 'fin', short: 'Le résultat',
     question: 'Votre business plan est prêt',
     render: doneScreen,
     ready: () => true,
@@ -130,51 +138,91 @@ export function renderSetup(navigate, refresh) {
   const s = store.scenario
   const step = STEPS[Math.min(flow.index, STEPS.length - 1)]
 
-  // Le premier écran crée le plan ; avant lui il n'y a rien à modifier.
   const ctx = { navigate, refresh, scenario: s, step }
 
   const go = (delta) => {
     const next = flow.index + delta
-    if (next < 0) return
-    if (next >= STEPS.length) { navigate('#/parcours'); return }
+    if (next < 0 || next >= STEPS.length) { if (next >= STEPS.length) navigate('#/parcours'); return }
     flow.index = next
     refresh()
   }
+  const jump = (i) => { flow.index = i; refresh() }
   ctx.go = go
 
-  const canNext = step.ready(s)
+  // Les nœuds que la frappe met à jour. Tout le reste — la question, le champ,
+  // la liste des étapes — reste en place : un champ qui se recrée à chaque
+  // touche perd le curseur, et la frappe suivante écrase la précédente.
+  const echoHost = h('div', { class: 'setup-echo-host' })
+  const nextBtn = h('button', {
+    class: 'btn btn-primary btn-lg',
+    onClick: () => go(1),
+  }, flow.index === STEPS.length - 2 ? 'Voir le résultat' : 'Continuer')
+
+  ctx.tick = () => {
+    const live = store.scenario
+    ctx.scenario = live
+    echoHost.replaceChildren(...[liveEcho(live, step)].filter(Boolean))
+    const ok = step.ready(live)
+    nextBtn.disabled = !ok
+    nextBtn.classList.toggle('is-waiting', !ok)
+  }
+
+  const body = h('div', { class: 'setup-body' }, step.render(ctx))
+  const ready = step.ready(s)
+  nextBtn.disabled = !ready
+  if (!ready) nextBtn.classList.add('is-waiting')
+  echoHost.replaceChildren(...[liveEcho(s, step)].filter(Boolean))
 
   return h('div', { class: 'setup' },
     h('div', { class: 'setup-bar' },
       h('div', { class: 'setup-bar-fill', style: { width: `${(flow.index / (STEPS.length - 1)) * 100}%` } }),
     ),
 
-    h('div', { class: 'setup-top' },
-      h('button', {
-        class: 'setup-back', disabled: flow.index === 0,
-        onClick: () => go(-1),
-      }, '←'),
-      h('span', { class: 'setup-count' }, `${flow.index + 1} / ${STEPS.length}`),
-      h('button', {
-        class: 'setup-skip',
-        onClick: () => navigate(s ? '#/parcours' : '#/'),
-      }, s ? 'Tout voir' : 'Annuler'),
-    ),
+    h('div', { class: 'setup-shell' },
+      stepList(s, jump, navigate),
 
-    h('div', { class: 'setup-stage' },
-      h('div', { class: `setup-card ${step.last ? 'is-last' : ''}` },
-        h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question),
-        step.help ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
-        h('div', { class: 'setup-body' }, step.render(ctx)),
-        !step.last ? h('div', { class: 'setup-actions' },
-          h('button', {
-            class: 'btn btn-primary btn-lg', disabled: !canNext, onClick: () => go(1),
-          }, flow.index === STEPS.length - 2 ? 'Voir le résultat →' : 'Continuer →'),
-          !canNext ? h('span', { class: 'setup-hint' }, 'Renseignez ce champ pour continuer') : null,
-        ) : null,
+      h('div', { class: 'setup-main' },
+        h('div', { class: `setup-card ${step.last ? 'is-last' : ''}` },
+          h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question),
+          step.help ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
+          body,
+          !step.last ? h('div', { class: 'setup-actions' },
+            flow.index > 0 ? h('button', { class: 'btn btn-lg btn-ghost', onClick: () => go(-1) }, 'Retour') : null,
+            nextBtn,
+            step.optional ? h('button', { class: 'setup-later', onClick: () => go(1) }, 'Plus tard') : null,
+          ) : null,
+        ),
+        echoHost,
       ),
-      liveEcho(s, step),
     ),
+  )
+}
+
+/**
+ * La liste des questions, à gauche.
+ *
+ * Elle enlève au parcours ce qu'il avait de rigide : on voit tout ce qui sera
+ * demandé, on saute où l'on veut, on revient. Un fondateur qui ne connaît pas
+ * encore son prix doit pouvoir passer à la suite et y revenir, pas se cogner à
+ * un bouton grisé.
+ */
+function stepList(s, jump, navigate) {
+  return h('nav', { class: 'setup-steps', 'aria-label': 'Les questions' },
+    h('div', { class: 'setup-steps-head' },
+      h('span', { class: 'setup-steps-title' }, 'Votre business plan'),
+      h('span', { class: 'setup-steps-sub' }, `${STEPS.length} questions · tout reste modifiable`),
+    ),
+    ...STEPS.map((st, i) => {
+      const done = i < flow.index && st.ready(s)
+      return h('button', {
+        class: `setup-step ${i === flow.index ? 'current' : ''} ${done ? 'done' : ''}`,
+        onClick: () => jump(i),
+      },
+        h('span', { class: 'setup-step-dot' }, done ? '\u2713' : String(i + 1)),
+        h('span', { class: 'setup-step-label' }, st.short || st.question),
+      )
+    }),
+    s ? h('button', { class: 'setup-steps-exit', onClick: () => navigate('#/parcours') }, 'Ouvrir le logiciel complet') : null,
   )
 }
 
@@ -202,6 +250,10 @@ function liveEcho(s, step) {
 
   const lines = []
   if (perClient > 0) lines.push({ k: `Un ${voc.client} rapporte`, v: euro(perClient) })
+  const me = (s.team || []).find((m) => ME.test(m.role || ''))
+  if (step.key === 'salaire' && me && Number(me.monthlyGross) > 0) {
+    lines.push({ k: 'Vous coûtez à l\u2019entreprise', v: `${euro(Math.round(Number(me.monthlyGross) * 1.42))}/mois` })
+  }
   if (r.pnl.revenue[0] > 0) lines.push({ k: "Chiffre d'affaires année 1", v: euro(r.pnl.revenue[0], { compact: true }) })
   if (fixed > 0) lines.push({ k: 'Charges fixes année 1', v: euro(fixed, { compact: true }) })
   if (need) lines.push({ k: 'Clients pour être à l’équilibre', v: `${num(need)}`, strong: true })
@@ -221,36 +273,77 @@ function liveEcho(s, step) {
 
 /* ────────────────────────────── Les contrôles ───────────────────────────── */
 
-/** Champ unique, grand, qui prend le focus et valide à la touche Entrée. */
+/**
+ * Le champ.
+ *
+ * Il n'est créé qu'une fois par question et ne se redessine jamais pendant la
+ * frappe : on écrit dans le scénario, puis on met à jour l'écho et le bouton,
+ * rien d'autre. Un champ recréé à chaque touche perd le curseur — et s'il est
+ * resélectionné au passage, chaque lettre efface la précédente.
+ */
 function field(ctx, { type, placeholder, value, apply, suffix }) {
-  const s = ctx.scenario
+  const initial = value(ctx.scenario)
   const input = h('input', {
-    class: 'setup-input', type: type === 'text' ? 'text' : 'text',
+    class: 'setup-input',
+    type: 'text',
     inputmode: type === 'number' ? 'decimal' : null,
-    value: String(value(s) ?? ''),
-    placeholder: typeof placeholder === 'function' ? placeholder(s) : placeholder,
+    autocomplete: 'off', spellcheck: 'false',
+    value: initial === '' || initial === null || initial === undefined ? '' : String(initial),
+    placeholder: typeof placeholder === 'function' ? placeholder(ctx.scenario) : placeholder,
     onInput: (e) => {
-      const raw = type === 'number' ? e.target.value.replace(',', '.') : e.target.value
-      store.update((sc) => apply(sc, type === 'number' ? Number(raw) || 0 : raw), { label: ctx.step.question, silent: true })
-      ctx.refresh()
+      const raw = e.target.value
+      const v = type === 'number' ? (parseFloat(raw.replace(/\s/g, '').replace(',', '.')) || 0) : raw
+      flow.touched.add(ctx.step.key)
+      store.update((sc) => apply(sc, v), { label: ctx.step.question, silent: true })
+      ctx.tick()
     },
-    onKeyDown: (e) => { if (e.key === 'Enter' && ctx.step.ready(store.scenario)) ctx.go(1) },
+    onKeyDown: (e) => {
+      if (e.key !== 'Enter') return
+      e.preventDefault()
+      if (ctx.step.ready(store.scenario)) ctx.go(1)
+    },
+    // Tant que la valeur n'est qu'une suggestion, tout retour dans le champ la
+    // resélectionne : cliquer dessus veut dire « je vais mettre la mienne »,
+    // pas « je veux ajouter des chiffres derrière ».
+    onFocus: (e) => { if (!flow.touched.has(ctx.step.key)) e.target.select() },
+    onMouseUp: (e) => { if (!flow.touched.has(ctx.step.key)) { e.preventDefault(); e.target.select() } },
   })
-  setTimeout(() => { input.focus(); input.select?.() }, 30)
-  return h('div', { class: 'setup-field' }, input, suffix ? h('span', { class: 'setup-suffix' }, suffix) : null)
+
+  // Le focus est posé une fois, à l'arrivée sur la question. Une suggestion du
+  // métier est sélectionnée — la première touche la remplace ; une réponse déjà
+  // donnée ne l'est pas — on vient la corriger, pas la refaire.
+  const suggested = !flow.touched.has(ctx.step.key) && String(initial ?? '') !== ''
+  requestAnimationFrame(() => {
+    input.focus({ preventScroll: true })
+    try {
+      if (suggested) input.select()
+      else input.setSelectionRange(input.value.length, input.value.length)
+    } catch { /* champ sans sélection */ }
+  })
+
+  return h('div', {},
+    h('div', { class: 'setup-field' },
+      input,
+      suffix ? h('span', { class: 'setup-suffix' }, suffix) : null,
+    ),
+    suggested
+      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans votre métier — écrivez la vôtre par-dessus.')
+      : null,
+  )
 }
 
 /** Choix parmi des options, en grandes cartes cliquables. */
 function choice(ctx, options) {
-  return h('div', { class: 'setup-choices' },
-    ...options.map((o) => h('button', {
-      class: `setup-choice ${o.active ? 'active' : ''}`,
-      onClick: () => { o.pick(); ctx.refresh() },
-    },
-      h('span', { class: 'setup-choice-label' }, o.label),
-      o.note ? h('span', { class: 'setup-choice-note' }, o.note) : null,
-    )),
-  )
+  const host = h('div', { class: 'setup-choices' })
+  const draw = () => host.replaceChildren(...options.map((o) => h('button', {
+    class: `setup-choice ${o.active() ? 'active' : ''}`,
+    onClick: () => { o.pick(); draw(); ctx.tick(); ctx.onChoice?.() },
+  },
+    h('span', { class: 'setup-choice-label' }, o.label),
+    o.note ? h('span', { class: 'setup-choice-note' }, o.note) : null,
+  )))
+  draw()
+  return host
 }
 
 /* ───────────────────────────── Écran : métier ───────────────────────────── */
@@ -286,50 +379,67 @@ function sectorPicker(ctx) {
 
 /* ─────────────────────────── Écran : prix et coût ───────────────────────── */
 
+/**
+ * Le prix.
+ *
+ * Le type de prix change la question posée juste en dessous — une fois, ou
+ * tous les mois. Le champ est donc reconstruit quand on bascule, et seulement
+ * là : la frappe, elle, ne reconstruit rien.
+ */
 function priceScreen(ctx) {
-  const s = ctx.scenario
-  const a = s.activities[0]
-  const recurring = (Number(a.recurringPrice) || 0) > 0
+  const isRecurring = () => (Number(store.scenario.activities[0].recurringPrice) || 0) > 0
+  const fieldHost = h('div', { class: 'setup-field-host' })
 
-  return h('div', {},
-    choice(ctx, [
-      {
-        label: 'Une fois', note: 'Le client paie et c’est réglé', active: !recurring,
-        pick: () => store.update((sc) => {
-          const act = sc.activities[0]
-          if (!(Number(act.unitPrice) > 0)) act.unitPrice = Number(act.recurringPrice) || 0
-          act.recurringPrice = 0; act.recurringCost = 0; act.contractMonths = 0
-        }, { label: 'Type de prix', silent: true }),
-      },
-      {
-        label: 'Tous les mois', note: 'Un abonnement qui se répète', active: recurring,
-        pick: () => store.update((sc) => {
-          const act = sc.activities[0]
-          if (!(Number(act.recurringPrice) > 0)) act.recurringPrice = Math.max(10, Math.round((Number(act.unitPrice) || 300) / 10))
-          act.unitPrice = 0; act.unitCost = 0
-          if (!(Number(act.contractMonths) > 0)) act.contractMonths = 12
-          if (!(Number(act.churnMonthly) > 0)) act.churnMonthly = 0.03
-        }, { label: 'Type de prix', silent: true }),
-      },
-    ]),
-    field(ctx, {
-      type: 'number', placeholder: recurring ? '49' : '500',
-      suffix: recurring ? '€ par mois' : '€',
+  const drawField = () => {
+    const recurring = isRecurring()
+    fieldHost.replaceChildren(field(ctx, {
+      type: 'number',
+      placeholder: recurring ? '49' : '500',
+      suffix: recurring ? '\u20AC par mois' : '\u20AC',
       value: (sc) => {
         const v = recurring ? sc.activities[0].recurringPrice : sc.activities[0].unitPrice
         return Number(v) > 0 ? v : ''
       },
-      apply: (sc, v) => { if (recurring) sc.activities[0].recurringPrice = v; else sc.activities[0].unitPrice = v },
-    }),
-  )
+      apply: (sc, v) => {
+        if (recurring) sc.activities[0].recurringPrice = v
+        else sc.activities[0].unitPrice = v
+      },
+    }))
+  }
+
+  ctx.onChoice = drawField
+  const picker = choice(ctx, [
+    {
+      label: 'Une fois', note: 'Le client paie et c\u2019est réglé',
+      active: () => !isRecurring(),
+      pick: () => store.update((sc) => {
+        const act = sc.activities[0]
+        if (!(Number(act.unitPrice) > 0)) act.unitPrice = Number(act.recurringPrice) || 0
+        act.recurringPrice = 0; act.recurringCost = 0; act.contractMonths = 0
+      }, { label: 'Type de prix', silent: true }),
+    },
+    {
+      label: 'Tous les mois', note: 'Un abonnement qui se répète',
+      active: () => isRecurring(),
+      pick: () => store.update((sc) => {
+        const act = sc.activities[0]
+        if (!(Number(act.recurringPrice) > 0)) act.recurringPrice = Math.max(10, Math.round((Number(act.unitPrice) || 300) / 10))
+        act.unitPrice = 0; act.unitCost = 0
+        if (!(Number(act.contractMonths) > 0)) act.contractMonths = 12
+        if (!(Number(act.churnMonthly) > 0)) act.churnMonthly = 0.03
+      }, { label: 'Type de prix', silent: true }),
+    },
+  ])
+
+  drawField()
+  return h('div', {}, picker, fieldHost)
 }
 
 function costScreen(ctx) {
-  const a = ctx.scenario.activities[0]
-  const recurring = (Number(a.recurringPrice) || 0) > 0
+  const recurring = (Number(ctx.scenario.activities[0].recurringPrice) || 0) > 0
   return field(ctx, {
     type: 'number', placeholder: '0',
-    suffix: recurring ? '€ par mois et par client' : '€',
+    suffix: recurring ? '\u20AC par mois et par client' : '\u20AC',
     value: (sc) => {
       const v = recurring ? sc.activities[0].recurringCost : sc.activities[0].unitCost
       return Number(v) > 0 ? v : ''
@@ -353,24 +463,22 @@ function clientsScreen(ctx) {
 }
 
 function growthScreen(ctx) {
-  const g = Number(ctx.scenario.activities[0].volumes.monthlyGrowth) || 0
+  const g = () => Number(store.scenario.activities[0].volumes.monthlyGrowth) || 0
   const pick = (value) => store.update((sc) => { sc.activities[0].volumes.monthlyGrowth = value },
     { label: 'Croissance', silent: true })
   return choice(ctx, [
-    { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: g > 0 && g <= 0.04, pick: () => pick(0.03) },
-    { label: 'Normalement', note: '+8 % par mois — vous prospectez', active: g > 0.04 && g <= 0.10, pick: () => pick(0.08) },
-    { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: g > 0.10, pick: () => pick(0.15) },
+    { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: () => g() > 0 && g() <= 0.04, pick: () => pick(0.03) },
+    { label: 'Normalement', note: '+8 % par mois — vous prospectez', active: () => g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
+    { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: () => g() > 0.10, pick: () => pick(0.15) },
   ])
 }
 
 /* ──────────────────── Écran : rémunération et frais ─────────────────────── */
 
 function salaryScreen(ctx) {
-  const s = ctx.scenario
-  const me = s.team?.find((m) => ME.test(m.role || ''))
   return h('div', {},
     field(ctx, {
-      type: 'number', placeholder: '2 500', suffix: '€ brut par mois',
+      type: 'number', placeholder: '2500', suffix: '\u20AC brut par mois',
       value: (sc) => {
         const m = sc.team?.find((x) => ME.test(x.role || ''))
         return m && Number(m.monthlyGross) > 0 ? m.monthlyGross : ''
@@ -381,9 +489,7 @@ function salaryScreen(ctx) {
         m.monthlyGross = v
       },
     }),
-    me && Number(me.monthlyGross) > 0
-      ? h('p', { class: 'setup-note' }, `Coût réel pour l'entreprise : environ ${euro(Math.round(Number(me.monthlyGross) * 1.42))} par mois, cotisations comprises.`)
-      : h('p', { class: 'setup-note' }, 'Laissez vide si vous ne vous versez rien la première année.'),
+    h('p', { class: 'setup-note' }, 'Laissez vide si vous ne vous versez rien la première année. Vous pourrez le changer à tout moment.'),
   )
 }
 
@@ -395,8 +501,7 @@ function salaryScreen(ctx) {
  * viennent du métier choisi.
  */
 function costsScreen(ctx) {
-  const s = ctx.scenario
-  const sector = getSector(s.meta.sectorKey)
+  const sector = getSector(store.scenario.meta.sectorKey)
   const shop = ['retail', 'personal'].includes(sector?.family) || sector?.key === 'restaurant'
 
   const suggestions = [
@@ -409,43 +514,51 @@ function costsScreen(ctx) {
     { label: 'Publicité', amount: 300 },
   ]
 
-  const has = (label) => (s.opex || []).find((o) => o.label === label)
+  const find = (label) => (store.scenario.opex || []).find((o) => o.label === label)
+  const host = h('div', { class: 'setup-costs' })
 
-  return h('div', { class: 'setup-costs' },
-    ...suggestions.map((sug) => {
-      const item = has(sug.label)
-      return h('div', { class: `setup-cost ${item ? 'on' : ''}` },
-        h('button', {
-          class: 'setup-cost-toggle',
-          onClick: () => {
+  const draw = () => host.replaceChildren(...suggestions.map((sug) => {
+    const item = find(sug.label)
+    const row = h('div', { class: `setup-cost ${item ? 'on' : ''}` })
+
+    const toggle = h('button', {
+      class: 'setup-cost-toggle',
+      onClick: () => {
+        store.update((sc) => {
+          const i = (sc.opex || []).findIndex((o) => o.label === sug.label)
+          if (i >= 0) sc.opex.splice(i, 1)
+          else sc.opex.push(newOpex({ label: sug.label, monthlyAmount: sug.amount }))
+        }, { label: 'Frais', silent: true })
+        draw(); ctx.tick()
+      },
+    },
+      h('span', { class: 'setup-cost-box' }, item ? '\u2713' : ''),
+      h('span', { class: 'setup-cost-label' }, sug.label),
+    )
+
+    // Le montant garde son élément entre deux frappes : seul l'écho suit.
+    const amount = item
+      ? h('input', {
+          class: 'setup-cost-amount num', inputmode: 'decimal', autocomplete: 'off',
+          value: String(item.monthlyAmount ?? ''),
+          onInput: (e) => {
+            const v = parseFloat(e.target.value.replace(/\s/g, '').replace(',', '.')) || 0
             store.update((sc) => {
-              const i = (sc.opex || []).findIndex((o) => o.label === sug.label)
-              if (i >= 0) sc.opex.splice(i, 1)
-              else sc.opex.push(newOpex({ label: sug.label, monthlyAmount: sug.amount }))
+              const o = sc.opex.find((x) => x.label === sug.label)
+              if (o) o.monthlyAmount = v
             }, { label: 'Frais', silent: true })
-            ctx.refresh()
+            ctx.tick()
           },
-        },
-          h('span', { class: 'setup-cost-box' }, item ? '✓' : ''),
-          h('span', { class: 'setup-cost-label' }, sug.label),
-        ),
-        item
-          ? h('input', {
-              class: 'setup-cost-amount num', value: String(item.monthlyAmount ?? ''),
-              inputmode: 'decimal',
-              onInput: (e) => {
-                const v = Number(e.target.value.replace(',', '.')) || 0
-                store.update((sc) => {
-                  const o = sc.opex.find((x) => x.label === sug.label)
-                  if (o) o.monthlyAmount = v
-                }, { label: 'Frais', silent: true })
-                ctx.refresh()
-              },
-            })
-          : h('span', { class: 'setup-cost-hint num' }, `≈ ${euro(sug.amount)}`),
-      )
-    }),
-  )
+        })
+      : h('span', { class: 'setup-cost-hint num' }, `\u2248 ${euro(sug.amount)}`)
+
+    row.append(toggle, amount)
+    return row
+  }))
+
+  draw()
+  return h('div', {}, host,
+    h('p', { class: 'setup-note' }, 'Ces montants sont des ordres de grandeur pour votre métier. Corrigez-les maintenant ou plus tard.'))
 }
 
 function cashScreen(ctx) {

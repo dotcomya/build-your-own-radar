@@ -113,7 +113,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ───────────────────────────── Charpente ─────────────────────────────── */
 #app { min-height: 100dvh; }
-.shell { display: grid; grid-template-columns: var(--rail-w) 1fr; min-height: 100dvh; }
+/* Trois colonnes : la navigation, la page, et la barre de guidage — cette
+   dernière large de 0 quand elle n'est pas rendue. */
+.shell { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr) auto; min-height: 100dvh; }
 
 .rail {
   background: var(--ink);
@@ -1554,28 +1556,62 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-bar { height: 2px; background: var(--rule); flex: none; }
 .setup-bar-fill { height: 100%; background: var(--signal); transition: width .4s var(--ease); }
 
-.setup-top {
-  display: flex; align-items: center; gap: 14px; flex: none;
-  padding: 14px 20px; max-width: 1100px; width: 100%; margin: 0 auto;
-}
-.setup-back, .setup-skip {
-  border: 0; background: none; cursor: pointer; font: inherit; color: var(--ink-4);
-  padding: 4px 6px; font-size: 13px;
-}
-.setup-back { font-size: 17px; line-height: 1; }
-.setup-back:disabled { opacity: .22; cursor: default; }
-.setup-back:not(:disabled):hover, .setup-skip:hover { color: var(--ink); }
-.setup-skip { margin-left: auto; }
-.setup-count {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-4);
+/* La charpente : les questions à gauche, la question en cours au centre. */
+.setup-shell {
+  flex: 1; display: grid; grid-template-columns: 252px minmax(0, 1fr);
+  max-width: 1160px; width: 100%; margin: 0 auto; gap: 0;
 }
 
-.setup-stage {
-  flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 238px;
-  gap: 40px; align-items: start; align-content: start;
-  max-width: 1100px; width: 100%; margin: 0 auto; padding: 6vh 20px 60px;
+.setup-steps {
+  border-right: 1px solid var(--rule); padding: 26px 0 40px;
+  display: flex; flex-direction: column; position: sticky; top: 0; align-self: start;
 }
-.setup-card { max-width: 620px; }
+.setup-steps-head { padding: 0 20px 14px; }
+.setup-steps-title {
+  display: block; font-family: var(--display); font-weight: 700; font-size: 14px;
+  color: var(--ink); letter-spacing: -.015em;
+}
+.setup-steps-sub {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-5); margin-top: 3px;
+}
+.setup-step {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
+  padding: 7px 20px; color: var(--ink-4); transition: color .12s, background .12s;
+}
+.setup-step:hover { background: var(--surface-2); color: var(--ink-2); }
+.setup-step-dot {
+  width: 21px; height: 21px; flex: none; display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 50%;
+  font-family: var(--mono); font-size: 10px; color: var(--ink-5); background: var(--surface);
+}
+.setup-step-label {
+  font-size: 12.8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.setup-step.done .setup-step-dot { background: var(--gain); border-color: var(--gain); color: #fff; }
+.setup-step.done { color: var(--ink-3); }
+.setup-step.current { background: var(--signal-wash); color: var(--ink); }
+.setup-step.current .setup-step-dot { background: var(--signal); border-color: var(--signal); color: #fff; }
+.setup-step.current .setup-step-label { font-weight: 600; }
+.setup-steps-exit {
+  margin: 18px 20px 0; padding: 8px 0 0; border: 0; border-top: 1px solid var(--rule);
+  background: none; cursor: pointer; font: inherit; text-align: left;
+  font-size: 12px; color: var(--ink-4);
+}
+.setup-steps-exit:hover { color: var(--signal-ink); }
+
+.setup-main {
+  display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 32px;
+  align-items: start; padding: 6vh 26px 60px;
+}
+.setup-card { max-width: 600px; }
+.setup-later {
+  border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 13px; color: var(--ink-4); text-decoration: underline; text-underline-offset: 3px;
+}
+.setup-later:hover { color: var(--ink); }
+.btn.is-waiting { opacity: .45; }
 
 .setup-q {
   font-size: clamp(27px, 4.6vw, 42px); letter-spacing: -.04em; line-height: 1.04;
@@ -1669,6 +1705,7 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-echo-row {
   display: flex; flex-direction: column; gap: 1px; padding: 7px 0;
   font-size: 12px; color: var(--ink-4); border-bottom: 1px solid var(--rule);
+  line-height: 1.35; overflow-wrap: break-word;
 }
 .setup-echo-row:last-child { border-bottom: 0; }
 .setup-echo-row .num { font-size: 15px; color: var(--ink); font-weight: 600; letter-spacing: -.02em; }
@@ -1687,11 +1724,123 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-result.ok .setup-result-value { color: var(--gain); }
 .setup-result.warn .setup-result-value { color: var(--warn); }
 
-@media (max-width: 900px) {
-  .setup-stage { grid-template-columns: 1fr; gap: 26px; padding-top: 2vh; }
+@media (max-width: 1040px) {
+  .setup-main { grid-template-columns: 1fr; gap: 26px; }
+}
+
+@media (max-width: 860px) {
+  /* Sur téléphone, la liste des questions devient une frise horizontale :
+     elle situe sans occuper la moitié de l'écran. */
+  .setup-shell { grid-template-columns: 1fr; }
+  .setup-steps {
+    position: static; border-right: 0; border-bottom: 1px solid var(--rule);
+    flex-direction: row; align-items: center; gap: 2px; overflow-x: auto;
+    padding: 10px 14px; scrollbar-width: none;
+  }
+  .setup-steps::-webkit-scrollbar { display: none; }
+  .setup-steps-head, .setup-steps-exit { display: none; }
+  .setup-step { width: auto; flex: none; padding: 5px 8px; }
+  .setup-step-label { display: none; }
+  .setup-step.current .setup-step-label { display: inline; }
+  .setup-main { padding: 3vh 18px 50px; }
   .setup-echo {
     position: static; border-left: 0; border-top: 1px solid var(--rule);
     padding: 16px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px;
   }
   .setup-echo-tag { grid-column: 1 / -1; }
+}
+
+/* La suggestion : présente, annoncée, remplaçable d'une touche. */
+.setup-suggested {
+  margin: 9px 0 0; font-size: 12px; color: var(--ink-4);
+  display: flex; align-items: center; gap: 6px;
+}
+.setup-suggested::before {
+  content: ''; width: 5px; height: 5px; flex: none; background: var(--signal);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA BARRE DE GUIDAGE
+
+   Le logiciel complet reste le logiciel complet — c'est ce qui rassure sur la
+   profondeur. Cette barre lui rend ce qu'un tableur n'a pas : un fil. Elle dit
+   où l'on est, ce que la page sert à faire, et ce qui vient après. Elle se
+   replie, et ce choix est retenu.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+.guide {
+  position: sticky; top: 0; align-self: start; height: 100dvh;
+  width: 252px; flex: none;
+  border-left: 1px solid var(--rule); background: var(--surface);
+  display: flex; transition: width .22s var(--ease);
+}
+.guide.is-closed { width: 34px; }
+.guide.is-closed .guide-inner { opacity: 0; pointer-events: none; }
+.guide.is-closed .guide-toggle-glyph { transform: rotate(180deg); }
+
+.guide-toggle {
+  position: absolute; left: -1px; top: 14px; width: 26px; height: 30px;
+  border: 1px solid var(--rule); border-left: 0; background: var(--surface);
+  cursor: pointer; display: grid; place-items: center; padding: 0; z-index: 1;
+  color: var(--ink-4);
+}
+.guide-toggle:hover { color: var(--ink); background: var(--surface-2); }
+.guide-toggle-glyph { font-size: 14px; line-height: 1; transition: transform .22s var(--ease); display: block; }
+
+.guide-inner {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px 20px 18px; width: 252px; overflow-y: auto;
+  transition: opacity .16s;
+}
+.guide-head { display: flex; align-items: baseline; gap: 8px; padding-left: 22px; }
+.guide-title {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.guide-pct { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--ink); }
+.guide-track { height: 3px; background: var(--rule); overflow: hidden; }
+.guide-track > i { display: block; height: 100%; background: var(--signal); transition: width .45s var(--ease); }
+
+.guide-what {
+  margin: 0; padding: 10px 12px; background: var(--surface-2);
+  border-left: 2px solid var(--signal);
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
+}
+
+.guide-steps { display: flex; flex-direction: column; }
+.guide-step {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
+  padding: 5px 6px; color: var(--ink-4); transition: color .12s, background .12s;
+}
+.guide-step:hover { background: var(--surface-2); color: var(--ink-2); }
+.guide-step-dot {
+  width: 15px; height: 15px; flex: none; border-radius: 50%;
+  border: 1px solid var(--rule); display: grid; place-items: center;
+  font-size: 9px; color: #fff;
+}
+.guide-step.done .guide-step-dot { background: var(--gain); border-color: var(--gain); }
+.guide-step.current { color: var(--ink); font-weight: 600; }
+.guide-step.current .guide-step-dot { border-color: var(--signal); border-width: 2px; }
+.guide-step-label { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.guide-nav { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 12px; }
+.guide-nav .btn { justify-content: flex-start; }
+.guide-foot { margin: 0; font-size: 11.5px; color: var(--ink-5); line-height: 1.5; }
+.guide-done {
+  border: 1px solid var(--gain); background: var(--gain-wash); color: var(--gain);
+  cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500; padding: 9px 11px; text-align: left;
+}
+.guide-done:hover { background: var(--gain); color: #fff; }
+
+/* Sous 1240 px la barre mangerait la page : elle disparaît, le parcours et la
+   barre d'onglets prennent le relais. La borne basse est indispensable — sans
+   elle, cette règle écraserait la mise en page mobile déclarée plus haut. */
+@media (min-width: 861px) and (max-width: 1240px) {
+  .guide { display: none; }
+  .shell { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .guide { display: none; }
 }

@@ -21,6 +21,13 @@ tout le reste, et tout est lié : changer un budget publicitaire modifie le
 nombre de clients, donc le chiffre d'affaires, donc la TVA, le besoin en fonds
 de roulement, l'impôt et la trésorerie — immédiatement.
 
+- **Une barre de guidage dans le logiciel.** Le parcours guidé pose les onze
+  questions et s'arrête ; passé cet instant on est dans le logiciel complet,
+  et c'est bien ce qu'on veut — voir qu'il y a de la profondeur. Mais un
+  logiciel complet sans fil conducteur redevient un tableur avec des onglets.
+  Une barre reste donc à droite : elle dit l'avancement, ce que la page ouverte
+  sert à faire, les neuf étapes cliquables et ce qui vient après. Elle se
+  replie, et ce choix est retenu.
 - **Onze questions, une par écran.** Un prévisionnel demande une soixantaine de
   chiffres ; les demander tous sur le même écran est ce qui fait abandonner. On
   en demande onze, dans l'ordre où elles se répondent, et Fizzy déduit le reste.
@@ -29,7 +36,10 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   —, et à droite l'écho de ce que la réponse vient de produire : combien
   rapporte un client, combien il en faut pour être à l'équilibre. C'est ce qui
   distingue ce parcours d'un formulaire : on voit le modèle se construire.
-  L'application s'ouvre vide ; l'exemple existe, mais il se demande.
+  L'application s'ouvre vide ; l'exemple existe, mais il se demande. La liste
+  des questions reste visible à gauche : on saute où l'on veut, on remet une
+  question à plus tard, on revient. Les valeurs proposées sont celles du métier
+  choisi, annoncées comme telles et remplacées d'une frappe.
 - **Un parcours, pas un formulaire.** Neuf étapes en trois actes — ce que tu
   vends, ce que ça coûte, l'argent — posées sur un rail de ronds reliés par des
   flèches. Chaque rond mène à la page où l'on saisit ses chiffres, et son état
