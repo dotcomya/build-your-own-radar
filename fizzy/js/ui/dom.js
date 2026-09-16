@@ -156,6 +156,24 @@ function round(v, d) { const p = Math.pow(10, d); return Math.round(v * p) / p }
 let drawerHost = null
 export function setDrawerHost(fn) { drawerHost = fn }
 
+/**
+ * L'interrupteur d'une ligne : actif / en pause.
+ *
+ * Désactiver plutôt que supprimer est ce qui rend un prévisionnel utilisable
+ * pour réfléchir : on met une embauche en pause, on regarde ce que ça change,
+ * on la remet. La saisie n'est jamais perdue. Posé dans l'en-tête, il agit sans
+ * ouvrir la ligne.
+ */
+export function enableToggle(on, onChange) {
+  const btn = h('button', {
+    class: `onoff ${on ? 'on' : ''}`,
+    role: 'switch', 'aria-checked': String(!!on),
+    title: on ? 'Mettre en pause — la ligne reste, elle cesse de compter' : 'Réactiver cette ligne',
+    onClick: (e) => { e.stopPropagation(); onChange(!on) },
+  }, h('i'))
+  return btn
+}
+
 export function helpButton(key) {
   return h('button', { class: 'help', type: 'button', title: 'En savoir plus', onClick: (e) => { e.preventDefault(); e.stopPropagation(); drawerHost && drawerHost(key) } }, '?')
 }

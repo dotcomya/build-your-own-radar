@@ -152,7 +152,7 @@ export function renderSetup(navigate, refresh) {
   // Les nœuds que la frappe met à jour. Tout le reste — la question, le champ,
   // la liste des étapes — reste en place : un champ qui se recrée à chaque
   // touche perd le curseur, et la frappe suivante écrase la précédente.
-  const echoHost = h('div', { class: 'setup-echo-host' })
+  const echoHost = h('div', { class: 'plan-host' })
   const nextBtn = h('button', {
     class: 'btn btn-primary btn-lg',
     onClick: () => go(1),
@@ -161,17 +161,20 @@ export function renderSetup(navigate, refresh) {
   ctx.tick = () => {
     const live = store.scenario
     ctx.scenario = live
-    echoHost.replaceChildren(...[liveEcho(live, step)].filter(Boolean))
+    echoHost.replaceChildren(livePlan(live, step, ctx))
     const ok = step.ready(live)
     nextBtn.disabled = !ok
     nextBtn.classList.toggle('is-waiting', !ok)
   }
+  // Ajouter ou retirer une ligne change la question elle-même (une personne de
+  // plus dans l'équipe, par exemple) : là, on redessine tout.
+  ctx.redraw = () => refresh()
 
   const body = h('div', { class: 'setup-body' }, step.render(ctx))
   const ready = step.ready(s)
   nextBtn.disabled = !ready
   if (!ready) nextBtn.classList.add('is-waiting')
-  echoHost.replaceChildren(...[liveEcho(s, step)].filter(Boolean))
+  echoHost.replaceChildren(livePlan(s, step, ctx))
 
   return h('div', { class: 'setup' },
     h('div', { class: 'setup-bar' },
@@ -227,49 +230,119 @@ function stepList(s, jump, navigate) {
 }
 
 /**
- * L'écho.
+ * Votre plan, à droite, qui se remplit.
  *
- * À droite de la question, ce que la réponse vient de produire. C'est la pièce
- * qui fait la différence avec un formulaire : on ne remplit pas des cases, on
- * regarde un modèle se construire.
+ * Ce n'est pas un résumé : ce sont les lignes réelles du modèle. Elles
+ * commencent vides — un tiret, pas un zéro — et chaque réponse en fait
+ * apparaître une. Le fondateur voit son tableau se construire au lieu de
+ * remplir un formulaire et de découvrir le résultat à la fin.
+ *
+ * Les lignes sont vivantes : on décoche un frais, on retire un poste, on
+ * ajoute une ligne, sans quitter la question en cours.
  */
-function liveEcho(s, step) {
-  if (!s || step.key === 'metier' || step.last) return null
-  const reached = (key) => STEPS.findIndex((x) => x.key === key) <= flow.index
+function livePlan(s, step, ctx) {
+  if (!s) return emptyPlan()
   let r = null
-  try { r = compute(s) } catch { return null }
+  try { r = compute(s) } catch { /* modèle incomplet : on affiche ce qu'on a */ }
 
-  const a = s.activities[0] || {}
   const voc = vocabulary(s)
+  const a = s.activities[0] || {}
   const months = Math.max(1, Number(a.contractMonths) || 1)
   const perClient = (Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0)
     + ((Number(a.recurringPrice) || 0) - (Number(a.recurringCost) || 0)) * months
-  const y = 0
-  const fixed = r.kpis.fixedCosts[y] || 0
-  const need = fixed > 0 && perClient > 0 ? Math.ceil(fixed / perClient) : null
 
-  const lines = []
-  if (perClient > 0) lines.push({ k: `Un ${voc.client} rapporte`, v: euro(perClient) })
-  const me = (s.team || []).find((m) => ME.test(m.role || ''))
-  if (step.key === 'salaire' && me && Number(me.monthlyGross) > 0) {
-    lines.push({ k: 'Vous coûtez à l\u2019entreprise', v: `${euro(Math.round(Number(me.monthlyGross) * 1.42))}/mois` })
-  }
-  if (r.pnl.revenue[0] > 0) lines.push({ k: "Chiffre d'affaires année 1", v: euro(r.pnl.revenue[0], { compact: true }) })
-  if (fixed > 0) lines.push({ k: 'Charges fixes année 1', v: euro(fixed, { compact: true }) })
-  if (need) lines.push({ k: 'Clients pour être à l’équilibre', v: `${num(need)}`, strong: true })
-  if (reached('depart') && r.kpis.fundingNeed > 0) {
-    lines.push({ k: 'Manque en trésorerie', v: euro(r.kpis.fundingNeed), bad: true })
-  }
-  if (!lines.length) return null
+  const team = (s.team || []).filter((m) => m.enabled !== false)
+  const opex = (s.opex || []).filter((o) => o.enabled !== false)
+  const cash = (s.financing?.equityFounders || []).reduce((x, e) => x + (Number(e.amount) || 0), 0)
 
-  return h('aside', { class: 'setup-echo' },
-    h('span', { class: 'setup-echo-tag' }, 'Ce que ça donne'),
-    ...lines.map((l) => h('div', { class: `setup-echo-row ${l.strong ? 'strong' : ''} ${l.bad ? 'bad' : ''}` },
-      h('span', {}, l.k),
-      h('span', { class: 'num' }, l.v),
-    )),
+  const revenue = r ? r.pnl.revenue[0] || 0 : 0
+  const fixed = r ? r.kpis.fixedCosts[0] || 0 : 0
+  const need = perClient > 0 && fixed > 0 ? Math.ceil(fixed / perClient) : null
+
+  return h('aside', { class: 'plan' },
+    h('div', { class: 'plan-head' },
+      h('span', { class: 'plan-title' }, 'Votre plan'),
+      h('span', { class: 'plan-live' }, 'se remplit à mesure'),
+    ),
+
+    // ── Ce que vous vendez ───────────────────────────────────────────────
+    planBlock('Ce que vous vendez', [
+      (Number(a.unitPrice) || 0) > 0 || (Number(a.recurringPrice) || 0) > 0
+        ? planRow(a.name, (Number(a.recurringPrice) || 0) > 0
+            ? `${euro(a.recurringPrice)}/mois`
+            : euro(a.unitPrice))
+        : planEmpty('Aucun prix'),
+      perClient > 0 ? planRow(`Marge par ${voc.client}`, euro(perClient), 'sub') : null,
+      (Number(a.volumes?.startUnits) || 0) > 0
+        ? planRow('Au départ', `${num(a.volumes.startUnits)} ${voc.many}/mois`, 'sub')
+        : null,
+    ]),
+
+    // ── L'équipe ─────────────────────────────────────────────────────────
+    planBlock('Votre équipe', team.length
+      ? team.map((m) => planRow(m.role, `${euro(m.monthlyGross)}/mois`, '', () => {
+          store.update((sc) => { sc.team = sc.team.filter((x) => x.id !== m.id) }, { label: 'Équipe', silent: true })
+          ctx.redraw()
+        }))
+      : [planEmpty('Personne, pas même vous')],
+      step.key === 'salaire' ? { label: '＋ Quelqu’un d’autre', act: () => {
+        store.update((sc) => sc.team.push(newTeamMember({ role: 'Nouveau poste', monthlyGross: 2200 })), { label: 'Équipe', silent: true })
+        ctx.redraw()
+      } } : null),
+
+    // ── Les frais ────────────────────────────────────────────────────────
+    planBlock('Vos frais', opex.length
+      ? opex.map((o) => planRow(o.label, `${euro(o.monthlyAmount)}/mois`))
+      : [planEmpty('Aucun frais')]),
+
+    // ── L'argent de départ ───────────────────────────────────────────────
+    planBlock('Votre mise', [
+      cash > 0 ? planRow('Apport', euro(cash)) : planEmpty('Rien pour l’instant'),
+    ]),
+
+    // ── Ce que ça donne ──────────────────────────────────────────────────
+    h('div', { class: 'plan-out' },
+      planOut("Chiffre d'affaires année 1", revenue > 0 ? euro(revenue, { compact: true }) : null),
+      planOut('Charges fixes année 1', fixed > 0 ? euro(fixed, { compact: true }) : null),
+      planOut(`${voc.many} pour l'équilibre`, need !== null ? num(need) : null, 'strong'),
+      r && r.kpis.fundingNeed > 0 && STEPS.findIndex((x) => x.key === 'depart') <= flow.index
+        ? planOut('Il vous manque', euro(r.kpis.fundingNeed), 'bad') : null,
+    ),
   )
 }
+
+const emptyPlan = () => h('aside', { class: 'plan' },
+  h('div', { class: 'plan-head' },
+    h('span', { class: 'plan-title' }, 'Votre plan'),
+    h('span', { class: 'plan-live' }, 'encore vide'),
+  ),
+  h('p', { class: 'plan-nothing' }, 'Choisissez votre métier : les lignes apparaîtront ici à mesure que vous répondez.'),
+)
+
+function planBlock(title, rows, add) {
+  const live = rows.filter(Boolean)
+  return h('div', { class: 'plan-block' },
+    h('div', { class: 'plan-block-title' }, title),
+    ...live,
+    add ? h('button', { class: 'plan-add', onClick: add.act }, add.label) : null,
+  )
+}
+
+const planRow = (label, value, tone = '', remove = null) => h('div', { class: `plan-row ${tone}` },
+  h('span', { class: 'plan-row-label' }, label),
+  h('span', { class: 'plan-row-value num' }, value),
+  remove ? h('button', { class: 'plan-row-x', title: 'Retirer', onClick: remove }, '\u00D7') : null,
+)
+
+const planEmpty = (text) => h('div', { class: 'plan-row is-empty' },
+  h('span', { class: 'plan-row-label' }, text),
+  h('span', { class: 'plan-row-value num' }, '\u2014'),
+)
+
+const planOut = (label, value, tone = '') => h('div', { class: `plan-out-row ${tone} ${value ? '' : 'is-empty'}` },
+  h('span', {}, label),
+  h('span', { class: 'num' }, value || '\u2014'),
+)
 
 /* ────────────────────────────── Les contrôles ───────────────────────────── */
 
@@ -357,9 +430,9 @@ function sectorPicker(ctx) {
         if (store.scenario && !store.scenario.meta.isDemo && store.scenario.meta.sectorKey) {
           // Changer de métier réécrit les hypothèses : on repart d'un plan neuf
           // plutôt que de mélanger deux jeux de valeurs par défaut.
-          store.create({ template: sector.key, level: store.scenario.meta.level || 'easy', name: SECTORS[sector.key].label })
+          store.create({ template: sector.key, level: store.scenario.meta.level || 'easy', name: SECTORS[sector.key].label, sample: false })
         } else {
-          store.create({ template: sector.key, level: 'easy', name: SECTORS[sector.key].label })
+          store.create({ template: sector.key, level: 'easy', name: SECTORS[sector.key].label, sample: false })
         }
         ctx.refresh()
       },
@@ -597,8 +670,15 @@ function doneScreen(ctx) {
         k.fundingNeed > 0 ? euro(k.fundingNeed) : 'Jamais négative',
         k.fundingNeed > 0 ? 'warn' : 'ok'),
     ),
-    h('p', { class: 'setup-note' },
-      "Tout reste modifiable. Les pages détaillées ajoutent les délais de paiement, la TVA, les investissements, les crédits d'impôt — mais l'essentiel est déjà là."),
+    h('div', { class: 'setup-unlocked' },
+      h('div', { class: 'setup-unlocked-title' }, 'Le logiciel complet vous attend'),
+      h('ul', { class: 'setup-unlocked-list' },
+        h('li', {}, 'Ajoutez des salariés, des campagnes, des offres, des investissements — et mettez chaque ligne en pause pour voir ce qu’elle coûte vraiment.'),
+        h('li', {}, 'Réglez les délais de paiement, la TVA, la saisonnalité, les crédits d’impôt.'),
+        h('li', {}, 'Lisez les graphiques : trésorerie mois par mois, compte de résultat, bilan, point mort.'),
+        h('li', {}, 'Un guide reste à droite pour vous emmener page après page.'),
+      ),
+    ),
     h('div', { class: 'setup-actions' },
       h('button', {
         class: 'btn btn-primary btn-lg',

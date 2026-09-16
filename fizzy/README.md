@@ -38,8 +38,16 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   distingue ce parcours d'un formulaire : on voit le modèle se construire.
   L'application s'ouvre vide ; l'exemple existe, mais il se demande. La liste
   des questions reste visible à gauche : on saute où l'on veut, on remet une
-  question à plus tard, on revient. Les valeurs proposées sont celles du métier
-  choisi, annoncées comme telles et remplacées d'une frappe.
+  question à plus tard, on revient. Et à droite, « votre plan » — les lignes
+  réelles du modèle, qui commencent à un tiret et apparaissent une à une. Choisir
+  un métier n'invente rien : ça pose le vocabulaire, le régime de TVA, la forme
+  juridique et les repères de marge, pas un chiffre d'affaires dont on ne
+  saurait pas d'où il sort.
+- **Mettre en pause plutôt que supprimer.** Chaque salarié, chaque charge,
+  chaque campagne porte un interrupteur. On met une embauche en pause, on
+  regarde ce que ça change au point mort et à la trésorerie, on la remet : la
+  saisie n'est jamais perdue. C'est ce qui fait la différence entre un
+  prévisionnel qu'on subit et un modèle avec lequel on réfléchit.
 - **Un parcours, pas un formulaire.** Neuf étapes en trois actes — ce que tu
   vends, ce que ça coûte, l'argent — posées sur un rail de ronds reliés par des
   flèches. Chaque rond mène à la page où l'on saisit ses chiffres, et son état

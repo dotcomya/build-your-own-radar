@@ -117,8 +117,8 @@ class Store {
       .sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
-  create({ template, name, level = 'easy' } = {}) {
-    const scenario = template ? scenarioFromTemplate(template, name) : emptyScenario(name)
+  create({ template, name, level = 'easy', sample = true } = {}) {
+    const scenario = template ? scenarioFromTemplate(template, name, { sample }) : emptyScenario(name)
     scenario.meta.level = level
     this.scenarios[scenario.meta.id] = scenario
     this.currentId = scenario.meta.id

@@ -159,6 +159,28 @@ export function emptyScenario(name = 'Mon business plan') {
 }
 
 
+/**
+ * Un plan vierge, mais qui sait dans quel métier il est.
+ *
+ * L'offre unique porte le vocabulaire et le taux de TVA du métier, et rien
+ * d'autre : ni prix, ni volumes, ni équipe, ni charges. Chaque chiffre qui
+ * apparaîtra ensuite aura été saisi par le fondateur.
+ */
+function blankFromSector(s, sector) {
+  const unit = sector.unit?.one || 'offre'
+  s.activities = [newActivity({
+    name: unit.charAt(0).toUpperCase() + unit.slice(1),
+    unitPrice: 0, unitCost: 0, recurringPrice: 0, recurringCost: 0, contractMonths: 0,
+    vatRateSales: sector.vat?.sales ?? 0.2,
+    volumes: { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0.08, growthDecay: 0.96, cap: '', seasonality: null, manual: [] },
+  })]
+  s.marketing = []
+  s.team = []
+  s.opex = []
+  s.capex = []
+  s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [] }
+}
+
 /** Charges de fonctionnement types, pour qu'un modèle ne démarre jamais à zéro. */
 function baseOpex(profile) {
   const sets = {
@@ -186,7 +208,20 @@ function baseOpex(profile) {
     newOpex({ label, mode: 'fixed', monthlyAmount }))
 }
 
-export function scenarioFromTemplate(key, name) {
+/**
+ * Un plan fondé sur un métier.
+ *
+ * `sample: false` n'applique que ce qui *caractérise* le métier — vocabulaire,
+ * régime de TVA, forme juridique, repères de marge — sans rien inventer à la
+ * place du fondateur. C'est le mode du parcours guidé : choisir « restaurant »
+ * ne doit pas faire apparaître un restaurant qui tourne déjà, avec son chiffre
+ * d'affaires et son équipe. On ne comprendrait pas d'où ça sort, et on ne
+ * saurait plus ce qui est à soi.
+ *
+ * `sample: true` garde l'ancien comportement : un exemple complet, utile pour
+ * montrer l'outil en fonctionnement.
+ */
+export function scenarioFromTemplate(key, name, { sample = true } = {}) {
   const s = emptyScenario(name || 'Mon business plan')
   const sector = SECTORS[key]
   if (!sector) return s
@@ -194,7 +229,8 @@ export function scenarioFromTemplate(key, name) {
   s.meta.sectorKey = key
   s.meta.name = name || sector.label
   s.meta.legalForm = sector.legal.forms[0]
-  sector.build(s)
+  if (sample) sector.build(s)
+  else blankFromSector(s, sector)
 
   // Le régime de TVA du secteur prime sur les valeurs par défaut de l'offre.
   if (sector.vat.exempt) s.meta.vatExempt = true

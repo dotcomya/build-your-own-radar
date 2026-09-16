@@ -9,6 +9,7 @@ import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
+import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
@@ -16,6 +17,7 @@ export function renderMarketing(navigate, refresh) {
   const s = store.scenario
   const r = store.result
   const open = renderMarketing.open || (renderMarketing.open = new Set())
+  if (open.size === 0 && s.marketing[0]) open.add(s.marketing[0].id)
 
   const add = () => {
     const c = newCampaign({ name: `Campagne ${s.marketing.length + 1}`, activityId: s.activities[0]?.id || null })
@@ -77,8 +79,14 @@ function campaignCard(c, index, r, open, refresh) {
     set({ channel: key, ...defaults }, 'Changement de canal')
   }
 
-  return h('div', { class: `item ${isOpen ? 'open' : ''} ${c.enabled ? '' : 'muted'}`, style: c.enabled ? {} : { opacity: '.6' } },
+  const on = c.enabled !== false
+  return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
     h('div', { class: 'item-head', onClick: () => { isOpen ? open.delete(c.id) : open.add(c.id); refresh() } },
+      enableToggle(on, (v) => {
+        store.update((sc) => { const x = sc.marketing.find((y) => y.id === c.id); if (x) x.enabled = v },
+          { label: v ? 'Campagne réactivée' : 'Campagne en pause' })
+        refresh()
+      }),
       h('span', { class: 'swatch', style: { background: PALETTE[index % PALETTE.length], width: '10px', height: '10px' } }),
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, c.name),

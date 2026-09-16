@@ -136,6 +136,9 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
 
 /** Le poste est-il actif au mois `m` (index 0-59) ? */
 export function isActive(member, m) {
+  // Un poste désactivé reste dans le scénario mais ne coûte rien : c'est ce qui
+  // permet de répondre à « et si je n'embauchais pas ? » sans perdre la saisie.
+  if (member.enabled === false) return false
   const start = Number(member.startMonth) || 0
   const end = member.endMonth === null || member.endMonth === undefined || member.endMonth === '' ? Infinity : Number(member.endMonth)
   return m >= start && m <= end

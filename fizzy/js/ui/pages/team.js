@@ -9,6 +9,7 @@ import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
+import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
@@ -17,6 +18,7 @@ export function renderTeam(navigate, refresh) {
   const r = store.result
   const level = store.level
   const open = renderTeam.open || (renderTeam.open = new Set())
+  if (open.size === 0 && s.team[0]) open.add(s.team[0].id)
 
   const add = () => {
     const m = newTeamMember({ role: s.team.length === 0 ? 'Fondateur' : 'Nouveau poste' })
@@ -65,8 +67,14 @@ function memberCard(m, index, r, level, open, refresh, jeiActive) {
     }
   }
 
-  return h('div', { class: `item ${isOpen ? 'open' : ''}` },
+  const on = m.enabled !== false
+  return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
     h('div', { class: 'item-head', onClick: () => { isOpen ? open.delete(m.id) : open.add(m.id); refresh() } },
+      enableToggle(on, (v) => {
+        store.update((sc) => { const t = sc.team.find((x) => x.id === m.id); if (t) t.enabled = v },
+          { label: v ? 'Poste réactivé' : 'Poste en pause' })
+        refresh()
+      }),
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, m.role || 'Poste sans nom', count > 1 ? h('span', { class: 'chip', style: { marginLeft: '7px' } }, `× ${count}`) : null),
         h('div', { class: 'item-meta' },

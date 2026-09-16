@@ -5,6 +5,7 @@ import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
+import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
@@ -85,9 +86,12 @@ function opexRow(o, r, level, refresh) {
       refresh()
     }
   }
-  return h('div', { class: 'card', style: { marginBottom: '9px' } },
+  const on = o.enabled !== false
+  return h('div', { class: `card ${on ? '' : 'is-off'}`, style: { marginBottom: '9px' } },
     h('div', { class: 'card-body tight' },
-      h('div', { class: 'grid', style: { gridTemplateColumns: 'minmax(150px,2fr) minmax(130px,1.3fr) minmax(120px,1fr) auto', alignItems: 'end', gap: '10px' } },
+      h('div', { class: 'grid', style: { gridTemplateColumns: 'auto minmax(150px,2fr) minmax(130px,1.3fr) minmax(120px,1fr) auto', alignItems: 'end', gap: '10px' } },
+        h('div', { style: { paddingBottom: '7px' } },
+          enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() })),
         textField({ label: 'Poste', value: o.label, onInput: (v, opt) => set({ label: v }, opt) }),
         selectField({
           label: 'Mode de calcul', value: o.mode,
