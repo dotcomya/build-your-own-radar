@@ -11,6 +11,8 @@ import { h, euro, pct, num, numberField, selectField, switchField, helpButton, y
 import { founderIncome } from '../../engine/founder.js'
 import { barChart, PALETTE, STATUS, YEAR_CATEGORIES } from '../charts.js'
 import { getSector } from '../../state/sectors.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderFounder(navigate, refresh) {
@@ -24,6 +26,7 @@ export function renderFounder(navigate, refresh) {
   const set = (patch) => store.update((sc) => Object.assign(sc.founder, patch), { label: 'Rémunération du dirigeant' })
 
   return h('div', { class: 'content' },
+    stepBanner('remuneration', journey(store.scenario, store.result), navigate),
     h('section', { class: 'persona-banner' },
       h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)', marginBottom: '7px' } }, `Dirigeant · ${yearLabel(y)}`),
       h('div', { class: 'persona-question' }, "Combien puis-je dépenser, une fois tout le monde payé ?"),
@@ -75,6 +78,8 @@ export function renderFounder(navigate, refresh) {
       h('div', { class: 'note-title' }, 'Ce que ce calcul ne dit pas'),
       "Le prélèvement à la source lisse l'impôt sur l'année mais ne le change pas. Ne sont pas modélisés ici : la CSG déductible en cas d'option pour le barème, les réductions et crédits d'impôt personnels, ni l'éventuelle contribution exceptionnelle sur les hauts revenus. Un expert-comptable affinera votre arbitrage entre rémunération et dividendes, qui dépend aussi de vos droits à retraite et à prévoyance.",
     ),
+
+    tutorial('remuneration', navigate),
   )
 }
 

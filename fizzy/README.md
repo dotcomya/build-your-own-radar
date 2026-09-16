@@ -10,12 +10,36 @@ commandes, trésorerie, TVA, BFR, CIR/CII, JEI, impôts, comptes de résultat,
 bilans, plan de financement — deviennent un moteur de calcul et une interface
 utilisable sans connaissance comptable.
 
+Fizzy s'adresse d'abord à un fondateur — typiquement en incubateur — qui doit
+produire un business plan défendable sans avoir fait d'école de commerce et sans
+payer un consultant pour ça.
+
 ## Ce que ça fait
 
 Vous saisissez ce que vous vendez, à qui, avec quelle équipe. Fizzy en déduit
 tout le reste, et tout est lié : changer un budget publicitaire modifie le
 nombre de clients, donc le chiffre d'affaires, donc la TVA, le besoin en fonds
 de roulement, l'impôt et la trésorerie — immédiatement.
+
+- **Un parcours, pas un formulaire.** Neuf étapes en trois actes — ce que tu
+  vends, ce que ça coûte, l'argent — posées sur un rail de ronds reliés par des
+  flèches. Chaque rond mène à la page où l'on saisit ses chiffres, et son état
+  n'est jamais déclaré : il est *constaté* dans les données. Personne ne coche
+  une case, donc personne ne peut se mentir sur son avancement. Un anneau donne
+  le pourcentage, un rang dit où en est le dossier vis-à-vis de l'extérieur —
+  *au départ*, *esquissé*, *chiffré*, *prêt pour ton incubateur*, *prêt pour un
+  investisseur* — et sept trophées se gagnent sur des résultats que le modèle
+  constate, jamais sur un champ rempli.
+- **Le modèle économique, guidé.** Une page dédiée demande quatre chiffres —
+  ce que tu vends, à quel prix, ce que ça te coûte, et si l'argent revient une
+  fois ou tous les mois — et répond immédiatement à la seule question qui compte
+  à ce stade : combien de clients il faut pour couvrir les charges.
+- **Des micro-tutos partout.** Chaque étape porte ce qu'un fondateur seul face à
+  son tableur n'a pas : la question qu'on lui posera, l'erreur que tout le monde
+  fait, et l'ordre de grandeur qui sépare un chiffre crédible d'un chiffre
+  inventé. « Un salaire brut coûte 1,25 à 1,45 fois plus. » « 10 % de croissance
+  mensuelle triple les volumes en un an. » « Une banque prête rarement plus que
+  les fonds propres. »
 
 - **Quinze types d'activité.** Logiciel, développeur indépendant, conseil,
   avocat, cabinet médical, kinésithérapie, dentaire, restaurant, e-commerce,
@@ -53,8 +77,8 @@ de roulement, l'impôt et la trésorerie — immédiatement.
 - **Alertes de métier.** Vos chiffres sont confrontés aux ordres de grandeur du
   secteur : une marge de 42 % est excellente en commerce de détail, alarmante
   en logiciel. Les alertes disent ce qu'il faut en conclure et où agir.
-- **Six vues métier.** Fondateur, direction financière, marketing, ressources
-  humaines, produit, conseil. Chacune pose sa question, affiche ses indicateurs
+- **Six vues métier, au second plan.** Fondateur, direction financière,
+  marketing, ressources humaines, produit, conseil. Chacune pose sa question, affiche ses indicateurs
   et — surtout — expose *ses leviers* : des curseurs branchés sur de vrais
   champs du modèle. Un CMO bouge son budget, un DRH décale une embauche, et
   l'EBITDA du groupe bouge sous leurs yeux. La monnaie commune est l'euro
@@ -146,6 +170,7 @@ fizzy/
       simulate.js         actions candidates, rejouées et chiffrées sur le modèle
       milestones.js       les moments qui comptent dans un scénario
       verdict.js          le jugement en un mot, et le chiffre qui décide
+      journey.js          les neuf étapes, leur état constaté, le rang, les trophées
       engine.js           orchestrateur : SIG, trésorerie, BFR, bilan, ratios
     state/
       schema.js           valeurs par défaut, bornes de saisie, contrôles
@@ -154,6 +179,8 @@ fizzy/
     ui/
       personas.js         vues métier : leviers, indicateurs, périmètre
       story.js            frise des cinq ans, repères annotés, jauges de métier
+      tutorial.js         bandeau d'étape et micro-tutos, sur chaque page du parcours
+      persona-switch.js   les vues métier, reléguées dans les réglages
       nudges.js           repères sectoriels, alertes, pièges, cadre réglementaire
       levers.js           curseurs branchés sur le modèle, recalcul pendant le geste
       impact.js           repère, écarts, rail d'impact, valeurs animées

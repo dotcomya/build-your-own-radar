@@ -3,6 +3,8 @@
 import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderFinancing(navigate, refresh) {
@@ -19,6 +21,7 @@ export function renderFinancing(navigate, refresh) {
     sum(f.equityFounders) + sum(f.equityInvestors) + sum(f.loans) + sum(f.grants) + sum(f.advances) + sum(f.shareholderLoans)
 
   return h('div', { class: 'content' },
+    stepBanner('financement', journey(store.scenario, store.result), navigate),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Financement'),
       h('p', {}, "Ce que vous mettez, ce que vous empruntez, ce qu'on vous donne. Le point bas de votre trésorerie indique le minimum à réunir avant de démarrer."),
@@ -170,6 +173,8 @@ function financingPlanTable(r) {
       h('tr', { class: 'highlight' }, h('td', {}, 'Excédent de la période'), ...p.map((y) => h('td', { class: `num ${y.surplus < 0 ? 'neg' : 'pos'}` }, euro(y.surplus)))),
       h('tr', { class: 'total' }, h('td', {}, 'Excédent cumulé'), ...p.map((y) => h('td', { class: `num ${y.cumulative < 0 ? 'neg' : ''}` }, euro(y.cumulative)))),
     ),
+
+    tutorial('financement', navigate),
   )
 }
 

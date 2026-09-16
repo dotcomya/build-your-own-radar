@@ -878,3 +878,454 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   .gauge { border-right: 0; }
   .content-wide { gap: 14px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE PARCOURS
+
+   Le reste de Fizzy est un instrument de mesure : sobre, dense, sans effet.
+   Cette page-ci a un autre travail — donner envie de continuer. Elle s'autorise
+   donc ce que les autres refusent : une surface sombre, une lueur, un anneau
+   qui se remplit, des ronds qui s'allument. L'audace est bornée à l'accueil ;
+   les pages de saisie restent des pages de saisie.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.journey { max-width: 1180px; }
+
+/* ─── Le bandeau d'ouverture ─── */
+.hero-journey {
+  position: relative; overflow: hidden;
+  background: #07090B; color: #fff;
+  border: 1px solid #1A1F24;
+  margin-bottom: 20px;
+}
+.hero-journey.tone-good    { color: var(--gain); }
+.hero-journey.tone-watch   { color: #F0A62E; }
+.hero-journey.tone-bad     { color: #FF6B80; }
+.hero-journey.tone-neutral { color: var(--signal); }
+
+/* La lumière.
+   Deux halos et une trame : le fond n'est plus une surface, c'est une
+   profondeur. Le premier halo est teinté par le rang — il change de couleur
+   quand le dossier change d'état ; le second, bleu, ne bouge jamais. C'est le
+   seul endroit de Fizzy où l'on s'autorise ça. */
+.hero-journey-glow {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+}
+.hero-journey-glow::before {
+  content: ''; position: absolute; left: -14%; top: -150%; width: 62%; aspect-ratio: 1;
+  background: radial-gradient(circle at 50% 50%, currentColor 0%, transparent 60%);
+  opacity: .26; filter: blur(6px);
+}
+.hero-journey-glow::after {
+  content: ''; position: absolute; right: -18%; bottom: -170%; width: 56%; aspect-ratio: 1;
+  background: radial-gradient(circle at 50% 50%, var(--signal) 0%, transparent 62%);
+  opacity: .22; filter: blur(10px);
+}
+/* Trame millimétrée : on reste un outil de mesure, même en s'autorisant du
+   spectacle. Elle s'efface avant d'être remarquée. */
+.hero-journey::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse 80% 120% at 60% 50%, #000 20%, transparent 78%);
+}
+.hero-journey-inner {
+  position: relative; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 30px; padding: 30px 32px;
+}
+
+.hero-ring { position: relative; width: 128px; height: 128px; flex: none; }
+.ring { width: 128px; height: 128px; display: block; }
+.ring-progress {
+  transition: stroke-dashoffset .9s var(--ease);
+  filter: drop-shadow(0 0 7px currentColor);
+}
+.hero-ring-label {
+  position: absolute; inset: 0; display: grid; place-content: center;
+  grid-auto-flow: column; align-items: baseline; gap: 2px; color: #fff;
+}
+.hero-ring-value { font-family: var(--mono); font-size: 34px; font-weight: 600; letter-spacing: -.05em; }
+.hero-ring-unit { font-family: var(--mono); font-size: 13px; color: #8E99A2; }
+
+.hero-journey-eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: #8E99A2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.hero-journey-eyebrow .dot { color: #3A434B; }
+.hero-journey-rank {
+  font-size: clamp(28px, 4vw, 46px); line-height: 1; letter-spacing: -.04em;
+  color: #fff; margin: 10px 0 10px; text-wrap: balance;
+}
+.hero-journey-line { color: #AEB9C9; font-size: 15px; max-width: 54ch; margin: 0 0 18px; line-height: 1.5; }
+.hero-journey-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.hero-journey-eta { font-family: var(--mono); font-size: 11px; color: #8E99A2; letter-spacing: .04em; }
+
+.hero-journey-stats {
+  display: grid; gap: 14px; padding-left: 26px; border-left: 1px solid #1A1F24; flex: none;
+}
+/* Les libellés n'ont pas la même longueur ; la grille aligne les valeurs sur
+   une même ligne de base plutôt que de les laisser flotter sous leur titre. */
+.hero-stat { display: grid; grid-template-rows: 1fr auto; gap: 3px; align-content: start; }
+.hero-stat-label {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: #6E7A85;
+}
+.hero-stat-value { font-size: 19px; font-weight: 600; letter-spacing: -.03em; color: #fff; white-space: nowrap; }
+.hero-stat-value.pos { color: #4ADE9E; }
+.hero-stat-value.warn { color: #F0A62E; }
+
+/* ─── Le corps : rail à gauche, contenu à droite ─── */
+.journey-body { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 20px; align-items: start; }
+.journey-main { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+
+/* ─── Les ronds reliés par des flèches ─── */
+/* La colonne vertébrale du parcours : un trait continu, des ronds dessus, et
+   l'étape courante qui respire. Tout y est cliquable. */
+.journey-rail {
+  position: sticky; top: calc(var(--header-h) + 14px);
+  background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong);
+  padding: 6px 0 10px;
+}
+.rail-act { padding: 16px 18px 8px; }
+.rail-act-title {
+  display: block; font-family: var(--display); font-weight: 700; font-size: 13px;
+  color: var(--ink); letter-spacing: -.01em;
+}
+.rail-act-tag {
+  display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-5); margin-top: 2px;
+}
+.rail-act.done .rail-act-title { color: var(--gain); }
+
+.node {
+  position: relative; width: 100%; border: 0; background: none; cursor: pointer;
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 11px 18px; text-align: left; font: inherit;
+  transition: background .13s;
+}
+.node:hover { background: var(--surface-2); }
+.node:hover .node-arrow { opacity: 1; transform: translateX(0); }
+
+/* La flèche qui relie un rond au suivant.
+   Un trait seul se lit comme une bordure ; une pointe se lit comme un sens de
+   lecture. C'est ce qui transforme une liste en parcours. */
+.node::before {
+  content: ''; position: absolute; left: 34px; top: -11px; height: 13px; width: 2px;
+  background: var(--ink-5); z-index: 0;
+}
+.node::after {
+  content: ''; position: absolute; left: 30.5px; top: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 6px solid var(--ink-5); z-index: 0;
+}
+.rail-act + .node::before, .rail-act + .node::after { display: none; }
+.node-done::before, .node-done + .node::before { background: var(--gain); }
+.node-done::after, .node-done + .node::after { border-top-color: var(--gain); }
+.node.is-current::before { background: var(--signal); }
+.node.is-current::after { border-top-color: var(--signal); }
+
+.node-dot {
+  position: relative; z-index: 1; width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--rule); border-radius: 50%;
+  background: var(--surface); color: var(--ink-4);
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  transition: border-color .16s, background .16s, color .16s, box-shadow .16s;
+}
+.node-label { display: block; font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+.node-detail {
+  display: block; font-size: 11px; color: var(--ink-4); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.node-arrow {
+  color: var(--ink-5); font-size: 13px; opacity: 0; transform: translateX(-4px);
+  transition: opacity .14s, transform .14s;
+}
+
+.node-done .node-dot { background: var(--gain); border-color: var(--gain); color: #fff; }
+.node-done .node-label { color: var(--ink-4); }
+
+.node-started .node-dot { border-color: var(--warn); color: var(--warn); }
+
+/* L'étape courante : la seule chose qui bouge sur la page. */
+.node.is-current { background: var(--signal-wash); }
+.node.is-current .node-dot {
+  border-color: var(--signal); background: var(--signal); color: #fff;
+  box-shadow: 0 0 0 4px rgba(27, 59, 255, .14);
+}
+.node.is-current .node-label { color: var(--ink); font-weight: 600; }
+.node.is-current .node-arrow { opacity: 1; transform: translateX(0); color: var(--signal-ink); }
+.node-pulse {
+  position: absolute; inset: -5px; border-radius: 50%;
+  border: 1.5px solid var(--signal); animation: node-pulse 2.4s var(--ease) infinite;
+}
+@keyframes node-pulse {
+  0%   { transform: scale(.85); opacity: .9 }
+  70%  { transform: scale(1.35); opacity: 0 }
+  100% { transform: scale(1.35); opacity: 0 }
+}
+
+/* ─── La carte de l'étape en cours ─── */
+.next-card {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 3px solid var(--signal); padding: 22px 24px 24px; margin-bottom: 14px;
+}
+.next-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.next-card-tag {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  background: var(--signal); color: #fff; padding: 3px 8px;
+}
+.next-card-time { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-left: auto; }
+.next-card-q {
+  font-size: clamp(22px, 3vw, 30px); letter-spacing: -.03em; line-height: 1.1; margin-bottom: 10px;
+}
+.next-card-promise { color: var(--ink-3); font-size: 14px; line-height: 1.55; max-width: 62ch; margin-bottom: 16px; }
+.next-card-unlock {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 11px 14px; background: var(--gain-wash); border-left: 3px solid var(--gain);
+  font-size: 13px; color: var(--ink-2); margin-bottom: 18px;
+}
+.next-card-unlock-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--gain);
+}
+.next-card-tips { display: grid; gap: 12px; margin-bottom: 20px; }
+.mini-tip { border-left: 2px solid var(--rule); padding-left: 12px; }
+.mini-tip-title { font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 3px; }
+.mini-tip p { margin: 0; font-size: 12.8px; color: var(--ink-3); line-height: 1.5; }
+
+/* ─── L'aperçu du verdict ─── */
+.snapshot { margin-bottom: 14px; }
+.snapshot-word {
+  font-family: var(--display); font-weight: 800; font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: -.035em; line-height: 1; margin-bottom: 8px; text-transform: uppercase;
+}
+.snapshot.tone-good  .snapshot-word { color: var(--gain); }
+.snapshot.tone-watch .snapshot-word { color: var(--warn); }
+.snapshot.tone-bad   .snapshot-word { color: var(--loss); }
+.snapshot-line { font-size: 15px; color: var(--ink-2); font-weight: 500; max-width: 60ch; }
+.snapshot-figure {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  border-top: 1px solid var(--rule); margin-top: 14px; padding-top: 14px;
+}
+.snapshot-figure-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+}
+.snapshot-figure-value { font-size: 26px; font-weight: 600; letter-spacing: -.04em; color: var(--ink); margin-left: auto; }
+
+/* ─── Les trophées ─── */
+/* Ils ne se cochent pas : le modèle les constate. Un trophée gagné est donc
+   une information sur le dossier, pas une décoration. */
+.trophy-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  border-top: 1px solid var(--rule);
+}
+.trophy {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 14px;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  opacity: .45; transition: opacity .2s;
+}
+.trophy-glyph { font-size: 20px; color: var(--ink-5); line-height: 1; }
+.trophy-label { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--ink); }
+.trophy-hint { font-size: 11px; color: var(--ink-4); line-height: 1.4; }
+.trophy.won { opacity: 1; }
+.trophy.won .trophy-glyph { color: var(--gain); }
+.trophy.won .trophy-hint { color: var(--gain); font-family: var(--mono); font-size: 10.5px; }
+
+/* ─── Les leviers rapides ─── */
+.wins { display: flex; flex-direction: column; }
+.win {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px;
+  padding: 14px 16px; border-bottom: 1px solid var(--rule);
+}
+.win:last-child { border-bottom: 0; }
+.win-label { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.win-detail { font-size: 11.5px; color: var(--signal-ink); margin-top: 2px; }
+.win-gain { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 12px; }
+
+/* ─── La pastille d'avancement, en tête de chaque page ─── */
+.progress-pill {
+  display: inline-flex; align-items: center; gap: 9px; padding: 5px 11px 5px 9px;
+  border: 1px solid var(--rule); background: var(--surface); cursor: pointer;
+  font: inherit; color: var(--ink-2); transition: border-color .13s, background .13s;
+}
+.progress-pill:hover { border-color: var(--ink); background: var(--surface-2); }
+.progress-pill-bar { width: 42px; height: 4px; background: var(--rule); flex: none; overflow: hidden; }
+.progress-pill-bar > i { display: block; height: 100%; background: var(--signal); transition: width .5s var(--ease); }
+.progress-pill-value { font-size: 12px; font-weight: 600; letter-spacing: -.02em; }
+.progress-pill-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--ink-4); white-space: nowrap;
+}
+.progress-pill.complete .progress-pill-bar > i { background: var(--gain); }
+.progress-pill.complete .progress-pill-value { color: var(--gain); }
+
+/* ═══════════════════ Bandeau d'étape et micro-tutos ═══════════════════════ */
+
+.step-banner {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start;
+  background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--signal);
+  padding: 16px 18px; margin-bottom: 20px;
+}
+.step-banner.done { border-left-color: var(--gain); }
+.step-banner-tag {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+}
+.step-banner-no { background: var(--ink); color: #fff; padding: 2px 6px; letter-spacing: .02em; }
+.step-banner.done .step-banner-no { background: var(--gain); }
+.step-banner-check { color: var(--gain); }
+.step-banner-q {
+  font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.025em;
+  color: var(--ink); margin: 8px 0 5px;
+}
+.step-banner-why { margin: 0; font-size: 13px; color: var(--ink-3); line-height: 1.5; max-width: 68ch; }
+.step-banner-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.step-banner-unlock {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  text-align: right; font-size: 12px; color: var(--ink-2); max-width: 26ch;
+}
+.step-banner-unlock .eyebrow { color: var(--gain); }
+
+/* Le coach : replié par défaut une fois lu, mais toujours à portée. */
+.coach {
+  background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--ink);
+  margin-top: 22px;
+}
+.coach-head {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
+}
+.coach-head:hover { background: var(--surface-2); }
+.coach-badge {
+  width: 20px; height: 20px; flex: none; display: grid; place-items: center;
+  background: var(--ink); color: #fff; font-family: var(--mono); font-size: 11px; font-weight: 600;
+}
+.coach-title { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
+.coach-count {
+  margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.coach-chevron { color: var(--ink-4); transform: rotate(90deg); transition: transform .18s var(--ease); }
+.coach.is-closed .coach-chevron { transform: rotate(0deg); }
+.coach.is-closed .coach-body { display: none; }
+.coach-body { border-top: 1px solid var(--rule); }
+.coach-invest { padding: 14px 16px; background: var(--ink); color: #C6CDD2; }
+.coach-invest-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #6E7A85;
+}
+.coach-invest p { margin: 5px 0 0; font-size: 13.5px; color: #fff; line-height: 1.5; max-width: 76ch; }
+.coach-tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.coach-tip {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 15px 16px;
+  border-right: 1px solid var(--rule); border-top: 1px solid var(--rule);
+}
+.coach-tip:last-child { border-right: 0; }
+.coach-tip-no {
+  width: 19px; height: 19px; display: grid; place-items: center; flex: none;
+  border: 1px solid var(--ink-5); color: var(--ink-4); font-size: 10.5px;
+}
+.coach-tip-title { font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 4px; }
+.coach-tip-body { margin: 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.52; }
+
+/* ══════════════════════ La page « Mon modèle » ════════════════════════════ */
+
+.engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.engine {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  padding: 18px 18px 20px; border: 0; border-right: 1px solid var(--rule);
+  background: var(--surface); cursor: pointer; font: inherit; text-align: left;
+  transition: background .14s, box-shadow .14s;
+}
+.engine:last-child { border-right: 0; }
+.engine:hover { background: var(--surface-2); }
+.engine-glyph { font-size: 22px; color: var(--ink-5); line-height: 1; margin-bottom: 4px; }
+.engine-label { font-family: var(--display); font-weight: 700; font-size: 16px; color: var(--ink); letter-spacing: -.018em; }
+.engine-line { font-size: 13px; color: var(--ink-2); }
+.engine-detail { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; }
+.engine.active { background: var(--ink); box-shadow: inset 0 3px 0 var(--signal); }
+.engine.active .engine-glyph { color: var(--signal); }
+.engine.active .engine-label { color: #fff; }
+.engine.active .engine-line { color: #C6CDD2; }
+.engine.active .engine-detail { color: #8E99A2; }
+
+.verdict-panel { border-top-color: var(--gain); }
+.verdict-panel.is-bad { border-top-color: var(--loss); }
+.model-figure { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.model-figure-value {
+  font-size: clamp(30px, 5vw, 42px); font-weight: 600; letter-spacing: -.045em; color: var(--gain);
+}
+.model-figure-value.neg { color: var(--loss); }
+.model-figure-unit { font-size: 13px; color: var(--ink-4); }
+.model-breakdown { margin-top: 14px; border-top: 1px solid var(--rule); }
+.model-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13px; color: var(--ink-2);
+}
+.model-row:last-child { border-bottom: 0; }
+.model-row.strong { font-weight: 600; color: var(--ink); }
+.model-answer { margin-top: 16px; padding: 16px; background: var(--ink); color: #fff; }
+.model-answer-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8E99A2;
+}
+.model-answer-value {
+  font-size: clamp(24px, 4vw, 32px); font-weight: 600; letter-spacing: -.04em; margin: 6px 0 6px;
+}
+.model-answer-note { font-size: 12px; color: #AEB9C9; line-height: 1.5; }
+.model-answer-todo { background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--rule); }
+.model-answer-todo .model-answer-label { color: var(--ink-4); }
+.model-answer-todo .model-answer-note { color: var(--ink-3); }
+
+.split-bar { display: flex; height: 30px; overflow: hidden; border: 1px solid var(--rule); }
+.split-bar > span { display: block; height: 100%; transition: width .35s var(--ease); }
+.split-cost { background: var(--ink-5); }
+.split-margin { background: var(--gain); }
+.split-legend {
+  display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em;
+}
+.split-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.split-legend .swatch { width: 9px; height: 9px; flex: none; }
+i.swatch.split-cost { background: var(--ink-5); }
+i.swatch.split-margin { background: var(--gain); }
+
+/* La liste des vues métier, dans les réglages. */
+.persona-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; }
+.persona-list .persona-option { border: 1px solid var(--rule); }
+
+/* ─────────────────────────────── Adaptatif ───────────────────────────────── */
+
+@media (max-width: 960px) {
+  .journey-body { grid-template-columns: 1fr; }
+  .journey-rail { position: static; }
+  .hero-journey-inner { grid-template-columns: auto minmax(0, 1fr); gap: 20px; padding: 22px; }
+  .hero-journey-stats {
+    grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; gap: 26px;
+    padding: 16px 0 0; padding-left: 0; border-left: 0; border-top: 1px solid #1A1F24;
+  }
+}
+
+@media (max-width: 860px) {
+  .hero-journey-inner { grid-template-columns: 1fr; }
+  .hero-ring, .ring { width: 96px; height: 96px; }
+  .hero-ring-value { font-size: 26px; }
+  .hero-journey-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .hero-stat-value { font-size: 16px; }
+  .step-banner { grid-template-columns: 1fr; gap: 14px; }
+  .step-banner-side { align-items: flex-start; }
+  .step-banner-unlock { align-items: flex-start; text-align: left; max-width: none; }
+  .coach-tip { border-right: 0; }
+  .engine { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .engine:last-child { border-bottom: 0; }
+  .win { grid-template-columns: 1fr; gap: 8px; }
+  .win-gain { text-align: left; flex-direction: row; gap: 14px; }
+  .trophy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .progress-pill { padding: 4px 8px; }
+  .progress-pill-bar { width: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node-pulse { animation: none; opacity: .5; }
+  .ring-progress { transition: none; }
+}

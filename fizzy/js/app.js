@@ -24,24 +24,31 @@ import { renderResults } from './ui/pages/results.js'
 import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
 import { renderFounder } from './ui/pages/founder.js'
+import { renderJourney } from './ui/pages/journey.js'
+import { renderModel } from './ui/pages/model.js'
+import { journey, points } from './engine/journey.js'
 
 const PAGES = {
+  parcours: { label: 'Mon parcours', icon: '◍', render: renderJourney, levels: ['easy', 'intermediate', 'advanced'], tab: true },
   'tableau-de-bord': { label: 'Tableau de bord', icon: '◱', render: renderDashboard, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  offre: { label: 'Offre et clients', icon: '◈', render: renderOffer, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  marketing: { label: 'Marketing', icon: '◎', render: renderMarketing, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  equipe: { label: 'Équipe', icon: '◷', render: renderTeam, levels: ['easy', 'intermediate', 'advanced'], tab: true },
+  modele: { label: 'Mon modèle', icon: '◈', render: renderModel, levels: ['easy', 'intermediate', 'advanced'], tab: true },
+  offre: { label: 'Offre et clients', icon: '◑', render: renderOffer, levels: ['easy', 'intermediate', 'advanced'], tab: true },
+  marketing: { label: 'Marketing', icon: '◎', render: renderMarketing, levels: ['easy', 'intermediate', 'advanced'] },
+  equipe: { label: 'Équipe', icon: '◷', render: renderTeam, levels: ['easy', 'intermediate', 'advanced'] },
   charges: { label: 'Charges', icon: '▦', render: renderCosts, levels: ['easy', 'intermediate', 'advanced'] },
   financement: { label: 'Financement', icon: '◇', render: renderFinancing, levels: ['easy', 'intermediate', 'advanced'] },
-  resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  'mon-revenu': { label: 'Ce que je touche', icon: '◉', render: renderFounder, levels: ['easy', 'intermediate', 'advanced'], tab: true },
+  resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'] },
+  'mon-revenu': { label: 'Ce que je touche', icon: '◉', render: renderFounder, levels: ['easy', 'intermediate', 'advanced'] },
   'business-case': { label: 'Business case', icon: '◆', render: renderBusinessCase, levels: ['easy', 'intermediate', 'advanced'] },
   reglages: { label: 'Réglages', icon: '⚙', render: renderSettings, levels: ['easy', 'intermediate', 'advanced'] },
 }
 
+// L'ordre du rail suit le parcours, pas l'organigramme d'un cabinet : on
+// construit d'abord, on analyse ensuite.
 const GROUPS = [
-  { title: 'Piloter', keys: ['tableau-de-bord'] },
-  { title: 'Construire', keys: ['offre', 'marketing', 'equipe', 'charges', 'financement'] },
-  { title: 'Analyser', keys: ['resultats', 'mon-revenu', 'business-case'] },
+  { title: '', keys: ['parcours'] },
+  { title: 'Construire', keys: ['modele', 'offre', 'marketing', 'equipe', 'charges', 'financement'] },
+  { title: 'Lire', keys: ['tableau-de-bord', 'resultats', 'mon-revenu', 'business-case'] },
   { title: '', keys: ['reglages'] },
 ]
 
@@ -73,9 +80,9 @@ function render({ preserveScroll = false } = {}) {
     return
   }
 
-  const page = PAGES[key] || PAGES['tableau-de-bord']
-  if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
-  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/tableau-de-bord'); return }
+  const page = PAGES[key] || PAGES.parcours
+  if (!PAGES[key]) { navigate('#/parcours'); return }
+  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/parcours'); return }
 
   const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render))
   clear(root).appendChild(h('div', { class: 'shell' },
@@ -161,7 +168,7 @@ function topbar(page) {
       h('h1', {}, page.label),
     ),
     h('span', { class: 'spacer' }),
-    personaSwitch(),
+    progressPill(),
     // La profondeur ne concerne que le fondateur : les autres metiers ont un
     // perimetre defini par leur fonction, pas par un curseur de detail.
     getPersona(store.persona).hasDepth && h('div', { class: 'levels desktop-only', title: LEVEL_META[store.level]?.description },
@@ -179,59 +186,29 @@ function topbar(page) {
   )
 }
 
-/** Selecteur de metier : ouvre un menu decrivant ce que chaque vue apporte. */
-function personaSwitch() {
-  const current = getPersona(store.persona)
-  const button = h('button', {
-    class: 'persona-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false',
-    onClick: (e) => { e.stopPropagation(); togglePersonaMenu(button) },
+/**
+ * La pastille d'avancement.
+ *
+ * Elle remplace le sélecteur de métier en tête de page : ce qu'un fondateur
+ * veut savoir en permanence, ce n'est pas quelle casquette il porte, c'est
+ * combien il lui reste à faire. Un clic ramène au parcours.
+ */
+function progressPill() {
+  const j = journey(store.scenario, store.result)
+  const pts = points(j)
+  return h('button', {
+    class: `progress-pill ${j.completion >= 1 ? 'complete' : ''}`,
+    title: `${j.done} étapes terminées sur ${j.total}`,
+    onClick: () => navigate('#/parcours'),
   },
-    h('span', { class: 'persona-code' }, current.code),
-    h('span', { class: 'persona-name' }, current.label),
-    h('span', { 'aria-hidden': 'true', style: { fontSize: '9px', opacity: '.6' } }, '\u25BE'),
+    h('span', { class: 'progress-pill-bar', 'aria-hidden': 'true' },
+      h('i', { style: { width: `${pts}%` } })),
+    h('span', { class: 'progress-pill-value num' }, `${pts} %`),
+    h('span', { class: 'progress-pill-label desktop-only' },
+      j.completion >= 1 ? 'complet' : `${j.done}/${j.total} étapes`),
   )
-  return h('div', { class: 'persona-switch' }, button)
 }
 
-function togglePersonaMenu(button) {
-  if (document.querySelector('.persona-menu')) { closePersonaMenu(); return }
-
-  const menu = h('div', { class: 'persona-menu', role: 'menu' },
-    ...Object.entries(PERSONAS).map(([key, p]) => h('button', {
-      class: `persona-option ${store.persona === key ? 'active' : ''}`,
-      role: 'menuitem',
-      onClick: () => {
-        closePersonaMenu()
-        store.setPersona(key)
-        if (p.forceLevel) store.setLevel(p.forceLevel)
-        // Une vue metier n'ouvre pas une page qu'elle ne contient pas.
-        if (!p.pages.includes(route())) navigate('#/tableau-de-bord')
-        else render()
-        toast(`${p.label} \u2014 ${p.tagline}`)
-      },
-    },
-      h('div', { class: 'persona-option-name' }, h('span', { class: 'persona-code' }, p.code), p.label),
-      h('div', { class: 'persona-option-tag' }, p.tagline),
-      h('div', { class: 'persona-option-brief' }, p.brief),
-    )),
-  )
-  document.body.appendChild(menu)
-  button.setAttribute('aria-expanded', 'true')
-  button.classList.add('open')
-  setTimeout(() => {
-    document.addEventListener('click', closePersonaMenu, { once: true })
-    document.addEventListener('keydown', escapePersonaMenu)
-  }, 0)
-}
-
-function closePersonaMenu() {
-  document.querySelector('.persona-menu')?.remove()
-  document.querySelectorAll('.persona-btn').forEach((b) => {
-    b.classList.remove('open'); b.setAttribute('aria-expanded', 'false')
-  })
-  document.removeEventListener('keydown', escapePersonaMenu)
-}
-const escapePersonaMenu = (e) => { if (e.key === 'Escape') closePersonaMenu() }
 
 function tabbar(active) {
   const allowed = getPersona(store.persona).pages
@@ -245,7 +222,8 @@ function tabbar(active) {
   )
 }
 
-const shortLabel = (l) => ({ 'Tableau de bord': 'Pilotage', 'Offre et clients': 'Offre', 'États financiers': 'Résultats', 'Ce que je touche': 'Ma paie',
+const shortLabel = (l) => ({ 'Mon parcours': 'Parcours', 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle',
+  'Offre et clients': 'Clients', 'États financiers': 'Comptes', 'Ce que je touche': 'Ma paie',
   'Business case': 'Dossier' }[l] || l)
 
 // ───────────────────────────── Tiroir du glossaire ─────────────────────────
@@ -315,14 +293,45 @@ window.addEventListener('resize', () => {
 
 // ────────────────────────────────── Démarrage ──────────────────────────────
 window.addEventListener('hashchange', render)
+/**
+ * La célébration d'une étape franchie.
+ *
+ * Un parcours qui ne dit rien quand on avance n'est pas un parcours. On compare
+ * l'avancement avant et après chaque modification, et on ne félicite que sur un
+ * franchissement réel — jamais sur une frappe au clavier.
+ */
+let lastDone = new Set()
+
+/** Relève l'état du parcours sans rien annoncer — au chargement d'un scénario. */
+function markJourney() {
+  if (!store.scenario || !store.result) { lastDone = new Set(); return }
+  const j = journey(store.scenario, store.result)
+  lastDone = new Set(j.steps.filter((s) => s.status === 'done').map((s) => s.key))
+}
+
+function celebrate() {
+  if (!store.scenario || !store.result) return
+  const j = journey(store.scenario, store.result)
+  const done = new Set(j.steps.filter((s) => s.status === 'done').map((s) => s.key))
+  const fresh = [...done].filter((k) => !lastDone.has(k))
+  lastDone = done
+  if (!fresh.length) return
+  const step = j.steps.find((s) => s.key === fresh[0])
+  const left = j.total - j.done
+  toast(left === 0
+    ? `${step.label} \u2713 Ton business plan est complet.`
+    : `${step.label} \u2713 ${points(j)} % \u2014 il reste ${left} étape${left > 1 ? 's' : ''}.`, 'ok')
+}
+
 store.subscribe((_, reason) => {
-  if (reason === 'scenario' || reason === 'profile') { resetLiveNumbers(); render() }
+  if (reason === 'scenario' || reason === 'profile') { markJourney(); resetLiveNumbers(); render() }
   // Une modification de données relance le calcul : on redessine la page pour
   // que les indicateurs suivent, en conservant la position de lecture.
-  else if (reason === 'data') render({ preserveScroll: true })
+  else if (reason === 'data') { celebrate(); render({ preserveScroll: true }) }
 })
 
-if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/'
+markJourney()
+if (!location.hash) location.hash = store.scenario ? '#/parcours' : '#/'
 render()
 
 // Le service worker n'accompagne que la version auto-hébergée : la page

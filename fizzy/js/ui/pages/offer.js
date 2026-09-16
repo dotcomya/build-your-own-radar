@@ -4,6 +4,8 @@ import { h, euro, pct, num, numberField, textField, selectField, helpButton, toa
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, PALETTE } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderOffer(navigate, refresh) {
@@ -25,6 +27,7 @@ export function renderOffer(navigate, refresh) {
   }
 
   return h('div', { class: 'content' },
+    stepBanner('clients', journey(store.scenario, store.result), navigate),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Offre et clients'),
       h('p', {}, level === 'easy'
@@ -39,6 +42,8 @@ export function renderOffer(navigate, refresh) {
       level === 'easy' && s.activities.length >= 1 ? h('span', { class: 'chip', style: { marginLeft: '6px' } }, 'Intermédiaire') : null),
 
     level !== 'easy' && s.activities.length > 1 && comparisonCard(r),
+
+    tutorial('clients', navigate),
   )
 }
 

@@ -8,6 +8,8 @@ import { h, euro, pct, num, numberField, textField, selectField, switchField, mo
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderTeam(navigate, refresh) {
@@ -26,6 +28,7 @@ export function renderTeam(navigate, refresh) {
   const jeiActive = r?.jei?.some((j) => j.eligible)
 
   return h('div', { class: 'content' },
+    stepBanner('equipe', journey(store.scenario, store.result), navigate),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Équipe'),
       h('p', {}, "Saisissez le salaire brut mensuel : Fizzy calcule les cotisations patronales, applique la réduction générale et en déduit le coût réel pour l'entreprise. Raisonner en brut sous-estime la masse salariale de 25 à 45 %."),
@@ -44,6 +47,8 @@ export function renderTeam(navigate, refresh) {
 
     r && s.team.length > 0 && payrollSummary(r, level),
     level === 'advanced' && s.team.length > 0 && jeiPanel(r),
+
+    tutorial('equipe', navigate),
   )
 }
 

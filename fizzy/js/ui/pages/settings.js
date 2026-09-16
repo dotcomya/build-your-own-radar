@@ -5,6 +5,8 @@ import { PARAMS, paramsToVerify, FISCAL_YEAR } from '../../engine/fiscal-fr-2026
 import { LEVEL_META } from '../../state/schema.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
+import { personaPicker } from '../persona-switch.js'
+import { getPersona } from '../personas.js'
 import store from '../../state/store.js'
 
 export function renderSettings(navigate, refresh) {
@@ -16,6 +18,8 @@ export function renderSettings(navigate, refresh) {
       h('h1', {}, 'Réglages'),
       h('p', {}, "Votre projet, vos scénarios et les paramètres fiscaux du modèle."),
     ),
+
+    teamViews(navigate, refresh),
 
     h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Ce projet')),
@@ -216,6 +220,32 @@ function dataPanel(navigate, refresh, usage) {
       h('div', { class: 'note plain mt' },
         h('div', { class: 'note-title' }, 'Profil'),
         `${store.profile?.name || '—'}${store.profile?.company ? ` · ${store.profile.company}` : ''}`),
+    ),
+  )
+}
+
+/**
+ * Les vues par métier, au second plan.
+ *
+ * Utile quand le modèle est relu à plusieurs — un associé financier, un
+ * accompagnant d'incubateur — mais ce n'est pas la question d'un fondateur qui
+ * ouvre l'outil pour la première fois. D'où sa place ici, repliée.
+ */
+function teamViews(navigate, refresh) {
+  const current = getPersona(store.persona)
+  return h('details', { class: 'detail-block mb' },
+    h('summary', {},
+      h('span', { class: 'detail-summary-title' }, 'Relire à plusieurs'),
+      h('span', { class: 'detail-summary-note' },
+        `Vue active : ${current.label}. Chaque métier voit ses indicateurs et ses leviers.`),
+    ),
+    h('div', { class: 'detail-inner' },
+      h('p', { class: 'small muted', style: { margin: '0 0 12px' } },
+        "Fizzy est construit pour un fondateur qui bâtit son dossier seul. Si vous partagez le modèle avec un associé, un directeur financier ou l'équipe d'un incubateur, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
+      personaPicker((p) => {
+        if (!p.pages.includes('reglages')) navigate('#/parcours')
+        else refresh()
+      }),
     ),
   )
 }

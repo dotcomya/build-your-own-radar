@@ -53,7 +53,7 @@ function chooseStart(navigate) {
     const level = store.profile?.role === 'consultant' ? 'advanced' : store.profile?.role === 'student' ? 'easy' : 'intermediate'
     const s = store.create({ template, level, name: template ? SECTORS[template].label : (store.profile?.company || 'Mon business plan') })
     toast(`« ${s.meta.name} » créé.`, 'ok')
-    navigate('#/tableau-de-bord')
+    navigate('#/parcours')
   }
 
   return h('div', { class: 'content', style: { maxWidth: '1080px', paddingTop: '4vh' } },
@@ -68,7 +68,7 @@ function chooseStart(navigate) {
         ...existing.slice(0, 4).map((s) => h('div', { class: 'item' },
           h('div', {
             class: 'item-head',
-            onClick: () => { store.load(s.id); navigate('#/tableau-de-bord') },
+            onClick: () => { store.load(s.id); navigate('#/parcours') },
           },
             h('div', { class: 'spacer' },
               h('div', { class: 'item-title' }, s.name),

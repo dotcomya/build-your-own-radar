@@ -139,7 +139,13 @@ export function emptyScenario(name = 'Mon business plan') {
       createdAt: Date.now(), updatedAt: Date.now(),
     },
     fiscal: {},
-    activities: [newActivity({ name: 'Offre principale' })],
+    // Une page blanche est vraiment blanche : l'offre existe pour accueillir la
+    // saisie, mais sans prix inventé. Un parcours qui s'ouvre à 70 % parce que
+    // l'outil a rempli les cases à la place du fondateur ne guide personne.
+    activities: [newActivity({
+      name: 'À définir', unitPrice: 0, unitCost: 0, recurringPrice: 0, contractMonths: 0,
+      volumes: { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0.08, growthDecay: 0.96, cap: '', seasonality: null, manual: [] },
+    })],
     marketing: [],
     team: [],
     opex: [],

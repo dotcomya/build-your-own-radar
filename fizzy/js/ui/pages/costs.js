@@ -4,6 +4,8 @@ import { h, euro, pct, num, numberField, textField, selectField, switchField, mo
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderCosts(navigate, refresh) {
@@ -32,6 +34,7 @@ export function renderCosts(navigate, refresh) {
   const missing = OPEX_TEMPLATES.filter((t) => !s.opex.some((o) => o.label === t.label))
 
   return h('div', { class: 'content' },
+    stepBanner('charges', journey(store.scenario, store.result), navigate),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Charges de fonctionnement'),
       h('p', {}, "Tout ce que vous payez indépendamment du volume vendu : loyer, assurances, logiciels, honoraires. Ces charges déterminent votre point mort."),
@@ -72,6 +75,8 @@ export function renderCosts(navigate, refresh) {
     ),
 
     capexSection(s, r, level, refresh),
+
+    tutorial('charges', navigate),
   )
 }
 

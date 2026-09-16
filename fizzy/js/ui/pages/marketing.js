@@ -8,6 +8,8 @@ import { h, euro, pct, num, numberField, textField, selectField, switchField, mo
 import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { tutorial, stepBanner } from '../tutorial.js'
+import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderMarketing(navigate, refresh) {
@@ -26,6 +28,7 @@ export function renderMarketing(navigate, refresh) {
   const totalClients = (r?.revenue.campaigns || []).reduce((a, c) => a + c.totalClients, 0)
 
   return h('div', { class: 'content' },
+    stepBanner('acquisition', journey(store.scenario, store.result), navigate),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Marketing et acquisition'),
       h('p', {}, "Chaque campagne convertit un budget en clients, et ces clients alimentent directement le chiffre d'affaires de l'offre à laquelle vous la rattachez. Modifiez un budget : le résultat et la trésorerie suivent."),
@@ -53,6 +56,8 @@ export function renderMarketing(navigate, refresh) {
     s.marketing.length > 0 && h('button', { class: 'btn btn-block mt', onClick: add }, '＋ Ajouter une campagne'),
 
     r && s.marketing.length > 0 && mixPanel(r),
+
+    tutorial('acquisition', navigate),
   )
 }
 
