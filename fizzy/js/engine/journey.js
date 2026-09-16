@@ -19,8 +19,8 @@ import { euro, pct } from '../format.js'
 
 /** Les trois actes. Un acte est une promesse, pas un chapitre. */
 export const ACTS = [
-  { key: 'projet', title: 'Ce que tu vends', tagline: "D'où vient l'argent" },
-  { key: 'moyens', title: 'Ce que ça coûte', tagline: 'Ce que tu dépenses pour y arriver' },
+  { key: 'projet', title: 'Ce que je vends', tagline: "D'où vient l'argent" },
+  { key: 'moyens', title: 'Ce que ça coûte', tagline: 'Ce qu’il faut dépenser pour y arriver' },
   { key: 'argent', title: "L'argent", tagline: 'Combien il en manque, et ce qui te revient' },
 ]
 
@@ -47,16 +47,16 @@ export const STEPS = [
     key: 'projet',
     act: 'projet',
     page: 'reglages',
-    label: 'Ton projet',
-    question: "C'est quoi, ton projet ?",
-    promise: "Le métier que tu choisis change tout le reste : la TVA, ton statut, les repères auxquels on te comparera.",
-    investor: "La première chose qu'on regarde : est-ce que tu sais dire en une phrase ce que tu vends et à qui.",
+    label: 'Mon projet',
+    question: 'Quel est votre projet ?',
+    promise: "Le métier choisi commande tout le reste : la TVA, votre statut social, les repères auxquels on vous comparera.",
+    investor: "La première chose qu'on regarde : savez-vous dire en une phrase ce que vous vendez et à qui.",
     minutes: 2,
-    unlocks: "Les repères de ton métier et le bon régime de TVA",
+    unlocks: "Repères du métier et régime de TVA applicable",
     tips: [
       {
-        title: 'Ton métier décide de ta TVA',
-        body: "Un cabinet médical ou paramédical est exonéré : tu ne la factures pas, mais tu ne la récupères pas non plus sur tes achats. Dans ce cas, saisis tout en TTC — sinon tu sous-estimes tes charges de 20 %.",
+        title: 'Le métier décide de la TVA',
+        body: "Un cabinet médical ou paramédical est exonéré : vous ne la facturez pas, mais vous ne la récupérez pas non plus sur vos achats. Saisissez alors tout en TTC — sinon vous sous-estimez vos charges de 20 %.",
       },
       {
         title: 'SAS ou SARL : ce n’est pas un détail',
@@ -64,7 +64,7 @@ export const STEPS = [
       },
       {
         title: 'La date de départ n’est pas aujourd’hui',
-        body: "Mets la date à laquelle tu encaisseras ton premier euro, pas celle de l'immatriculation. Un décalage de trois mois déplace tout ton besoin de trésorerie.",
+        body: "Indiquez la date du premier euro encaissé, pas celle de l'immatriculation. Un décalage de trois mois déplace tout le besoin de trésorerie.",
       },
     ],
     check(s) {
@@ -75,7 +75,7 @@ export const STEPS = [
       const bits = []
       if (s.meta?.sectorKey) bits.push(s.meta.sectorLabel || 'métier choisi')
       if (s.meta?.legalForm) bits.push(s.meta.legalForm)
-      return state(score, bits.join(' · ') || 'Choisis ton métier pour démarrer')
+      return state(score, bits.join(' · ') || 'Choisissez votre métier pour démarrer')
     },
   },
 
@@ -83,16 +83,16 @@ export const STEPS = [
     key: 'modele',
     act: 'projet',
     page: 'modele',
-    label: 'Ton modèle',
-    question: 'Comment tu gagnes de l’argent ?',
+    label: 'Mon modèle',
+    question: 'Comment gagnez-vous de l’argent ?',
     promise: "Un prix, un coût de revient, et la façon dont l'argent revient — une fois ou tous les mois. C'est la brique dont tout le reste est fait.",
-    investor: "On vérifiera que ta marge unitaire est positive avant même de regarder ton chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
+    investor: "On vérifiera que votre marge unitaire est positive avant même de regarder votre chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
     minutes: 5,
-    unlocks: 'Ta marge unitaire et ton point mort',
+    unlocks: 'Marge unitaire et point mort',
     tips: [
       {
         title: 'La marge brute, pas le prix',
-        body: "Ce qui paie tes charges fixes, ce n'est pas ton prix : c'est ton prix moins ce que coûte chaque vente. À 100 € vendus et 70 € de coût, il te faut dix fois plus de clients qu'à 30 € de coût pour le même résultat.",
+        body: "Ce qui paie les charges fixes, ce n'est pas le prix : c'est le prix moins ce que coûte chaque vente. À 100 € vendus et 70 € de coût, il faut dix fois plus de clients qu'à 30 € de coût pour le même résultat.",
       },
       {
         title: "Le récurrent vaut plusieurs fois l'unitaire",
@@ -100,7 +100,7 @@ export const STEPS = [
       },
       {
         title: "L'erreur classique : oublier le coût de revient",
-        body: "Hébergement, commission de paiement, matières, sous-traitance, livraison. Tout ce qui augmente quand tu vends une unité de plus est un coût variable — pas une charge fixe.",
+        body: "Hébergement, commission de paiement, matières, sous-traitance, livraison. Tout ce qui augmente quand vous vendez une unité de plus est un coût variable — pas une charge fixe.",
       },
     ],
     check(s) {
@@ -132,24 +132,24 @@ export const STEPS = [
     key: 'clients',
     act: 'projet',
     page: 'offre',
-    label: 'Tes clients',
-    question: 'Combien, et à quel rythme ?',
+    label: 'Mes clients',
+    question: 'Combien de clients, et à quel rythme ?',
     promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
-    investor: "Un investisseur ne discute presque jamais tes charges. Il discute tes volumes. Prépare-toi à dire d'où vient ce premier chiffre.",
+    investor: "Un investisseur ne discute presque jamais vos charges. Il discute vos volumes. Préparez-vous à dire d'où vient ce premier chiffre.",
     minutes: 6,
-    unlocks: "Ton chiffre d'affaires et ta trajectoire sur cinq ans",
+    unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
     tips: [
       {
-        title: 'Pars de ce que tu sais faire, pas du marché',
-        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois parce que j'en ai déjà deux qui attendent » se vérifie. Dimensionne à partir de ta capacité réelle à livrer.",
+        title: 'Partez de ce que vous savez livrer, pas du marché',
+        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de votre capacité réelle à livrer.",
       },
       {
         title: '10 % par mois, c’est déjà énorme',
-        body: "10 % de croissance mensuelle triple tes volumes en un an. 30 % les multiplie par 23. Au-delà de 15 %, il faut expliquer par quel canal — Fizzy freine automatiquement la croissance dans la durée, parce qu'aucune courbe ne monte indéfiniment.",
+        body: "10 % de croissance mensuelle triplent les volumes en un an. 30 % les multiplient par 23. Au-delà de 15 %, il faut dire par quel canal — Fizzy freine automatiquement la croissance dans la durée, parce qu'aucune courbe ne monte indéfiniment.",
       },
       {
         title: 'Le délai de paiement tue plus que le prix',
-        body: "Vendre à 60 jours quand tu paies tes salaires à 30 crée un trou permanent. Demande un acompte : c'est la manière la plus simple de financer ta croissance sans lever un euro.",
+        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demandez un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
       },
     ],
     check(s, r) {
@@ -169,13 +169,13 @@ export const STEPS = [
     key: 'acquisition',
     act: 'moyens',
     page: 'marketing',
-    label: 'Ton acquisition',
-    question: 'Comment tu les trouves ?',
-    promise: "Combien te coûte un client, et combien il te rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
+    label: 'Mon acquisition',
+    question: 'Comment les trouvez-vous ?',
+    promise: "Combien vous coûte un client, et combien il vous rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
     investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
     minutes: 5,
     optional: true,
-    unlocks: 'Ton coût d’acquisition et le rapport valeur client / coût',
+    unlocks: "Coût d'acquisition et rapport valeur client / coût",
     tips: [
       {
         title: 'La règle des 3',
@@ -183,10 +183,10 @@ export const STEPS = [
       },
       {
         title: 'Le bouche-à-oreille n’est pas un canal',
-        body: "Si tes premiers clients viennent de ton réseau, laisse cette page vide et dis-le : c'est plus honnête qu'un budget publicitaire inventé. Tu la rempliras quand tu voudras passer à l'échelle.",
+        body: "Si les premiers clients viennent du réseau, laissez cette page vide et dites-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
       },
       {
-        title: 'Ton taux de conversion est plus bas que tu ne crois',
+        title: 'Le taux de conversion est plus bas qu’on ne croit',
         body: "2 à 5 % d'un visiteur à un contact, 10 à 20 % d'un contact à un client : voilà les ordres de grandeur. Au-delà de 20 %, il faut des données réelles pour l'étayer.",
       },
     ],
@@ -205,29 +205,29 @@ export const STEPS = [
     key: 'equipe',
     act: 'moyens',
     page: 'equipe',
-    label: 'Ton équipe',
-    question: 'Qui travaille avec toi ?',
-    promise: "Tu donnes un brut mensuel, Fizzy calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements auxquels tu as droit.",
+    label: 'Mon équipe',
+    question: 'Qui travaille avec vous ?',
+    promise: "Vous donnez un brut mensuel, Fizzy calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
     investor: "Les salaires sont le premier poste de dépense et le plus difficile à réduire. Le mois d'arrivée compte autant que le montant.",
     minutes: 6,
-    unlocks: 'Ta masse salariale chargée et ton point mort',
+    unlocks: 'Masse salariale chargée et point mort',
     tips: [
       {
         title: 'Un salaire brut coûte 1,25 à 1,45 fois plus',
-        body: "Les cotisations patronales s'ajoutent au brut. Au niveau du SMIC, la réduction générale les ramène presque à zéro ; elle s'annule à 3 SMIC. Fizzy applique la dégressivité réelle : ne fais pas la moyenne toi-même.",
+        body: "Les cotisations patronales s'ajoutent au brut. Au niveau du SMIC, la réduction générale les ramène presque à zéro ; elle s'annule à 3 SMIC. Fizzy applique la dégressivité réelle : inutile d'en faire la moyenne.",
       },
       {
         title: 'Décaler une embauche de trois mois',
-        body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer à ton modèle. Regarde l'effet avant d'aller chercher de l'argent.",
+        body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer au modèle. Mesurez l'effet avant d'aller chercher de l'argent.",
       },
       {
-        title: 'Compte-toi dedans',
-        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Mets ta rémunération, même modeste, sinon ton point mort est sous-estimé et ta première année te surprendra.",
+        title: 'Comptez-vous dedans',
+        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscrivez votre rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
       },
     ],
     check(s, r) {
       const team = liveTeam(s)
-      if (!team.length) return state(0, "Personne dans l'équipe, pas même toi")
+      if (!team.length) return state(0, "Personne dans l'équipe, pas même vous")
       const paid = team.filter((m) => n(m.monthlyGross) > 0 || m.contractType === 'stage')
       const cost = r ? (r.pnl.payroll[0] || 0) : 0
       const score = paid.length === team.length ? 1 : 0.6
@@ -239,12 +239,12 @@ export const STEPS = [
     key: 'charges',
     act: 'moyens',
     page: 'charges',
-    label: 'Tes charges',
-    question: 'Ce que ça coûte de tourner ?',
-    promise: "Loyer, comptable, logiciels, assurances, matériel. Les dépenses qui tombent que tu vendes ou non — celles qui fixent ton point mort.",
+    label: 'Mes charges',
+    question: 'Que coûte le fonctionnement ?',
+    promise: "Loyer, comptable, logiciels, assurances, matériel. Les dépenses qui tombent que vous vendiez ou non — celles qui fixent votre point mort.",
     investor: "Un prévisionnel sans comptable, sans assurance et sans banque n'a pas été relu. C'est le premier signe qu'on cherche.",
     minutes: 4,
-    unlocks: 'Ton point mort et ton besoin en fonds de roulement',
+    unlocks: 'Point mort et besoin en fonds de roulement',
     tips: [
       {
         title: 'Les quatre oubliés',
@@ -252,11 +252,11 @@ export const STEPS = [
       },
       {
         title: 'Investissement ou charge ?',
-        body: "Ce qui sert plus d'un an et dépasse 500 € est un investissement : il sort de la trésorerie d'un coup, mais s'étale dans le résultat sur sa durée d'amortissement. Ça change ton résultat sans changer ta caisse.",
+        body: "Ce qui sert plus d'un an et dépasse 500 € est un investissement : il sort de la trésorerie d'un coup, mais s'étale dans le résultat sur sa durée d'amortissement. Le résultat change sans que la caisse bouge.",
       },
       {
         title: 'Les charges qui suivent le chiffre d’affaires',
-        body: "Certaines charges ne sont pas fixes : commission de plateforme, frais de livraison, part variable d'un loyer. Rattache-les au chiffre d'affaires plutôt que de les figer — ton point mort en dépend.",
+        body: "Certaines charges ne sont pas fixes : commission de plateforme, frais de livraison, part variable d'un loyer. Rattachez-les au chiffre d'affaires plutôt que de les figer — le point mort en dépend.",
       },
     ],
     check(s) {
@@ -275,25 +275,25 @@ export const STEPS = [
     key: 'financement',
     act: 'argent',
     page: 'financement',
-    label: 'Ton financement',
-    question: 'Comment tu tiens jusqu’à la rentabilité ?',
+    label: 'Mon financement',
+    question: 'Comment tenir jusqu’à la rentabilité ?',
     promise: "Apport, prêt, subvention, levée. Fizzy calcule le trou à combler et la date avant laquelle il doit l'être.",
-    investor: "Le chiffre qu'on retient de ton dossier : combien tu demandes, et pour combien de mois d'autonomie.",
+    investor: "Le chiffre qu'on retient d'un dossier : combien vous demandez, et pour combien de mois d'autonomie.",
     minutes: 5,
-    unlocks: 'Ton plan de financement et ta date limite',
+    unlocks: 'Plan de financement et date limite',
     tips: [
       {
         title: 'Demande le point bas, pas la perte',
         button: 'Voir mon point bas',
-        body: "Ce qu'il te faut, ce n'est pas la somme de tes pertes : c'est le point le plus bas de ta trésorerie, plus une marge. Fizzy te donne le montant exact et le mois où il tombe.",
+        body: "Ce qu'il faut réunir, ce n'est pas la somme des pertes : c'est le point le plus bas de la trésorerie, plus une marge. Fizzy donne le montant exact et le mois où il tombe.",
       },
       {
         title: 'La règle du 1 pour 1',
-        body: "Une banque prête rarement plus que les fonds propres. 20 000 € d'apport ouvrent la porte à 20 000 € de prêt — rarement à 60 000. Prévois l'apport avant de compter sur l'emprunt.",
+        body: "Une banque prête rarement plus que les fonds propres. 20 000 € d'apport ouvrent la porte à 20 000 € de prêt — rarement à 60 000. Prévoyez l'apport avant de compter sur l'emprunt.",
       },
       {
         title: 'Lève pour 18 mois, pas pour 6',
-        body: "Une levée prend quatre à six mois. Si tu ne finances que six mois d'autonomie, tu repars en levée le jour où tu as fini. Vise 18 à 24 mois entre deux tours.",
+        body: "Une levée prend quatre à six mois. En ne finançant que six mois d'autonomie, on repart en levée le jour où l'on a fini. Visez 18 à 24 mois entre deux tours.",
       },
     ],
     check(s, r) {
@@ -316,20 +316,20 @@ export const STEPS = [
     key: 'remuneration',
     act: 'argent',
     page: 'mon-revenu',
-    label: 'Ta rémunération',
-    question: 'Combien il t’en reste ?',
-    promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur ton compte.",
+    label: 'Ma rémunération',
+    question: 'Combien vous en reste-t-il ?',
+    promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur votre compte.",
     investor: "Un fondateur qui sait ce qu'il touche net a compris son propre modèle. C'est plus rare qu'on ne croit.",
     minutes: 3,
-    unlocks: 'Ton revenu disponible, mois par mois',
+    unlocks: 'Revenu disponible, mois par mois',
     tips: [
       {
         title: "L'arbitrage salaire / dividendes",
-        body: "Le salaire coûte plus cher à l'entreprise mais ouvre des droits — retraite, chômage parfois, prévoyance. Les dividendes coûtent moins mais n'ouvrent rien, et supposent un bénéfice. Fizzy chiffre les deux.",
+        body: "Le salaire coûte plus cher à l'entreprise mais ouvre des droits — retraite, prévoyance, parfois chômage. Les dividendes coûtent moins mais n'ouvrent rien, et supposent un bénéfice. Fizzy chiffre les deux.",
       },
       {
-        title: 'Ce que ton comptable appelle le « coût d’un euro net »',
-        body: "L'entreprise doit souvent produire 1,70 à 2,20 € de valeur pour t'en laisser un dans la poche. Le savoir change la façon dont tu fixes tes prix.",
+        title: 'Le « coût d’un euro net »',
+        body: "L'entreprise doit souvent produire 1,70 à 2,20 € de valeur pour en laisser un dans votre poche. Le savoir change la façon de fixer ses prix.",
       },
       {
         title: "Le gérant majoritaire de SARL n'échappe pas aux cotisations",
@@ -341,7 +341,7 @@ export const STEPS = [
       const team = liveTeam(s)
       const paysSelf = team.some((m) => n(m.monthlyGross) > 0)
       const hasPayout = n(f.dividendPayout) > 0
-      if (!paysSelf && !hasPayout) return state(0, 'Tu ne te verses rien pour le moment')
+      if (!paysSelf && !hasPayout) return state(0, 'Vous ne vous versez rien pour le moment')
       let score = 0.6
       if (n(f.taxParts) >= 1 && f.dividendRegime) score = 1
       return state(score, paysSelf ? 'Rémunération saisie' : 'Distribution de dividendes prévue')
@@ -352,32 +352,32 @@ export const STEPS = [
     key: 'dossier',
     act: 'argent',
     page: 'business-case',
-    label: 'Ton dossier',
+    label: 'Mon dossier',
     question: 'Prêt à le présenter ?',
-    promise: "La synthèse rédigée à partir de tes chiffres, et le PowerPoint qui dit exactement la même chose que ton écran.",
-    investor: "Le dossier ne remplace pas la conversation : il prouve que tu as fait le travail avant d'entrer dans la pièce.",
+    promise: "La synthèse rédigée à partir de vos chiffres, et le PowerPoint qui dit exactement la même chose que votre écran.",
+    investor: "Le dossier ne remplace pas la conversation : il prouve que le travail est fait avant d'entrer dans la pièce.",
     minutes: 2,
-    unlocks: 'Ton business plan exportable',
+    unlocks: 'Business plan exportable',
     tips: [
       {
         title: 'Douze diapositives, pas quarante',
-        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que tu touches. C'est l'ordre dans lequel on te lira.",
+        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que vous touchez. C'est l'ordre dans lequel on vous lira.",
       },
       {
         title: 'Emporte le CSV',
-        body: "Un banquier ou un incubateur demandera souvent le détail mois par mois. Le CSV contient les soixante mois : tu réponds en trente secondes au lieu de trois jours.",
+        body: "Une banque ou un fonds demande presque toujours le détail mois par mois. Le CSV contient les soixante mois : vous répondez en trente secondes au lieu de trois jours.",
       },
       {
-        title: 'Relis tes hypothèses avant d’envoyer',
-        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Si tu n'es pas capable de défendre chaque ligne, corrige-la maintenant plutôt qu'en réunion.",
+        title: 'Relisez vos hypothèses avant d’envoyer',
+        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que vous ne sauriez pas défendre se corrige maintenant, pas en réunion.",
       },
     ],
     check(s, r) {
       if (!r) return state(0, 'Rien à exporter pour le moment')
       const hasRevenue = (r.pnl.revenue || []).some((v) => v > 0)
       const hasCosts = (r.pnl.payroll || []).some((v) => v > 0) || (r.pnl.external || []).some((v) => v > 0)
-      if (!hasRevenue) return state(0, "Il manque ton chiffre d'affaires")
-      if (!hasCosts) return state(0.4, 'Il manque tes charges')
+      if (!hasRevenue) return state(0, "Il manque le chiffre d'affaires")
+      if (!hasCosts) return state(0.4, 'Il manque les charges')
       return state(1, 'Exportable en PowerPoint et en CSV')
     },
   },
@@ -447,7 +447,7 @@ function trophies(scenario, result, steps) {
     {
       key: 'modele', label: 'Modèle posé', glyph: '◈',
       won: steps.find((s) => s.key === 'modele')?.status === 'done',
-      hint: 'Un prix et un coût de revient sur chaque offre',
+      hint: 'Un prix et une marge positive sur chaque offre',
     },
     {
       key: 'marge', label: 'Marge positive', glyph: '△',
@@ -458,7 +458,7 @@ function trophies(scenario, result, steps) {
     {
       key: 'pointmort', label: 'Point mort franchi', glyph: '◎',
       won: did('modele') && did('charges') && !!k && !!p && k.breakEven.some((v, y) => v !== null && p.revenue[y] >= v),
-      hint: "Ton chiffre d'affaires dépasse tes charges sur au moins un exercice",
+      hint: "Le chiffre d'affaires dépasse les charges sur au moins un exercice",
     },
     {
       key: 'tresorerie', label: 'Trésorerie couverte', glyph: '◇',
@@ -472,9 +472,9 @@ function trophies(scenario, result, steps) {
       value: k && k.firstProfitableYear !== null ? `Année ${k.firstProfitableYear + 1}` : null,
     },
     {
-      key: 'paye', label: 'Tu te paies', glyph: '◉',
+      key: 'paye', label: 'Je me paie', glyph: '◉',
       won: (scenario?.team || []).some((m) => m?.enabled !== false && n(m?.monthlyGross) > 0),
-      hint: 'Ta rémunération est dans le modèle',
+      hint: 'La rémunération du dirigeant est dans le modèle',
     },
     {
       key: 'dossier', label: 'Dossier prêt', glyph: '◆',
@@ -498,22 +498,22 @@ function rank(completion, result) {
 
   if (completion >= 0.98 && solid) {
     return { key: 'investisseur', label: 'Prêt pour un investisseur', tone: 'good',
-      line: 'Ton dossier tient debout tout seul. Va le défendre.' }
+      line: 'Le dossier tient debout tout seul. Allez le défendre.' }
   }
   if (completion >= 0.85) {
-    return { key: 'comite', label: 'Prêt pour ton incubateur', tone: 'good',
-      line: 'De quoi passer un comité de sélection sans se faire arrêter à la deuxième question.' }
+    return { key: 'banque', label: 'Présentable à une banque', tone: 'good',
+      line: 'Les grandes masses tiennent. Il reste à boucler le financement pour viser un fonds.' }
   }
   if (completion >= 0.6) {
     return { key: 'chiffre', label: 'Chiffré', tone: 'watch',
-      line: viable ? 'Les grandes masses y sont. Reste à boucler le financement et la trésorerie.' : "Les grandes masses y sont, mais ta marge unitaire ne tient pas encore." }
+      line: viable ? 'Les grandes masses y sont. Reste à boucler le financement et la trésorerie.' : "Les grandes masses y sont, mais la marge unitaire ne tient pas encore." }
   }
   if (completion >= 0.3) {
     return { key: 'esquisse', label: 'Esquissé', tone: 'watch',
-      line: 'Le modèle prend forme. Continue : les chiffres commencent à se répondre.' }
+      line: 'Le modèle prend forme : les chiffres commencent à se répondre.' }
   }
   return { key: 'depart', label: 'Au départ', tone: 'neutral',
-    line: 'Cinq minutes suffisent pour voir ton premier point mort.' }
+    line: 'Cinq minutes suffisent pour voir un premier point mort.' }
 }
 
 /** Progression exprimée en points, pour l'affichage. */

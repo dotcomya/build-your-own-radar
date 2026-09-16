@@ -27,7 +27,7 @@ export function tutorial(step, navigate) {
 
   const body = h('div', { class: 'coach-body' },
     h('div', { class: 'coach-invest' },
-      h('span', { class: 'coach-invest-tag' }, 'Ce qu’on te demandera'),
+      h('span', { class: 'coach-invest-tag' }, 'Ce qu’on vous demandera'),
       h('p', {}, s.investor),
     ),
     h('div', { class: 'coach-tips' },

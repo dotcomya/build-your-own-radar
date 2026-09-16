@@ -22,10 +22,6 @@ export function renderFinancing(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('financement', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Financement'),
-      h('p', {}, "Ce que vous mettez, ce que vous empruntez, ce qu'on vous donne. Le point bas de votre trésorerie indique le minimum à réunir avant de démarrer."),
-    ),
 
     r && h('div', { class: 'grid grid-4 kpis mb' },
       tile('Financements réunis', euro(totalRaised, { compact: true }), 'Tous apports confondus'),

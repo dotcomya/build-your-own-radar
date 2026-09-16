@@ -1,16 +1,32 @@
 /**
- * Paramètres fiscaux et sociaux — France, exercice 2026.
+ * Paramètres fiscaux et sociaux — France.
  *
- * Chaque paramètre porte son barème, une note explicative et un niveau de
- * confiance. Les valeurs marquées `confidence: 'to-verify'` sont des valeurs
- * reconduites ou estimées : elles doivent être confirmées avant tout usage
- * officiel (dépôt bancaire, levée de fonds, liasse fiscale).
+ * Deux natures de paramètres cohabitent ici, et les confondre serait la
+ * principale façon de se tromper.
  *
- * L'utilisateur peut surcharger n'importe quelle valeur depuis Réglages →
- * Paramètres fiscaux ; les surcharges sont stockées dans le scénario.
+ * Les RÈGLES sont pérennes : l'impôt sur les sociétés à 15 % jusqu'à 42 500 €
+ * puis 25 %, la dégressivité de la réduction générale jusqu'à 3 SMIC, les taux
+ * de TVA, le report déficitaire plafonné. Elles ne changent qu'avec une loi de
+ * finances, et sont marquées `confidence: 'stable'`.
+ *
+ * Les VALEURS ANNUELLES — SMIC, plafond de la Sécurité sociale, taux moyens de
+ * cotisations — sont revalorisées chaque année. Elles portent
+ * `confidence: 'to-verify'` : ce ne sont pas des approximations acceptables
+ * mais des valeurs à confirmer contre le texte publié avant tout usage engageant
+ * (dossier bancaire, levée de fonds, liasse fiscale). Réglages → Paramètres
+ * fiscaux les liste toutes et permet de les corriger sans toucher au code.
+ *
+ * Sur 2027 : au moment où ce module est écrit, aucune loi de finances 2027
+ * n'est promulguée. Projeter un exercice 2027 revient donc à reconduire les
+ * règles connues — ce que Fizzy fait explicitement plutôt que d'inventer des
+ * barèmes. La date de départ d'un plan pouvant tomber en 2027, l'application
+ * l'affiche et le dit.
  */
 
 export const FISCAL_YEAR = 2026
+
+/** Dernier exercice dont les règles sont issues d'un texte promulgué. */
+export const LAST_ENACTED_YEAR = 2026
 
 /** Confiance : 'stable' = règle pérenne, 'to-verify' = à confirmer pour 2026. */
 export const PARAMS = {

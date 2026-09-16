@@ -27,6 +27,8 @@ import { renderFounder } from './ui/pages/founder.js'
 import { renderJourney } from './ui/pages/journey.js'
 import { renderModel } from './ui/pages/model.js'
 import { journey, points } from './engine/journey.js'
+import { cloud, onCloud, syncLabel } from './state/cloud.js'
+import { renderAccount } from './ui/pages/account.js'
 
 const PAGES = {
   parcours: { label: 'Mon parcours', icon: '◍', render: renderJourney, levels: ['easy', 'intermediate', 'advanced'], tab: true },
@@ -40,6 +42,7 @@ const PAGES = {
   resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'] },
   'mon-revenu': { label: 'Ce que je touche', icon: '◉', render: renderFounder, levels: ['easy', 'intermediate', 'advanced'] },
   'business-case': { label: 'Business case', icon: '◆', render: renderBusinessCase, levels: ['easy', 'intermediate', 'advanced'] },
+  compte: { label: 'Mon compte', icon: '◍', render: renderAccount, levels: ['easy', 'intermediate', 'advanced'] },
   reglages: { label: 'Réglages', icon: '⚙', render: renderSettings, levels: ['easy', 'intermediate', 'advanced'] },
 }
 
@@ -49,7 +52,7 @@ const GROUPS = [
   { title: '', keys: ['parcours'] },
   { title: 'Construire', keys: ['modele', 'offre', 'marketing', 'equipe', 'charges', 'financement'] },
   { title: 'Lire', keys: ['tableau-de-bord', 'resultats', 'mon-revenu', 'business-case'] },
-  { title: '', keys: ['reglages'] },
+  { title: '', keys: ['compte', 'reglages'] },
 ]
 
 const root = document.getElementById('app')
@@ -145,15 +148,22 @@ function rail(active) {
     h('div', { class: 'rail-foot' },
       h('button', { class: 'rail-link', onClick: () => { navigate('#/demarrer') } },
         h('span', { class: 'ico' }, '＋'), h('span', {}, 'Nouveau projet')),
-      h('div', { class: 'tiny', style: { padding: '10px 10px 0', color: 'var(--ink-600)' } },
-        store.profile?.name || '', h('br'), h('span', { style: { color: 'var(--ink-700)' } }, saveLabel())),
+      h('button', {
+        class: 'rail-account', onClick: () => { navigate('#/compte'); document.getElementById('rail')?.classList.remove('open') },
+      },
+        h('span', { class: 'rail-account-name' }, cloud.name || store.profile?.name || 'Mon compte'),
+        h('span', { class: `rail-account-sync ${cloud.status === 'ready' ? 'live' : ''}` },
+          cloud.status === 'ready' ? h('i', { class: 'sync-dot' }) : null,
+          saveLabel()),
+      ),
     ),
   )
   return el
 }
 
 function saveLabel() {
-  return store.saveState === 'error' ? 'Sauvegarde impossible' : 'Enregistré sur cet appareil'
+  if (store.saveState === 'error') return 'Sauvegarde impossible'
+  return syncLabel()
 }
 
 function topbar(page) {
@@ -302,11 +312,20 @@ window.addEventListener('hashchange', render)
  */
 let lastDone = new Set()
 
-/** Relève l'état du parcours sans rien annoncer — au chargement d'un scénario. */
+/**
+ * Relève l'état du parcours sans rien annoncer — au chargement d'un plan.
+ *
+ * Et complète les dates manquantes : un plan importé, ou rempli avant que
+ * Fizzy ne date les franchissements, a des étapes faites sans date. On les
+ * rattache à la dernière modification du plan plutôt que de les laisser vides,
+ * sinon l'historique ment par omission.
+ */
 function markJourney() {
   if (!store.scenario || !store.result) { lastDone = new Set(); return }
   const j = journey(store.scenario, store.result)
-  lastDone = new Set(j.steps.filter((s) => s.status === 'done').map((s) => s.key))
+  const done = j.steps.filter((s) => s.status === 'done').map((s) => s.key)
+  lastDone = new Set(done)
+  store.backfillSteps(done)
 }
 
 function celebrate() {
@@ -316,6 +335,9 @@ function celebrate() {
   const fresh = [...done].filter((k) => !lastDone.has(k))
   lastDone = done
   if (!fresh.length) return
+  // La date du franchissement part avec le plan : elle survit au rechargement
+  // et à un changement d'appareil.
+  store.markSteps(fresh)
   const step = j.steps.find((s) => s.key === fresh[0])
   const left = j.total - j.done
   toast(left === 0
@@ -333,6 +355,22 @@ store.subscribe((_, reason) => {
 markJourney()
 if (!location.hash) location.hash = store.scenario ? '#/parcours' : '#/'
 render()
+
+// Le compte s'ouvre après le premier rendu : la page ne doit jamais attendre
+// le réseau pour s'afficher. Le rail se met à jour quand la réponse arrive.
+onCloud(() => {
+  const foot = document.querySelector('.rail-account-sync')
+  if (foot) {
+    foot.className = `rail-account-sync ${cloud.status === 'ready' ? 'live' : ''}`
+    foot.replaceChildren(...[
+      cloud.status === 'ready' ? h('i', { class: 'sync-dot' }) : null,
+      saveLabel(),
+    ].filter(Boolean))
+  }
+  const name = document.querySelector('.rail-account-name')
+  if (name && cloud.name) name.textContent = cloud.name
+})
+store.syncAccount()
 
 // Le service worker n'accompagne que la version auto-hébergée : la page
 // publiée n'en sert pas et tenterait un enregistrement voué à l'échec.

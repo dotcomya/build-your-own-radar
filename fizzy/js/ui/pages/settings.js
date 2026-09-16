@@ -1,7 +1,7 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
 import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton } from '../dom.js'
-import { PARAMS, paramsToVerify, FISCAL_YEAR } from '../../engine/fiscal-fr-2026.js'
+import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
 import { LEVEL_META } from '../../state/schema.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
@@ -144,6 +144,11 @@ function fiscalPanel(refresh) {
     h('div', { class: 'card-body' },
       h('div', { class: 'note warn mb' },
         h('div', { class: 'note-title' }, `${toVerify.length} paramètres à confirmer pour ${FISCAL_YEAR}`),
+        h('p', { style: { margin: '0 0 8px' } },
+          `Les règles structurelles appliquées sont celles de l'exercice ${LAST_ENACTED_YEAR}, dernier promulgué. `
+          + `Un plan démarrant en ${LAST_ENACTED_YEAR + 1} les reconduit : aucune loi de finances ${LAST_ENACTED_YEAR + 1} `
+          + `n'existe encore, et Fizzy préfère le dire plutôt que d'inventer un barème. `
+          + `Les valeurs ci-dessous sont revalorisées chaque année — confirmez-les avant un dossier bancaire ou une levée.`),
         "Les règles pérennes — barème de l'impôt sur les sociétés, taux de TVA, seuils de la CVAE et de la C3S — sont appliquées telles quelles. En revanche, les valeurs revalorisées chaque année (SMIC, plafond de la Sécurité sociale, coefficients de la réduction générale, barème de la CFE) sont ici des valeurs de référence reconduites. Confirmez-les avec votre expert-comptable avant tout usage officiel.",
       ),
 
@@ -228,8 +233,8 @@ function dataPanel(navigate, refresh, usage) {
  * Les vues par métier, au second plan.
  *
  * Utile quand le modèle est relu à plusieurs — un associé financier, un
- * accompagnant d'incubateur — mais ce n'est pas la question d'un fondateur qui
- * ouvre l'outil pour la première fois. D'où sa place ici, repliée.
+ * associé financier — mais ce n'est pas la question d'un fondateur qui ouvre
+ * l'outil pour la première fois. D'où sa place ici, repliée.
  */
 function teamViews(navigate, refresh) {
   const current = getPersona(store.persona)
@@ -241,7 +246,7 @@ function teamViews(navigate, refresh) {
     ),
     h('div', { class: 'detail-inner' },
       h('p', { class: 'small muted', style: { margin: '0 0 12px' } },
-        "Fizzy est construit pour un fondateur qui bâtit son dossier seul. Si vous partagez le modèle avec un associé, un directeur financier ou l'équipe d'un incubateur, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
+        "Fizzy est construit pour un fondateur qui bâtit son dossier seul. Si vous partagez le modèle avec un associé ou un directeur financier, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
       personaPicker((p) => {
         if (!p.pages.includes('reglages')) navigate('#/parcours')
         else refresh()

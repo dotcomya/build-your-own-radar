@@ -49,10 +49,8 @@ export function renderBusinessCase(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('dossier', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Business case'),
-      h('p', {}, "La synthèse de votre projet, rédigée à partir de vos chiffres. Le PowerPoint exporté dit exactement ce que dit cet écran — il lit les mêmes fonctions."),
-    ),
+
+    readiness(s, r, y),
 
     h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Exporter'), h('span', { class: 'spacer' })),
@@ -238,6 +236,156 @@ function checklist(s, r, y) {
       h('div', { class: 'small muted' }, i.detail),
     ),
   ))
+}
+
+/* ───────────────────── Ce que chaque lecteur va vérifier ────────────────── */
+
+/**
+ * Trois lecteurs, trois grilles.
+ *
+ * Un même prévisionnel n'est pas jugé de la même façon selon qui l'ouvre. Une
+ * banque regarde la capacité de remboursement et l'apport ; un business angel
+ * regarde l'économie unitaire et ce que l'argent achète ; un fonds regarde la
+ * pente et la taille que le modèle peut atteindre. Cette section confronte le
+ * modèle aux trois grilles et dit, pour chacune, ce qui tient et ce qui manque.
+ *
+ * Les critères sont volontairement peu nombreux et vérifiables : il ne s'agit
+ * pas de promettre un accord, mais d'éviter la question à laquelle on n'a pas
+ * de réponse.
+ */
+function readiness(s, r, y) {
+  const k = r.kpis, p = r.pnl
+  const f = s.financing || {}
+  const equity = [...(f.equityFounders || []), ...(f.equityInvestors || [])]
+    .reduce((a, x) => a + (Number(x.amount) || 0), 0)
+  const debt = (f.loans || []).reduce((a, x) => a + (Number(x.amount) || 0), 0)
+  const revenue5 = p.revenue[4] || 0
+  const growth = p.revenue[0] > 0 && p.revenue[2] > 0 ? Math.pow(p.revenue[2] / p.revenue[0], 1 / 2) - 1 : null
+  const ebitdaY = p.ebitda[y] || 0
+  const annuity = debt > 0 ? debt / 7 : 0
+
+  const audiences = [
+    {
+      key: 'banque', label: 'Banque', glyph: '▤',
+      brief: "Elle prête contre une capacité de remboursement et un apport, pas contre une idée.",
+      checks: [
+        {
+          label: 'Apport personnel',
+          ok: debt === 0 || equity >= debt * 0.8,
+          value: debt > 0 ? `${euro(equity, { compact: true })} pour ${euro(debt, { compact: true })} empruntés` : euro(equity, { compact: true }),
+          need: "Une banque suit rarement au-delà de un pour un. Prévoyez un apport au moins égal au prêt demandé.",
+        },
+        {
+          label: 'Capacité de remboursement',
+          ok: annuity === 0 || ebitdaY > annuity * 1.3,
+          value: annuity > 0 ? `${euro(ebitdaY, { compact: true })} d'EBITDA pour ${euro(annuity, { compact: true })} d'annuité` : 'Aucun emprunt',
+          need: "L'EBITDA doit couvrir l'annuité avec de la marge. Réduisez le montant, allongez la durée, ou remontez la rentabilité.",
+        },
+        {
+          label: 'Trésorerie jamais négative',
+          ok: k.fundingNeed === 0,
+          value: k.fundingNeed > 0 ? `${euro(k.fundingNeed)} manquants` : 'Couverte sur cinq ans',
+          need: "Un plan qui passe sous zéro n'est pas finançable en l'état : le trou doit être comblé avant de présenter.",
+        },
+        {
+          label: 'Point mort atteint',
+          ok: !!k.breakEven[y] && p.revenue[y] >= k.breakEven[y],
+          value: k.breakEven[y] ? `Seuil à ${euro(k.breakEven[y], { compact: true })}` : 'Incalculable',
+          need: "Montrez l'exercice où le chiffre d'affaires dépasse les charges, et à quel mois.",
+        },
+      ],
+    },
+    {
+      key: 'angel', label: 'Business angel', glyph: '◈',
+      brief: "Il investit son argent personnel. Il veut comprendre l'économie unitaire en cinq minutes.",
+      checks: [
+        {
+          label: 'Marge unitaire positive',
+          ok: k.marginRate[y] > 0,
+          value: pct(k.marginRate[y], 0) + ' de marge brute',
+          need: "Sans marge brute, aucun volume ne sauve le modèle. C'est la première chose vérifiée.",
+        },
+        {
+          label: 'Un client rapporte plus qu’il ne coûte',
+          ok: k.ltvCacRatio === null || k.ltvCacRatio >= 3,
+          value: k.ltvCacRatio === null ? 'Acquisition non chiffrée' : `${num(k.ltvCacRatio, 1)}× le coût d'acquisition`,
+          need: "En dessous de 3, dépenser plus en acquisition accélère les pertes. Travaillez la conversion ou la rétention.",
+        },
+        {
+          label: 'Le fondateur se rémunère',
+          ok: (s.team || []).some((m) => m?.enabled !== false && (Number(m.monthlyGross) || 0) > 0),
+          value: (s.team || []).some((m) => (Number(m.monthlyGross) || 0) > 0) ? 'Oui, dans le modèle' : 'Non',
+          need: "Un plan où le fondateur ne se paie pas n'est pas prudent, il est faux — et le point mort est sous-estimé.",
+        },
+        {
+          label: 'Montant demandé explicite',
+          ok: k.fundingNeed > 0 || equity > 0,
+          value: k.fundingNeed > 0 ? `${euro(k.fundingNeed)} avant ${monthLabel(k.cashLow.month, r.startDate)}` : `${euro(equity, { compact: true })} déjà mobilisés`,
+          need: "Dites le montant et la date. « On cherche des fonds » n'est pas une demande.",
+        },
+      ],
+    },
+    {
+      key: 'fonds', label: "Fonds d'investissement", glyph: '◆',
+      brief: "Il cherche une pente et une taille de sortie. Un bon commerce rentable ne l'intéresse pas forcément.",
+      checks: [
+        {
+          label: 'Croissance annuelle',
+          ok: growth !== null && growth >= 0.5,
+          value: growth === null ? 'Non mesurable' : `${pct(growth, 0)} par an`,
+          need: "Un fonds attend un doublement annuel sur les premières années. En dessous, visez plutôt la dette ou l'autofinancement.",
+        },
+        {
+          label: 'Taille à cinq ans',
+          ok: revenue5 >= 3000000,
+          value: euro(revenue5, { compact: true }) + ' en année 5',
+          need: "En dessous de quelques millions à cinq ans, le calcul de sortie d'un fonds ne tombe pas juste.",
+        },
+        {
+          label: 'Part de revenu récurrent',
+          ok: (s.activities || []).some((a) => (Number(a.recurringPrice) || 0) > 0),
+          value: (s.activities || []).some((a) => (Number(a.recurringPrice) || 0) > 0) ? 'Oui' : 'Aucun abonnement',
+          need: "Le récurrent se valorise plusieurs fois mieux que la prestation : c'est ce qui rend la croissance capitalisable.",
+        },
+        {
+          label: 'Autonomie financée',
+          ok: k.fundingNeed === 0 || k.runwayMonths === null || k.runwayMonths >= 18,
+          value: k.runwayMonths === null ? 'Pas de consommation nette' : `${num(k.runwayMonths, 0)} mois d'autonomie`,
+          need: "Une levée prend quatre à six mois. Financez dix-huit mois, pas six, sinon vous repartez en levée le jour où vous finissez.",
+        },
+      ],
+    },
+  ]
+
+  return h('section', { class: 'panel mb' },
+    h('div', { class: 'panel-head' },
+      h('h2', {}, 'Ce qu’on va vérifier dans votre dossier'),
+      h('p', { class: 'panel-sub' }, "Les mêmes chiffres, lus par trois lecteurs différents. Ce qui manque ici est ce qu'on vous demandera."),
+    ),
+    h('div', { class: 'audiences' },
+      ...audiences.map((a) => {
+        const passed = a.checks.filter((c) => c.ok).length
+        return h('div', { class: `audience ${passed === a.checks.length ? 'ready' : ''}` },
+          h('div', { class: 'audience-head' },
+            h('span', { class: 'audience-glyph' }, a.glyph),
+            h('span', { class: 'audience-label' }, a.label),
+            h('span', { class: 'audience-score num' }, `${passed}/${a.checks.length}`),
+          ),
+          h('p', { class: 'audience-brief' }, a.brief),
+          h('div', { class: 'audience-checks' },
+            ...a.checks.map((c) => h('div', { class: `check ${c.ok ? 'ok' : ''}` },
+              h('span', { class: 'check-mark' }, c.ok ? '✓' : '·'),
+              h('div', {},
+                h('div', { class: 'check-label' }, c.label),
+                h('div', { class: 'check-value num' }, c.value),
+                !c.ok ? h('p', { class: 'check-need' }, c.need) : null,
+              ),
+            )),
+          ),
+        )
+      }),
+    ),
+  )
 }
 
 function exportTile(title, description, action, onClick, primary) {

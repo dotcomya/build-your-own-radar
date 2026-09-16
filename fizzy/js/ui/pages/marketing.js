@@ -29,10 +29,6 @@ export function renderMarketing(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('acquisition', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Marketing et acquisition'),
-      h('p', {}, "Chaque campagne convertit un budget en clients, et ces clients alimentent directement le chiffre d'affaires de l'offre à laquelle vous la rattachez. Modifiez un budget : le résultat et la trésorerie suivent."),
-    ),
 
     r && s.marketing.length > 0 && h('div', { class: 'grid grid-4 kpis mb' },
       tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),

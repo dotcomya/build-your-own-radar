@@ -1114,7 +1114,24 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 }
 .snapshot-figure-value { font-size: 26px; font-weight: 600; letter-spacing: -.04em; color: var(--ink); margin-left: auto; }
 
-/* ─── Les trophées ─── */
+/* ─── Ce qui est démontré : une rangée, pas un mur ─── */
+.proof {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 13px 16px; background: var(--surface); border: 1px solid var(--rule);
+}
+.proof-tag {
+  flex: none; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.proof-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.proof-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border: 1px solid var(--rule); font-size: 11.5px;
+  color: var(--ink-5); white-space: nowrap; cursor: default;
+}
+.proof-chip.won { border-color: var(--gain); color: var(--gain); font-weight: 500; }
+
+/* ─── Les trophées (grille, conservée pour d'autres usages) ─── */
 /* Ils ne se cochent pas : le modèle les constate. Un trophée gagné est donc
    une information sur le dossier, pas une décoration. */
 .trophy-grid {
@@ -1328,4 +1345,149 @@ i.swatch.split-margin { background: var(--gain); }
 @media (prefers-reduced-motion: reduce) {
   .node-pulse { animation: none; opacity: .5; }
   .ring-progress { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE COMPTE
+
+   Un logiciel se reconnaît à ce qu'il dit de son propre état : qui vous êtes,
+   où sont vos données, si elles sont à l'abri. Trois réponses, rien de plus.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.content.narrow { max-width: 860px; }
+
+/* Le pied du rail : l'état de sauvegarde, en permanence sous les yeux. */
+.rail-account {
+  display: flex; flex-direction: column; gap: 2px; width: 100%;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
+  padding: 10px 10px 2px; color: #B9C1C7;
+  transition: color .12s;
+}
+.rail-account:hover { color: #fff; }
+.rail-account-name {
+  font-size: 12.5px; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rail-account-sync {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  text-transform: uppercase; color: #5D6871;
+}
+.rail-account-sync.live { color: #4ADE9E; }
+.sync-dot {
+  width: 5px; height: 5px; flex: none; border-radius: 50%; background: currentColor;
+  animation: sync-breathe 3.2s ease-in-out infinite;
+}
+@keyframes sync-breathe { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+
+.account-card {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule-strong);
+}
+.account-card.is-online { border-top-color: var(--gain); }
+.account-id {
+  display: flex; align-items: center; gap: 14px;
+  padding: 20px; border-bottom: 1px solid var(--rule);
+}
+.account-avatar {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  background: var(--ink); color: #fff;
+  font-family: var(--display); font-weight: 800; font-size: 19px;
+}
+.account-card.is-online .account-avatar { background: var(--gain); }
+.account-who { min-width: 0; }
+.account-name {
+  font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink);
+  letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account-mail {
+  font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account-badge {
+  margin-left: auto; flex: none;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 8px; border: 1px solid var(--rule); color: var(--ink-4);
+}
+.account-badge.ok { border-color: var(--gain); color: var(--gain); }
+
+.account-rows { display: flex; flex-direction: column; }
+.account-row {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 11px 20px; border-bottom: 1px solid var(--rule); font-size: 13px;
+}
+.account-row:last-child { border-bottom: 0; }
+.account-row-label {
+  flex: none; width: 128px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.account-row-value { color: var(--ink-2); }
+.account-row-value.ok { color: var(--gain); }
+.account-note {
+  margin: 0; padding: 14px 20px; border-top: 1px solid var(--rule);
+  background: var(--surface-2); font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
+}
+
+/* La liste des plans : une ligne par plan, ouvrable d'un clic. */
+.plan-list { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
+.plan-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--rule);
+}
+.plan-row.current { background: var(--signal-wash); }
+.plan-open {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  border: 0; background: none; cursor: pointer; font: inherit; text-align: left; padding: 0;
+}
+.plan-name {
+  font-size: 14px; font-weight: 500; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.plan-open:hover .plan-name { color: var(--signal-ink); }
+.plan-meta { font-size: 11.5px; color: var(--ink-4); }
+.plan-pct {
+  font-size: 12px; color: var(--ink-3); font-weight: 600;
+  padding: 2px 7px; border: 1px solid var(--rule); white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .plan-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .plan-row .btn { grid-column: span 1; }
+  .account-row { flex-direction: column; gap: 3px; }
+  .account-row-label { width: auto; }
+}
+
+/* ─── Trois lecteurs, trois grilles ─── */
+/* Le même prévisionnel n'est pas jugé de la même façon selon qui l'ouvre. */
+.audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+.audience {
+  padding: 16px 18px 18px; border-right: 1px solid var(--rule); border-top: 1px solid var(--rule);
+}
+.audience:last-child { border-right: 0; }
+.audience-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.audience-glyph { font-size: 16px; color: var(--ink-5); line-height: 1; }
+.audience-label { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: -.016em; }
+.audience-score {
+  margin-left: auto; font-size: 11px; color: var(--ink-4);
+  padding: 2px 7px; border: 1px solid var(--rule);
+}
+.audience.ready .audience-glyph { color: var(--gain); }
+.audience.ready .audience-score { border-color: var(--gain); color: var(--gain); }
+.audience-brief { margin: 0 0 12px; font-size: 12px; color: var(--ink-4); line-height: 1.5; }
+.audience-checks { display: flex; flex-direction: column; gap: 11px; }
+.check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; }
+.check-mark {
+  width: 16px; height: 16px; flex: none; display: grid; place-items: center; margin-top: 1px;
+  border: 1px solid var(--rule); color: var(--ink-5); font-size: 10px;
+}
+.check.ok .check-mark { border-color: var(--gain); background: var(--gain); color: #fff; }
+.check-label { font-size: 12.8px; font-weight: 500; color: var(--ink-2); }
+.check-value { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; }
+.check.ok .check-value { color: var(--gain); }
+.check-need { margin: 5px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+
+@media (max-width: 860px) {
+  .audience { border-right: 0; }
 }

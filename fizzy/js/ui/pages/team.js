@@ -29,10 +29,6 @@ export function renderTeam(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('equipe', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Équipe'),
-      h('p', {}, "Saisissez le salaire brut mensuel : Fizzy calcule les cotisations patronales, applique la réduction générale et en déduit le coût réel pour l'entreprise. Raisonner en brut sous-estime la masse salariale de 25 à 45 %."),
-    ),
 
     s.team.length === 0
       ? h('div', { class: 'card' }, h('div', { class: 'empty' },

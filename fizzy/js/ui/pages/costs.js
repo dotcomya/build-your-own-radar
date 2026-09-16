@@ -35,10 +35,6 @@ export function renderCosts(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('charges', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Charges de fonctionnement'),
-      h('p', {}, "Tout ce que vous payez indépendamment du volume vendu : loyer, assurances, logiciels, honoraires. Ces charges déterminent votre point mort."),
-    ),
 
     s.opex.length === 0 && h('div', { class: 'card mb' },
       h('div', { class: 'empty' },

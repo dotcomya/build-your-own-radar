@@ -74,7 +74,7 @@ function hero(j, s, r, sector, navigate) {
 
       h('div', { class: 'hero-journey-text' },
         h('div', { class: 'hero-journey-eyebrow' },
-          sector ? sector.label : 'Ton business plan',
+          sector ? sector.label : 'Mon business plan',
           h('span', { class: 'dot' }, '·'),
           `${j.done}/${j.total} étapes`,
         ),
@@ -123,6 +123,13 @@ function heroStats(r) {
  * C'est la pièce qui donne au parcours sa forme : on voit d'un coup d'œil ce
  * qui est fait, où on en est, et ce qui reste. Chaque rond mène à sa page.
  */
+/** « Validé le 12 mars » — la date écrite au franchissement, pas une déduction. */
+function validatedOn(key) {
+  const at = store.scenario?.meta?.stepsDoneAt?.[key]
+  if (!at) return null
+  return `Validé le ${new Date(at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+}
+
 function rail(j, navigate) {
   const nodes = []
   let index = 0
@@ -148,7 +155,8 @@ function rail(j, navigate) {
         ),
         h('span', { class: 'node-text' },
           h('span', { class: 'node-label' }, step.label),
-          h('span', { class: 'node-detail' }, step.detail),
+          h('span', { class: 'node-detail' },
+            step.status === 'done' ? (validatedOn(step.key) || step.detail) : step.detail),
         ),
         h('span', { class: 'node-arrow', 'aria-hidden': 'true' }, '→'),
       ))
@@ -176,7 +184,7 @@ function nextCard(j, navigate) {
     ),
 
     h('div', { class: 'next-card-tips' },
-      ...step.tips.slice(0, 2).map((tip) => h('div', { class: 'mini-tip' },
+      ...step.tips.slice(0, 1).map((tip) => h('div', { class: 'mini-tip' },
         h('div', { class: 'mini-tip-title' }, tip.title),
         h('p', {}, tip.body),
       )),
@@ -202,10 +210,10 @@ function snapshot(j, s, r, navigate) {
   const v = verdict(r, s)
   return h('section', { class: `panel snapshot tone-${v.tone}` },
     h('div', { class: 'panel-head' },
-      h('h2', {}, 'Ce que tes chiffres disent déjà'),
+      h('h2', {}, 'Ce que vos chiffres disent déjà'),
       h('p', { class: 'panel-sub' }, j.completion < 0.85
         ? "Provisoire : il reste des étapes qui peuvent tout changer."
-        : "Ton modèle est complet — voilà le verdict."),
+        : "Le modèle est complet — voilà le verdict."),
     ),
     h('div', { class: 'panel-body' },
       h('div', { class: 'snapshot-word' }, v.word),
@@ -222,19 +230,21 @@ function snapshot(j, s, r, navigate) {
 
 /* ─────────────────────────────── Trophées ───────────────────────────────── */
 
+/**
+ * Ce qui est démontré, sur une seule ligne.
+ *
+ * Sept cartes occupaient un écran pour dire sept mots. Une rangée de jetons dit
+ * la même chose et laisse la place au reste.
+ */
 function trophyCase(j) {
   const won = j.trophies.filter((t) => t.won).length
-  return h('section', { class: 'panel trophies mt' },
-    h('div', { class: 'panel-head' },
-      h('h2', {}, 'Ce que tu as prouvé'),
-      h('p', { class: 'panel-sub' }, `${won} sur ${j.trophies.length}. On ne coche pas un trophée : le modèle le constate.`),
-    ),
-    h('div', { class: 'trophy-grid' },
-      ...j.trophies.map((t) => h('div', { class: `trophy ${t.won ? 'won' : ''}`, title: t.hint },
-        h('span', { class: 'trophy-glyph' }, t.glyph),
-        h('span', { class: 'trophy-label' }, t.label),
-        h('span', { class: 'trophy-hint' }, t.won && t.value ? t.value : t.hint),
-      )),
+  return h('section', { class: 'proof mt' },
+    h('span', { class: 'proof-tag' }, `Démontré ${won}/${j.trophies.length}`),
+    h('div', { class: 'proof-row' },
+      ...j.trophies.map((t) => h('span', {
+        class: `proof-chip ${t.won ? 'won' : ''}`,
+        title: t.won && t.value ? `${t.label} — ${t.value}` : t.hint,
+      }, t.glyph, ' ', t.label)),
     ),
   )
 }
@@ -249,7 +259,7 @@ function quickWins(s, r, navigate, refresh) {
   return h('section', { class: 'panel mt' },
     h('div', { class: 'panel-head' },
       h('h2', {}, 'Deux leviers, tout de suite'),
-      h('p', { class: 'panel-sub' }, "Chaque estimation rejoue ton modèle entier. Appliquer reste réversible."),
+      h('p', { class: 'panel-sub' }, "Chaque estimation rejoue le modèle entier. Appliquer reste réversible."),
     ),
     h('div', { class: 'wins' },
       ...best.map((a) => h('div', { class: 'win' },

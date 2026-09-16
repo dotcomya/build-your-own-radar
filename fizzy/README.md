@@ -10,9 +10,9 @@ commandes, trésorerie, TVA, BFR, CIR/CII, JEI, impôts, comptes de résultat,
 bilans, plan de financement — deviennent un moteur de calcul et une interface
 utilisable sans connaissance comptable.
 
-Fizzy s'adresse d'abord à un fondateur — typiquement en incubateur — qui doit
-produire un business plan défendable sans avoir fait d'école de commerce et sans
-payer un consultant pour ça.
+Fizzy s'adresse à un fondateur qui doit produire un business plan défendable
+sans avoir fait d'école de commerce. La saisie reste élémentaire ; la sortie
+doit tenir devant une banque, un business angel ou un fonds.
 
 ## Ce que ça fait
 
@@ -112,8 +112,21 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   même courbe de trésorerie, chiffre les mêmes actions et se termine sur ce que
   touche le dirigeant. Le fichier est écrit sans bibliothèque : un .pptx est une
   archive ZIP de XML OpenXML, et les courbes y sont de vraies polylignes.
-- **Mémoire.** Profil et scénarios enregistrés dans le navigateur, sauvegarde
-  automatique, annulation, navigation sans perte. Rien ne quitte l'appareil.
+- **Un compte, et des plans qui suivent.** Le navigateur d'abord — instantané,
+  hors ligne, jamais perdu si le réseau tombe. Le compte ensuite : les mêmes
+  plans sur n'importe quelle machine, réconciliés par date de modification, et
+  une modification faite sur un autre poste arrive dans la page ouverte. Les
+  plans vivent dans un espace privé, que personne d'autre ne peut lire.
+  L'identité vient de la session authentifiée dans laquelle la page s'exécute :
+  Fizzy ne conserve aucun secret et ne gère aucun mot de passe. Sans compte
+  disponible, tout continue en local — la synchronisation est un gain, jamais
+  une condition.
+- **Ce qu'on va vérifier dans votre dossier.** Les mêmes chiffres, lus par une
+  banque (apport, capacité de remboursement, trésorerie, point mort), un
+  business angel (marge unitaire, valeur client sur coût d'acquisition,
+  rémunération du dirigeant, montant demandé) et un fonds (croissance, taille à
+  cinq ans, part de récurrent, autonomie financée). Chaque critère est noté, et
+  ce qui manque est nommé — c'est la question qu'on vous posera.
 - **Mobile.** Interface adaptative, barre d'onglets tactile, installable comme
   application (PWA) et utilisable hors connexion.
 
@@ -170,12 +183,13 @@ fizzy/
       simulate.js         actions candidates, rejouées et chiffrées sur le modèle
       milestones.js       les moments qui comptent dans un scénario
       verdict.js          le jugement en un mot, et le chiffre qui décide
-      journey.js          les neuf étapes, leur état constaté, le rang, les trophées
+      journey.js          les neuf étapes, leur état constaté, le rang, les preuves
       engine.js           orchestrateur : SIG, trésorerie, BFR, bilan, ratios
     state/
       schema.js           valeurs par défaut, bornes de saisie, contrôles
       sectors.js          quinze profils de métier : régime, repères, pièges
-      store.js            profils, scénarios, sauvegarde, historique
+      store.js            plans, sauvegarde locale, historique, réconciliation
+      cloud.js            compte, espace privé, synchronisation multi-appareils
     ui/
       personas.js         vues métier : leviers, indicateurs, périmètre
       story.js            frise des cinq ans, repères annotés, jauges de métier
@@ -200,6 +214,13 @@ Le moteur est une fonction pure : `compute(scénario)` renvoie tous les états.
 Il est donc rejouable à chaque frappe sans effet de bord, et testable seul.
 
 ## Fiscalité
+
+Les règles structurelles appliquées sont celles du dernier exercice promulgué.
+Un plan démarrant l'année suivante les reconduit explicitement : tant qu'aucune
+loi de finances n'est publiée, inventer un barème serait pire que le dire. Les
+valeurs revalorisées chaque année — SMIC, plafond de la Sécurité sociale, taux
+moyens de cotisations — portent `confidence: 'to-verify'` et sont listées une à
+une dans Réglages, où elles se corrigent sans toucher au code.
 
 Les règles pérennes sont appliquées telles quelles : impôt sur les sociétés à
 15 % jusqu'à 42 500 € de bénéfice puis 25 %, report déficitaire plafonné à 1 M€

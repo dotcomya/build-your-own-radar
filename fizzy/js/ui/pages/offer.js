@@ -28,12 +28,6 @@ export function renderOffer(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('clients', journey(store.scenario, store.result), navigate),
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'Offre et clients'),
-      h('p', {}, level === 'easy'
-        ? "Décrivez ce que vous vendez et à combien de clients. Fizzy s'occupe de la TVA, des délais de paiement et de la saisonnalité avec des valeurs de marché."
-        : "Chaque offre porte son prix, son coût de revient, ses conditions de paiement et sa trajectoire de volumes. Tout se répercute immédiatement sur le résultat et la trésorerie."),
-    ),
 
     ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh)),
 

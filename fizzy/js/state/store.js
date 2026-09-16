@@ -1,13 +1,20 @@
 /**
- * État applicatif : profils, scénarios, sauvegarde et historique.
+ * État applicatif : compte, plans, sauvegarde et historique.
  *
- * Tout vit dans le navigateur (localStorage). Chaque modification déclenche un
- * recalcul du modèle et une sauvegarde différée. La navigation entre les pages
- * ne perd jamais rien : le scénario courant est la source de vérité unique.
+ * Deux couches de mémoire, dans cet ordre. Le navigateur d'abord : instantané,
+ * hors ligne, jamais perdu si le réseau tombe. Le compte ensuite : les mêmes
+ * plans, sur n'importe quelle machine. Le local n'est pas un cache du distant,
+ * c'est l'inverse — on écrit localement puis on pousse, de sorte qu'une panne
+ * de synchronisation ne coûte jamais une frappe.
+ *
+ * Quand les deux divergent, la date de modification tranche. C'est grossier,
+ * mais c'est prévisible, et un fondateur qui reprend son plan sur un autre
+ * poste veut la dernière version, pas une fusion qu'il n'a pas demandée.
  */
 
 import { emptyScenario, scenarioFromTemplate, SCHEMA_VERSION, validate } from './schema.js'
 import { compute } from '../engine/engine.js'
+import { connect, isOnline, pullPlans, pushPlan, deletePlan, pushProfile, watchPlans, cloud } from './cloud.js'
 
 const KEY_PROFILE = 'fizzy.profile'
 const KEY_SCENARIOS = 'fizzy.scenarios'
@@ -93,6 +100,7 @@ class Store {
   // ───────────────────────────── Profil ────────────────────────────────
   hasProfile() { return !!(this.profile && this.profile.name) }
   saveProfile(profile) {
+    pushProfile(profile)
     this.profile = { ...(this.profile || {}), ...profile, updatedAt: Date.now() }
     write(KEY_PROFILE, this.profile)
     this.emit('profile')
@@ -146,6 +154,7 @@ class Store {
   }
 
   remove(id) {
+    deletePlan(id)
     delete this.scenarios[id]
     if (this.currentId === id) {
       const next = Object.keys(this.scenarios)[0]
@@ -236,7 +245,103 @@ class Store {
   persist() {
     const ok = write(KEY_SCENARIOS, this.scenarios) && write(KEY_CURRENT, this.currentId)
     if (ok) this.saveState = 'saved'
+    // Le compte reçoit le plan courant seulement : pousser les soixante à
+    // chaque frappe coûterait cher pour rien.
+    if (this.scenario) pushPlan(this.scenario)
     return ok
+  }
+
+  /* ─────────────────────────────── Le compte ───────────────────────────── */
+
+  /**
+   * Ouvre la session et réconcilie. Appelé une fois au démarrage.
+   *
+   * Un plan présent des deux côtés est arbitré par sa date ; un plan qui
+   * n'existe que d'un côté est conservé. On ne supprime jamais rien au nom
+   * d'une synchronisation : l'utilisateur seul supprime.
+   */
+  async syncAccount() {
+    await connect()
+    if (!isOnline()) { this.emit('account'); return }
+
+    const remote = await pullPlans()
+    let changed = false
+
+    for (const plan of remote) {
+      const id = plan.meta?.id
+      if (!id) continue
+      const mine = this.scenarios[id]
+      if (!mine || (Number(plan.meta.updatedAt) || 0) > (Number(mine.meta?.updatedAt) || 0)) {
+        this.scenarios[id] = migrate(plan)
+        changed = true
+      }
+    }
+
+    // Les plans nés sur cette machine et jamais poussés montent maintenant.
+    const remoteIds = new Set(remote.map((p) => p.meta?.id))
+    for (const [id, plan] of Object.entries(this.scenarios)) {
+      if (!remoteIds.has(id) && !plan.meta?.isDemo) pushPlan(plan)
+    }
+    if (this.profile) pushProfile(this.profile)
+
+    // Un compte qui contient déjà des plans n'a pas besoin de l'exemple.
+    if (remote.length && this.scenario?.meta?.isDemo) {
+      const newest = remote[0]
+      if (newest?.meta?.id) { this.load(newest.meta.id, { silent: true }); changed = true }
+    } else if (changed && this.currentId && this.scenarios[this.currentId]) {
+      this.load(this.currentId, { silent: true })
+    }
+
+    write(KEY_SCENARIOS, this.scenarios)
+    this.watchRemote()
+    this.emit(changed ? 'scenario' : 'account')
+  }
+
+  /** Une modification faite sur un autre appareil arrive ici. */
+  watchRemote() {
+    if (this.unwatch) this.unwatch()
+    this.unwatch = watchPlans((remote) => {
+      let changed = false
+      for (const plan of remote) {
+        const id = plan.meta?.id
+        if (!id) continue
+        const mine = this.scenarios[id]
+        if (!mine || (Number(plan.meta.updatedAt) || 0) > (Number(mine.meta?.updatedAt) || 0)) {
+          this.scenarios[id] = migrate(plan)
+          changed = true
+        }
+      }
+      if (!changed) { this.emit('account'); return }
+      write(KEY_SCENARIOS, this.scenarios)
+      // Ne pas arracher la page sous les doigts : on ne recharge le plan
+      // courant que s'il a lui-même changé ailleurs.
+      if (this.currentId && this.scenarios[this.currentId]) this.load(this.currentId, { silent: true })
+      this.emit('scenario')
+    })
+  }
+
+  /**
+   * Franchissement d'étape : la date est conservée dans le plan.
+   *
+   * L'état d'une étape reste déduit des données — on ne coche rien — mais
+   * savoir *quand* elle a été franchie est une information que le fondateur
+   * perdrait à chaque rechargement si on ne l'écrivait pas.
+   */
+  backfillSteps(keys) {
+    if (!keys?.length || !this.scenario) return
+    const done = this.scenario.meta.stepsDoneAt || (this.scenario.meta.stepsDoneAt = {})
+    const when = Number(this.scenario.meta.updatedAt) || Date.now()
+    let touched = false
+    for (const k of keys) if (!done[k]) { done[k] = when; touched = true }
+    if (touched) { this.scenarios[this.scenario.meta.id] = this.scenario; write(KEY_SCENARIOS, this.scenarios) }
+  }
+
+  markSteps(keys) {
+    if (!keys?.length || !this.scenario) return
+    const done = this.scenario.meta.stepsDoneAt || (this.scenario.meta.stepsDoneAt = {})
+    let touched = false
+    for (const k of keys) if (!done[k]) { done[k] = Date.now(); touched = true }
+    if (touched) { this.scenarios[this.scenario.meta.id] = this.scenario; this.scheduleSave() }
   }
 
   // ──────────────────────────── Import / export ─────────────────────────
