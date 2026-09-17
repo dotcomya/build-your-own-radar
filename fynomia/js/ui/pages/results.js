@@ -4,6 +4,7 @@ import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, pageBar } f
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
+import { partBanner } from '../tutorial.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -28,6 +29,8 @@ export function renderResults(navigate, refresh) {
   renderResults.tab = view
 
   return h('div', { class: 'content' },
+    partBanner('resultats'),
+
     pageBar('États financiers', "Tout est calculé à partir de ce que vous avez saisi. Aucune ligne n'est à remplir ici."),
 
     tabs(views, view, (k) => { renderResults.tab = k; refresh() }),

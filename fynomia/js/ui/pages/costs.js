@@ -46,7 +46,7 @@ export function renderCosts(navigate, refresh) {
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   return h('div', { class: 'content' },
-    stepBanner('charges', journey(store.scenario, store.result), navigate),
+    stepBanner('charges', journey(store.scenario, store.result), navigate, 'charges'),
 
     pageBar(
       view === 'invest' ? 'Investissements' : 'Charges de fonctionnement',

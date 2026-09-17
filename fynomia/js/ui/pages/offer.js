@@ -44,7 +44,7 @@ export function renderOffer(navigate, refresh) {
   renderOffer.view = view
 
   return h('div', { class: 'content' },
-    stepBanner('clients', journey(store.scenario, store.result), navigate),
+    stepBanner('clients', journey(store.scenario, store.result), navigate, 'offre'),
 
     pageBar(
       s.activities.length > 1 ? `${s.activities.length} offres` : 'Votre offre',

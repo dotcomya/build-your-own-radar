@@ -48,7 +48,7 @@ export function renderBusinessCase(navigate, refresh) {
   }
 
   return h('div', { class: 'content' },
-    stepBanner('dossier', journey(store.scenario, store.result), navigate),
+    stepBanner('dossier', journey(store.scenario, store.result), navigate, 'business-case'),
 
     readiness(s, r, y),
 

@@ -121,7 +121,7 @@ export function renderFinancing(navigate, refresh) {
   renderFinancing.view = view
 
   return h('div', { class: 'content' },
-    stepBanner('financement', journey(store.scenario, store.result), navigate),
+    stepBanner('financement', journey(store.scenario, store.result), navigate, 'financement'),
 
     pageBar(
       'Financement',

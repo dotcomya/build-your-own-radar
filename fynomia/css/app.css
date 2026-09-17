@@ -2940,3 +2940,75 @@ table.data th, table.data td { padding: 9px 12px; }
 .step-line-why {
   margin: 8px 0 0; padding: 0 12px 0 44px; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); max-width: 90ch;
 }
+
+/* ═══════════════════════ L'infobulle des graphiques ════════════════════════ */
+/* Elle répond tout de suite, dans la langue du reste : un titre, une ligne par
+   série, la pastille de couleur qui la relie au dessin. */
+.ctip {
+  position: fixed; top: 0; left: 0; z-index: 120; pointer-events: none;
+  min-width: 152px; max-width: 280px;
+  background: var(--ink); color: #E6EAED; border-radius: var(--r-sm);
+  padding: 9px 11px; box-shadow: 0 18px 40px -18px rgba(11, 14, 16, .65);
+  opacity: 0; transition: opacity .1s var(--ease);
+}
+.ctip.is-on { opacity: 1; }
+.ctip-head {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: #8E99A2; margin-bottom: 7px;
+}
+.ctip-row { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.7; }
+.ctip-row.is-strong { border-top: 1px solid #2A3238; margin-top: 4px; padding-top: 5px; }
+.ctip-dot { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.ctip-label { color: #B9C1C7; flex: 1; min-width: 0; }
+.ctip-row.is-strong .ctip-label { color: #fff; }
+.ctip-value { color: #fff; font-weight: 600; white-space: nowrap; }
+.chart-hot { cursor: crosshair; }
+.donut .chart-hot, svg .chart-hot[stroke] { cursor: pointer; }
+
+/* Le « i » d'une tuile : posé dans l'angle, discret jusqu'au survol. */
+.figure { position: relative; }
+.figure-help { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .14s var(--ease); }
+.figure:hover .figure-help, .figure:focus-within .figure-help { opacity: 1; }
+.figure-help .help { background: var(--surface); }
+@media (hover: none) { .figure-help { opacity: .5; } }
+
+/* ═════════ Le papier change de teinte avec la profondeur ═══════════════════ */
+/* Trois univers, trois papiers. L'écart est volontairement faible — deux ou
+   trois points de saturation — mais il suffit à faire sentir qu'on a changé
+   d'espace, là où un simple bouton actif ne le disait qu'à qui le cherchait.
+   L'encre, elle, ne bouge jamais : la lisibilité n'est pas négociable. */
+.shell {
+  background: var(--paper);
+  transition: background .45s var(--ease);
+}
+.shell[data-level="easy"] { --paper: #F0F4F1; }
+.shell[data-level="intermediate"] { --paper: #F0F2F7; }
+.shell[data-level="advanced"] { --paper: #F3F0F7; }
+.shell[data-level="easy"] { --surface-2: #F8FAF8; }
+.shell[data-level="intermediate"] { --surface-2: #F8F9FC; }
+.shell[data-level="advanced"] { --surface-2: #FAF8FC; }
+
+/* La barre du haut suit le papier, sinon elle flotte au-dessus d'un autre fond. */
+.topbar { background: color-mix(in srgb, var(--paper) 88%, transparent); transition: background .45s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .shell, .topbar { transition: none; }
+}
+
+/* Le guide d'une partie : trois colonnes courtes, dépliées à la demande. */
+.step-guide { padding: 10px 12px 12px 44px; }
+.step-guide .step-line-why { padding: 0; margin: 0 0 12px; }
+.guide-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.guide-cell p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); }
+.guide-cell-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 5px;
+}
+.step-line.todo .step-line-no,
+.step-line .step-line-no:not(.num) { font-family: var(--mono); font-style: italic; }
+@media (max-width: 720px) {
+  .step-guide { padding-left: 12px; }
+}

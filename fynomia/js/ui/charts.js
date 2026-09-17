@@ -20,6 +20,69 @@ const GRID = '#E2E5E2'
 const AXIS = '#78838C'
 const SURFACE = '#FFFFFF'
 
+/* ─────────────────────────── L'infobulle ──────────────────────────────── */
+
+/**
+ * Une seule infobulle pour toute l'application.
+ *
+ * Les `<title>` SVG que les graphiques portaient jusqu'ici s'affichaient au
+ * bout d'une seconde, dans la police du système, hors de toute mise en forme.
+ * Un graphique qu'on interroge doit répondre tout de suite et dans la langue
+ * du reste : un repère vertical, la date ou la catégorie, et chaque série
+ * avec sa pastille et son montant.
+ */
+let tipEl = null
+function tip() {
+  if (tipEl && tipEl.isConnected) return tipEl
+  tipEl = h('div', { class: 'ctip', role: 'tooltip', 'aria-hidden': 'true' })
+  document.body.appendChild(tipEl)
+  return tipEl
+}
+
+/** Place l'infobulle près du curseur, sans jamais la laisser sortir de l'écran. */
+function showTip(event, title, rows) {
+  const el = tip()
+  el.replaceChildren(
+    h('div', { class: 'ctip-head' }, title),
+    ...rows.filter(Boolean).map((r) => h('div', { class: `ctip-row ${r.strong ? 'is-strong' : ''}` },
+      r.color ? h('span', { class: 'ctip-dot', style: { background: r.color } }) : null,
+      h('span', { class: 'ctip-label' }, r.label),
+      h('span', { class: 'ctip-value num' }, r.value),
+    )),
+  )
+  el.classList.add('is-on')
+  el.setAttribute('aria-hidden', 'false')
+  const pad = 12
+  const box = el.getBoundingClientRect()
+  let x = event.clientX + 14
+  let y = event.clientY - box.height - 12
+  if (x + box.width + pad > window.innerWidth) x = event.clientX - box.width - 14
+  if (y < pad) y = event.clientY + 18
+  el.style.transform = `translate(${Math.max(pad, x)}px, ${Math.max(pad, y)}px)`
+}
+
+function hideTip() {
+  if (!tipEl) return
+  tipEl.classList.remove('is-on')
+  tipEl.setAttribute('aria-hidden', 'true')
+}
+
+/**
+ * Rend une zone sensible : elle appelle `rows()` au survol et fait disparaître
+ * l'infobulle quand on la quitte. Le pointeur reste fin — la zone est
+ * transparente, elle ne se voit pas, elle s'utilise.
+ */
+function hot(node, title, rows, onEnter, onLeave) {
+  node.addEventListener('mousemove', (e) => { showTip(e, title, rows()); if (onEnter) onEnter() })
+  node.addEventListener('mouseleave', () => { hideTip(); if (onLeave) onLeave() })
+  node.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]
+    if (t) showTip({ clientX: t.clientX, clientY: t.clientY }, title, rows())
+    if (onEnter) onEnter()
+  }, { passive: true })
+  return node
+}
+
 function scaleY(min, max, height, pad) {
   const span = max - min || 1
   return (v) => pad.t + (height - pad.t - pad.b) * (1 - (v - min) / span)
@@ -60,15 +123,28 @@ export function barChart({ series, categories, height = 220, line = null, format
       const v = s.values[i] || 0
       const x = cx - (barW * series.length) / 2 + barW * j
       const top = Math.min(y(v), y(0)), hgt = Math.abs(y(v) - y(0))
-      nodes.push(svg('rect', { x, y: top, width: Math.max(2, barW - 3), height: Math.max(1, hgt), rx: 2, fill: s.color || PALETTE[j % PALETTE.length] },
-        svg('title', {}, `${s.label} · ${cat} : ${euro(v)}`)))
+      nodes.push(svg('rect', { x, y: top, width: Math.max(2, barW - 3), height: Math.max(1, hgt), rx: 2, fill: s.color || PALETTE[j % PALETTE.length] }))
     })
+  })
+
+  // Une bande sensible par catégorie, par-dessus tout le reste : on interroge
+  // une année entière, pas une barre isolée.
+  categories.forEach((cat, i) => {
+    const cx = pad.l + groupW * (i + 0.5)
+    const band = svg('rect', {
+      x: cx - groupW / 2, y: pad.t, width: groupW, height: height - pad.t - pad.b,
+      fill: 'transparent', class: 'chart-hot',
+    })
+    hot(band, cat, () => [
+      ...series.map((s, j) => ({ label: s.label, value: euro(s.values[i] || 0), color: s.color || PALETTE[j % PALETTE.length] })),
+      line ? { label: line.label, value: euro(line.values[i] || 0), color: line.color || '#0B0E10' } : null,
+    ])
+    nodes.push(band)
   })
   if (line) {
     const pts = line.values.map((v, i) => `${pad.l + groupW * (i + 0.5)},${y(v)}`).join(' ')
     nodes.push(svg('polyline', { points: pts, fill: 'none', stroke: line.color || '#0B0E10', 'stroke-width': 2, 'stroke-dasharray': line.dashed ? '5 4' : null, 'stroke-linejoin': 'round' }))
-    line.values.forEach((v, i) => nodes.push(svg('circle', { cx: pad.l + groupW * (i + 0.5), cy: y(v), r: 3.5, fill: '#fff', stroke: line.color || '#0B0E10', 'stroke-width': 2 },
-      svg('title', {}, `${line.label} · ${categories[i]} : ${euro(v)}`))))
+    line.values.forEach((v, i) => nodes.push(svg('circle', { cx: pad.l + groupW * (i + 0.5), cy: y(v), r: 3.5, fill: '#fff', stroke: line.color || '#0B0E10', 'stroke-width': 2 })))
   }
   const chart = svg('svg', { class: 'chart', viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet', role: 'img' }, ...nodes)
   return h('div', {}, chart, legend([...series, ...(line ? [{ ...line, dashed: true }] : [])]))
@@ -107,8 +183,27 @@ export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', 
     nodes.push(svg('circle', { cx: x(lowIndex), cy: y(values[lowIndex]), r: 5, fill: STATUS.loss, stroke: SURFACE, 'stroke-width': 2 },
       svg('title', {}, `Point bas : ${euro(values[lowIndex])} en ${monthLabel(lowIndex, startDate)}`)))
   }
-  values.forEach((v, i) => nodes.push(svg('rect', { x: x(i) - innerW / values.length / 2, y: pad.t, width: innerW / values.length, height: height - pad.t - pad.b, fill: 'transparent' },
-    svg('title', {}, `${monthLabel(i, startDate)} : ${euro(v)}`))))
+  // Un repère qui suit le curseur : le mois survolé se lit sur l'axe, et la
+  // valeur exacte s'affiche sans qu'on ait à viser un point de trois pixels.
+  const guide = svg('line', { x1: 0, x2: 0, y1: pad.t, y2: height - pad.b, stroke: '#0B0E10', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 })
+  const marker = svg('circle', { cx: 0, cy: 0, r: 4.5, fill: SURFACE, stroke: color, 'stroke-width': 2.5, opacity: 0 })
+  nodes.push(guide, marker)
+
+  values.forEach((v, i) => {
+    const band = svg('rect', {
+      x: x(i) - innerW / values.length / 2, y: pad.t,
+      width: innerW / values.length, height: height - pad.t - pad.b,
+      fill: 'transparent', class: 'chart-hot',
+    })
+    hot(band, monthLabel(i, startDate),
+      () => [{ label, value: formatter(v), color }],
+      () => {
+        guide.setAttribute('x1', x(i)); guide.setAttribute('x2', x(i)); guide.setAttribute('opacity', '.35')
+        marker.setAttribute('cx', x(i)); marker.setAttribute('cy', y(v)); marker.setAttribute('opacity', '1')
+      },
+      () => { guide.setAttribute('opacity', '0'); marker.setAttribute('opacity', '0') })
+    nodes.push(band)
+  })
 
   return h('div', {}, svg('svg', { class: 'chart', viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet', role: 'img' }, ...nodes))
 }
@@ -139,10 +234,22 @@ export function stackedBar({ series, categories, height = 220, formatter = (v) =
       const top = y(acc + v), bottom = y(acc)
       // 2 px de fond entre deux segments : sans cela les aplats se confondent.
       const height = Math.max(1, bottom - top - 2)
-      nodes.push(svg('rect', { x: cx - barW / 2, y: top, width: barW, height, fill: s.color || PALETTE[j % PALETTE.length] },
-        svg('title', {}, `${s.label} · ${cat} : ${euro(v)}`)))
+      nodes.push(svg('rect', { x: cx - barW / 2, y: top, width: barW, height, fill: s.color || PALETTE[j % PALETTE.length] }))
       acc += v
     })
+  })
+
+  categories.forEach((cat, i) => {
+    const cx = pad.l + groupW * (i + 0.5)
+    const band = svg('rect', {
+      x: cx - groupW / 2, y: pad.t, width: groupW, height: height - pad.t - pad.b,
+      fill: 'transparent', class: 'chart-hot',
+    })
+    hot(band, cat, () => [
+      ...series.map((s, j) => ({ label: s.label, value: euro(Math.max(0, s.values[i] || 0)), color: s.color || PALETTE[j % PALETTE.length] })),
+      { label: 'Total', value: euro(totals[i]), strong: true },
+    ])
+    nodes.push(band)
   })
   return h('div', {}, svg('svg', { class: 'chart', viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet', role: 'img' }, ...nodes), legend(series))
 }
@@ -161,8 +268,11 @@ export function donut({ items, size = 170, formatter = (v) => euro(v, { compact:
     if (single) {
       const only = items.find((i) => i.value > 0)
       const idx = items.indexOf(only)
-      nodes.push(svg('circle', { cx: r, cy: r, r: r - thickness / 2, fill: 'none', stroke: only.color || PALETTE[idx % PALETTE.length], 'stroke-width': thickness },
-        svg('title', {}, `${only.label} : ${formatter(only.value)} (100 %)`)))
+      const colour = only.color || PALETTE[idx % PALETTE.length]
+      nodes.push(svg('circle', { cx: r, cy: r, r: r - thickness / 2, fill: 'none', stroke: colour, 'stroke-width': thickness }))
+      nodes.push(hot(
+        svg('circle', { cx: r, cy: r, r: r - thickness / 2, fill: 'none', stroke: 'transparent', 'stroke-width': thickness + 14, class: 'chart-hot' }),
+        only.label, () => [{ label: '100 % du total', value: formatter(only.value), color: colour }]))
     }
     let angle = -Math.PI / 2
     items.forEach((item, i) => {
@@ -174,10 +284,18 @@ export function donut({ items, size = 170, formatter = (v) => euro(v, { compact:
       const rr = r - thickness / 2
       const p0 = [r + rr * Math.cos(angle), r + rr * Math.sin(angle)]
       const p1 = [r + rr * Math.cos(end), r + rr * Math.sin(end)]
-      nodes.push(svg('path', {
-        d: `M ${p0[0]} ${p0[1]} A ${rr} ${rr} 0 ${sweep > Math.PI ? 1 : 0} 1 ${p1[0]} ${p1[1]}`,
-        fill: 'none', stroke: item.color || PALETTE[i % PALETTE.length], 'stroke-width': thickness,
-      }, svg('title', {}, `${item.label} : ${formatter(v)} (${Math.round((v / total) * 100)} %)`)))
+      const d = `M ${p0[0]} ${p0[1]} A ${rr} ${rr} 0 ${sweep > Math.PI ? 1 : 0} 1 ${p1[0]} ${p1[1]}`
+      const colour = item.color || PALETTE[i % PALETTE.length]
+      nodes.push(svg('path', { d, fill: 'none', stroke: colour, 'stroke-width': thickness }))
+      // Un second tracé, transparent et plus large, sert de cible : viser un
+      // arc de vingt pixels à la souris ne doit pas être un exercice d'adresse.
+      nodes.push(hot(
+        svg('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': thickness + 14, class: 'chart-hot' }),
+        item.label,
+        () => [
+          { label: 'Montant', value: formatter(v), color: colour },
+          { label: 'Part du total', value: `${Math.round((v / total) * 100)} %` },
+        ]))
       angle = end
     })
   }
@@ -243,10 +361,18 @@ export function waterfall({ items, height = 280, formatter = (v) => euro(v, { co
     const colour = b.total
       ? (b.to >= 0 ? '#0B0E10' : STATUS.loss)
       : (b.value >= 0 ? STATUS.gain : STATUS.loss)
-    nodes.push(svg('rect', {
-      x: cx - barW / 2, y: top, width: barW, height: hgt, rx: 2,
-      fill: colour, 'fill-opacity': b.total ? 1 : 0.86,
-    }, svg('title', {}, `${b.label} : ${euro(b.value)}`)))
+    nodes.push(hot(
+      svg('rect', {
+        x: cx - barW / 2, y: top, width: barW, height: hgt, rx: 2,
+        fill: colour, 'fill-opacity': b.total ? 1 : 0.86, class: 'chart-hot',
+      }),
+      b.label,
+      () => (b.total
+        ? [{ label: 'Solde', value: euro(b.value), color: colour, strong: true }]
+        : [
+            { label: b.value >= 0 ? 'Vient s\'ajouter' : 'Vient se retrancher', value: euro(Math.abs(b.value)), color: colour },
+            { label: 'Solde apr\u00e8s', value: euro(b.to), strong: true },
+          ])))
 
     // Valeur au-dessus de la barre pour une variation, au-dessus du palier
     // pour un solde : jamais à l'intérieur, où elle deviendrait illisible.

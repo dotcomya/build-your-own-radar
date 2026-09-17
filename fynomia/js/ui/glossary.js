@@ -8,6 +8,30 @@
  */
 
 export const GLOSSARY = {
+  chiffreAffaires: {
+    title: "Chiffre d'affaires",
+    what: "Tout ce que vous facturez sur l'exercice, hors taxes. Ce n'est ni ce que vous avez encaissé, ni ce que vous avez gagné : c'est ce que vous avez vendu.",
+    formula: "Chiffre d'affaires = Σ (prix de vente × volumes vendus)",
+    how: "Fynomia additionne, mois par mois, les ventes à l'unité et les abonnements en cours de chaque offre, au prix de l'année concernée.",
+    use: "C'est la première ligne du compte de résultat et la taille de votre entreprise vue de l'extérieur. Un investisseur le regarde pour situer l'échelle, jamais pour juger la santé.",
+    watch: "Un chiffre d'affaires en forte hausse avec une marge négative accélère la faillite. Regardez-le toujours avec l'EBITDA à côté.",
+  },
+  resultatNet: {
+    title: 'Résultat net',
+    what: "Ce qui reste à l'entreprise une fois tout payé : achats, salaires, charges, amortissements, intérêts et impôt sur les sociétés. C'est le bénéfice au sens strict.",
+    formula: "Résultat net = Résultat avant impôt − Impôt sur les sociétés + Crédits d'impôt",
+    how: "Fynomia part de l'EBITDA, retire les amortissements et les frais financiers, applique l'impôt sur les sociétés au barème en vigueur, puis ajoute les crédits d'impôt recherche et innovation auxquels vous avez droit.",
+    use: "C'est lui qui décide de ce que vous pouvez distribuer en dividendes et de ce qui vient grossir vos fonds propres. Une banque regarde sa progression sur trois exercices.",
+    watch: "Un résultat net positif ne garantit pas que vous ayez de l'argent en banque : l'amortissement ne sort pas de trésorerie, les délais clients, si.",
+  },
+  besoinFinancement: {
+    title: 'Besoin de financement',
+    what: "Le montant qu'il vous manque pour ne jamais tomber en dessous de zéro sur les cinq ans modélisés. C'est la somme à réunir avant d'être à sec.",
+    formula: 'Besoin = |Point bas de trésorerie| si ce point bas est négatif, sinon 0',
+    how: "Fynomia déroule la trésorerie mois par mois en tenant compte des délais de paiement, de la TVA, des remboursements d'emprunt et des apports déjà prévus, puis relève le creux le plus profond.",
+    use: "C'est le chiffre que vous demandez à une banque ou à un investisseur, et la date du point bas est l'échéance à tenir. Prévoyez une marge : un plan tendu à l'euro près ne survit à aucun imprévu.",
+    watch: "Réduire ce besoin passe souvent moins par la rentabilité que par les délais : un acompte de 30 % à la commande déplace davantage le point bas qu'une hausse de prix de 5 %.",
+  },
   pointMort: {
     title: 'Point mort (seuil de rentabilité)',
     what: "Le chiffre d'affaires à partir duquel votre entreprise cesse de perdre de l'argent. En dessous, chaque mois creuse le trou ; au-dessus, chaque euro vendu vous enrichit.",

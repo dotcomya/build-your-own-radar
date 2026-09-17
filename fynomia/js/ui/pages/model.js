@@ -37,7 +37,7 @@ export function renderModel(navigate, refresh) {
 
   if (!r || !s.activities.length) {
     return h('div', { class: 'content' },
-      stepBanner('modele', journey(s, r), navigate),
+      stepBanner('modele', journey(s, r), navigate, 'modele'),
       h('div', { class: 'card' }, h('div', { class: 'empty' },
         h('h3', {}, 'Rien à calculer pour l’instant'),
         h('p', { class: 'muted' }, "Renseignez une offre et un prix : ce tableau vous dira combien de clients il vous faut."),
@@ -66,7 +66,7 @@ export function renderModel(navigate, refresh) {
   paint(r)
 
   return h('div', { class: 'content' },
-    stepBanner('modele', journey(s, r), navigate),
+    stepBanner('modele', journey(s, r), navigate, 'modele'),
 
     pageBar('Votre modèle', headline(r, s, voc)),
 

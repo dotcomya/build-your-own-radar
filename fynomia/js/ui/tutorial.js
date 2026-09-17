@@ -12,6 +12,7 @@
 
 import { h } from './dom.js'
 import { STEPS } from '../engine/journey.js'
+import { guideFor } from './guides.js'
 
 /** Les tutos restent ouverts ou fermés d'une page à l'autre, par étape. */
 const closed = new Set()
@@ -77,23 +78,45 @@ export function tutorial(step, navigate) {
  * est. Le reste encombrait la page sans jamais être utilisé — la barre de
  * guidage, à droite, fait déjà la navigation.
  */
-export function stepBanner(stepKey, journeyState, navigate) {
+/**
+ * Le bandeau d'une partie.
+ *
+ * Une ligne repliée : le numéro de l'étape et sa question. Dépliée, elle dit
+ * à quoi sert cette partie, ce qu'elle décide ailleurs dans le plan, et ce
+ * qu'on regarde en premier. C'est le seul endroit où le logiciel s'explique :
+ * partout ailleurs, il calcule.
+ */
+export function stepBanner(stepKey, journeyState, navigate, pageKey = stepKey) {
   const step = STEPS.find((x) => x.key === stepKey)
-  if (!step) return null
-  const live = journeyState?.steps?.find((x) => x.key === stepKey)
-  const index = STEPS.indexOf(step) + 1
+  const guide = guideFor(pageKey)
+  if (!step && !guide) return null
+  const live = step ? journeyState?.steps?.find((x) => x.key === stepKey) : null
+  const index = step ? STEPS.indexOf(step) + 1 : null
 
-  // Le pourquoi de la page tient sur une ligne, et se déplie pour qui le
-  // demande. Un paragraphe en tête de chaque écran finit par ne plus être lu,
-  // et coûte trois centimètres à chaque visite.
   const el = h('details', { class: `step-line ${live?.status || 'todo'}` },
     h('summary', { class: 'step-line-head' },
-      h('span', { class: 'step-line-no num' }, `${index}`),
-      h('span', { class: 'step-line-q' }, step.question),
+      index ? h('span', { class: 'step-line-no num' }, `${index}`) : h('span', { class: 'step-line-no' }, 'i'),
+      h('span', { class: 'step-line-q' }, step ? step.question : 'À quoi sert cette partie'),
       live?.status === 'done' ? h('span', { class: 'step-line-done' }, 'fait') : null,
       h('span', { class: 'step-line-chev' }, '›'),
     ),
-    h('p', { class: 'step-line-why' }, step.promise),
+    h('div', { class: 'step-guide' },
+      step ? h('p', { class: 'step-line-why' }, step.promise) : null,
+      guide ? h('div', { class: 'guide-grid' },
+        guideCell('Ce que fait cette partie', guide.role),
+        guideCell('Pourquoi ça compte', guide.why),
+        guideCell('Ce qu’on regarde en premier', guide.first),
+      ) : null,
+    ),
   )
   return el
 }
+
+const guideCell = (title, body) => h('div', { class: 'guide-cell' },
+  h('div', { class: 'guide-cell-tag' }, title),
+  h('p', {}, body),
+)
+
+/** Pour les pages qui ne correspondent à aucune étape du parcours. */
+export const partBanner = (pageKey) => stepBanner(null, null, null, pageKey)
+

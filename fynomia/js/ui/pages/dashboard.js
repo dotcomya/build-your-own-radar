@@ -13,6 +13,7 @@ import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
 import { referenceYear } from '../impact.js'
 import { storyline, gauge } from '../story.js'
+import { partBanner } from '../tutorial.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
@@ -55,6 +56,8 @@ export function renderDashboard(navigate, refresh) {
     s.meta.isDemo && demoBanner(navigate, refresh),
 
     boardHead(health, s, sector, y, navigate),
+
+    partBanner('tableau-de-bord'),
 
     tabs(views, view, (k) => { renderDashboard.view = k; refresh() }),
 
@@ -271,36 +274,46 @@ function figureSet(r, s, y) {
   const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
   return [
     { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y),
-      spark: p.revenue, go: 'offre' },
+      spark: p.revenue, go: 'offre', help: 'chiffreAffaires' },
     { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du CA`,
       tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda' },
     { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
       note: reached ? 'atteint' : 'non atteint',
       tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort' },
     { label: 'R\u00e9sultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
-      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', spark: p.netResult, go: 'resultats' },
+      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', spark: p.netResult, go: 'resultats', help: 'resultatNet' },
     { label: 'Tr\u00e9sorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
       note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos',
-      spark: r.cash.balance, go: 'financement' },
+      spark: r.cash.balance, go: 'financement', help: 'tresorerie' },
     { label: '\u00c0 financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
       note: k.fundingNeed > 0 ? 'avant ' + monthLabel(k.cashLow.month, r.startDate) : 'caisse couverte',
-      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement' },
+      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement' },
   ]
 }
 
 function keyFigures(r, s, y, navigate) {
   const figures = figureSet(r, s, y)
    const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
+  // Chaque notion porte son « i » : EBITDA, point mort, résultat net ne sont
+  // pas des mots que tout le monde a déjà croisés, et un tableau de bord qui
+  // les affiche sans les définir suppose un bagage qu'un fondateur n'a pas
+  // forcément. La tuile reste cliquable ; le « i » ouvre l'explication.
   const cells = figures.map((f) => {
     const valueEl = h('span', { class: 'figure-value num' }, f.value)
     const noteEl = h('span', { class: 'figure-note' }, f.note)
-    const btn = h('button', { class: `figure ${f.tone || ''}`, onClick: () => navigate(`#/${f.go}`) },
+    const btn = h('div', {
+      class: `figure ${f.tone || ''}`, role: 'button', tabindex: '0',
+      title: `Aller à la page ${f.go}`,
+      onClick: () => navigate(`#/${f.go}`),
+      onKeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`#/${f.go}`) } },
+    },
       h('span', { class: 'figure-label' }, f.label),
       valueEl,
       h('span', { class: 'figure-foot' },
         noteEl,
         f.spark && f.spark.some((v) => v) ? sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }) : null,
       ),
+      f.help ? h('span', { class: 'figure-help' }, helpButton(f.help)) : null,
     )
     return { btn, valueEl, noteEl }
   })

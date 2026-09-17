@@ -44,7 +44,7 @@ export function renderMarketing(navigate, refresh) {
   renderMarketing.view = view
 
   return h('div', { class: 'content' },
-    stepBanner('acquisition', journey(store.scenario, store.result), navigate),
+    stepBanner('acquisition', journey(store.scenario, store.result), navigate, 'marketing'),
 
     pageBar(
       s.marketing.length > 1 ? `${s.marketing.length} campagnes` : 'Acquisition de clients',
@@ -120,7 +120,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
   const ratio = cac > 0 && ltv > 0 ? ltv / cac : null
 
   return h('div', { class: 'content' },
-    stepBanner('acquisition', journey(store.scenario, store.result), navigate),
+    stepBanner('acquisition', journey(store.scenario, store.result), navigate, 'marketing'),
 
     h('div', { class: 'card' },
       h('div', { class: 'card-head' },
