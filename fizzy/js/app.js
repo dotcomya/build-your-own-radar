@@ -40,9 +40,7 @@ const PAGES = {
   charges: { label: 'Charges', icon: '▦', render: renderCosts, levels: ['easy', 'intermediate', 'advanced'] },
   financement: { label: 'Financement', icon: '◇', render: renderFinancing, levels: ['easy', 'intermediate', 'advanced'] },
   resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'] },
-  'mon-revenu': { label: 'Ce que je touche', icon: '◉', render: renderFounder, levels: ['easy', 'intermediate', 'advanced'] },
   'business-case': { label: 'Business case', icon: '◆', render: renderBusinessCase, levels: ['easy', 'intermediate', 'advanced'] },
-  compte: { label: 'Mon compte', icon: '◍', render: renderAccount, levels: ['easy', 'intermediate', 'advanced'] },
   reglages: { label: 'Réglages', icon: '⚙', render: renderSettings, levels: ['easy', 'intermediate', 'advanced'] },
 }
 
@@ -51,8 +49,8 @@ const PAGES = {
 const GROUPS = [
   { title: 'Construire', keys: ['modele', 'offre', 'marketing', 'equipe', 'charges', 'financement'] },
   { title: '', keys: ['tableau-de-bord'] },
-  { title: 'Analyser', keys: ['resultats', 'mon-revenu', 'business-case'] },
-  { title: '', keys: ['compte', 'reglages'] },
+  { title: 'Analyser', keys: ['resultats', 'business-case'] },
+  { title: '', keys: ['reglages'] },
 ]
 
 const root = document.getElementById('app')
@@ -84,6 +82,9 @@ function render({ preserveScroll = false } = {}) {
   }
 
   if (!store.scenario || key === 'demarrer' || key === '') {
+    // Sans plan, l'accueil est la première question : une page de garde qui ne
+    // fait qu'annoncer l'étape suivante n'apporte rien.
+    if (!store.scenario) { resetSetup(); navigate('#/creer'); return }
     clear(root).appendChild(renderOnboarding(navigate))
     document.title = 'Fizzy — Business plan'
     window.scrollTo(0, 0)
@@ -95,7 +96,9 @@ function render({ preserveScroll = false } = {}) {
   if (!getPersona(store.persona).pages.includes(key)) { navigate('#/tableau-de-bord'); return }
 
   const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render))
-  clear(root).appendChild(h('div', { class: 'shell' },
+  // Le niveau de détail se voit : chaque profondeur a sa couleur, et tout ce
+  // qu'elle débloque la porte. Changer de niveau change la teinte de l'app.
+  clear(root).appendChild(h('div', { class: 'shell', 'data-level': store.level },
     rail(key), main, guideBar(key, navigate), tabbar(key), impactRail(render)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
@@ -360,7 +363,7 @@ store.subscribe((_, reason) => {
 })
 
 markJourney()
-if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/'
+if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/creer'
 render()
 
 // Le compte s'ouvre après le premier rendu : la page ne doit jamais attendre

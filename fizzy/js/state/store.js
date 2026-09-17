@@ -409,6 +409,9 @@ function migrate(scenario) {
     a.volumes = a.volumes || { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0, manual: [] }
     if (a.volumes.growthDecay === undefined) a.volumes.growthDecay = 0.96
   }
+  for (const m of s.team) {
+    if (!m.benefits) m.benefits = ['cdi', 'cdd', 'dirigeant'].includes(m.contractType) ? { mutuelle: 45 } : {}
+  }
   s.version = SCHEMA_VERSION
   return s
 }

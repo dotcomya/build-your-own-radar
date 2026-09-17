@@ -74,7 +74,7 @@ export function renderFinancing(navigate, refresh) {
       h('div', { class: 'card-body' },
         f.loans.length === 0
           ? h('p', { class: 'muted small', style: { margin: 0 } }, "Aucun emprunt. Un prêt bancaire finance en général les investissements durables, rarement le besoin en fonds de roulement.")
-          : h('div', {}, ...f.loans.map((l) => h('div', { class: 'card', style: { marginBottom: '9px', background: 'var(--ink-50)' } },
+          : h('div', {}, ...f.loans.map((l) => h('div', { class: 'card', style: { marginBottom: '9px', background: 'var(--surface-2)' } },
               h('div', { class: 'card-body tight' },
                 h('div', { class: 'grid', style: { gridTemplateColumns: 'minmax(130px,1.4fr) repeat(4, minmax(96px,1fr)) auto', gap: '10px', alignItems: 'end' } },
                   textField({ label: 'Intitulé', value: l.label, onInput: (v, o) => setField('loans', l.id, { label: v }, o) }),
@@ -127,6 +127,8 @@ export function renderFinancing(navigate, refresh) {
       h('div', { class: 'card-head' }, h('h2', {}, 'Plan de financement'), helpButton('planFinancement')),
       h('div', { class: 'table-wrap' }, financingPlanTable(r)),
     ),
+
+    tutorial('financement', navigate),
   )
 
   function pushAt(key, item) { store.update((sc) => sc.financing[key].push(item), { label: 'Apport' }); refresh() }
@@ -169,8 +171,6 @@ function financingPlanTable(r) {
       h('tr', { class: 'highlight' }, h('td', {}, 'Excédent de la période'), ...p.map((y) => h('td', { class: `num ${y.surplus < 0 ? 'neg' : 'pos'}` }, euro(y.surplus)))),
       h('tr', { class: 'total' }, h('td', {}, 'Excédent cumulé'), ...p.map((y) => h('td', { class: `num ${y.cumulative < 0 ? 'neg' : ''}` }, euro(y.cumulative)))),
     ),
-
-    tutorial('financement', navigate),
   )
 }
 

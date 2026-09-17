@@ -3,6 +3,7 @@
 import { h, euro, pct, num, helpButton, monthLabel, yearLabel } from '../dom.js'
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
+import { renderFounder } from './founder.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -35,6 +36,10 @@ export function renderResults(navigate, refresh) {
       : current === 'bilan' ? balanceView(r)
       : current === 'bfr' ? bfrView(r)
       : taxView(r),
+
+    // « Ce que je touche » n'était qu'une page de plus à trouver : c'est la
+    // dernière ligne des états financiers, elle vit désormais avec eux.
+    h('div', { class: 'merged' }, renderFounder(navigate, refresh)),
   )
 }
 

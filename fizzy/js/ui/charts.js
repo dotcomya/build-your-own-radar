@@ -194,6 +194,101 @@ export function donut({ items, size = 170, formatter = (v) => euro(v, { compact:
   )
 }
 
+/**
+ * Cascade : d'où part l'argent et ce qu'il en reste.
+ *
+ * C'est la représentation qui répond le plus directement à « où part chaque
+ * euro ? ». Chaque barre flotte au niveau atteint par la précédente ; les
+ * paliers (`total: true`) repartent du zéro et se lisent comme des soldes.
+ *
+ * @param {{label:string,value:number,total?:boolean}[]} items
+ */
+export function waterfall({ items, height = 280, formatter = (v) => euro(v, { compact: true }) }) {
+  const width = 720
+  const pad = { t: 22, r: 12, b: 52, l: 62 }
+
+  // Position de chaque barre : un palier se lit depuis zéro, une variation
+  // depuis le solde courant.
+  let running = 0
+  const bars = items.map((it) => {
+    const v = Number(it.value) || 0
+    if (it.total) {
+      running = v
+      return { ...it, from: 0, to: v, value: v }
+    }
+    const from = running
+    running += v
+    return { ...it, from, to: running, value: v }
+  })
+
+  const all = bars.flatMap((b) => [b.from, b.to])
+  let max = Math.max(0, ...all), min = Math.min(0, ...all)
+  const ticks = niceTicks(min, max, 4)
+  max = Math.max(max, ...ticks); min = Math.min(min, ...ticks)
+  const y = scaleY(min, max, height, pad)
+  const innerW = width - pad.l - pad.r
+  const slot = innerW / bars.length
+  const barW = Math.min(52, slot * 0.62)
+
+  const nodes = []
+  for (const t of ticks) {
+    nodes.push(svg('line', { x1: pad.l, x2: width - pad.r, y1: y(t), y2: y(t), stroke: t === 0 ? AXIS : GRID, 'stroke-width': 1 }))
+    nodes.push(svg('text', { x: pad.l - 8, y: y(t) + 4, 'text-anchor': 'end', fill: AXIS, 'font-size': 11 }, formatter(t)))
+  }
+
+  bars.forEach((b, i) => {
+    const cx = pad.l + slot * (i + 0.5)
+    const top = Math.min(y(b.from), y(b.to))
+    const hgt = Math.max(2, Math.abs(y(b.to) - y(b.from)))
+    const colour = b.total
+      ? (b.to >= 0 ? '#0B0E10' : STATUS.loss)
+      : (b.value >= 0 ? STATUS.gain : STATUS.loss)
+    nodes.push(svg('rect', {
+      x: cx - barW / 2, y: top, width: barW, height: hgt, rx: 2,
+      fill: colour, 'fill-opacity': b.total ? 1 : 0.86,
+    }, svg('title', {}, `${b.label} : ${euro(b.value)}`)))
+
+    // Valeur au-dessus de la barre pour une variation, au-dessus du palier
+    // pour un solde : jamais à l'intérieur, où elle deviendrait illisible.
+    nodes.push(svg('text', {
+      x: cx, y: top - 6, 'text-anchor': 'middle', fill: b.total ? '#0B0E10' : colour,
+      'font-size': 11.5, 'font-weight': b.total ? 650 : 500,
+    }, `${!b.total && b.value > 0 ? '+' : ''}${formatter(b.value)}`))
+
+    // Trait de liaison vers la barre suivante.
+    const next = bars[i + 1]
+    if (next && !next.total) {
+      nodes.push(svg('line', {
+        x1: cx + barW / 2, x2: pad.l + slot * (i + 1.5) - barW / 2,
+        y1: y(b.to), y2: y(b.to), stroke: AXIS, 'stroke-width': 1, 'stroke-dasharray': '3 3',
+      }))
+    }
+
+    for (const [k, part] of wrapLabel(b.label).entries()) {
+      nodes.push(svg('text', {
+        x: cx, y: height - 34 + k * 12, 'text-anchor': 'middle',
+        fill: b.total ? '#0B0E10' : AXIS, 'font-size': 10, 'font-weight': b.total ? 600 : 400,
+      }, part))
+    }
+  })
+
+  return h('div', {}, svg('svg', { class: 'chart', viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: 'xMidYMid meet', role: 'img' }, ...nodes))
+}
+
+/** Deux lignes au maximum : au-delà, l'étiquette est tronquée. */
+function wrapLabel(label) {
+  const words = String(label).split(' ')
+  if (words.length === 1) return [label]
+  const lines = ['']
+  for (const w of words) {
+    const last = lines[lines.length - 1]
+    if (!last) lines[lines.length - 1] = w
+    else if ((last + ' ' + w).length <= 11) lines[lines.length - 1] = last + ' ' + w
+    else lines.push(w)
+  }
+  return lines.slice(0, 2)
+}
+
 /** Ligne simple, utile pour une évolution d'effectif ou de volumes. */
 export function sparkline({ values, width = 120, height = 32, color = '#1B3BFF' }) {
   const max = Math.max(...values, 1), min = Math.min(...values, 0)

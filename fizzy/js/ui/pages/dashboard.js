@@ -7,8 +7,8 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel } from '../dom.js'
-import { barChart, areaChart, donut, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, levelBlock } from '../dom.js'
+import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
 import { referenceYear } from '../impact.js'
@@ -30,13 +30,14 @@ export function renderDashboard(navigate, refresh) {
 
   const persona = getPersona(store.persona)
   const sector = getSector(s.meta.sectorKey)
+  const level = store.level
   const y = referenceYear(r)
   const health = assess(r, s)
 
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
 
-    verdictHero(health, r, s, y, persona, sector),
+    boardHead(health, s, sector, y, navigate),
 
     keyFigures(r, s, y, navigate),
 
@@ -54,9 +55,11 @@ export function renderDashboard(navigate, refresh) {
       storyline(r, s, { compact: narrow() }),
     ),
 
-    actionsPanel(r, s, navigate, refresh),
+    ...boardCharts(r, s, y, level, sector, navigate),
 
     sector && gaugePanel(r, s, sector, y),
+
+    actionsPanel(r, s, navigate, refresh),
 
     nudgesSection(s, r, navigate),
 
@@ -64,65 +67,225 @@ export function renderDashboard(navigate, refresh) {
   )
 }
 
-/* ───────────────────────────── Diagnostic ─────────────────────────────── */
+/* ────────────────────────── En-tête et verdict ────────────────────────── */
 
 /**
- * État de santé en un mot, avec ce qui le motive.
- * L'ordre des tests est celui de la gravité : on meurt de trésorerie avant de
- * mourir de rentabilité.
- */
-/**
- * Les chiffres qu'on vient chercher.
+ * Le nom du projet, et le verdict à côté.
  *
- * Ils étaient exacts mais rangés dans un pli : il fallait déplier « voir les
- * chiffres » pour lire son EBITDA. Ce sont pourtant les six nombres qu'un
- * fondateur cite quand on lui demande où il en est. Ils sont donc dehors, sur
- * une ligne, chacun cliquable vers la page qui l'explique.
+ * Le verdict occupait auparavant un bandeau sombre pleine largeur : il volait
+ * la vedette aux chiffres alors qu'il n'en est que le résumé. Il tient
+ * désormais dans une carte étroite, posée à droite du titre — une pastille de
+ * couleur, un mot, une ligne. Le détail est à un clic, pas à l'écran.
+ */
+function boardHead(health, s, sector, y, navigate) {
+  return h('header', { class: 'board-head' },
+    h('div', { class: 'board-id' },
+      h('div', { class: 'board-eyebrow' },
+        [sector?.label, yearLabel(y)].filter(Boolean).join(' · ')),
+      h('h1', { class: 'board-title' }, s.meta.company || 'Mon projet'),
+    ),
+    verdictCard(health, navigate),
+  )
+}
+
+function verdictCard(health, navigate) {
+  const detail = h('div', { class: 'verdict-body' }, health.body,
+    health.figure && h('div', { class: 'verdict-figure' },
+      h('span', {}, health.figure.label),
+      h('strong', { class: 'num' }, health.figure.value),
+    ),
+  )
+  const card = h('aside', { class: `verdict verdict-${health.tone}` },
+    h('button', {
+      class: 'verdict-head',
+      title: 'Voir le raisonnement',
+      onClick: () => { card.classList.toggle('open') },
+    },
+      h('span', { class: 'verdict-dot' }),
+      h('span', { class: 'spacer' },
+        h('span', { class: 'verdict-word' }, health.word),
+        h('span', { class: 'verdict-line' }, health.line),
+      ),
+      h('span', { class: 'verdict-more' }, '›'),
+    ),
+    detail,
+  )
+  return card
+}
+
+/* ────────────────────────────── Les chiffres ──────────────────────────── */
+
+/**
+ * Les six chiffres qu'on vient chercher, chacun avec sa trajectoire.
+ *
+ * Un nombre seul ne dit pas s'il monte ou s'il tombe. Chaque tuile porte donc
+ * sa courbe sur cinq ans : c'est la différence entre un tableau de chiffres et
+ * un tableau de bord.
  */
 function keyFigures(r, s, y, navigate) {
   const k = r.kpis, p = r.pnl
+  const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
   const figures = [
-    { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y), go: 'offre' },
+    { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y),
+      spark: p.revenue, go: 'offre' },
     { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du CA`,
-      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', go: 'resultats', help: 'ebitda' },
+      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda' },
     { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '—',
-      note: k.breakEven[y] && p.revenue[y] >= k.breakEven[y] ? 'atteint' : 'non atteint',
-      tone: k.breakEven[y] && p.revenue[y] >= k.breakEven[y] ? 'pos' : 'warn', go: 'resultats', help: 'pointMort' },
+      note: reached ? 'atteint' : 'non atteint',
+      tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort' },
     { label: 'Résultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
-      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', go: 'resultats' },
+      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', spark: p.netResult, go: 'resultats' },
     { label: 'Trésorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
-      note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos', go: 'financement' },
+      note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos',
+      spark: r.cash.balance, go: 'financement' },
     { label: 'À financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
       note: k.fundingNeed > 0 ? 'avant ' + monthLabel(k.cashLow.month, r.startDate) : 'caisse couverte',
       tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement' },
   ]
 
+  const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
   return h('section', { class: 'figures' },
     ...figures.map((f) => h('button', {
       class: `figure ${f.tone || ''}`, onClick: () => navigate(`#/${f.go}`),
     },
       h('span', { class: 'figure-label' }, f.label),
       h('span', { class: 'figure-value num' }, f.value),
-      h('span', { class: 'figure-note' }, f.note),
+      h('span', { class: 'figure-foot' },
+        h('span', { class: 'figure-note' }, f.note),
+        f.spark && f.spark.some((v) => v) && sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }),
+      ),
     )),
   )
 }
 
-function verdictHero(health, r, s, y, persona, sector) {
-  return h('section', { class: `hero hero-${health.tone}` },
-    h('div', { class: 'hero-main' },
-      h('div', { class: 'hero-eyebrow' },
-        [sector?.label, s.meta.company, persona.label].filter(Boolean).join(' · ')),
-      h('h1', { class: 'hero-word' }, health.word),
-      h('p', { class: 'hero-line' }, health.line),
-      h('p', { class: 'hero-body' }, health.body),
-    ),
-    h('div', { class: 'hero-figure' },
-      h('div', { class: 'hero-figure-label' }, health.figure.label),
-      h('div', { class: 'hero-figure-value num' }, health.figure.value),
-      health.figure.link && h('a', { class: 'hero-figure-link', href: health.figure.link }, 'Voir le détail'),
-    ),
-  )
+/* ────────────────────── Le plan, en graphiques ───────────────────── */
+
+/**
+ * Tout ce qu'un prévisionnel raconte, en images.
+ *
+ * L'ordre suit une question par graphique : où part l'argent, comment le
+ * compte évolue, ce qui coûte, d'où vient le chiffre d'affaires, ce que pèse
+ * l'équipe, ce que le cycle immobilise. Le niveau de détail choisi décide
+ * combien de ces questions sont posées — pas si elles le sont graphiquement.
+ */
+function boardCharts(r, s, y, level, sector, navigate) {
+  const k = r.kpis, p = r.pnl
+  const out = []
+
+  out.push(panel(
+    'Où part chaque euro',
+    `De votre chiffre d'affaires à votre résultat net — ${yearLabel(y).toLowerCase()}`,
+    waterfall({ items: moneyFlow(r, y) }),
+    h('p', { class: 'chart-note' }, moneyFlowSentence(r, y)),
+  ))
+
+  const trajectory = panel("Chiffre d'affaires et résultat", 'Les cinq exercices',
+    barChart({
+      categories: YEAR_CATEGORIES,
+      series: [
+        { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
+        { label: 'EBITDA', values: p.ebitda, color: PALETTE[2] },
+        { label: 'Résultat net', values: p.netResult, color: PALETTE[5] },
+      ],
+      line: k.breakEven.some((v) => v)
+        ? { label: 'Point mort', values: k.breakEven.map((v) => v || 0), color: STATUS.loss, dashed: true }
+        : null,
+    }))
+
+  const costs = panel('Ce que coûte votre activité', 'Structure des charges, par exercice',
+    stackedBar({
+      categories: YEAR_CATEGORIES,
+      series: [
+        { label: 'Achats variables', values: p.variableCost, color: PALETTE[5] },
+        { label: 'Charges externes', values: p.external, color: PALETTE[1] },
+        { label: 'Personnel', values: p.payroll, color: PALETTE[0] },
+        { label: 'Impôts et taxes', values: p.duties, color: PALETTE[4] },
+        { label: 'Amortissements', values: p.amortisation, color: PALETTE[2] },
+      ],
+    }))
+  out.push(pair(trajectory, costs))
+
+  const activities = r.revenue.perActivity
+    .map((a, i) => ({ label: a.name, value: a.total.reduce((x, z) => x + z, 0), color: PALETTE[i % PALETTE.length] }))
+    .filter((a) => a.value > 0)
+  // Un camembert à une part ne dit rien : il ne s'affiche qu'à partir de deux
+  // sources de revenus.
+  const mix = activities.length > 1
+    ? panel("D'où vient le chiffre d'affaires", 'Cumul sur cinq ans', donut({ items: activities }))
+    : null
+
+  const payrollY = yearly(r.payroll.gross)
+  const team = payrollY.some((v) => v > 0)
+    ? panel('Ce que pèse votre équipe', 'Brut, cotisations patronales et avantages',
+        barChart({
+          categories: YEAR_CATEGORIES,
+          series: [
+            { label: 'Salaires bruts', values: payrollY, color: PALETTE[0] },
+            { label: 'Cotisations patronales', values: yearly(r.payroll.employerCharges), color: PALETTE[1] },
+            ...(r.payroll.benefits && r.payroll.benefits.some((v) => v > 0)
+              ? [{ label: 'Avantages', values: yearly(r.payroll.benefits), color: PALETTE[4] }]
+              : []),
+          ],
+        }))
+    : null
+
+  if (mix || team) out.push(pair(mix, team))
+
+  if (level !== 'easy') {
+    const bfr = panel('Ce que le cycle immobilise',
+      k.peakBfr > 0 ? "Besoin en fonds de roulement — l'argent avancé aux clients et aux stocks" : 'Le cycle dégage de la ressource',
+      areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
+    const cashPanel = panel('Combien de temps la caisse tient',
+      Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
+      areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }))
+    out.push(levelBlock('intermediate', 'Ce que la profondeur intermédiaire ajoute', pair(bfr, cashPanel)))
+  }
+
+  return out
+}
+
+/** Deux graphiques côte à côte, un seul s'il n'y en a qu'un. */
+function pair(a, b) {
+  const cards = [a, b].filter(Boolean)
+  if (cards.length === 0) return null
+  return h('div', { class: 'board-pair' }, ...cards)
+}
+
+/**
+ * La cascade du compte de résultat : chiffre d'affaires, ce qu'on en retire,
+ * ce qu'il reste. Les paliers sont les soldes intermédiaires de gestion — ceux
+ * qu'une banque lit en premier.
+ */
+function moneyFlow(r, y) {
+  const p = r.pnl
+  const items = [{ label: "Chiffre d'affaires", value: p.revenue[y], total: true }]
+  if (p.grants[y]) items.push({ label: 'Subventions', value: p.grants[y] })
+  if (p.variableCost[y]) items.push({ label: 'Achats', value: -p.variableCost[y] })
+  if (p.external[y]) items.push({ label: 'Charges externes', value: -p.external[y] })
+  if (p.duties[y]) items.push({ label: 'Impôts et taxes', value: -p.duties[y] })
+  if (p.payroll[y]) items.push({ label: 'Personnel', value: -p.payroll[y] })
+  items.push({ label: 'EBITDA', value: p.ebitda[y], total: true })
+  if (p.amortisation[y]) items.push({ label: 'Amortis.', value: -p.amortisation[y] })
+  if (p.interest[y]) items.push({ label: 'Frais fin.', value: -p.interest[y] })
+  if (p.corporateTax[y]) items.push({ label: 'Impôt sociétés', value: -p.corporateTax[y] })
+  if (p.credits[y]) items.push({ label: "Crédits impôt", value: p.credits[y] })
+  items.push({ label: 'Résultat net', value: p.netResult[y], total: true })
+  return items
+}
+
+/** Une phrase qui dit ce que le dessin montre, pour qui ne lit pas les dessins. */
+function moneyFlowSentence(r, y) {
+  const p = r.pnl
+  const rev = p.revenue[y]
+  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseignez vos ventes pour voir la cascade se remplir."
+  const kept = p.netResult[y] / rev
+  const biggest = [
+    { label: 'les achats', v: p.variableCost[y] },
+    { label: 'les charges externes', v: p.external[y] },
+    { label: "l'équipe", v: p.payroll[y] },
+  ].sort((a, b) => b.v - a.v)[0]
+  if (biggest.v <= 0) return `Sur 100 € facturés, il vous en reste ${Math.round(kept * 100)} € après impôt.`
+  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il vous en reste ${Math.round(kept * 100)} € après impôt.`
 }
 
 /* ──────────────────────── Actions déjà chiffrées ──────────────────────── */
@@ -254,8 +417,9 @@ function nudgesSection(s, r, navigate) {
 /* ────────────────────────────── Le détail ─────────────────────────────── */
 
 /**
- * Tout ce qui précède répond à « que dois-je faire ». Ce bloc répond à
- * « montrez-moi les chiffres » — pour qui veut vérifier, et seulement alors.
+ * Les graphiques sont désormais à l'écran, plus dans un pli. Ne restent ici
+ * que les indicateurs détaillés, les leviers à tirer et les pièges propres au
+ * métier — utiles, mais qu'on ne consulte pas à chaque visite.
  */
 function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
   const board = metricBoard(persona, r)
@@ -264,69 +428,19 @@ function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
 
   const details = h('details', { class: 'detail-block', open: open || null },
     h('summary', { class: 'detail-summary' },
-      h('span', { class: 'detail-title' }, 'Voir les chiffres'),
-      h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs, vos leviers, la structure des coûts`),
+      h('span', { class: 'detail-title' }, 'Aller plus loin'),
+      h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs, vos leviers, les pièges du métier`),
     ),
     h('div', { class: 'detail-body' },
       board,
       levers.length > 0 && h('div', { class: 'mt' },
         leverPanel(levers, { onLive: (provisional) => board.updateWith(provisional), onDone: refresh })),
-      h('div', { class: 'grid grid-2 mt' }, ...personaCharts(persona, r)),
       sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
         sectorTraps(s), sectorRegime(s)),
     ),
   )
   details.addEventListener('toggle', () => { detailDisclosure.open = details.open })
   return details
-}
-
-function personaCharts(persona, r) {
-  const k = r.kpis, p = r.pnl
-  const trajectory = panel("Chiffre d'affaires et résultat", 'Cinq exercices',
-    barChart({
-      categories: YEAR_CATEGORIES,
-      series: [
-        { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
-        { label: 'EBITDA', values: p.ebitda, color: PALETTE[2] },
-        { label: 'Résultat net', values: p.netResult, color: PALETTE[5] },
-      ],
-      line: k.breakEven.some((v) => v) ? { label: 'Point mort', values: k.breakEven.map((v) => v || 0), color: STATUS.loss, dashed: true } : null,
-    }))
-
-  const costs = panel('Structure des coûts', 'Par exercice',
-    stackedBar({
-      categories: YEAR_CATEGORIES,
-      series: [
-        { label: 'Achats variables', values: p.variableCost, color: PALETTE[5] },
-        { label: 'Charges externes', values: p.external, color: PALETTE[1] },
-        { label: 'Personnel', values: p.payroll, color: PALETTE[0] },
-        { label: 'Impôts et taxes', values: p.duties, color: PALETTE[4] },
-        { label: 'Amortissements', values: p.amortisation, color: PALETTE[2] },
-      ],
-    }))
-
-  const mix = panel("Répartition du chiffre d'affaires", 'Cumul sur cinq ans',
-    donut({ items: r.revenue.perActivity.map((a, i) => ({ label: a.name, value: a.total.reduce((x, z) => x + z, 0), color: PALETTE[i % PALETTE.length] })) }))
-
-  const payroll = panel('Masse salariale', 'Brut et cotisations patronales',
-    barChart({
-      categories: YEAR_CATEGORIES,
-      series: [
-        { label: 'Salaires bruts', values: yearly(r.payroll.gross), color: PALETTE[0] },
-        { label: 'Cotisations patronales', values: yearly(r.payroll.employerCharges), color: PALETTE[1] },
-      ],
-    }))
-
-  const bfr = panel('Besoin en fonds de roulement', r.kpis.peakBfr > 0 ? 'Immobilisé dans le cycle' : 'Ressource dégagée par le cycle',
-    areaChart({ values: r.bfr.total, startDate: r.startDate, color: r.kpis.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
-
-  switch (persona.code) {
-    case 'CFO': return [bfr, costs]
-    case 'CMO': return [trajectory, mix]
-    case 'CHRO': return [payroll, costs]
-    case 'CPO': return [trajectory, mix]
-    default: return [trajectory, costs]
-  }
 }
 
 function panel(title, subtitle, ...body) {

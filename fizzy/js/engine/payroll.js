@@ -26,6 +26,98 @@ export const STATUSES = {
 }
 
 /**
+ * Avantages accordés aux salariés.
+ *
+ * Deux d'entre eux sont des obligations : la complémentaire santé collective
+ * et la prise en charge de l'abonnement de transport. Les autres sont des
+ * leviers d'attractivité — ils coûtent moins cher qu'une augmentation de
+ * salaire équivalente, puisqu'ils échappent aux cotisations.
+ *
+ * `amount` est toujours la dépense mensuelle de l'employeur par personne.
+ */
+export const BENEFITS = {
+  mutuelle: {
+    label: 'Mutuelle santé',
+    legal: true,
+    suggested: 45,
+    short: 'Obligatoire',
+    help: "Complémentaire santé collective, obligatoire depuis 2016 pour tout salarié en CDI ou CDD de plus de trois mois. L'employeur en finance au moins la moitié. Comptez 40 à 60 € par mois et par personne pour un contrat d'entrée de gamme.",
+    forfaitSocial: true,
+    contracts: ['cdi', 'cdd', 'dirigeant'],
+  },
+  transport: {
+    label: 'Abonnement de transport',
+    legal: true,
+    suggested: 45,
+    short: 'Obligatoire',
+    help: "L'employeur rembourse au moins 50 % de l'abonnement aux transports publics. En Île-de-France, la moitié d'un pass mensuel représente environ 45 € ; en région, plutôt 20 à 30 €. Exonéré de cotisations et d'impôt.",
+  },
+  tickets: {
+    label: 'Titres-restaurant',
+    legal: false,
+    suggested: 108,
+    short: 'Facultatif',
+    help: "Part patronale comprise entre 50 et 60 % de la valeur du titre. Pour 18 titres de 10 € pris en charge à 60 %, la dépense est de 108 € par mois — dont la totalité est exonérée tant que la part patronale reste sous le plafond par titre.",
+  },
+  mobilite: {
+    label: 'Forfait mobilités durables',
+    legal: false,
+    suggested: 50,
+    short: 'Facultatif',
+    help: "Vélo, covoiturage, trottinette. Exonéré de cotisations et d'impôt dans la limite d'un plafond annuel par salarié. Souvent le premier avantage mis en place, parce qu'il coûte peu et se voit beaucoup.",
+  },
+  teletravail: {
+    label: 'Indemnité de télétravail',
+    legal: false,
+    suggested: 30,
+    short: 'Facultatif',
+    help: "Allocation forfaitaire couvrant électricité, chauffage et connexion. Exonérée de cotisations dans la limite d'un barème URSSAF proportionnel au nombre de jours télétravaillés.",
+  },
+  formation: {
+    label: 'Budget formation et matériel',
+    legal: false,
+    suggested: 80,
+    short: 'Facultatif',
+    help: "Enveloppe annuelle lissée sur douze mois : conférences, cours, licences, renouvellement du poste de travail. Charge d'exploitation ordinaire, pas un avantage en nature.",
+  },
+  autres: {
+    label: 'Autres avantages',
+    legal: false,
+    suggested: 40,
+    short: 'Facultatif',
+    help: "Chèques-vacances, chèques cadeaux, garde d'enfants, salle de sport. À saisir en coût employeur mensuel par personne.",
+  },
+}
+
+/** Les avantages ne concernent pas un prestataire externe ni un TNS. */
+const SALARIED = ['cdi', 'cdd', 'dirigeant', 'alternance', 'stage']
+
+/**
+ * Dépense mensuelle d'avantages pour un poste, et forfait social éventuel.
+ * @returns {{total:number,lines:Array,forfaitSocial:number}}
+ */
+export function benefitsCost(member, { headcount = 1, fiscal = {} } = {}) {
+  const ctx = fiscal && fiscal.get ? fiscal : fiscalContext(fiscal)
+  const lines = []
+  let total = 0
+  let forfaitSocial = 0
+  if (!SALARIED.includes(member.contractType)) return { total: 0, lines, forfaitSocial: 0 }
+  const chosen = member.benefits || {}
+  for (const [key, def] of Object.entries(BENEFITS)) {
+    const amount = Math.max(0, Number(chosen[key]) || 0)
+    if (amount <= 0) continue
+    if (def.contracts && !def.contracts.includes(member.contractType)) continue
+    total += amount
+    // Le forfait social frappe la contribution patronale de prévoyance et de
+    // mutuelle, mais seulement à partir de onze salariés.
+    const fs = def.forfaitSocial && headcount >= 11 ? amount * ctx.get('forfaitSocialRate') : 0
+    forfaitSocial += fs
+    lines.push({ key, label: def.label, amount, forfaitSocial: fs, legal: def.legal })
+  }
+  return { total: total + forfaitSocial, lines, forfaitSocial }
+}
+
+/**
  * Coefficient de la réduction générale de cotisations patronales.
  * Formule dégressive : maximale au SMIC, nulle au plafond (3 SMIC).
  */
@@ -47,10 +139,42 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
   const gross = Math.max(0, Number(member.monthlyGross) || 0)
   const detail = []
 
+  // Mutuelle, transport, titres-restaurant : une dépense réelle, qui ne passe
+  // ni par le brut ni par les cotisations. On la calcule une fois et on
+  // l'ajoute au coût de chaque régime concerné.
+  const ben = benefitsCost(member, { headcount, fiscal: ctx })
+  const withBenefits = (res) => {
+    if (ben.total <= 0) return { ...res, benefits: 0, benefitsLines: [] }
+    const lines = ben.lines.map((line) => ({
+      label: line.label,
+      amount: line.amount,
+      note: line.legal
+        ? 'Obligation légale. Exonéré de cotisations sociales dans les limites prévues.'
+        : 'Avantage facultatif, exonéré de cotisations dans les limites prévues : il coûte moins cher qu’une augmentation de salaire du même montant.',
+    }))
+    if (ben.forfaitSocial > 0) {
+      lines.push({ label: `Forfait social (${pct(ctx.get('forfaitSocialRate'))})`, amount: ben.forfaitSocial, note: "Dû à partir de 11 salariés sur la part patronale de mutuelle et de prévoyance." })
+    }
+    // Les avantages se lisent juste avant le total : ils font partie du coût
+    // du poste, pas d'une annexe.
+    const at = res.detail.findIndex((d) => d.emphasis)
+    if (at >= 0) {
+      res.detail.splice(at, 0, ...lines)
+      const totalLine = res.detail.find((d) => d.emphasis)
+      totalLine.amount += ben.total
+      totalLine.label = 'Coût complet du poste'
+      totalLine.note = 'Salaire, cotisations et avantages compris.'
+    } else {
+      res.detail.push(...lines)
+      res.detail.push({ label: 'Coût complet du poste', amount: res.cost + ben.total, emphasis: true, note: 'Salaire, cotisations et avantages compris.' })
+    }
+    return { ...res, cost: res.cost + ben.total, superGross: res.superGross + ben.total, benefits: ben.total, benefitsLines: ben.lines }
+  }
+
   // Prestataire externe : pas de paie, le montant saisi est le coût final.
   if (member.contractType === 'freelance') {
     detail.push({ label: 'Prestation facturée', amount: gross, note: 'Aucune cotisation sociale ; TVA récupérable en sus.' })
-    return { gross: 0, employerBase: 0, reduction: 0, jeiExemption: 0, employerCharges: 0, superGross: gross, employeeCharges: 0, net: 0, cost: gross, detail }
+    return { gross: 0, employerBase: 0, reduction: 0, jeiExemption: 0, employerCharges: 0, superGross: gross, employeeCharges: 0, net: 0, cost: gross, detail, benefits: 0, benefitsLines: [] }
   }
 
   // Dirigeant TNS : cotisations du régime des indépendants sur la rémunération.
@@ -59,7 +183,7 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
     const charges = gross * rate
     detail.push({ label: 'Rémunération du dirigeant', amount: gross })
     detail.push({ label: `Cotisations TNS (${pct(rate)})`, amount: charges, note: 'Régime des travailleurs non salariés : assiette et taux distincts du régime général.' })
-    return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail }
+    return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail, benefits: 0, benefitsLines: [] }
   }
 
   // Stagiaire : gratification exonérée jusqu'au minimum légal.
@@ -71,7 +195,7 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
     detail.push({ label: 'Gratification', amount: gross })
     detail.push({ label: 'Minimum légal exonéré', amount: -Math.min(gross, legalMinimum), note: `${fmt(legalMinimum)} € par mois pour un temps plein. Aucune cotisation en dessous de ce seuil.` })
     if (charges > 0) detail.push({ label: `Cotisations sur la fraction excédentaire (${pct(rate)})`, amount: charges })
-    return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail }
+    return withBenefits({ gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail })
   }
 
   // Alternant : taux patronal réduit, pas de réduction générale supplémentaire.
@@ -80,7 +204,7 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
     const charges = gross * rate
     detail.push({ label: 'Salaire brut', amount: gross })
     detail.push({ label: `Cotisations patronales réduites (${pct(rate)})`, amount: charges, note: 'Exonérations propres aux contrats en alternance.' })
-    return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail }
+    return withBenefits({ gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail })
   }
 
   // CDI, CDD, dirigeant assimilé salarié : régime général.
@@ -151,7 +275,7 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
   detail.push({ label: 'Coût total employeur', amount: superGross, emphasis: true })
   detail.push({ label: 'Net avant impôt versé au salarié', amount: net, note: `Après ${pct(ctx.get('employeeRate'))} de cotisations salariales. Le prélèvement à la source s'applique ensuite sur ce net.` })
 
-  return { gross, employerBase, reduction, jeiExemption, employerCharges, superGross, employeeCharges, net, cost: superGross, detail }
+  return withBenefits({ gross, employerBase, reduction, jeiExemption, employerCharges, superGross, employeeCharges, net, cost: superGross, detail })
 }
 
 /** Le poste est-il actif au mois `m` (index 0-59) ? */
@@ -166,13 +290,14 @@ export function isActive(member, m) {
 
 /**
  * Masse salariale mensuelle sur l'horizon complet.
- * @returns {{cost:number[],gross:number[],employerCharges:number[],headcount:number[],fte:number[],jeiExemption:number[],byMember:Array}}
+ * @returns {{cost:number[],gross:number[],employerCharges:number[],benefits:number[],headcount:number[],fte:number[],jeiExemption:number[],byMember:Array}}
  */
 export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {} } = {}) {
   const cost = new Array(months).fill(0)
   const gross = new Array(months).fill(0)
   const employerCharges = new Array(months).fill(0)
   const jeiExemption = new Array(months).fill(0)
+  const benefits = new Array(months).fill(0)
   const headcount = new Array(months).fill(0)
   const fte = new Array(months).fill(0)
   const byMember = []
@@ -198,11 +323,12 @@ export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {} 
       gross[m] += r.gross * n
       employerCharges[m] += r.employerCharges * n
       jeiExemption[m] += r.jeiExemption * n
+      benefits[m] += (r.benefits || 0) * n
     }
     byMember.push({ id: member.id, role: member.role, series })
   }
 
-  return { cost, gross, employerCharges, jeiExemption, headcount, fte, byMember }
+  return { cost, gross, employerCharges, jeiExemption, benefits, headcount, fte, byMember }
 }
 
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)

@@ -174,6 +174,24 @@ export function enableToggle(on, onChange) {
   return btn
 }
 
+/**
+ * Un bloc qui n'existe qu'à partir d'un certain niveau de détail.
+ *
+ * Sans marque, on ne sait pas pourquoi une section apparaît ou disparaît en
+ * changeant de profondeur. Un filet de couleur et une étiquette suffisent à
+ * rendre l'échange visible : bleu pour l'intermédiaire, violet pour l'expert.
+ */
+export function levelBlock(level, title, ...children) {
+  const label = { intermediate: 'Intermédiaire', advanced: 'Expert' }[level] || level
+  return h('div', { class: `lv lv-${level}` },
+    h('div', { class: 'lv-head' },
+      h('span', { class: 'lv-tag' }, label),
+      title && h('span', { class: 'lv-title' }, title),
+    ),
+    ...children,
+  )
+}
+
 export function helpButton(key) {
   return h('button', { class: 'help', type: 'button', title: 'En savoir plus', onClick: (e) => { e.preventDefault(); e.stopPropagation(); drawerHost && drawerHost(key) } }, '?')
 }

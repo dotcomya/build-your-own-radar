@@ -94,6 +94,9 @@ export function newTeamMember(overrides = {}) {
     id: uid('emp'), role: 'Nouveau poste', contractType: 'cdi', status: 'non-cadre',
     monthlyGross: 2500, count: 1, startMonth: 0, endMonth: '',
     rdShare: 0, innovShare: 0, youngDoctor: false, allocation: {},
+    // La mutuelle collective n'est pas une option : elle est obligatoire dès le
+    // premier salarié. Un plan qui l'oublie sous-estime chaque embauche.
+    benefits: { mutuelle: 45 },
     ...overrides,
   }
 }

@@ -389,7 +389,7 @@ function readiness(s, r, y) {
 }
 
 function exportTile(title, description, action, onClick, primary) {
-  return h('div', { class: 'card', style: { background: primary ? 'var(--brand-50)' : 'var(--ink-50)', borderColor: primary ? 'var(--brand-100)' : 'var(--ink-200)' } },
+  return h('div', { class: 'card', style: { background: primary ? 'var(--signal-wash)' : 'var(--surface-2)', borderColor: primary ? 'var(--signal)' : 'var(--rule)' } },
     h('div', { class: 'card-body' },
       h('h3', {}, title),
       h('p', { class: 'small muted', style: { minHeight: '58px', marginTop: '6px' } }, description),

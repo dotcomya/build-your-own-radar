@@ -48,8 +48,8 @@ export function resetSetup() { flow.index = 0; flow.touched = new Set() }
 const STEPS = [
   {
     key: 'metier', short: 'Votre métier',
-    question: 'Vous faites quoi ?',
-    help: "Le métier commande la TVA, votre statut et les repères de marge. C'est le seul choix qui change tout le reste.",
+    question: 'Commençons. Vous faites quoi ?',
+    help: "Nous allons construire votre business plan une question à la fois. Celle-ci commande la TVA, votre statut et les repères de marge — c'est la seule qui change tout le reste.",
     render: sectorPicker,
     ready: (s) => !!s?.meta?.sectorKey,
   },
@@ -176,10 +176,12 @@ export function renderSetup(navigate, refresh) {
     onClick: () => go(1),
   }, flow.index === STEPS.length - 2 ? 'Voir le résultat' : 'Continuer')
 
+  const showPlan = () => flow.index >= STEPS.findIndex((x) => x.key === 'prix')
+
   ctx.tick = () => {
     const live = store.scenario
     ctx.scenario = live
-    echoHost.replaceChildren(livePlan(live, step, ctx))
+    echoHost.replaceChildren(...(showPlan() ? [livePlan(live, step, ctx)] : []))
     const ok = step.ready(live)
     nextBtn.disabled = !ok
     nextBtn.classList.toggle('is-waiting', !ok)
@@ -192,7 +194,7 @@ export function renderSetup(navigate, refresh) {
   const ready = step.ready(s)
   nextBtn.disabled = !ready
   if (!ready) nextBtn.classList.add('is-waiting')
-  echoHost.replaceChildren(livePlan(s, step, ctx))
+  echoHost.replaceChildren(...(showPlan() ? [livePlan(s, step, ctx)] : []))
 
   return h('div', { class: 'setup' },
     h('div', { class: 'setup-bar' },
@@ -362,6 +364,19 @@ const planOut = (label, value, tone = '') => h('div', { class: `plan-out-row ${t
   h('span', { class: 'num' }, value || '\u2014'),
 )
 
+/** Les plans déjà commencés, pour y revenir sans passer par une page d'accueil. */
+function resumeLinks(navigate) {
+  const plans = store.list().filter((p) => p.id !== store.currentId)
+  if (!plans.length) return null
+  return h('div', { class: 'setup-resume' },
+    h('span', { class: 'setup-resume-tag' }, 'Reprendre'),
+    ...plans.slice(0, 3).map((p) => h('button', {
+      class: 'setup-resume-item',
+      onClick: () => { store.load(p.id); navigate('#/tableau-de-bord') },
+    }, p.name)),
+  )
+}
+
 /* ────────────────────────────── Les contrôles ───────────────────────────── */
 
 /**
@@ -479,7 +494,12 @@ function sectorPicker(ctx) {
  */
 function legalScreen(ctx) {
   const sector = getSector(store.scenario.meta.sectorKey)
-  const allowed = sector?.legal?.forms || ['SAS', 'SARL', 'EI']
+  // Les formes du métier d'abord — ce sont les plus probables — puis les
+  // autres. Un fondateur qui sait déjà ce qu'il veut ne doit pas être bloqué
+  // par un métier qui ne la propose pas.
+  const suggested = sector?.legal?.forms || ['SAS', 'SARL']
+  const allowed = [...suggested, ...['SAS', 'SASU', 'SARL', 'EURL', 'EI', 'BNC', 'SELARL', 'SELAS', 'SCM', 'SCI', 'SNC', 'Association']
+    .filter((f) => !suggested.includes(f))]
   const current = () => store.scenario.meta.legalForm
 
   const FORMS = {
@@ -492,6 +512,9 @@ function legalScreen(ctx) {
     SELARL: { label: 'SELARL', note: 'Société d’exercice libéral. Gérant majoritaire TNS.', contract: 'tns' },
     SELAS: { label: 'SELAS', note: 'Société d’exercice libéral par actions. Président assimilé salarié.', contract: 'dirigeant' },
     SCM: { label: 'SCM', note: 'Société civile de moyens : on partage les charges, pas les honoraires.', contract: 'tns' },
+    SCI: { label: 'SCI', note: 'Société civile immobilière : détenir et louer un bien, pas exercer une activité commerciale.', contract: 'tns' },
+    SNC: { label: 'SNC', note: 'Société en nom collectif : les associés répondent des dettes sur leurs biens propres.', contract: 'tns' },
+    Association: { label: 'Association', note: 'Loi 1901. Gestion désintéressée : pas de distribution de bénéfices.', contract: 'dirigeant' },
   }
 
   return h('div', {},
@@ -533,9 +556,19 @@ function legalScreen(ctx) {
  */
 function priceScreen(ctx) {
   const act = () => store.scenario.activities[0]
+  /**
+   * Le modèle retenu.
+   *
+   * Il est lu dans le scénario dès qu'il a été choisi. Le déduire des prix
+   * saisis ne marchait pas : choisir « par abonnement » remet justement les
+   * prix à zéro, et la déduction renvoyait alors « à la vente » — le clic
+   * semblait sans effet. La déduction ne sert plus qu'aux plans anciens, qui
+   * portent des prix mais pas encore de modèle déclaré.
+   */
   const mode = () => {
+    const declared = store.scenario.meta.revenueModel
+    if (declared) return declared
     const a = act()
-    if (store.scenario.meta.revenueModel === 'commission') return 'commission'
     const u = Number(a.unitPrice) || 0, r = Number(a.recurringPrice) || 0
     if (u > 0 && r > 0) return 'mixte'
     if (r > 0) return 'abonnement'
@@ -641,17 +674,112 @@ function commissionFields(ctx) {
   )
 }
 
+/**
+ * Le coût de revient, détaillé.
+ *
+ * « Ça vous coûte combien à produire ? » est une question à laquelle personne
+ * ne sait répondre d'un seul nombre. En revanche, chacun sait dire s'il a des
+ * matières, une commission de paiement, une livraison — et combien. On propose
+ * donc les postes du métier, on additionne, et le total devient le coût de
+ * revient. Exactement le geste des charges, appliqué à l'unité vendue.
+ */
+const COST_PARTS = {
+  produit: [
+    { label: 'Matières ou achat de marchandise', share: 0.45 },
+    { label: 'Emballage', share: 0.03 },
+    { label: 'Livraison', share: 0.08 },
+    { label: 'Commission de paiement', share: 0.02 },
+  ],
+  service: [
+    { label: 'Sous-traitance', share: 0.15 },
+    { label: 'Déplacement sur mission', share: 0.05 },
+    { label: 'Commission de paiement', share: 0.02 },
+  ],
+  logiciel: [
+    { label: 'Hébergement et infrastructure', share: 0.08 },
+    { label: 'Licences et briques tierces', share: 0.04 },
+    { label: 'Commission de paiement', share: 0.02 },
+  ],
+}
+
+function costFamily(sector) {
+  if (['tech'].includes(sector?.family)) return 'logiciel'
+  if (['retail'].includes(sector?.family) || sector?.key === 'restaurant') return 'produit'
+  return 'service'
+}
+
 function costScreen(ctx) {
-  const recurring = (Number(ctx.scenario.activities[0].recurringPrice) || 0) > 0
-  return field(ctx, {
-    type: 'number', placeholder: '0',
-    suffix: recurring ? '\u20AC par mois et par client' : '\u20AC',
-    value: (sc) => {
-      const v = recurring ? sc.activities[0].recurringCost : sc.activities[0].unitCost
-      return Number(v) > 0 ? v : ''
-    },
-    apply: (sc, v) => { if (recurring) sc.activities[0].recurringCost = v; else sc.activities[0].unitCost = v },
-  })
+  const sector = getSector(store.scenario.meta.sectorKey)
+  const a = () => store.scenario.activities[0]
+  const recurring = () => (Number(a().recurringPrice) || 0) > 0 && !(Number(a().unitPrice) > 0)
+  const price = () => (recurring() ? Number(a().recurringPrice) : Number(a().unitPrice)) || 0
+  const parts = COST_PARTS[costFamily(sector)]
+
+  const lines = () => store.scenario.meta.costParts || {}
+  const total = () => Object.values(lines()).reduce((x, v) => x + (Number(v) || 0), 0)
+
+  const write = () => store.update((sc) => {
+    const sum = Object.values(sc.meta.costParts || {}).reduce((x, v) => x + (Number(v) || 0), 0)
+    if (recurring()) sc.activities[0].recurringCost = sum
+    else sc.activities[0].unitCost = sum
+  }, { label: 'Coût de revient', silent: true })
+
+  const host = h('div', { class: 'setup-costs' })
+  const summary = h('div', { class: 'cost-sum' })
+
+  const drawSummary = () => {
+    const t = total(), p = price()
+    summary.replaceChildren(
+      h('div', { class: 'cost-sum-line' },
+        h('span', {}, 'Coût de revient'),
+        h('span', { class: 'num' }, euro(t)),
+      ),
+      p > 0 ? h('div', { class: `cost-sum-line strong ${p - t <= 0 ? 'bad' : ''}` },
+        h('span', {}, 'Marge par vente'),
+        h('span', { class: 'num' }, `${euro(p - t)} · ${pct((p - t) / p, 0)}`),
+      ) : null,
+    )
+  }
+
+  const draw = () => {
+    host.replaceChildren(...parts.map((part) => {
+      const v = lines()[part.label]
+      const on = v !== undefined
+      const row = h('div', { class: `setup-cost ${on ? 'on' : ''}` })
+      row.append(
+        h('button', {
+          class: 'setup-cost-toggle',
+          onClick: () => {
+            store.update((sc) => {
+              sc.meta.costParts = sc.meta.costParts || {}
+              if (on) delete sc.meta.costParts[part.label]
+              else sc.meta.costParts[part.label] = Math.round(price() * part.share)
+            }, { label: 'Coût de revient', silent: true })
+            write(); draw(); drawSummary(); ctx.tick()
+          },
+        },
+          h('span', { class: 'setup-cost-box' }, on ? '\u2713' : ''),
+          h('span', { class: 'setup-cost-label' }, part.label),
+        ),
+        on
+          ? h('input', {
+              class: 'setup-cost-amount num', inputmode: 'decimal', value: String(v ?? ''),
+              onInput: (e) => {
+                const n = parseFloat(e.target.value.replace(/\s/g, '').replace(',', '.')) || 0
+                store.update((sc) => { (sc.meta.costParts = sc.meta.costParts || {})[part.label] = n }, { label: 'Coût de revient', silent: true })
+                write(); drawSummary(); ctx.tick()
+              },
+            })
+          : h('span', { class: 'setup-cost-hint num' }, price() > 0 ? `\u2248 ${euro(Math.round(price() * part.share))}` : ''),
+      )
+      return row
+    }))
+  }
+
+  draw(); drawSummary()
+  return h('div', {}, host, summary,
+    h('p', { class: 'setup-note' },
+      "Cochez ce qui vous concerne ; les montants proposés sont des ordres de grandeur pour votre métier. Rien ici n'est un frais fixe — le loyer et le comptable, vous venez de les saisir."))
 }
 
 /* ───────────────────── Écran : clients et croissance ────────────────────── */

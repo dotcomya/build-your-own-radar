@@ -9,15 +9,21 @@ import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
-import { enableToggle } from '../dom.js'
+import { enableToggle, levelBlock } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
 export function renderMarketing(navigate, refresh) {
   const s = store.scenario
   const r = store.result
+  const level = store.level
   const open = renderMarketing.open || (renderMarketing.open = new Set())
   if (open.size === 0 && s.marketing[0]) open.add(s.marketing[0].id)
+
+  // En mode simple, l'acquisition tient en deux nombres : ce que coûte un
+  // client et combien on en veut par mois. L'entonnoir, les canaux et le
+  // rapport LTV/CAC sont de vraies questions — mais pas les premières.
+  if (level === 'easy') return simpleAcquisition(s, r, navigate, refresh)
 
   const add = () => {
     const c = newCampaign({ name: `Campagne ${s.marketing.length + 1}`, activityId: s.activities[0]?.id || null })
@@ -54,10 +60,177 @@ export function renderMarketing(navigate, refresh) {
     s.marketing.length > 0 && h('button', { class: 'btn btn-block mt', onClick: add }, '＋ Ajouter une campagne'),
 
     r && s.marketing.length > 0 && mixPanel(r),
+    level === 'advanced' && r && s.marketing.length > 0 && levelBlock('advanced', 'La rentabilité de votre acquisition', unitEconomicsPanel(r, s)),
 
     tutorial('acquisition', navigate),
   )
 }
+
+/* ─────────────────── Mode simple : deux nombres, une réponse ─────────────── */
+
+/**
+ * Combien coûte un client, combien j'en veux.
+ *
+ * Un fondateur qui démarre ne connaît ni son taux de clic ni son coût pour
+ * mille impressions ; il a en revanche une idée de ce qu'il est prêt à
+ * dépenser pour gagner un client. C'est la seule question posée ici : le
+ * budget s'en déduit, et la comparaison avec ce que rapporte un client dit
+ * immédiatement si le compte y est.
+ */
+function simpleAcquisition(s, r, navigate, refresh) {
+  const camp = s.marketing[0]
+  const cac = camp ? Number(camp.cac) || 0 : 0
+  const perMonth = camp ? Number(camp.clientsPerMonth) || 0 : 0
+  const budget = cac * perMonth
+
+  const setSimple = (patch) => {
+    store.update((sc) => {
+      let c = sc.marketing[0]
+      if (!c) {
+        c = newCampaign({ name: 'Acquisition de clients', activityId: sc.activities[0]?.id || null, channel: 'ads' })
+        sc.marketing.push(c)
+      }
+      c.model = 'cac'
+      c.durationMonths = 60
+      c.startMonth = 0
+      Object.assign(c, patch)
+      c.monthlyBudget = (Number(c.cac) || 0) * (Number(c.clientsPerMonth) || 0)
+    }, { label: 'Acquisition de clients' })
+  }
+
+  const ltv = r?.kpis?.ltv || 0
+  const ratio = cac > 0 && ltv > 0 ? ltv / cac : null
+
+  return h('div', { class: 'content' },
+    stepBanner('acquisition', journey(store.scenario, store.result), navigate),
+
+    h('div', { class: 'card' },
+      h('div', { class: 'card-head' },
+        h('div', {},
+          h('h2', {}, 'Ce que vous coûte un client'),
+          h('div', { class: 'tiny muted' }, "Deux nombres suffisent à chiffrer votre acquisition."),
+        ),
+      ),
+      h('div', { class: 'card-body' },
+        h('div', { class: 'grid grid-2' },
+          numberField({
+            label: "Coût moyen pour gagner un client", field: 'cac', value: cac, suffix: '€',
+            help: 'cac',
+            hint: "Tout ce que vous dépensez pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
+            onInput: (v) => setSimple({ cac: v }),
+          }),
+          numberField({
+            label: 'Nouveaux clients visés par mois', field: 'count', value: perMonth, suffix: 'clients',
+            hint: "En plus de ceux qui viennent seuls. Laissez à zéro si vous ne dépensez rien pour en trouver.",
+            onInput: (v) => setSimple({ clientsPerMonth: v }),
+          }),
+        ),
+
+        h('div', { class: 'acq-sum' },
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, 'Budget mensuel'),
+            h('div', { class: 'acq-sum-value num' }, euro(budget)),
+          ),
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, 'Sur un an'),
+            h('div', { class: 'acq-sum-value num' }, euro(budget * 12)),
+          ),
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, 'Clients gagnés en un an'),
+            h('div', { class: 'acq-sum-value num' }, num(perMonth * 12)),
+          ),
+        ),
+
+        cac > 0 && ltv > 0 && h('div', { class: 'acq-scale' },
+          h('div', { class: 'acq-scale-head' },
+            h('span', {}, 'Ce qu’un client vous rapporte, face à ce qu’il vous coûte'),
+          ),
+          h('div', { class: 'acq-scale-row' },
+            h('span', { class: 'acq-scale-tag' }, 'Rapporte'),
+            h('span', { class: 'acq-scale-bar' },
+              h('i', { class: 'gain', style: { width: `${(ltv / Math.max(ltv, cac)) * 100}%` } })),
+            h('span', { class: 'acq-scale-num num' }, euro(ltv)),
+          ),
+          h('div', { class: 'acq-scale-row' },
+            h('span', { class: 'acq-scale-tag' }, 'Coûte'),
+            h('span', { class: 'acq-scale-bar' },
+              h('i', { class: 'loss', style: { width: `${(cac / Math.max(ltv, cac)) * 100}%` } })),
+            h('span', { class: 'acq-scale-num num' }, euro(cac)),
+          ),
+          h('p', { class: 'acq-scale-note' }, ratioAdvice(ratio)),
+        ),
+
+        cac > 0 && ltv <= 0 && h('div', { class: 'note mt' },
+          h('div', { class: 'note-title' }, 'Il manque un prix de vente'),
+          "Renseignez le prix et le coût de revient de votre offre pour que Fizzy puisse comparer ce qu'un client vous rapporte à ce qu'il vous coûte."),
+      ),
+    ),
+
+    h('div', { class: 'note plain mt' },
+      h('div', { class: 'note-title' }, 'Et si je veux détailler ?'),
+      "Passez en niveau Intermédiaire ou Expert pour décomposer votre acquisition en campagnes, choisir un canal par campagne et chiffrer un entonnoir complet — impressions, clics, contacts, clients — avec le rapport entre ce qu'un client coûte et ce qu'il rapporte sur toute sa durée de vie."),
+
+    tutorial('acquisition', navigate),
+  )
+}
+
+function ratioAdvice(ratio) {
+  if (ratio === null) return ''
+  if (ratio >= 3) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. Au-delà de trois, l'acquisition est saine : vous pouvez dépenser davantage sans fragiliser le modèle.`
+  if (ratio >= 1) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. C'est positif mais court : le retour est lent et laisse peu de marge d'erreur. Travaillez la conversion ou la valeur client avant d'augmenter le budget.`
+  return `Un client vous coûte plus qu'il ne vous rapporte. En l'état, chaque client gagné creuse la perte : baissez le coût d'acquisition ou augmentez le prix avant de dépenser.`
+}
+
+/* ───────────────── Mode expert : la rentabilité, en détail ──────────────── */
+
+/**
+ * LTV, CAC, et le temps qu'il faut pour rembourser l'acquisition.
+ *
+ * Le rapport LTV/CAC dit si l'acquisition est rentable ; le délai de retour dit
+ * si la trésorerie le supporte. Les deux sont nécessaires : une acquisition
+ * rentable sur trois ans peut tuer une entreprise en six mois.
+ */
+function unitEconomicsPanel(r, s) {
+  const k = r.kpis
+  const cac = k.cac || 0
+  const ltv = k.ltv || 0
+  const ratio = k.ltvCacRatio
+  const arpu = k.arpu || 0
+  const payback = arpu > 0 && cac > 0 ? cac / arpu : null
+
+  const rows = [
+    { label: "Coût d'acquisition (CAC)", value: cac > 0 ? euro(cac) : '—', note: 'Budget marketing divisé par les clients acquis', key: 'cac' },
+    { label: 'Valeur vie client (LTV)', value: ltv > 0 ? euro(ltv) : '—', note: "Marge cumulée sur toute la relation", key: 'ltv' },
+    { label: 'Rapport LTV / CAC', value: ratio ? `${num(ratio, 1)}×` : '—', note: '3 ou plus : sain. Sous 1 : chaque client coûte plus qu’il ne rapporte',
+      tone: ratio ? (ratio >= 3 ? 'pos' : ratio >= 1 ? 'warn' : 'neg') : '' },
+    { label: 'Délai de retour', value: payback ? `${num(payback, 1)} mois` : '—', note: "Temps pour que la marge d'un client rembourse son acquisition",
+      tone: payback ? (payback <= 12 ? 'pos' : payback <= 24 ? 'warn' : 'neg') : '' },
+    { label: 'Revenu moyen par client', value: arpu > 0 ? `${euro(arpu)} / mois` : '—', note: 'Toutes offres confondues' },
+  ]
+
+  return h('div', { class: 'card' },
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'data' },
+        h('tbody', {},
+          ...rows.map((row) => h('tr', {},
+            h('td', {},
+              h('div', { class: 'rowlabel' }, row.label, row.key && helpButton(row.key)),
+              h('div', { class: 'tiny muted', style: { whiteSpace: 'normal', maxWidth: '56ch' } }, row.note),
+            ),
+            h('td', { class: `num ${row.tone === 'pos' ? 'pos' : row.tone === 'neg' ? 'neg' : ''}`, style: { fontSize: '16px', fontWeight: '650' } }, row.value),
+          )),
+        ),
+      ),
+    ),
+    payback !== null && h('div', { class: 'card-body', style: { paddingTop: '0' } },
+      h('p', { class: 'tiny muted', style: { margin: 0, maxWidth: '78ch' } },
+        payback <= 12
+          ? `Vous récupérez ce que coûte un client en ${num(payback, 1)} mois. Sous douze mois, l'acquisition s'autofinance presque : accelérer ne crée pas de trou de trésorerie durable.`
+          : `Il faut ${num(payback, 1)} mois pour récupérer ce que coûte un client. Chaque client supplémentaire creuse d'abord la trésorerie avant de la remplir : c'est ce délai, plus que la rentabilité, qui fixe le rythme auquel vous pouvez croître.`),
+    ),
+  )
+}
+
 
 function campaignCard(c, index, r, open, refresh) {
   const isOpen = open.has(c.id)

@@ -20,7 +20,7 @@ export function renderAccount(navigate, refresh) {
   const online = cloud.status === 'ready'
   const plans = store.list()
 
-  return h('div', { class: 'content narrow' },
+  return h('div', { class: 'content narrow embedded' },
     h('div', { class: 'page-head' },
       h('h1', {}, 'Mon compte'),
       h('p', {}, online

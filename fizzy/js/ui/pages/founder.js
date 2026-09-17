@@ -25,7 +25,7 @@ export function renderFounder(navigate, refresh) {
   const row = income.rows[y]
   const set = (patch) => store.update((sc) => Object.assign(sc.founder, patch), { label: 'Rémunération du dirigeant' })
 
-  return h('div', { class: 'content' },
+  return h('div', { class: 'content embedded' },
     stepBanner('remuneration', journey(store.scenario, store.result), navigate),
     payLadder(income, row, r, y),
 

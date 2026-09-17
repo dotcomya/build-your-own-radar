@@ -6,10 +6,10 @@
 
 import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
-import { monthlyCost, CONTRACT_TYPES, STATUSES } from '../../engine/payroll.js'
+import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
-import { enableToggle } from '../dom.js'
+import { enableToggle, svg, levelBlock } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
@@ -44,9 +44,28 @@ export function renderTeam(navigate, refresh) {
     s.team.length > 0 && h('button', { class: 'btn btn-block mt', onClick: add }, '＋ Ajouter un poste'),
 
     r && s.team.length > 0 && payrollSummary(r, level),
-    level === 'advanced' && s.team.length > 0 && jeiPanel(r),
+    level === 'advanced' && s.team.length > 0 && levelBlock('advanced', null, jeiPanel(r)),
 
     tutorial('equipe', navigate),
+  )
+}
+
+/**
+ * Une silhouette par poste.
+ *
+ * Une liste de lignes de texte fait oublier qu'il s'agit de personnes — et
+ * qu'embaucher est la décision la plus lourde et la plus difficile à défaire
+ * d'un business plan. La couleur distingue le statut ; le nombre se lit sur le
+ * jeton quand le poste est dupliqué.
+ */
+function personGlyph(m, count) {
+  const type = m.contractType || 'cdi'
+  return h('span', { class: `who who-${type}`, title: (CONTRACT_TYPES[type] || {}).label || '' },
+    svg('svg', { viewBox: '0 0 24 24', width: 18, height: 18, 'aria-hidden': 'true' },
+      svg('circle', { cx: 12, cy: 8, r: 3.6, fill: 'currentColor' }),
+      svg('path', { d: 'M4.6 20.5c0-4.1 3.3-6.6 7.4-6.6s7.4 2.5 7.4 6.6z', fill: 'currentColor' }),
+    ),
+    count > 1 ? h('span', { class: 'who-count num' }, String(count)) : null,
   )
 }
 
@@ -70,6 +89,7 @@ function memberCard(m, index, r, level, open, refresh, jeiActive) {
   const on = m.enabled !== false
   return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
     h('div', { class: 'item-head', onClick: () => { isOpen ? open.delete(m.id) : open.add(m.id); refresh() } },
+      personGlyph(m, count),
       enableToggle(on, (v) => {
         store.update((sc) => { const t = sc.team.find((x) => x.id === m.id); if (t) t.enabled = v },
           { label: v ? 'Poste réactivé' : 'Poste en pause' })
@@ -120,8 +140,10 @@ function memberCard(m, index, r, level, open, refresh, jeiActive) {
 
       costBreakdown(cost, count, m),
 
-      level === 'advanced' && ['cdi', 'cdd'].includes(m.contractType) && h('div', {},
-        h('h4', { style: { margin: '18px 0 4px', display: 'flex', gap: '6px', alignItems: 'center' } }, "Recherche et innovation", helpButton('cir')),
+      level === 'advanced' && benefitsPanel(m, set, headcount),
+
+      level === 'advanced' && ['cdi', 'cdd'].includes(m.contractType) && levelBlock('advanced', null,
+        h('h4', { style: { margin: '0 0 4px', display: 'flex', gap: '6px', alignItems: 'center' } }, "Recherche et innovation", helpButton('cir')),
         h('div', { class: 'field-hint', style: { marginBottom: '10px', maxWidth: '70ch' } },
           "Part du temps de travail consacrée à des travaux éligibles. Ces pourcentages alimentent le crédit d'impôt recherche, le crédit d'impôt innovation et l'éligibilité au statut JEI."),
         h('div', { class: 'grid grid-3' },
@@ -139,7 +161,7 @@ function memberCard(m, index, r, level, open, refresh, jeiActive) {
 
 /** Le passage du brut au coût employeur, poste par poste. */
 function costBreakdown(cost, count, member) {
-  return h('div', { class: 'card', style: { marginTop: '16px', background: 'var(--ink-50)' } },
+  return h('div', { class: 'card', style: { marginTop: '16px', background: 'var(--surface-2)' } },
     h('div', { class: 'card-body tight' },
       h('div', { class: 'row', style: { marginBottom: '8px' } },
         h('h4', {}, 'Du brut au coût réel'),
@@ -169,9 +191,79 @@ function costBreakdown(cost, count, member) {
   )
 }
 
+/**
+ * Ce que le salarié reçoit en plus de son salaire.
+ *
+ * Deux lignes ne sont pas négociables — la mutuelle collective et la moitié de
+ * l'abonnement de transport — et sont pourtant absentes de la plupart des
+ * prévisionnels. Les autres sont des leviers d'attractivité : à coût égal, un
+ * avantage exonéré vaut environ deux fois une augmentation de salaire.
+ */
+function benefitsPanel(m, set, headcount) {
+  const chosen = m.benefits || {}
+  const applies = (key) => {
+    const def = BENEFITS[key]
+    return !def.contracts || def.contracts.includes(m.contractType)
+  }
+  const keys = Object.keys(BENEFITS).filter(applies)
+  if (keys.length === 0) return null
+
+  const setBenefit = (key, value) =>
+    set({ benefits: { ...chosen, [key]: Math.max(0, Number(value) || 0) } }, 'Avantages salariés')
+
+  const total = keys.reduce((a, k) => a + (Number(chosen[k]) || 0), 0)
+  const missing = keys.filter((k) => BENEFITS[k].legal && !(Number(chosen[k]) > 0))
+
+  return levelBlock('advanced', null, h('div', { class: 'perks' },
+    h('div', { class: 'perks-head' },
+      h('h4', {}, 'Ce que reçoit la personne en plus du salaire'),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'tiny muted' }, 'coût employeur mensuel'),
+    ),
+    h('div', { class: 'perk-list' }, ...keys.map((key) => {
+      const def = BENEFITS[key]
+      const amount = Number(chosen[key]) || 0
+      const on = amount > 0
+      return h('div', { class: `perk ${on ? 'on' : ''} ${def.legal ? 'is-legal' : ''}` },
+        enableToggle(on, (v) => setBenefit(key, v ? def.suggested : 0)),
+        h('div', { class: 'spacer' },
+          h('div', { class: 'perk-name' }, def.label,
+            h('span', { class: `chip ${def.legal ? 'chip-warn' : ''}` }, def.short)),
+          h('div', { class: 'perk-help' }, def.help),
+        ),
+        h('div', { class: 'perk-amount' },
+          on
+            ? (() => {
+                const input = h('input', {
+                  class: 'perk-input num', type: 'number', min: '0', step: '5', value: String(amount),
+                  onInput: (e) => setBenefit(key, e.target.value),
+                  onClick: (e) => e.stopPropagation(),
+                })
+                return h('label', { class: 'perk-box' }, input, h('span', {}, '€'))
+              })()
+            : h('button', { class: 'btn btn-sm btn-ghost', onClick: () => setBenefit(key, def.suggested) }, `+ ${euro(def.suggested)}`),
+        ),
+      )
+    })),
+    h('div', { class: 'perk-total' },
+      h('span', {}, 'Total des avantages'),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'num' }, `${euro(total)} / mois`),
+      h('span', { class: 'tiny muted' }, `soit ${euro(total * 12)} par an`),
+    ),
+    headcount >= 11 && (Number(chosen.mutuelle) || 0) > 0 && h('div', { class: 'note mt' },
+      h('div', { class: 'note-title' }, 'Forfait social'),
+      "À partir de onze salariés, la part patronale de mutuelle et de prévoyance supporte un forfait social de 8 %. Fizzy l'ajoute automatiquement au coût du poste."),
+    missing.length > 0 && h('div', { class: 'note warn mt' },
+      h('div', { class: 'note-title' }, 'Une obligation manque à l’appel'),
+      `${missing.map((k) => BENEFITS[k].label).join(' et ')} : ce n’est pas un avantage que vous choisissez d’accorder, c’est une dépense que vous aurez. La laisser à zéro rend le plan optimiste de ${euro(missing.reduce((a, k) => a + BENEFITS[k].suggested, 0) * 12)} par an et par personne.`),
+  ))
+}
+
 function payrollSummary(r, level) {
   const p = r.payroll
   const grossY = yearly(p.gross), costY = yearly(p.cost), chargesY = yearly(p.employerCharges)
+  const benY = yearly(p.benefits || new Array(60).fill(0))
   return h('div', { class: 'card mt' },
     h('div', { class: 'card-head' }, h('h2', {}, 'Masse salariale'), h('span', { class: 'spacer' }),
       h('span', { class: 'tiny muted' }, `${num(p.headcount[11])} personnes fin d'année 1 · ${num(p.headcount[59])} fin d'année 5`)),
@@ -181,6 +273,7 @@ function payrollSummary(r, level) {
         series: [
           { label: 'Salaires bruts', values: grossY, color: PALETTE[0] },
           { label: 'Cotisations patronales', values: chargesY, color: PALETTE[2] },
+          ...(benY.some((v) => v > 0) ? [{ label: 'Avantages salariés', values: benY, color: PALETTE[4] || PALETTE[1] }] : []),
         ],
       }),
       h('div', { class: 'table-wrap mt' },
@@ -189,6 +282,7 @@ function payrollSummary(r, level) {
           h('tbody', {},
             h('tr', {}, h('td', {}, 'Salaires bruts'), ...grossY.map((v) => h('td', { class: 'num' }, euro(v)))),
             h('tr', {}, h('td', {}, 'Cotisations patronales'), ...chargesY.map((v) => h('td', { class: 'num' }, euro(v)))),
+            ...(benY.some((v) => v > 0) ? [h('tr', {}, h('td', {}, 'Avantages (mutuelle, transport, titres‑restaurant…)'), ...benY.map((v) => h('td', { class: 'num' }, euro(v))))] : []),
             ...(p.jeiExemption.some((v) => v) ? [h('tr', {}, h('td', {}, h('span', { class: 'rowlabel' }, 'dont exonération JEI', helpButton('jei'))), ...yearly(p.jeiExemption).map((v) => h('td', { class: 'num pos' }, euro(-v))))] : []),
             h('tr', { class: 'total' }, h('td', {}, h('span', { class: 'rowlabel' }, 'Coût total employeur', helpButton('superBrut'))), ...costY.map((v) => h('td', { class: 'num' }, euro(v)))),
             h('tr', {}, h('td', {}, 'Taux de charges effectif'), ...costY.map((v, i) => h('td', { class: 'num pct' }, grossY[i] > 0 ? pct(chargesY[i] / grossY[i], 0) : '—'))),

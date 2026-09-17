@@ -30,7 +30,7 @@ export function renderOnboarding(navigate) {
           onClick: () => {
             const demo = store.seedDemo()
             toast('Exemple chargé — modifiez-le librement.')
-            navigate('#/parcours')
+            navigate('#/tableau-de-bord')
           },
         }, 'ou voir un exemple'),
       ),
@@ -39,7 +39,7 @@ export function renderOnboarding(navigate) {
         h('span', { class: 'landing-resume-tag' }, 'Reprendre'),
         ...existing.slice(0, 3).map((p) => h('button', {
           class: 'landing-resume-item',
-          onClick: () => { store.load(p.id); navigate('#/parcours') },
+          onClick: () => { store.load(p.id); navigate('#/tableau-de-bord') },
         },
           h('span', {}, p.name),
           h('span', { class: 'landing-resume-when' }, relative(p.updatedAt)),

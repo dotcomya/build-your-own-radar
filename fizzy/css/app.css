@@ -2110,3 +2110,320 @@ i.swatch.split-margin { background: var(--gain); }
 
 @media (max-width: 1240px) { .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Le total du coût de revient, sous sa décomposition. */
+.cost-sum { margin-top: 14px; border-top: 2px solid var(--rule-strong); }
+.cost-sum-line {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13px; color: var(--ink-3);
+}
+.cost-sum-line:last-child { border-bottom: 0; }
+.cost-sum-line .num { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -.02em; }
+.cost-sum-line.strong { color: var(--ink); }
+.cost-sum-line.strong .num { color: var(--gain); font-size: 19px; }
+.cost-sum-line.bad .num { color: var(--loss); }
+
+/* Reprendre un plan, depuis la liste des questions. */
+.setup-resume { margin: 14px 20px 0; padding-top: 10px; border-top: 1px solid var(--rule); }
+.setup-resume-tag {
+  display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-5); margin-bottom: 5px;
+}
+.setup-resume-item {
+  display: block; width: 100%; border: 0; background: none; cursor: pointer; font: inherit;
+  text-align: left; padding: 4px 0; font-size: 12.5px; color: var(--ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.setup-resume-item:hover { color: var(--signal-ink); }
+
+/* Une page fusionnée dans une autre : elle perd ses marges de page. */
+.merged { margin-top: 30px; padding-top: 26px; border-top: 2px solid var(--rule-strong); }
+.merged .content { padding: 0; max-width: none; }
+
+/* ───────────────────────── L'équipe, ce sont des gens ────────────────────── */
+/* Une liste de lignes de texte fait oublier qu'embaucher est la décision la
+   plus lourde d'un business plan. La couleur porte le statut. */
+.who {
+  position: relative; flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface-2); color: var(--ink-5);
+  border: 1px solid var(--rule);
+}
+.who svg { display: block; margin-top: 2px; }
+.who-cdi, .who-cdd { color: var(--signal); background: var(--signal-wash); border-color: transparent; }
+.who-dirigeant { color: #fff; background: var(--ink); border-color: var(--ink); }
+.who-tns { color: #fff; background: var(--gain); border-color: var(--gain); }
+.who-alternance, .who-stage { color: var(--warn); background: var(--warn-wash); border-color: transparent; }
+.who-freelance { color: var(--ink-4); background: var(--surface); border-style: dashed; }
+.who-count {
+  position: absolute; right: -4px; bottom: -3px; min-width: 15px; height: 15px; padding: 0 3px;
+  display: grid; place-items: center; border-radius: 8px;
+  background: var(--ink); color: #fff; font-size: 9px; font-weight: 600;
+}
+.item.is-off .who { filter: grayscale(1); }
+
+/* ─────────────────── Avantages salariés (mode expert) ─────────────────── */
+.perks { margin-top: 18px; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.perks-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--rule);
+}
+.perks-head h4 { margin: 0; }
+.perk { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--rule); }
+.perk:last-child { border-bottom: 0; }
+.perk .onoff { flex: none; margin-top: 2px; }
+.perk-name { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+.perk-help { font-size: 11.5px; color: var(--ink-4); line-height: 1.5; margin-top: 3px; max-width: 62ch; }
+.perk:not(.on) .perk-help { display: none; }
+.perk:not(.on) { background: var(--surface-2); }
+.perk.on { background: var(--surface); }
+.perk.on.is-legal { box-shadow: inset 3px 0 0 var(--signal); }
+.perk-amount { flex: none; }
+.perk-box {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid var(--rule-strong); border-radius: 8px; padding: 4px 8px; background: var(--surface);
+}
+.perk-box:focus-within { border-color: var(--ink); }
+.perk-input { width: 62px; border: 0; background: none; text-align: right; font-size: 14px; font-weight: 600; color: var(--ink); }
+.perk-input:focus { outline: none; }
+.perk-input::-webkit-outer-spin-button, .perk-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.perk-total {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 11px 14px; background: var(--surface-2); border-top: 1px solid var(--rule-strong); font-size: 13px;
+}
+.perk-total .num { font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
+@media (max-width: 720px) {
+  .perk { flex-wrap: wrap; }
+  .perk-amount { margin-left: 46px; }
+}
+
+/* ─────────── En-tête du tableau de bord et verdict de côté ─────────── */
+.board-head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap; margin-bottom: 18px;
+}
+.board-id { min-width: 0; }
+.board-eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px;
+}
+.board-title {
+  font-family: var(--display); font-size: clamp(26px, 4vw, 40px); font-weight: 700;
+  letter-spacing: -.035em; line-height: 1.02; margin: 0; color: var(--ink);
+}
+
+/* Le verdict : une pastille, un mot, une ligne. Le raisonnement se déplie. */
+.verdict {
+  flex: 0 1 340px; min-width: 250px; align-self: flex-end;
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); overflow: hidden;
+}
+.verdict-head {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 12px; background: none; border: 0; cursor: pointer; font: inherit; text-align: left;
+}
+.verdict-head:hover { background: var(--surface-2); }
+.verdict-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ink-4); }
+.verdict-bad .verdict-dot { background: var(--loss); box-shadow: 0 0 0 4px var(--loss-wash); }
+.verdict-watch .verdict-dot { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-wash); }
+.verdict-good .verdict-dot { background: var(--gain); box-shadow: 0 0 0 4px var(--gain-wash); }
+.verdict-neutral .verdict-dot { background: var(--ink-5); }
+.verdict .spacer { min-width: 0; }
+.verdict-word {
+  display: block; font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; color: var(--ink);
+}
+.verdict-bad .verdict-word { color: var(--loss); }
+.verdict-watch .verdict-word { color: var(--warn); }
+.verdict-good .verdict-word { color: var(--gain); }
+.verdict-line {
+  display: block; font-size: 11.5px; color: var(--ink-4); line-height: 1.4; margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.verdict.open .verdict-line { white-space: normal; }
+.verdict-more { flex: none; color: var(--ink-5); font-size: 18px; transition: transform .15s; }
+.verdict.open .verdict-more { transform: rotate(90deg); }
+.verdict-body { display: none; padding: 0 12px 12px 31px; font-size: 12px; line-height: 1.6; color: var(--ink-3); }
+.verdict.open .verdict-body { display: block; }
+.verdict-figure {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 11.5px; color: var(--ink-4);
+}
+.verdict-figure strong { font-size: 15px; color: var(--ink); letter-spacing: -.02em; }
+
+/* Pied de tuile : la note et la courbe partagent la ligne. */
+.figure-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; width: 100%; }
+.figure-foot .spark { opacity: .55; }
+.figure:hover .figure-foot .spark { opacity: 1; }
+
+/* Deux graphiques côte à côte. */
+.board-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.board-pair > .panel { margin-bottom: 0; }
+.chart-note {
+  margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3);
+  border-left: 2px solid var(--signal); padding-left: 10px;
+}
+@media (max-width: 980px) { .board-pair { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+  .board-head { align-items: stretch; }
+  .verdict { flex: 1 1 100%; }
+}
+
+/* ───────── Le niveau de détail, rendu visible par la couleur ───────── */
+.shell { --level: var(--ink); --level-wash: var(--surface-2); }
+.shell[data-level="easy"] { --level: var(--gain); --level-wash: var(--gain-wash); }
+.shell[data-level="intermediate"] { --level: var(--signal); --level-wash: var(--signal-wash); }
+.shell[data-level="advanced"] { --level: #7C3AED; --level-wash: #EEE5FF; }
+
+.levels { border-color: var(--level); }
+.level-btn.active { background: var(--level); color: #fff; }
+.figures { border-top-color: var(--level); }
+.rail-link.active { border-left-color: var(--level); }
+.progress-pill-bar > i { background: var(--level); }
+.progress-pill.complete .progress-pill-bar > i { background: var(--gain); }
+
+/* Un bloc débloqué par la profondeur choisie. */
+.lv {
+  position: relative; margin: 20px 0 0; padding-left: 15px;
+  border-left: 3px solid var(--lv-color);
+}
+.lv-intermediate { --lv-color: var(--signal); }
+.lv-advanced { --lv-color: #7C3AED; }
+.lv-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.lv-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: #fff; background: var(--lv-color); padding: 2px 7px; border-radius: 3px; flex: none;
+}
+.lv-title { font-size: 14px; font-weight: 650; letter-spacing: -.01em; color: var(--ink); }
+.lv .perks, .lv .card { margin-top: 0; }
+
+/* ───────────── Offre : l'économie d'une vente, en proportions ───────────── */
+.ueco {
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.ueco-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 9px; }
+.ueco-title { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.ueco-price { font-size: 19px; font-weight: 650; letter-spacing: -.03em; color: var(--ink); }
+.ueco-bar {
+  display: flex; height: 13px; border-radius: 3px; overflow: hidden;
+  background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 5px, #EDEFEC 5px, #EDEFEC 10px);
+}
+.ueco-cost { background: var(--ink-3); }
+.ueco-margin { background: var(--gain); }
+.ueco-loss { background: var(--loss); }
+.ueco-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 9px; font-size: 12px; color: var(--ink-3); }
+.ueco-legend b { color: var(--ink); font-weight: 650; }
+.ueco-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: baseline; }
+.ueco-dot.cost { background: var(--ink-3); }
+.ueco-dot.margin { background: var(--gain); }
+.ueco-dot.loss { background: var(--loss); }
+.ueco-bad { border-color: var(--loss); }
+.ueco-thin { border-color: var(--warn); }
+
+.ueco-sum {
+  display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start;
+  margin-top: 14px; padding: 13px 15px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--rule);
+}
+.ueco-sum-label { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+.ueco-sum-value { font-size: 20px; font-weight: 650; letter-spacing: -.03em; color: var(--ink); margin-top: 2px; }
+.ueco-sum-note { flex: 1 1 260px; margin: 0; font-size: 12px; line-height: 1.55; color: var(--ink-3); }
+
+/* Un sous-titre à l'intérieur d'un bloc. */
+.slice-sub {
+  margin: 20px 0 10px; padding-top: 14px; border-top: 1px dashed var(--rule);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+}
+
+/* ───────────────── Offre : la frise des encaissements ───────────────── */
+.tline { margin-top: 16px; }
+.tline-track { position: relative; height: 66px; margin: 0 4px; }
+.tline-rule { position: absolute; top: 9px; left: 0; right: 0; height: 2px; background: var(--rule); }
+.tline-gap {
+  position: absolute; top: 5px; height: 10px; border-radius: 5px;
+  background: repeating-linear-gradient(45deg, var(--warn-wash), var(--warn-wash) 4px, transparent 4px, transparent 8px);
+  border: 1px solid var(--warn-wash);
+}
+.tline-point { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
+.tline-point > i {
+  display: block; width: 11px; height: 11px; margin: 4px auto 0; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--ink-5);
+}
+.tline-point.paid > i { background: var(--ink); border-color: var(--ink); }
+.tline-label { display: block; margin-top: 6px; white-space: nowrap; font-size: 11px; color: var(--ink-4); }
+.tline-label b { display: block; font-size: 13px; color: var(--ink); font-weight: 650; }
+/* Les libellés des extrémités s'alignent sur le point plutôt que de déborder. */
+.tline-point[data-side="start"] .tline-label { transform: translateX(50%); }
+.tline-point[data-side="end"] .tline-label { transform: translateX(-50%); }
+.tline-note { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: var(--ink-3); }
+.tline-split { display: block; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+
+/* ───────────────── Offre : les volumes, en courbe et en barres ───────────── */
+.vol { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-top: 16px; overflow: hidden; }
+.vol-head {
+  display: flex; align-items: baseline; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid var(--rule); background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--ink-3);
+}
+.vol .chart { padding: 8px 6px 0; }
+.vol-years {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--rule); background: var(--surface-2);
+}
+.vol-year { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 11px 6px; border-right: 1px solid var(--rule); }
+.vol-year:last-child { border-right: 0; }
+.vol-year-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4); }
+.vol-year-bar { width: 22px; height: 38px; display: flex; align-items: flex-end; background: var(--rule); border-radius: 2px; overflow: hidden; }
+.vol-year-bar > i { display: block; width: 100%; background: var(--gain); }
+.vol-year-units { font-size: 14px; font-weight: 650; letter-spacing: -.02em; color: var(--ink); }
+.vol-year-rev { font-size: 11px; color: var(--ink-4); }
+.vol-note { margin: 0; padding: 11px 14px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .ueco-sum { gap: 16px; }
+  .tline-label { font-size: 10px; }
+}
+
+/* Pas de délai du tout : une ligne suffit, un axe de longueur nulle n'a rien à dire. */
+.tline-flat {
+  display: flex; align-items: flex-start; gap: 11px; margin-top: 16px;
+  padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--gain-wash);
+}
+.tline-flat-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--gain); flex: none; margin-top: 3px; }
+.tline-flat-title { font-size: 13px; font-weight: 650; color: var(--ink); }
+.tline-flat-note { font-size: 12px; color: var(--ink-3); line-height: 1.55; margin-top: 2px; }
+
+/* Sélecteur segmenté générique — distinct du sélecteur de profondeur. */
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); background: var(--surface); border-radius: 8px; overflow: hidden; }
+.seg-btn {
+  border: 0; background: none; padding: 7px 14px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--ink-3); border-right: 1px solid var(--rule); transition: background .12s, color .12s;
+}
+.seg-btn:last-child { border-right: 0; }
+.seg-btn:hover { background: var(--surface-2); color: var(--ink); }
+.seg-btn.active { background: var(--ink); color: #fff; }
+
+/* ─────────────── Acquisition en mode simple : deux nombres ─────────────── */
+.acq-sum {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+  margin-top: 18px; background: var(--rule); border: 1px solid var(--rule);
+}
+.acq-sum-cell { background: var(--surface-2); padding: 12px 14px; }
+.acq-sum-label { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+.acq-sum-value { font-size: 22px; font-weight: 650; letter-spacing: -.035em; color: var(--ink); margin-top: 3px; }
+
+.acq-scale { margin-top: 20px; }
+.acq-scale-head { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-bottom: 10px; }
+.acq-scale-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.acq-scale-tag {
+  flex: none; width: 74px; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4);
+}
+.acq-scale-bar { flex: 1; height: 16px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.acq-scale-bar > i { display: block; height: 100%; border-radius: 3px; }
+.acq-scale-bar > i.gain { background: var(--gain); }
+.acq-scale-bar > i.loss { background: var(--loss); }
+.acq-scale-num { flex: none; width: 96px; text-align: right; font-size: 14px; font-weight: 650; color: var(--ink); }
+.acq-scale-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); max-width: 76ch; }
+@media (max-width: 640px) {
+  .acq-sum { grid-template-columns: 1fr; }
+  .acq-scale-tag { width: 58px; }
+  .acq-scale-num { width: 76px; }
+}

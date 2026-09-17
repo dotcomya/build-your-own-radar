@@ -2,7 +2,7 @@
 
 import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
-import { sparkline, PALETTE } from '../charts.js'
+import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
@@ -99,18 +99,31 @@ function activityCard(a, index, r, level, open, refresh) {
       ),
 
       block(2, 'Prix et coût de revient', `Ce que paie un ${voc.client}, et ce que la vente vous coûte directement.`, null,
-        h('div', { class: 'grid grid-2' },
-          numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', onInput: (v) => set({ unitPrice: v }) }),
-          numberField({ label: `Coût de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: 'Achats, sous-traitance, consommables. Ni loyer ni salaires.', onInput: (v) => set({ unitCost: v }) }),
-          numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '€ HT', hint: 'Laissez à 0 si vente ponctuelle.', onInput: (v) => set({ recurringPrice: v }) }),
-          numberField({ label: 'Coût mensuel récurrent', field: 'recurringPrice', value: a.recurringCost, suffix: '€ HT', hint: 'Hébergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
+        revenueModelPicker(a, set),
+
+        sells(a, 'unit') && h('div', {},
+          unitEconomics(`Une vente à l'unité`, a.unitPrice, a.unitCost),
+          h('div', { class: 'grid grid-2' },
+            numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', onInput: (v) => set({ unitPrice: v }) }),
+            numberField({ label: `Coût de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: 'Achats, sous-traitance, consommables. Ni loyer ni salaires.', onInput: (v) => set({ unitCost: v }) }),
+          ),
+          margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
+            h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
+            marginAdvice(margin)),
         ),
-        margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
-          h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
-          marginAdvice(margin)),
-        (Number(a.recurringPrice) || 0) > 0 && h('div', { class: 'grid grid-2 mt' },
-          numberField({ label: 'Durée du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
-          numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c’est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+
+        sells(a, 'recurring') && h('div', {},
+          sells(a, 'unit') && h('div', { class: 'slice-sub' }, "La part récurrente"),
+          unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
+          h('div', { class: 'grid grid-2' },
+            numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '€ HT', onInput: (v) => set({ recurringPrice: v }) }),
+            numberField({ label: 'Coût mensuel récurrent', field: 'recurringPrice', value: a.recurringCost, suffix: '€ HT', hint: 'Hébergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
+          ),
+          h('div', { class: 'grid grid-2 mt' },
+            numberField({ label: 'Durée du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
+            numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c’est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+          ),
+          lifetimeValue(a),
         ),
       ),
 
@@ -126,8 +139,7 @@ function activityCard(a, index, r, level, open, refresh) {
           numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement votre besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
           numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
         ),
-        h('div', { class: 'note plain', style: { marginTop: '10px' } },
-          `${pct(a.deposit || 0, 0)} à la commande, ${pct(a.milestone || 0, 0)} à mi-parcours, ${pct(Math.max(0, 1 - (a.deposit || 0) - (a.milestone || 0)), 0)} à la livraison.`),
+        paymentTimeline(a),
         h('div', { class: 'grid grid-2 mt' },
           numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance votre activité.', onInput: (v) => set({ costPaymentLag: v }) }),
           numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
@@ -142,15 +154,175 @@ function activityCard(a, index, r, level, open, refresh) {
   )
 }
 
+/**
+ * Vend-on à l'unité, par abonnement, ou les deux ?
+ *
+ * Afficher les quatre champs à la fois obligeait à laisser deux zéros dans un
+ * formulaire, sans savoir s'ils étaient une erreur ou un choix. Le modèle se
+ * déclare, et seuls les champs correspondants restent à l'écran.
+ */
+function revenueModelPicker(a, set) {
+  const current = a.revenueModel || (
+    (Number(a.unitPrice) || 0) > 0 && (Number(a.recurringPrice) || 0) > 0 ? 'mixte'
+      : (Number(a.recurringPrice) || 0) > 0 ? 'abonnement' : 'unitaire')
+  const options = [
+    { key: 'unitaire', label: 'À la vente' },
+    { key: 'abonnement', label: 'Par abonnement' },
+    { key: 'mixte', label: 'Les deux' },
+  ]
+  return h('div', { class: 'seg mb' },
+    ...options.map((o) => h('button', {
+      class: `seg-btn ${current === o.key ? 'active' : ''}`,
+      onClick: () => set({ revenueModel: o.key }, 'Modèle de revenus'),
+    }, o.label)),
+  )
+}
+
+/** Cette offre facture-t-elle à l'unité, au mois, ou les deux ? */
+function sells(a, kind) {
+  const model = a.revenueModel || (
+    (Number(a.unitPrice) || 0) > 0 && (Number(a.recurringPrice) || 0) > 0 ? 'mixte'
+      : (Number(a.recurringPrice) || 0) > 0 ? 'abonnement' : 'unitaire')
+  if (model === 'mixte') return true
+  return kind === 'unit' ? model === 'unitaire' : model === 'abonnement'
+}
+
+/**
+ * L'économie d'une vente, en une barre.
+ *
+ * Un prix et un coût de revient côte à côte dans deux champs ne disent pas
+ * grand-chose ; la même chose en proportions se lit d'un coup d'œil, et rend
+ * visible le moment où le coût dépasse le prix.
+ */
+function unitEconomics(title, price, cost) {
+  const p = Math.max(0, Number(price) || 0)
+  const c = Math.max(0, Number(cost) || 0)
+  const margin = p - c
+  const span = Math.max(p, c) || 1
+  const rate = p > 0 ? margin / p : null
+  const tone = margin < 0 ? 'bad' : rate !== null && rate < 0.2 ? 'thin' : 'ok'
+  return h('div', { class: `ueco ueco-${tone}` },
+    h('div', { class: 'ueco-head' },
+      h('span', { class: 'ueco-title' }, title),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'ueco-price num' }, euro(p)),
+    ),
+    h('div', { class: 'ueco-bar' },
+      h('span', { class: 'ueco-cost', style: { width: `${(Math.min(c, span) / span) * 100}%` } }),
+      h('span', { class: 'ueco-margin', style: { width: `${(Math.max(0, margin) / span) * 100}%` } }),
+      margin < 0 && h('span', { class: 'ueco-loss', style: { width: `${(Math.min(-margin, span) / span) * 100}%` } }),
+    ),
+    h('div', { class: 'ueco-legend' },
+      h('span', {}, h('i', { class: 'ueco-dot cost' }), 'Coût de revient ', h('b', { class: 'num' }, euro(c))),
+      h('span', {}, h('i', { class: `ueco-dot ${margin < 0 ? 'loss' : 'margin'}` }),
+        margin < 0 ? 'Perte ' : 'Marge ', h('b', { class: 'num' }, euro(margin)),
+        rate !== null ? h('span', { class: 'muted' }, ` · ${pct(rate, 0)}`) : null),
+    ),
+  )
+}
+
+/**
+ * Ce que rapporte un abonné sur toute sa durée de vie.
+ *
+ * C'est le chiffre qui décide de ce qu'on peut dépenser pour l'acquérir ;
+ * il n'a pas à être calculé à la main.
+ */
+function lifetimeValue(a) {
+  const price = Number(a.recurringPrice) || 0
+  const cost = Number(a.recurringCost) || 0
+  const churn = Number(a.churnMonthly) || 0
+  const contract = Number(a.contractMonths) || 0
+  const life = churn > 0 ? Math.min(1 / churn, contract || Infinity) : contract || 24
+  const ltv = (price - cost) * life
+  return h('div', { class: 'ueco-sum' },
+    h('div', {},
+      h('div', { class: 'ueco-sum-label' }, 'Durée de vie moyenne'),
+      h('div', { class: 'ueco-sum-value num' }, `${num(life, 0)} mois`),
+    ),
+    h('div', {},
+      h('div', { class: 'ueco-sum-label' }, 'Marge cumulée par client'),
+      h('div', { class: 'ueco-sum-value num' }, euro(ltv)),
+    ),
+    h('p', { class: 'ueco-sum-note' },
+      `C'est le plafond de ce que vous pouvez dépenser pour gagner un client. Au-delà de ${euro(ltv / 3)} par client acquis, l'acquisition coûte plus qu'elle ne rapporte à court terme.`),
+  )
+}
+
+/**
+ * Qui paie quoi, et quand.
+ *
+ * Quatre pourcentages et deux délais dans des champs ne laissent pas voir le
+ * trou de trésorerie qu'ils décrivent. La frise le montre : chaque versement
+ * à sa place sur l'axe du temps, et l'écart entre la livraison et l'encaissement
+ * matérialisé en clair.
+ */
+function paymentTimeline(a) {
+  const deposit = Math.max(0, Number(a.deposit) || 0)
+  const milestone = Math.max(0, Number(a.milestone) || 0)
+  const balance = Math.max(0, 1 - deposit - milestone)
+  const delivery = Math.max(0, Number(a.deliveryLag) || 0)
+  const pay = Math.max(0, Number(a.paymentLag) || 0)
+  const last = delivery + pay
+
+  const steps = [
+    { month: 0, share: deposit, label: 'Acompte à la commande' },
+    { month: delivery / 2, share: milestone, label: 'Solde intermédiaire' },
+    { month: last, share: balance, label: 'Solde à la livraison' },
+  ].filter((st) => st.share > 0)
+
+  // Tout encaisser le jour de la commande est un cas fréquent — et une frise
+  // dont tous les points se superposent ne montre rien. On dit alors la chose
+  // en clair plutôt que de dessiner un axe de longueur nulle.
+  if (last === 0) {
+    return h('div', { class: 'tline-flat' },
+      h('span', { class: 'tline-flat-dot' }),
+      h('div', {},
+        h('div', { class: 'tline-flat-title' }, 'Payé comptant, le jour de la commande'),
+        h('div', { class: 'tline-flat-note' },
+          "Aucun délai entre la vente et l'encaissement : cette offre ne crée aucun besoin en fonds de roulement."),
+      ),
+    )
+  }
+
+  const at = (m) => (m / last) * 100
+  return h('div', { class: 'tline' },
+    h('div', { class: 'tline-track' },
+      h('span', { class: 'tline-rule' }),
+      h('span', {
+        class: 'tline-gap',
+        style: { left: `${at(delivery)}%`, width: `${Math.max(0, at(last) - at(delivery))}%` },
+        title: "Entre la livraison et l'encaissement, c'est vous qui financez",
+      }),
+      // Sous chaque point, la part et la date seulement : le nom du versement
+      // tiendrait rarement sans chevaucher le suivant, il se lit en dessous.
+      ...steps.map((st, i) => h('span', {
+        class: 'tline-point paid',
+        style: { left: `${at(st.month)}%` },
+        'data-side': i === 0 ? 'start' : i === steps.length - 1 ? 'end' : 'mid',
+        title: st.label,
+      },
+        h('i'),
+        h('span', { class: 'tline-label' },
+          h('b', {}, pct(st.share, 0)),
+          h('span', {}, st.month === 0 ? 'jour J' : `M+${num(st.month, st.month % 1 ? 1 : 0)}`),
+        ),
+      )),
+    ),
+    h('p', { class: 'tline-note' },
+      h('span', { class: 'tline-split' }, steps.map((st) => `${pct(st.share, 0)} ${st.label.toLowerCase()}`).join(' · ')),
+      `Entre la commande et l'encaissement du solde, ${pct(balance, 0)} du prix reste à votre charge pendant ${num(last, 0)} mois. C'est ce délai, et non votre rentabilité, qui crée le besoin en fonds de roulement.`),
+  )
+}
+
 function volumesEditor(a, setVolumes, level, detail) {
   const v = a.volumes || {}
   const voc = vocabulary(store.scenario)
   const isManual = v.mode === 'manual'
   return h('div', {},
     level !== 'easy' && h('div', { class: 'row mb' },
-      h('div', { class: 'levels' },
-        h('button', { class: `level-btn ${!isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'growth' }) }, 'Courbe de croissance'),
-        h('button', { class: `level-btn ${isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'manual', manual: v.manual?.length ? v.manual : buildManual(a) }) }, 'Saisie mois par mois'),
+      h('div', { class: 'seg' },
+        h('button', { class: `seg-btn ${!isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'growth' }) }, 'Courbe de croissance'),
+        h('button', { class: `seg-btn ${isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'manual', manual: v.manual?.length ? v.manual : buildManual(a) }) }, 'Saisie mois par mois'),
       ),
     ),
     isManual
@@ -169,9 +341,50 @@ function volumesEditor(a, setVolumes, level, detail) {
               onInput: (x) => setVolumes({ growthDecay: x }),
             }),
           ),
-          detail && h('div', { class: 'note plain mt' },
-            `Projection : ${num(sumRange(detail.volumes, 0, 12))} ${voc.many} ${voc.verb} en année 1, ${num(sumRange(detail.volumes, 12, 24))} en année 2, ${num(sumRange(detail.volumes, 48, 60))} en année 5.`),
+          detail && volumeVisual(detail, voc),
         ),
+  )
+}
+
+/**
+ * La courbe des volumes, et ce qu'elle donne chaque année.
+ *
+ * Une phrase de projection ne montre ni la forme de la courbe, ni le moment où
+ * elle décolle, ni le plafond qu'elle atteint. Le dessin le fait, et le
+ * tableau donne les nombres à recopier dans un dossier.
+ */
+function volumeVisual(detail, voc) {
+  const units = yearly(detail.volumes)
+  const revenue = yearly(detail.total)
+  const total = units.reduce((a, b) => a + b, 0)
+  if (total <= 0) {
+    return h('div', { class: 'note plain mt' },
+      `Aucun volume projeté pour l'instant : renseignez le premier mois de vente et le nombre de ${voc.many} pour voir la courbe apparaître.`)
+  }
+  const peak = Math.max(...detail.volumes)
+  const peakMonth = detail.volumes.indexOf(peak)
+
+  return h('div', { class: 'vol' },
+    h('div', { class: 'vol-head' },
+      h('span', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} ${voc.verb}, mois par mois`),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'tiny muted' }, `sommet à ${num(peak)} en ${monthLabel(peakMonth, store.result?.startDate)}`),
+    ),
+    areaChart({
+      values: detail.volumes, startDate: store.result?.startDate, height: 170,
+      color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
+    }),
+    h('div', { class: 'vol-years' },
+      ...units.map((u, y) => h('div', { class: 'vol-year' },
+        h('div', { class: 'vol-year-tag' }, `A${y + 1}`),
+        h('div', { class: 'vol-year-bar' },
+          h('i', { style: { height: `${Math.max(3, (u / Math.max(...units, 1)) * 100)}%` } })),
+        h('div', { class: 'vol-year-units num' }, num(u)),
+        h('div', { class: 'vol-year-rev num' }, euro(revenue[y], { compact: true })),
+      )),
+    ),
+    h('p', { class: 'vol-note' },
+      `${num(units[0])} ${voc.many} en année 1, ${num(units[4])} en année 5 — soit ${units[0] > 0 ? `× ${num(units[4] / units[0], 1)}` : 'un démarrage'} en cinq ans.`),
   )
 }
 
@@ -190,7 +403,7 @@ function manualGrid(a, setVolumes) {
           h('td', {}, `A${y + 1}`),
           ...Array.from({ length: 12 }, (_, m) => {
             const i = y * 12 + m
-            const input = h('input', { type: 'number', min: 0, value: manual[i] || 0, style: { width: '52px', border: '1px solid var(--ink-200)', borderRadius: '5px', padding: '3px 5px', textAlign: 'right', fontSize: '12px' } })
+            const input = h('input', { type: 'number', min: 0, value: manual[i] || 0, style: { width: '52px', border: '1px solid var(--rule)', borderRadius: '5px', padding: '3px 5px', textAlign: 'right', fontSize: '12px' } })
             input.addEventListener('change', () => commit(i, input.value))
             return h('td', { style: { padding: '3px' } }, input)
           }),
@@ -203,8 +416,8 @@ function manualGrid(a, setVolumes) {
 
 function priceEvolution(a, set) {
   const years = [1, 2, 3, 4]
-  return h('div', {},
-    section('Évolution des prix', "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseignez une case pour appliquer une hausse à partir de cette année."),
+  return block(5, 'Évolution des prix',
+    "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseignez une case pour appliquer une hausse à partir de cette année.", null,
     h('div', { class: 'grid grid-4' },
       ...years.map((y) => numberField({
         label: `Prix unitaire — année ${y + 1}`, field: 'unitPrice',

@@ -5,6 +5,7 @@ import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../en
 import { LEVEL_META } from '../../state/schema.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
+import { renderAccount } from './account.js'
 import { personaPicker } from '../persona-switch.js'
 import { getPersona } from '../personas.js'
 import store from '../../state/store.js'
@@ -84,6 +85,10 @@ export function renderSettings(navigate, refresh) {
     scenarioManager(navigate, refresh),
     fiscalPanel(refresh),
     dataPanel(navigate, refresh, usage),
+
+    // Le compte et les réglages répondaient à la même question — « où sont mes
+    // affaires ? » — sur deux pages. Ils n'en font plus qu'une.
+    h('div', { class: 'merged' }, renderAccount(navigate, refresh)),
   )
 }
 

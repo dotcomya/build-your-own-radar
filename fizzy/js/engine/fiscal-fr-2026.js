@@ -104,6 +104,40 @@ export const PARAMS = {
     note: "Taux réduit après application des exonérations propres aux contrats en alternance.",
   },
 
+  // ──────────────────── Avantages accordés aux salariés ─────────────────────
+  //
+  // Deux d'entre eux ne sont pas facultatifs : la complémentaire santé
+  // collective et la prise en charge de l'abonnement de transport. Un plan qui
+  // les oublie sous-estime le coût de chaque embauche de 60 à 100 € par mois.
+  transportShare: {
+    value: 0.5,
+    unit: "% de l'abonnement",
+    label: 'Prise en charge obligatoire des transports publics',
+    confidence: 'stable',
+    note: "L'employeur rembourse au moins 50 % de l'abonnement aux transports publics du domicile au lieu de travail. Cette part est exonérée de cotisations et d'impôt sur le revenu.",
+  },
+  mealVoucherExemptCap: {
+    value: 7.26,
+    unit: '€ par titre',
+    label: 'Exonération maximale de la part patronale d’un titre-restaurant',
+    confidence: 'to-verify',
+    note: "La part patronale doit représenter entre 50 et 60 % de la valeur du titre. Elle est exonérée de cotisations dans la limite de ce plafond, revalorisé chaque année.",
+  },
+  sustainableMobilityCap: {
+    value: 700,
+    unit: '€ par an et par salarié',
+    label: 'Plafond du forfait mobilités durables',
+    confidence: 'to-verify',
+    note: "Vélo, covoiturage, trottinette, transports partagés : le forfait est exonéré de cotisations et d'impôt dans cette limite.",
+  },
+  forfaitSocialRate: {
+    value: 0.08,
+    unit: '% de la part patronale',
+    label: 'Forfait social sur la prévoyance et la mutuelle',
+    confidence: 'stable',
+    note: "Dû à partir de 11 salariés sur la contribution patronale de prévoyance et de complémentaire santé. En dessous de ce seuil, l'entreprise en est dispensée.",
+  },
+
   // ────────────────────────────────── TVA ───────────────────────────────────
   vatRates: {
     value: { normal: 0.2, intermediate: 0.1, reduced: 0.055, superReduced: 0.021, exempt: 0 },
