@@ -7,7 +7,7 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
@@ -37,6 +37,8 @@ export function renderDashboard(navigate, refresh) {
     s.meta.isDemo && demoBanner(navigate, refresh),
 
     verdictHero(health, r, s, y, persona, sector),
+
+    keyFigures(r, s, y, navigate),
 
     h('section', { class: 'panel story-panel' },
       h('div', { class: 'card-head' },
@@ -69,6 +71,43 @@ export function renderDashboard(navigate, refresh) {
  * L'ordre des tests est celui de la gravité : on meurt de trésorerie avant de
  * mourir de rentabilité.
  */
+/**
+ * Les chiffres qu'on vient chercher.
+ *
+ * Ils étaient exacts mais rangés dans un pli : il fallait déplier « voir les
+ * chiffres » pour lire son EBITDA. Ce sont pourtant les six nombres qu'un
+ * fondateur cite quand on lui demande où il en est. Ils sont donc dehors, sur
+ * une ligne, chacun cliquable vers la page qui l'explique.
+ */
+function keyFigures(r, s, y, navigate) {
+  const k = r.kpis, p = r.pnl
+  const figures = [
+    { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y), go: 'offre' },
+    { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du CA`,
+      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', go: 'resultats', help: 'ebitda' },
+    { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '—',
+      note: k.breakEven[y] && p.revenue[y] >= k.breakEven[y] ? 'atteint' : 'non atteint',
+      tone: k.breakEven[y] && p.revenue[y] >= k.breakEven[y] ? 'pos' : 'warn', go: 'resultats', help: 'pointMort' },
+    { label: 'Résultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
+      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', go: 'resultats' },
+    { label: 'Trésorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
+      note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos', go: 'financement' },
+    { label: 'À financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
+      note: k.fundingNeed > 0 ? 'avant ' + monthLabel(k.cashLow.month, r.startDate) : 'caisse couverte',
+      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement' },
+  ]
+
+  return h('section', { class: 'figures' },
+    ...figures.map((f) => h('button', {
+      class: `figure ${f.tone || ''}`, onClick: () => navigate(`#/${f.go}`),
+    },
+      h('span', { class: 'figure-label' }, f.label),
+      h('span', { class: 'figure-value num' }, f.value),
+      h('span', { class: 'figure-note' }, f.note),
+    )),
+  )
+}
+
 function verdictHero(health, r, s, y, persona, sector) {
   return h('section', { class: `hero hero-${health.tone}` },
     h('div', { class: 'hero-main' },

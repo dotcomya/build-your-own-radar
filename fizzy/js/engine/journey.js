@@ -19,9 +19,10 @@ import { euro, pct } from '../format.js'
 
 /** Les trois actes. Un acte est une promesse, pas un chapitre. */
 export const ACTS = [
-  { key: 'projet', title: 'Ce que je vends', tagline: "D'où vient l'argent" },
-  { key: 'moyens', title: 'Ce que ça coûte', tagline: 'Ce qu’il faut dépenser pour y arriver' },
-  { key: 'argent', title: "L'argent", tagline: 'Combien il en manque, et ce qui te revient' },
+  { key: 'projet', title: 'Les bases', tagline: 'Le projet et son modèle' },
+  { key: 'moyens', title: 'Ce que ça coûte', tagline: "L'équipe et les frais" },
+  { key: 'argent', title: 'Ce que ça rapporte', tagline: 'Les clients, la caisse, votre part' },
+  { key: 'plus', title: 'Pour aller plus loin', tagline: 'Quand le reste est posé' },
 ]
 
 /* ────────────────────────────── Petits outils ───────────────────────────── */
@@ -78,7 +79,6 @@ export const STEPS = [
       return state(score, bits.join(' · ') || 'Choisissez votre métier pour démarrer')
     },
   },
-
   {
     key: 'modele',
     act: 'projet',
@@ -127,80 +127,6 @@ export const STEPS = [
       return state(score, `${priced.length} offre${priced.length > 1 ? 's' : ''} · ${price}`)
     },
   },
-
-  {
-    key: 'clients',
-    act: 'projet',
-    page: 'offre',
-    label: 'Mes clients',
-    question: 'Combien de clients, et à quel rythme ?',
-    promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
-    investor: "Un investisseur ne discute presque jamais vos charges. Il discute vos volumes. Préparez-vous à dire d'où vient ce premier chiffre.",
-    minutes: 6,
-    unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
-    tips: [
-      {
-        title: 'Partez de ce que vous savez livrer, pas du marché',
-        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de votre capacité réelle à livrer.",
-      },
-      {
-        title: '10 % par mois, c’est déjà énorme',
-        body: "10 % de croissance mensuelle triplent les volumes en un an. 30 % les multiplient par 23. Au-delà de 15 %, il faut dire par quel canal — Fizzy freine automatiquement la croissance dans la durée, parce qu'aucune courbe ne monte indéfiniment.",
-      },
-      {
-        title: 'Le délai de paiement tue plus que le prix',
-        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demandez un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
-      },
-    ],
-    check(s, r) {
-      const list = activities(s)
-      const withVolume = list.filter((a) => {
-        const v = a.volumes || {}
-        return n(v.startUnits) > 0 || (v.manual || []).some((x) => n(x) > 0)
-      })
-      if (!withVolume.length) return state(0, 'Aucun volume renseigné')
-      const revenue = r ? (r.pnl.revenue[0] || 0) : 0
-      const score = withVolume.length === list.length ? 1 : 0.6
-      return state(score, revenue > 0 ? `${euro(revenue, { compact: true })} la première année` : 'Volumes renseignés')
-    },
-  },
-
-  {
-    key: 'acquisition',
-    act: 'moyens',
-    page: 'marketing',
-    label: 'Mon acquisition',
-    question: 'Comment les trouvez-vous ?',
-    promise: "Combien vous coûte un client, et combien il vous rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
-    investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
-    minutes: 5,
-    optional: true,
-    unlocks: "Coût d'acquisition et rapport valeur client / coût",
-    tips: [
-      {
-        title: 'La règle des 3',
-        body: "Un client doit rapporter au moins trois fois ce qu'il a coûté à acquérir. En dessous, chaque euro de publicité supplémentaire accélère les pertes au lieu de les combler.",
-      },
-      {
-        title: 'Le bouche-à-oreille n’est pas un canal',
-        body: "Si les premiers clients viennent du réseau, laissez cette page vide et dites-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
-      },
-      {
-        title: 'Le taux de conversion est plus bas qu’on ne croit',
-        body: "2 à 5 % d'un visiteur à un contact, 10 à 20 % d'un contact à un client : voilà les ordres de grandeur. Au-delà de 20 %, il faut des données réelles pour l'étayer.",
-      },
-    ],
-    check(s, r) {
-      const live = liveCampaigns(s)
-      if (!live.length) return state(0, 'Pas de budget — bouche-à-oreille')
-      const budget = live.reduce((a, c) => a + n(c.monthlyBudget), 0)
-      const linked = live.filter((c) => (s.activities || []).some((a) => a.id === c.activityId))
-      const cac = r?.kpis?.cac
-      const score = linked.length === live.length ? 1 : 0.5
-      return state(score, cac ? `${euro(cac)} par client acquis` : `${euro(budget)}/mois`)
-    },
-  },
-
   {
     key: 'equipe',
     act: 'moyens',
@@ -234,7 +160,6 @@ export const STEPS = [
       return state(score, `${team.length} personne${team.length > 1 ? 's' : ''}${cost > 0 ? ` · ${euro(cost, { compact: true })}/an` : ''}`)
     },
   },
-
   {
     key: 'charges',
     act: 'moyens',
@@ -270,7 +195,42 @@ export const STEPS = [
       return state(score, `${opex.length} postes · ${euro(total)}/mois`)
     },
   },
-
+  {
+    key: 'clients',
+    act: 'argent',
+    page: 'offre',
+    label: 'Mes clients',
+    question: 'Combien de clients, et à quel rythme ?',
+    promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
+    investor: "Un investisseur ne discute presque jamais vos charges. Il discute vos volumes. Préparez-vous à dire d'où vient ce premier chiffre.",
+    minutes: 6,
+    unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
+    tips: [
+      {
+        title: 'Partez de ce que vous savez livrer, pas du marché',
+        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de votre capacité réelle à livrer.",
+      },
+      {
+        title: '10 % par mois, c’est déjà énorme',
+        body: "10 % de croissance mensuelle triplent les volumes en un an. 30 % les multiplient par 23. Au-delà de 15 %, il faut dire par quel canal — Fizzy freine automatiquement la croissance dans la durée, parce qu'aucune courbe ne monte indéfiniment.",
+      },
+      {
+        title: 'Le délai de paiement tue plus que le prix',
+        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demandez un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
+      },
+    ],
+    check(s, r) {
+      const list = activities(s)
+      const withVolume = list.filter((a) => {
+        const v = a.volumes || {}
+        return n(v.startUnits) > 0 || (v.manual || []).some((x) => n(x) > 0)
+      })
+      if (!withVolume.length) return state(0, 'Aucun volume renseigné')
+      const revenue = r ? (r.pnl.revenue[0] || 0) : 0
+      const score = withVolume.length === list.length ? 1 : 0.6
+      return state(score, revenue > 0 ? `${euro(revenue, { compact: true })} la première année` : 'Volumes renseignés')
+    },
+  },
   {
     key: 'financement',
     act: 'argent',
@@ -311,7 +271,6 @@ export const STEPS = [
       return state(1, `${euro(total, { compact: true })} mobilisés · trésorerie couverte`)
     },
   },
-
   {
     key: 'remuneration',
     act: 'argent',
@@ -347,10 +306,44 @@ export const STEPS = [
       return state(score, paysSelf ? 'Rémunération saisie' : 'Distribution de dividendes prévue')
     },
   },
-
+  {
+    key: 'acquisition',
+    act: 'plus',
+    page: 'marketing',
+    label: 'Mon acquisition',
+    question: 'Comment les trouvez-vous ?',
+    promise: "Combien vous coûte un client, et combien il vous rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
+    investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
+    minutes: 5,
+    optional: true,
+    unlocks: "Coût d'acquisition et rapport valeur client / coût",
+    tips: [
+      {
+        title: 'La règle des 3',
+        body: "Un client doit rapporter au moins trois fois ce qu'il a coûté à acquérir. En dessous, chaque euro de publicité supplémentaire accélère les pertes au lieu de les combler.",
+      },
+      {
+        title: 'Le bouche-à-oreille n’est pas un canal',
+        body: "Si les premiers clients viennent du réseau, laissez cette page vide et dites-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
+      },
+      {
+        title: 'Le taux de conversion est plus bas qu’on ne croit',
+        body: "2 à 5 % d'un visiteur à un contact, 10 à 20 % d'un contact à un client : voilà les ordres de grandeur. Au-delà de 20 %, il faut des données réelles pour l'étayer.",
+      },
+    ],
+    check(s, r) {
+      const live = liveCampaigns(s)
+      if (!live.length) return state(0, 'Pas de budget — bouche-à-oreille')
+      const budget = live.reduce((a, c) => a + n(c.monthlyBudget), 0)
+      const linked = live.filter((c) => (s.activities || []).some((a) => a.id === c.activityId))
+      const cac = r?.kpis?.cac
+      const score = linked.length === live.length ? 1 : 0.5
+      return state(score, cac ? `${euro(cac)} par client acquis` : `${euro(budget)}/mois`)
+    },
+  },
   {
     key: 'dossier',
-    act: 'argent',
+    act: 'plus',
     page: 'business-case',
     label: 'Mon dossier',
     question: 'Prêt à le présenter ?',
@@ -381,6 +374,7 @@ export const STEPS = [
       return state(1, 'Exportable en PowerPoint et en CSV')
     },
   },
+
 ]
 
 /* ─────────────────────────────── Avancement ─────────────────────────────── */

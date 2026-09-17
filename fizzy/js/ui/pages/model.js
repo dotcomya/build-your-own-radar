@@ -82,8 +82,6 @@ export function renderModel(navigate, refresh) {
       verdictCard(a, s, r, voc, navigate),
     ),
 
-    unitEconomics(a, s, r, voc),
-
     sector && sectorNote(sector, voc),
 
     tutorial(step, navigate),
@@ -216,17 +214,7 @@ function verdictCard(a, s, r, voc, navigate) {
         breakdownRow('Taux de marge', pct(marginRate, 0), null, true),
       ),
 
-      clientsNeeded !== null
-        ? h('div', { class: 'model-answer' },
-            h('div', { class: 'model-answer-label' }, 'Pour couvrir vos charges, il vous faut'),
-            h('div', { class: 'model-answer-value num' }, `${num(clientsNeeded)} ${clientsNeeded > 1 ? voc.many : voc.one}`),
-            h('div', { class: 'model-answer-note' }, `Charges fixes de ${euro(fixed, { compact: true })} par an, divisées par ce que rapporte un ${voc.client}.`),
-          )
-        : h('div', { class: 'model-answer model-answer-todo' },
-            h('div', { class: 'model-answer-label' }, 'Combien de clients pour vivre ?'),
-            h('div', { class: 'model-answer-note' }, "Saisissez vos charges et votre rémunération : Fizzy donne le nombre exact."),
-            h('button', { class: 'btn btn-sm mt', onClick: () => navigate('#/charges') }, 'Aller aux charges →'),
-          ),
+
     ),
   )
 }

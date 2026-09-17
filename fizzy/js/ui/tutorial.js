@@ -15,6 +15,7 @@ import { STEPS } from '../engine/journey.js'
 
 /** Les tutos restent ouverts ou fermés d'une page à l'autre, par étape. */
 const closed = new Set()
+let everOpened = false
 
 /**
  * Le bloc de coaching d'une étape.
@@ -23,7 +24,9 @@ const closed = new Set()
 export function tutorial(step, navigate) {
   const s = typeof step === 'string' ? STEPS.find((x) => x.key === step) : step
   if (!s?.tips?.length) return null
-  const isClosed = closed.has(s.key)
+  // Fermé tant qu'on ne l'a jamais ouvert : les repères attendent qu'on les
+  // demande, au lieu de s'imposer pendant la saisie.
+  const isClosed = closed.has(s.key) || !everOpened
 
   const body = h('div', { class: 'coach-body' },
     h('div', { class: 'coach-invest' },
@@ -45,6 +48,7 @@ export function tutorial(step, navigate) {
     h('button', {
       class: 'coach-head', 'aria-expanded': String(!isClosed),
       onClick: () => {
+        everOpened = true
         if (closed.has(s.key)) closed.delete(s.key); else closed.add(s.key)
         panel.classList.toggle('is-closed')
         const btn = panel.querySelector('.coach-head')
@@ -65,32 +69,26 @@ export function tutorial(step, navigate) {
  * Bandeau d'étape : où on en est, ce que cette page débloque, et par où
  * continuer. Posé en tête des pages du parcours.
  */
+/**
+ * Le bandeau d'étape — réduit à ce qu'il apporte.
+ *
+ * Il portait un encart vert « ça débloque », un bouton vers l'étape suivante et
+ * un retour au parcours : trois promesses là où il suffisait de dire où l'on
+ * est. Le reste encombrait la page sans jamais être utilisé — la barre de
+ * guidage, à droite, fait déjà la navigation.
+ */
 export function stepBanner(stepKey, journeyState, navigate) {
   const step = STEPS.find((x) => x.key === stepKey)
   if (!step) return null
   const live = journeyState?.steps?.find((x) => x.key === stepKey)
   const index = STEPS.indexOf(step) + 1
-  const next = journeyState?.steps?.find((x, i) => i >= index && x.status !== 'done')
 
-  return h('div', { class: `step-banner ${live?.status || 'todo'}` },
-    h('div', { class: 'step-banner-main' },
-      h('div', { class: 'step-banner-tag' },
-        h('span', { class: 'step-banner-no num' }, `${index}/${STEPS.length}`),
-        h('span', {}, step.label),
-        live?.status === 'done' ? h('span', { class: 'step-banner-check' }, '✓ fait') : null,
-      ),
-      h('div', { class: 'step-banner-q' }, step.question),
-      h('p', { class: 'step-banner-why' }, step.promise),
+  return h('div', { class: `step-line ${live?.status || 'todo'}` },
+    h('span', { class: 'step-line-no num' }, `${index}`),
+    h('div', { class: 'step-line-text' },
+      h('span', { class: 'step-line-q' }, step.question),
+      h('span', { class: 'step-line-why' }, step.promise),
     ),
-    h('div', { class: 'step-banner-side' },
-      h('div', { class: 'step-banner-unlock' },
-        h('span', { class: 'eyebrow' }, 'Ça débloque'),
-        h('span', {}, step.unlocks),
-      ),
-      next ? h('button', {
-        class: 'btn btn-sm', onClick: () => navigate(`#/${next.page}`),
-      }, `Suite : ${next.label} →`) : null,
-      h('button', { class: 'btn btn-sm btn-ghost', onClick: () => navigate('#/parcours') }, '← Le parcours'),
-    ),
+    live?.status === 'done' ? h('span', { class: 'step-line-done' }, 'fait') : null,
   )
 }

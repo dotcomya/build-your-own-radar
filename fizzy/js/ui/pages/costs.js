@@ -77,51 +77,86 @@ export function renderCosts(navigate, refresh) {
   )
 }
 
+/**
+ * Une charge, sur une ligne.
+ *
+ * Chaque poste occupait une carte entière avec quatre champs déployés : dix
+ * charges, et la page devenait un rouleau. Une charge, c'est un nom et un
+ * montant — le reste (mode de calcul, dates, R&D) se déplie à la demande, et
+ * la plupart du temps on n'en a pas besoin.
+ */
 function opexRow(o, r, level, refresh) {
   const set = (patch, opts = {}) => store.update((sc) => Object.assign(sc.opex.find((x) => x.id === o.id), patch), { label: 'Modification de charge', ...opts })
   const detail = r?.opex.perItem.find((x) => x.id === o.id)
+  const on = o.enabled !== false
+  const open = opexRow.open || (opexRow.open = new Set())
+  const isOpen = open.has(o.id)
+  const variable = o.mode !== 'fixed'
+
   const remove = async () => {
     if (await confirmDialog({ title: 'Supprimer cette charge ?', message: `« ${o.label} » sera retirée.`, confirmLabel: 'Supprimer', danger: true })) {
       store.update((sc) => { sc.opex = sc.opex.filter((x) => x.id !== o.id) }, { label: 'Suppression de charge' })
       refresh()
     }
   }
-  const on = o.enabled !== false
-  return h('div', { class: `card ${on ? '' : 'is-off'}`, style: { marginBottom: '9px' } },
-    h('div', { class: 'card-body tight' },
-      h('div', { class: 'grid', style: { gridTemplateColumns: 'auto minmax(150px,2fr) minmax(130px,1.3fr) minmax(120px,1fr) auto', alignItems: 'end', gap: '10px' } },
-        h('div', { style: { paddingBottom: '7px' } },
-          enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() })),
-        textField({ label: 'Poste', value: o.label, onInput: (v, opt) => set({ label: v }, opt) }),
+
+  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''}` },
+    h('div', { class: 'cost-line' },
+      enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }),
+
+      h('input', {
+        class: 'cost-label', value: o.label, 'aria-label': 'Nom de la charge',
+        onInput: (e) => set({ label: e.target.value }, { silent: true }),
+      }),
+
+      h('div', { class: 'cost-amount' },
+        h('input', {
+          class: 'num', inputmode: 'decimal', value: String(o.monthlyAmount ?? ''),
+          'aria-label': 'Montant mensuel',
+          onInput: (e) => set({ monthlyAmount: Number(e.target.value.replace(',', '.')) || 0 }, { silent: true }),
+        }),
+        h('span', { class: 'cost-unit' }, '€/mois'),
+      ),
+
+      detail ? h('span', { class: 'cost-year num' }, `${euro(detail.yearly[0], { compact: true })}/an`) : null,
+
+      variable ? h('span', { class: 'cost-tag' }, o.mode === 'perEmployee' ? 'par salarié' : 'du CA') : null,
+
+      h('button', {
+        class: 'cost-more', title: 'Réglages de cette charge',
+        onClick: () => { isOpen ? open.delete(o.id) : open.add(o.id); refresh() },
+      }, '\u22EF'),
+    ),
+
+    isOpen && h('div', { class: 'cost-detail' },
+      h('div', { class: 'grid grid-3' },
         selectField({
           label: 'Mode de calcul', value: o.mode,
           options: [
             { value: 'fixed', label: 'Montant fixe mensuel' },
             { value: 'perEmployee', label: 'Fixe + par salarié' },
-            { value: 'pctRevenue', label: 'Fixe + % du CA' },
+            { value: 'pctRevenue', label: "Fixe + % du chiffre d'affaires" },
           ],
-          onInput: (v) => set({ mode: v }),
+          onInput: (v) => { set({ mode: v }); refresh() },
         }),
-        numberField({ label: 'Montant fixe', field: 'monthlyAmount', value: o.monthlyAmount, suffix: '€/mois', onInput: (v) => set({ monthlyAmount: v }) }),
-        h('button', { class: 'btn btn-sm btn-danger', onClick: remove, style: { marginBottom: '1px' } }, 'Retirer'),
-      ),
-      (o.mode === 'perEmployee' || o.mode === 'pctRevenue' || level === 'advanced') && h('div', { class: 'grid grid-3 mt' },
         o.mode === 'perEmployee' && numberField({ label: 'Par salarié', field: 'perEmployee', value: o.perEmployee, suffix: '€/mois', onInput: (v) => set({ perEmployee: v }) }),
         o.mode === 'pctRevenue' && numberField({ label: "Part du chiffre d'affaires", field: 'pctRevenue', value: o.pctRevenue, percent: true, onInput: (v) => set({ pctRevenue: v }) }),
         level === 'advanced' && monthField({ label: 'À partir de', value: o.startMonth, startDate: r?.startDate, onInput: (v) => set({ startMonth: v }) }),
         level === 'advanced' && monthField({ label: "Jusqu'à", value: o.endMonth, startDate: r?.startDate, allowEmpty: true, onInput: (v) => set({ endMonth: v }) }),
       ),
-      detail && h('div', { class: 'row', style: { marginTop: '9px', fontSize: '12.5px', color: 'var(--ink-500)' } },
-        h('span', {}, `Année 1 : `, h('strong', { class: 'num' }, euro(detail.yearly[0]))),
-        h('span', {}, `· Année 5 : `, h('strong', { class: 'num' }, euro(detail.yearly[4]))),
-        h('span', { class: 'spacer' }),
+      h('div', { class: 'row-wrap mt' },
         level === 'advanced' && h('label', { class: 'switch' },
           (() => { const i = h('input', { type: 'checkbox', checked: !!o.rdApproved }); i.addEventListener('change', () => set({ rdApproved: i.checked })); return i })(),
-          h('span', { class: 'track' }), h('span', { class: 'tiny' }, 'Sous-traitance R&D agréée')),
+          h('span', { class: 'track' }),
+          h('span', { class: 'small' }, 'Dépense de recherche (CIR)'),
+        ),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Supprimer'),
       ),
     ),
   )
 }
+
 
 function capexSection(s, r, level, refresh) {
   if (level === 'easy' && s.capex.length === 0) {

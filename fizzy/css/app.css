@@ -1182,30 +1182,27 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ═══════════════════ Bandeau d'étape et micro-tutos ═══════════════════════ */
 
-.step-banner {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start;
+/* Le bandeau d'étape : une seule ligne. Dire où l'on est, et rien d'autre.
+   Il portait un encart « ça débloque » et deux boutons de navigation ; la barre
+   de guidage fait déjà la navigation, et la promesse n'était jamais lue. */
+.step-line {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 14px; margin-bottom: 18px;
   background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--signal);
-  padding: 16px 18px; margin-bottom: 20px;
 }
-.step-banner.done { border-left-color: var(--gain); }
-.step-banner-tag {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+.step-line.done { border-left-color: var(--gain); }
+.step-line-no {
+  flex: none; width: 22px; height: 22px; display: grid; place-items: center;
+  background: var(--ink); color: #fff; font-size: 11px;
 }
-.step-banner-no { background: var(--ink); color: #fff; padding: 2px 6px; letter-spacing: .02em; }
-.step-banner.done .step-banner-no { background: var(--gain); }
-.step-banner-check { color: var(--gain); }
-.step-banner-q {
-  font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.025em;
-  color: var(--ink); margin: 8px 0 5px;
+.step-line.done .step-line-no { background: var(--gain); }
+.step-line-text { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.step-line-q { font-family: var(--display); font-weight: 700; font-size: 14.5px; color: var(--ink); letter-spacing: -.016em; }
+.step-line-why { font-size: 12.5px; color: var(--ink-4); }
+.step-line-done {
+  margin-left: auto; flex: none; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--gain);
 }
-.step-banner-why { margin: 0; font-size: 13px; color: var(--ink-3); line-height: 1.5; max-width: 68ch; }
-.step-banner-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
-.step-banner-unlock {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
-  text-align: right; font-size: 12px; color: var(--ink-2); max-width: 26ch;
-}
-.step-banner-unlock .eyebrow { color: var(--gain); }
 
 /* Le coach : replié par défaut une fois lu, mais toujours à portée. */
 .coach {
@@ -1331,9 +1328,6 @@ i.swatch.split-margin { background: var(--gain); }
   .hero-ring-value { font-size: 26px; }
   .hero-journey-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .hero-stat-value { font-size: 16px; }
-  .step-banner { grid-template-columns: 1fr; gap: 14px; }
-  .step-banner-side { align-items: flex-start; }
-  .step-banner-unlock { align-items: flex-start; text-align: left; max-width: none; }
   .coach-tip { border-right: 0; }
   .engine { border-right: 0; border-bottom: 1px solid var(--rule); }
   .engine:last-child { border-bottom: 0; }
@@ -1942,3 +1936,177 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-unlocked-list { margin: 0; padding-left: 17px; }
 .setup-unlocked-list li { font-size: 12.8px; color: var(--ink-3); line-height: 1.55; margin-bottom: 5px; }
 .setup-unlocked-list li:last-child { margin-bottom: 0; }
+
+/* Le statut du dirigeant : rappelé, pas redemandé. */
+.setup-status {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  padding: 9px 12px; background: var(--ink); color: #fff; margin-bottom: 18px;
+}
+.setup-status-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: #8E99A2;
+}
+.setup-status-value { font-weight: 600; font-size: 13.5px; }
+.setup-status-why { font-size: 11.5px; color: #8E99A2; margin-left: auto; }
+
+/* L'échelle : coût employeur → brut → net. Trois marches, un seul coup d'œil. */
+.ladder { margin-top: 18px; border-top: 1px solid var(--rule); }
+.ladder-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3);
+}
+.ladder-row .num { font-size: 17px; font-weight: 600; letter-spacing: -.03em; color: var(--ink); }
+.ladder-row.top { color: var(--ink-2); }
+.ladder-row.top .num { color: var(--loss); }
+.ladder-row.bottom { color: var(--ink); font-weight: 500; }
+.ladder-row.bottom .num { color: var(--gain); font-size: 21px; }
+
+/* ─────────────────────────── Les blocs de saisie ─────────────────────────── */
+/* Quatre sujets dans une offre : l'identité, le prix, les volumes, les délais.
+   Les enchaîner sous de simples titres en faisait un formulaire. Chacun a
+   maintenant sa surface — on voit qu'il y en a quatre, et on peut n'en traiter
+   qu'un. */
+
+.item-body.sliced { padding: 0; }
+.slice { border-top: 1px solid var(--rule); }
+.slice:first-child { border-top: 0; }
+.slice-head {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 13px 16px 0;
+}
+.slice-no {
+  flex: none; width: 20px; height: 20px; display: grid; place-items: center;
+  border: 1px solid var(--rule); color: var(--ink-4); font-size: 10.5px; margin-top: 1px;
+}
+.slice-title {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--display); font-weight: 700; font-size: 13.5px; color: var(--ink);
+  letter-spacing: -.014em;
+}
+.slice-hint { font-size: 12px; color: var(--ink-4); margin-top: 2px; line-height: 1.45; max-width: 64ch; }
+.slice-body { padding: 12px 16px 16px 47px; }
+
+@media (max-width: 720px) {
+  .slice-body { padding: 12px 14px 16px; }
+}
+
+/* ────────────────────────── Les charges, sur une ligne ───────────────────── */
+/* Une charge, c'est un nom et un montant. Le reste — mode de calcul, dates,
+   R&D — se déplie à la demande : dix postes doivent tenir sur un écran. */
+
+.cost-row { border-bottom: 1px solid var(--rule); background: var(--surface); }
+.cost-row:first-of-type { border-top: 1px solid var(--rule); }
+.cost-row.is-off { opacity: .5; }
+.cost-line { display: flex; align-items: center; gap: 10px; padding: 7px 12px; }
+.cost-label {
+  flex: 1; min-width: 0; border: 0; background: none; outline: 0; padding: 4px 2px;
+  font: inherit; font-size: 13.5px; color: var(--ink); border-bottom: 1px solid transparent;
+}
+.cost-label:focus { border-bottom-color: var(--signal); }
+.cost-amount { display: flex; align-items: baseline; gap: 5px; flex: none; }
+.cost-amount input {
+  width: 86px; border: 1px solid var(--rule); background: var(--surface); outline: 0;
+  padding: 5px 8px; text-align: right; font-size: 13px;
+}
+.cost-amount input:focus { border-color: var(--signal); }
+.cost-unit { font-family: var(--mono); font-size: 10px; color: var(--ink-5); }
+.cost-year {
+  flex: none; width: 80px; text-align: right; font-size: 11.5px; color: var(--ink-4);
+}
+.cost-tag {
+  flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-4); border: 1px solid var(--rule); padding: 1px 5px;
+}
+.cost-more {
+  flex: none; width: 26px; height: 26px; border: 1px solid transparent; background: none;
+  cursor: pointer; color: var(--ink-4); font-size: 14px; line-height: 1;
+}
+.cost-more:hover { border-color: var(--rule); color: var(--ink); }
+.cost-row.open .cost-more { border-color: var(--ink); color: var(--ink); }
+.cost-detail { padding: 4px 12px 14px 56px; border-top: 1px solid var(--rule); background: var(--surface-2); }
+
+@media (max-width: 720px) {
+  .cost-line { flex-wrap: wrap; }
+  .cost-label { flex: 1 1 100%; order: -1; }
+  .cost-year, .cost-tag { display: none; }
+  .cost-detail { padding-left: 12px; }
+}
+
+/* ──────────── De ce que paie l'entreprise à ce que touche le dirigeant ───── */
+/* Quatre marches, dans l'ordre où l'argent descend, chacune expliquant ce qui
+   la sépare de la précédente. Le détail exhaustif vient après, pas avant. */
+
+.pay { background: var(--surface); border: 1px solid var(--rule); border-top: 3px solid var(--signal); }
+.pay-head {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 15px 18px; border-bottom: 1px solid var(--rule);
+}
+.pay-head h2 { font-size: 17px; }
+.pay-year {
+  margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.pay-steps { display: flex; flex-direction: column; }
+.pay-step { padding: 13px 18px; border-bottom: 1px solid var(--rule); position: relative; }
+.pay-step:last-child { border-bottom: 0; }
+.pay-step::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--rule);
+}
+.pay-step.cost::before { background: var(--loss); }
+.pay-step.final { background: var(--ink); }
+.pay-step.final::before { background: var(--gain); }
+.pay-step-main { display: flex; align-items: baseline; gap: 14px; }
+.pay-step-k { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.pay-step-v { margin-left: auto; font-size: 22px; font-weight: 600; letter-spacing: -.035em; color: var(--ink); }
+.pay-step.cost .pay-step-v { color: var(--loss); }
+.pay-step.final .pay-step-k { color: #fff; }
+.pay-step.final .pay-step-v { color: #4ADE9E; font-size: 28px; }
+.pay-step-note { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 74ch; }
+.pay-step.final .pay-step-note { color: #AEB9C9; }
+.pay-foot {
+  margin: 0; padding: 12px 18px; border-top: 1px solid var(--rule); background: var(--surface-2);
+  font-size: 12.5px; color: var(--ink-3);
+}
+
+/* La liste des plans, repliée : on l'ouvre quand on en change. */
+.plans-fold > summary { list-style: none; cursor: pointer; position: relative; padding-right: 40px; }
+.plans-fold > summary::-webkit-details-marker { display: none; }
+.plans-fold > summary:hover { background: var(--surface-2); }
+.plans-chevron {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  color: var(--ink-4); font-size: 16px; transition: transform .18s var(--ease);
+}
+.plans-fold[open] .plans-chevron { transform: translateY(-50%) rotate(90deg); }
+
+/* ────────────────── Les six chiffres qu'on vient chercher ────────────────── */
+/* Ils étaient rangés dans un pli. Ce sont pourtant ceux qu'un fondateur cite
+   quand on lui demande où il en est : ils vivent dehors, sur une ligne. */
+
+.figures {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong);
+  background: var(--surface); margin-bottom: 16px;
+}
+.figure {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  padding: 13px 14px; border-right: 1px solid var(--rule);
+  border-bottom: 2px solid transparent;
+  background: none; cursor: pointer; font: inherit; text-align: left; min-width: 0;
+  transition: background .12s, border-color .12s;
+}
+.figure:last-child { border-right: 0; }
+.figure:hover { background: var(--surface-2); border-bottom-color: var(--ink); }
+.figure-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.figure-value {
+  font-size: 21px; font-weight: 600; letter-spacing: -.04em; color: var(--ink); white-space: nowrap;
+}
+.figure-note { font-size: 11px; color: var(--ink-5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.figure.pos .figure-value { color: var(--gain); }
+.figure.neg .figure-value { color: var(--loss); }
+.figure.warn .figure-value { color: var(--warn); }
+
+@media (max-width: 1240px) { .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

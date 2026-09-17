@@ -15,7 +15,8 @@ export const CONTRACT_TYPES = {
   cdd: { label: 'CDD', help: "Contrat à durée déterminée. Même assiette qu'un CDI, majorée de la contribution CPF-CDD de 1 %." },
   alternance: { label: 'Alternance', help: "Apprentissage ou professionnalisation. Cotisations patronales fortement réduites et salarié exclu de l'effectif pour les seuils sociaux." },
   stage: { label: 'Stage', help: "Gratification obligatoire au-delà de deux mois. Exonérée de cotisations tant qu'elle n'excède pas le minimum légal." },
-  tns: { label: 'Dirigeant TNS', help: "Gérant majoritaire de SARL ou entrepreneur individuel. Cotisations du régime des indépendants, sensiblement inférieures au régime général." },
+  tns: { label: 'Dirigeant TNS', help: "Gérant majoritaire de SARL ou EURL, entrepreneur individuel. Régime des indépendants : environ 45 % de cotisations sur la rémunération, sensiblement moins que le régime général — mais une protection plus légère et aucun droit au chômage." },
+  dirigeant: { label: 'Dirigeant assimilé salarié', help: "Président de SAS ou SASU, gérant minoritaire ou égalitaire de SARL. Régime général, comme un cadre — donc une meilleure couverture, mais le coût employeur le plus élevé. L'assurance chômage n'est pas due : le dirigeant n'y a pas droit." },
   freelance: { label: 'Freelance / prestataire', help: "Facturation externe. Aucune cotisation sociale : le montant saisi est le coût complet, soumis à TVA." },
 }
 
@@ -82,13 +83,32 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
     return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail }
   }
 
-  // CDI / CDD : régime général.
-  const baseRate = member.status === 'cadre' ? ctx.get('employerRateCadre') : ctx.get('employerRateNonCadre')
+  // CDI, CDD, dirigeant assimilé salarié : régime général.
+  //
+  // Le dirigeant assimilé salarié — président de SAS, gérant minoritaire de
+  // SARL — relève du même régime qu'un cadre, à une exception près : il ne
+  // cotise pas à l'assurance chômage, puisqu'il n'y a pas droit. C'est environ
+  // quatre points de moins, et c'est une différence que beaucoup de
+  // simulateurs oublient.
+  const isExecutive = member.contractType === 'dirigeant'
+  const baseRate0 = isExecutive || member.status === 'cadre'
+    ? ctx.get('employerRateCadre')
+    : ctx.get('employerRateNonCadre')
+  const unemploymentRate = 0.0405
+  const baseRate = isExecutive ? Math.max(0, baseRate0 - unemploymentRate) : baseRate0
   const employerBase = gross * baseRate
   detail.push({ label: 'Salaire brut', amount: gross })
-  detail.push({ label: `Cotisations patronales (${pct(baseRate)})`, amount: employerBase, note: 'Maladie, vieillesse, famille, chômage, AT/MP, retraite complémentaire.' })
+  detail.push({
+    label: `Cotisations patronales (${pct(baseRate)})`,
+    amount: employerBase,
+    note: isExecutive
+      ? `Maladie, vieillesse, famille, AT/MP, retraite complémentaire. L'assurance chômage (${pct(unemploymentRate)}) n'est pas due : un dirigeant assimilé salarié n'y a pas droit.`
+      : 'Maladie, vieillesse, famille, chômage, AT/MP, retraite complémentaire.',
+  })
 
-  const coef = reductionCoefficient(gross, headcount, ctx)
+  // La réduction générale vise les salariés au sens strict : un mandataire
+  // social n'y ouvre pas droit.
+  const coef = isExecutive ? 0 : reductionCoefficient(gross, headcount, ctx)
   const generalRelief = gross * coef
 
   // L'exonération JEI ne porte que sur les cotisations d'assurances sociales et

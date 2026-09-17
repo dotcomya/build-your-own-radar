@@ -16,9 +16,9 @@ export function renderOnboarding(navigate) {
   return h('div', { class: 'landing' },
     h('div', { class: 'landing-inner' },
       h('div', { class: 'landing-mark' }, 'F'),
-      h('h1', { class: 'landing-title' }, 'Faites votre business plan'),
+      h('h1', { class: 'landing-title' }, 'Nous allons vous aider à faire votre business plan'),
       h('p', { class: 'landing-line' },
-        'Onze questions. Fizzy s’occupe des cotisations, de la TVA, des impôts et de la trésorerie.'),
+        'Une question à la fois. Vous répondez, Fizzy calcule — cotisations, TVA, impôts, trésorerie.'),
 
       h('div', { class: 'landing-actions' },
         h('button', {

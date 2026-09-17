@@ -23,6 +23,7 @@
 import { h, euro, num, pct, toast } from '../dom.js'
 import { sectorsByFamily, SECTORS, getSector, vocabulary } from '../../state/sectors.js'
 import { newTeamMember, newOpex } from '../../state/schema.js'
+import { monthlyCost } from '../../engine/payroll.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 
@@ -64,6 +65,21 @@ const STEPS = [
     ready: () => true,
   },
   {
+    key: 'forme', short: 'La forme juridique',
+    question: 'Sous quelle forme ?',
+    help: "Elle décide de votre statut social et de la façon dont vous vous rémunérez. Rien n'est définitif : on la change en un clic.",
+    render: legalScreen,
+    ready: (s) => !!s?.meta?.legalForm,
+  },
+  {
+    key: 'depart', short: 'Votre mise de départ',
+    question: 'Vous démarrez avec combien ?',
+    help: "L'argent déjà disponible : votre apport, celui de vos associés. On verra à la fin s'il en manque.",
+    optional: true,
+    render: cashScreen,
+    ready: () => true,
+  },
+  {
     key: 'offre', short: 'Ce que vous vendez',
     question: 'Vous vendez quoi ?',
     help: (s) => `Une ${vocabulary(s).one}, un forfait, un abonnement — dites-le comme vous le diriez à un client.`,
@@ -76,51 +92,52 @@ const STEPS = [
   },
   {
     key: 'prix', short: 'Le prix',
-    question: 'Vous le vendez combien ?',
-    help: 'Hors taxes, le prix que le client voit sur la facture.',
+    question: 'Comment rentre l’argent ?',
+    help: 'La forme du revenu change tout : une vente qui se répète ne vaut pas une vente unique.',
     render: priceScreen,
     ready: (s) => (Number(s?.activities?.[0]?.unitPrice) || 0) > 0 || (Number(s?.activities?.[0]?.recurringPrice) || 0) > 0,
   },
   {
-    key: 'cout', optional: true, short: 'Le coût de revient',
-    question: 'Ça vous coûte combien à produire ?',
-    help: "Tout ce qui augmente quand vous en vendez un de plus : matières, sous-traitance, commission, livraison. Zéro est une réponse valable.",
-    render: costScreen,
+    key: 'salaire', short: 'Votre rémunération',
+    question: 'Vous vous payez combien ?',
+    help: "Fizzy calcule ce que ça coûte vraiment à l'entreprise. Un plan où le fondateur ne se paie pas n'est pas prudent — il est faux.",
+    optional: true,
+    render: salaryScreen,
     ready: () => true,
   },
   {
-    key: 'clients', short: 'Les premiers clients',
+    key: 'frais', short: 'Vos frais fixes',
+    question: 'Vos frais tous les mois',
+    help: 'Cochez ce qui vous concerne. Ce sont eux qui fixent le nombre de clients dont vous avez besoin.',
+    optional: true,
+    render: costsScreen,
+    ready: () => true,
+  },
+  {
+    key: 'clients', short: 'Vos premiers clients',
     question: 'Combien de clients le premier mois ?',
     help: "Pas une ambition : ce que vous pouvez livrer et facturer dès le début. C'est le chiffre le plus discuté d'un business plan.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
   {
-    key: 'croissance', optional: true, short: 'La croissance',
+    key: 'cout', short: 'Le coût de revient',
+    // On ne demande le coût de revient qu'ici, une fois les frais connus : sans
+    // ce repère, « ce que ça vous coûte de produire » ne veut rien dire pour
+    // quelqu'un qui n'a jamais tenu de comptabilité — et la confusion la plus
+    // fréquente est justement d'y ranger le loyer ou le comptable.
+    question: 'Et chaque vente, elle vous coûte quoi ?',
+    help: "Uniquement ce qui augmente quand vous vendez une unité de plus : matières, sous-traitance, commission. Pas le loyer ni le comptable — ceux-là, vous venez de les saisir.",
+    optional: true,
+    render: costScreen,
+    ready: () => true,
+  },
+  {
+    key: 'croissance', short: 'La croissance',
     question: 'Ça grandit à quelle vitesse ?',
     help: 'Fizzy freine automatiquement la courbe dans la durée — aucune croissance ne tient cinq ans au même rythme.',
+    optional: true,
     render: growthScreen,
-    ready: () => true,
-  },
-  {
-    key: 'salaire', optional: true, short: 'Votre rémunération',
-    question: 'Vous vous payez combien par mois ?',
-    help: "Brut. Fizzy calcule les cotisations. Un plan où le fondateur ne se paie pas n'est pas prudent — il est faux.",
-    render: salaryScreen,
-    ready: () => true,
-  },
-  {
-    key: 'frais', optional: true, short: 'Les frais fixes',
-    question: 'Vos frais tous les mois',
-    help: 'Cochez ce qui vous concerne. Les montants sont des ordres de grandeur pour votre métier — corrigez-les.',
-    render: costsScreen,
-    ready: () => true,
-  },
-  {
-    key: 'depart', optional: true, short: 'La mise de départ',
-    question: 'Vous démarrez avec combien ?',
-    help: "L'argent déjà disponible : votre apport, celui de vos associés. On verra plus tard s'il en manque.",
-    render: cashScreen,
     ready: () => true,
   },
   {
@@ -130,6 +147,7 @@ const STEPS = [
     ready: () => true,
     last: true,
   },
+
 ]
 
 /* ─────────────────────────────── La page ────────────────────────────────── */
@@ -450,6 +468,51 @@ function sectorPicker(ctx) {
   )
 }
 
+/* ──────────────────────────── Écran : forme juridique ───────────────────── */
+
+/**
+ * La forme juridique, dite par ses conséquences.
+ *
+ * « SAS ou SARL » ne veut rien dire à qui n'a jamais créé de société. Ce qui
+ * veut dire quelque chose, c'est : combien ça coûte de me payer, et quelle
+ * protection j'ai en échange. On propose donc trois choix décrits comme ça.
+ */
+function legalScreen(ctx) {
+  const sector = getSector(store.scenario.meta.sectorKey)
+  const allowed = sector?.legal?.forms || ['SAS', 'SARL', 'EI']
+  const current = () => store.scenario.meta.legalForm
+
+  const FORMS = {
+    SAS: { label: 'SAS', note: 'Président assimilé salarié : meilleure protection, coût le plus élevé. La forme des projets qui lèvent.', contract: 'dirigeant' },
+    SASU: { label: 'SASU', note: 'La SAS à associé unique. Même régime pour le président.', contract: 'dirigeant' },
+    SARL: { label: 'SARL', note: 'Gérant majoritaire TNS : environ 45 % de cotisations, protection plus légère, pas de chômage.', contract: 'tns' },
+    EURL: { label: 'EURL', note: 'La SARL à associé unique. Gérant TNS.', contract: 'tns' },
+    EI: { label: 'Entreprise individuelle', note: 'Pas de société : le bénéfice est imposé directement à votre nom.', contract: 'tns' },
+    BNC: { label: 'Exercice libéral', note: 'Bénéfices non commerciaux. Le résultat du cabinet est votre revenu imposable.', contract: 'tns' },
+    SELARL: { label: 'SELARL', note: 'Société d’exercice libéral. Gérant majoritaire TNS.', contract: 'tns' },
+    SELAS: { label: 'SELAS', note: 'Société d’exercice libéral par actions. Président assimilé salarié.', contract: 'dirigeant' },
+    SCM: { label: 'SCM', note: 'Société civile de moyens : on partage les charges, pas les honoraires.', contract: 'tns' },
+  }
+
+  return h('div', {},
+    choice(ctx, allowed.filter((f) => FORMS[f]).map((f) => ({
+      label: FORMS[f].label,
+      note: FORMS[f].note,
+      active: () => current() === f,
+      pick: () => store.update((sc) => {
+        sc.meta.legalForm = f
+        sc.founder.majorityManager = ['SARL', 'EURL', 'SELARL'].includes(f)
+        // Le statut du dirigeant suit la forme : c'est elle qui le détermine,
+        // pas un choix séparé qu'on oublierait de mettre à jour.
+        const me = sc.team?.find((x) => ME.test(x.role || ''))
+        if (me) me.contractType = FORMS[f].contract
+      }, { label: 'Forme juridique', silent: true }),
+    }))),
+    h('p', { class: 'setup-note' },
+      "Ce choix fixe votre statut social — c'est lui qui décide du coût de votre rémunération, pas l'inverse."),
+  )
+}
+
 /* ─────────────────────────── Écran : prix et coût ───────────────────────── */
 
 /**
@@ -459,53 +522,123 @@ function sectorPicker(ctx) {
  * tous les mois. Le champ est donc reconstruit quand on bascule, et seulement
  * là : la frappe, elle, ne reconstruit rien.
  */
+/**
+ * D'où vient l'argent.
+ *
+ * Quatre formes, et une seule question derrière : est-ce que cette vente se
+ * répète ? La commission mérite sa place — marketplace, agence, apporteur
+ * d'affaires : on ne vend pas un produit, on prélève un pourcentage sur ce qui
+ * passe. Le raisonnement est différent, et se tromper de modèle à ce stade
+ * fausse tout le reste.
+ */
 function priceScreen(ctx) {
-  const isRecurring = () => (Number(store.scenario.activities[0].recurringPrice) || 0) > 0
+  const act = () => store.scenario.activities[0]
+  const mode = () => {
+    const a = act()
+    if (store.scenario.meta.revenueModel === 'commission') return 'commission'
+    const u = Number(a.unitPrice) || 0, r = Number(a.recurringPrice) || 0
+    if (u > 0 && r > 0) return 'mixte'
+    if (r > 0) return 'abonnement'
+    return 'unitaire'
+  }
   const fieldHost = h('div', { class: 'setup-field-host' })
 
   const drawField = () => {
-    const recurring = isRecurring()
-    fieldHost.replaceChildren(field(ctx, {
-      type: 'number',
-      placeholder: recurring ? '49' : '500',
-      suffix: recurring ? '\u20AC par mois' : '\u20AC',
-      value: (sc) => {
-        const v = recurring ? sc.activities[0].recurringPrice : sc.activities[0].unitPrice
-        return Number(v) > 0 ? v : ''
-      },
-      apply: (sc, v) => {
-        if (recurring) sc.activities[0].recurringPrice = v
-        else sc.activities[0].unitPrice = v
-      },
-    }))
+    const m = mode()
+    if (m === 'commission') { fieldHost.replaceChildren(commissionFields(ctx)); return }
+    const recurring = m === 'abonnement' || m === 'mixte'
+    const nodes = []
+    if (m === 'unitaire' || m === 'mixte') {
+      nodes.push(field(ctx, {
+        type: 'number', placeholder: '500', suffix: m === 'mixte' ? '\u20AC à la signature' : '\u20AC',
+        value: (sc) => (Number(sc.activities[0].unitPrice) > 0 ? sc.activities[0].unitPrice : ''),
+        apply: (sc, v) => { sc.activities[0].unitPrice = v },
+      }))
+    }
+    if (recurring) {
+      nodes.push(field(ctx, {
+        type: 'number', placeholder: '49', suffix: '\u20AC par mois',
+        value: (sc) => (Number(sc.activities[0].recurringPrice) > 0 ? sc.activities[0].recurringPrice : ''),
+        apply: (sc, v) => { sc.activities[0].recurringPrice = v },
+      }))
+    }
+    fieldHost.replaceChildren(...nodes)
   }
+
+  const setMode = (patch) => store.update((sc) => patch(sc), { label: 'Modèle de revenu', silent: true })
 
   ctx.onChoice = drawField
   const picker = choice(ctx, [
     {
-      label: 'Une fois', note: 'Le client paie et c\u2019est réglé',
-      active: () => !isRecurring(),
-      pick: () => store.update((sc) => {
-        const act = sc.activities[0]
-        if (!(Number(act.unitPrice) > 0)) act.unitPrice = Number(act.recurringPrice) || 0
-        act.recurringPrice = 0; act.recurringCost = 0; act.contractMonths = 0
-      }, { label: 'Type de prix', silent: true }),
+      label: 'À la vente', note: 'Le client paie une fois, et c’est réglé.',
+      active: () => mode() === 'unitaire',
+      pick: () => setMode((sc) => {
+        const a = sc.activities[0]
+        sc.meta.revenueModel = 'unitaire'
+        if (!(Number(a.unitPrice) > 0)) a.unitPrice = 0
+        a.recurringPrice = 0; a.recurringCost = 0; a.contractMonths = 0
+      }),
     },
     {
-      label: 'Tous les mois', note: 'Un abonnement qui se répète',
-      active: () => isRecurring(),
-      pick: () => store.update((sc) => {
-        const act = sc.activities[0]
-        if (!(Number(act.recurringPrice) > 0)) act.recurringPrice = Math.max(10, Math.round((Number(act.unitPrice) || 300) / 10))
-        act.unitPrice = 0; act.unitCost = 0
-        if (!(Number(act.contractMonths) > 0)) act.contractMonths = 12
-        if (!(Number(act.churnMonthly) > 0)) act.churnMonthly = 0.03
-      }, { label: 'Type de prix', silent: true }),
+      label: 'Par abonnement', note: 'Il paie tous les mois tant qu’il reste.',
+      active: () => mode() === 'abonnement',
+      pick: () => setMode((sc) => {
+        const a = sc.activities[0]
+        sc.meta.revenueModel = 'abonnement'
+        a.unitPrice = 0; a.unitCost = 0
+        if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
+        if (!(Number(a.churnMonthly) > 0)) a.churnMonthly = 0.03
+      }),
+    },
+    {
+      label: 'Les deux', note: 'Un montant à la signature, puis un abonnement.',
+      active: () => mode() === 'mixte',
+      pick: () => setMode((sc) => {
+        const a = sc.activities[0]
+        sc.meta.revenueModel = 'mixte'
+        if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
+      }),
+    },
+    {
+      label: 'À la commission', note: 'Vous prélevez un pourcentage sur ce qui passe par vous.',
+      active: () => mode() === 'commission',
+      pick: () => setMode((sc) => {
+        const a = sc.activities[0]
+        sc.meta.revenueModel = 'commission'
+        sc.meta.commissionBasket = sc.meta.commissionBasket || 0
+        sc.meta.commissionRate = sc.meta.commissionRate || 0.1
+        a.recurringPrice = 0; a.recurringCost = 0; a.contractMonths = 0; a.unitCost = 0
+        a.unitPrice = Math.round((sc.meta.commissionBasket || 0) * (sc.meta.commissionRate || 0))
+      }),
     },
   ])
 
   drawField()
   return h('div', {}, picker, fieldHost)
+}
+
+/**
+ * La commission : deux nombres, et le prix unitaire s'en déduit.
+ * Ce que Fizzy enregistre reste un prix par transaction — le moteur n'a pas
+ * besoin de connaître la notion de commission, seulement son résultat.
+ */
+function commissionFields(ctx) {
+  const recompute = (sc) => {
+    sc.activities[0].unitPrice = Math.round((Number(sc.meta.commissionBasket) || 0) * (Number(sc.meta.commissionRate) || 0))
+  }
+  return h('div', {},
+    field(ctx, {
+      type: 'number', placeholder: '1200', suffix: '\u20AC par transaction',
+      value: (sc) => (Number(sc.meta.commissionBasket) > 0 ? sc.meta.commissionBasket : ''),
+      apply: (sc, v) => { sc.meta.commissionBasket = v; recompute(sc) },
+    }),
+    h('p', { class: 'setup-note' }, 'Le montant moyen de ce qui passe par vous.'),
+    field(ctx, {
+      type: 'number', placeholder: '10', suffix: '% pour vous',
+      value: (sc) => (Number(sc.meta.commissionRate) > 0 ? Math.round(sc.meta.commissionRate * 1000) / 10 : ''),
+      apply: (sc, v) => { sc.meta.commissionRate = (Number(v) || 0) / 100; recompute(sc) },
+    }),
+  )
 }
 
 function costScreen(ctx) {
@@ -548,23 +681,73 @@ function growthScreen(ctx) {
 
 /* ──────────────────── Écran : rémunération et frais ─────────────────────── */
 
+/**
+ * Votre rémunération, et ce qu'elle coûte vraiment.
+ *
+ * Le statut n'est pas demandé : il découle de la forme juridique choisie deux
+ * questions plus tôt. On l'affiche pour que le fondateur comprenne pourquoi le
+ * même brut ne coûte pas la même chose selon la société qu'il a créée.
+ */
 function salaryScreen(ctx) {
+  const me = () => store.scenario.team?.find((x) => ME.test(x.role || ''))
+  const type = () => me()?.contractType || (['SARL', 'EURL', 'EI', 'BNC', 'SELARL'].includes(store.scenario.meta.legalForm) ? 'tns' : 'dirigeant')
+  const label = () => (type() === 'tns' ? 'Dirigeant TNS' : 'Dirigeant assimilé salarié')
+
+  const host = h('div', { class: 'setup-salary-echo' })
+  const draw = () => {
+    const m = me()
+    const gross = Number(m?.monthlyGross) || 0
+    if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laissez vide si vous ne vous versez rien la première année.')); return }
+    let c = null
+    try { c = monthlyCost({ ...m, monthlyGross: gross }, { headcount: 1, fiscal: store.scenario.fiscal }) } catch { /* rien */ }
+    if (!c) { host.replaceChildren(); return }
+    host.replaceChildren(
+      h('div', { class: 'ladder' },
+        ladderRow('Coût pour l’entreprise', euro(c.superGross), 'top'),
+        ladderRow(type() === 'tns' ? 'Votre rémunération' : 'Votre brut', euro(gross)),
+        ladderRow('Ce que vous touchez', euro(c.net), 'bottom'),
+      ),
+      h('p', { class: 'setup-note' },
+        type() === 'tns'
+          ? `Statut ${label()} : les cotisations s’ajoutent à votre rémunération. L’impôt sur le revenu s’applique ensuite.`
+          : `Statut ${label()} : cotisations patronales puis salariales. L’impôt sur le revenu s’applique ensuite.`),
+    )
+  }
+
+  const f = field(ctx, {
+    type: 'number', placeholder: '2500',
+    suffix: type() === 'tns' ? '\u20AC par mois' : '\u20AC brut par mois',
+    value: (sc) => {
+      const m = sc.team?.find((x) => ME.test(x.role || ''))
+      return m && Number(m.monthlyGross) > 0 ? m.monthlyGross : ''
+    },
+    apply: (sc, v) => {
+      let m = sc.team?.find((x) => ME.test(x.role || ''))
+      if (!m) { m = newTeamMember({ role: 'Moi', contractType: type(), status: 'cadre', monthlyGross: v }); sc.team.push(m) }
+      m.monthlyGross = v
+      m.contractType = type()
+    },
+  })
+
+  // L'échelle se redessine à la frappe ; le champ, lui, reste en place.
+  const tick = ctx.tick
+  ctx.tick = () => { tick(); draw() }
+  draw()
+
   return h('div', {},
-    field(ctx, {
-      type: 'number', placeholder: '2500', suffix: '\u20AC brut par mois',
-      value: (sc) => {
-        const m = sc.team?.find((x) => ME.test(x.role || ''))
-        return m && Number(m.monthlyGross) > 0 ? m.monthlyGross : ''
-      },
-      apply: (sc, v) => {
-        let m = sc.team?.find((x) => ME.test(x.role || ''))
-        if (!m) { m = newTeamMember({ role: 'Moi', contractType: 'cdi', monthlyGross: v }); sc.team.push(m) }
-        m.monthlyGross = v
-      },
-    }),
-    h('p', { class: 'setup-note' }, 'Laissez vide si vous ne vous versez rien la première année. Vous pourrez le changer à tout moment.'),
+    h('div', { class: 'setup-status' },
+      h('span', { class: 'setup-status-tag' }, 'Votre statut'),
+      h('span', { class: 'setup-status-value' }, label()),
+      h('span', { class: 'setup-status-why' }, `découle de la forme ${store.scenario.meta.legalForm}`),
+    ),
+    f, host,
   )
 }
+
+const ladderRow = (label, value, tone = '') => h('div', { class: `ladder-row ${tone}` },
+  h('span', {}, label),
+  h('span', { class: 'num' }, value),
+)
 
 /**
  * Les frais, sous forme de cases à cocher.

@@ -78,11 +78,19 @@ const row = (label, value, tone = '') => h('div', { class: 'account-row' },
 
 /* ─────────────────────────────── Les plans ──────────────────────────────── */
 
+/**
+ * Les plans, repliés.
+ *
+ * La liste occupait la moitié de la page pour une action qu'on fait une fois
+ * par mois. Un chevron suffit : ouvert, on choisit ; fermé, on voit combien il
+ * y en a et on passe.
+ */
 function plansCard(plans, navigate, refresh) {
-  return h('section', { class: 'panel mt' },
-    h('div', { class: 'panel-head' },
+  return h('details', { class: 'panel mt plans-fold' },
+    h('summary', { class: 'panel-head' },
       h('h2', {}, `Mes plans`),
       h('p', { class: 'panel-sub' }, `${plans.length} plan${plans.length > 1 ? 's' : ''} · le dernier modifié en premier`),
+      h('span', { class: 'plans-chevron', 'aria-hidden': 'true' }, '\u203A'),
     ),
     h('div', { class: 'plan-list' },
       ...plans.map((p) => planRow(p, navigate, refresh)),

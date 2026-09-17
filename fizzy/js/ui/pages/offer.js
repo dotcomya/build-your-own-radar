@@ -79,57 +79,60 @@ function activityCard(a, index, r, level, open, refresh) {
       detail && h('div', { style: { marginRight: '8px' } }, sparkline({ values: yearly(detail.total), color: PALETTE[index % PALETTE.length] })),
       h('span', { class: 'disclose' }, '›'),
     ),
-    isOpen && h('div', { class: 'item-body' },
-      h('div', { class: 'grid grid-2 mt' },
-        textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
-        level !== 'easy' && selectField({
-          label: 'Taux de TVA', value: a.vatRateSales,
-          options: [
-            { value: 0.2, label: '20 % — taux normal' },
-            { value: 0.1, label: '10 % — restauration, transport, travaux' },
-            { value: 0.055, label: '5,5 % — alimentaire, livres, énergie' },
-            { value: 0.021, label: '2,1 % — presse, médicaments' },
-            { value: 0, label: '0 % — exonéré ou franchise en base' },
-          ],
-          help: 'tva',
-          onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
-        }),
+    isOpen && h('div', { class: 'item-body sliced' },
+      block(1, "L'offre", null, null,
+        h('div', { class: 'grid grid-2' },
+          textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
+          level !== 'easy' && selectField({
+            label: 'Taux de TVA', value: a.vatRateSales,
+            options: [
+              { value: 0.2, label: '20 % — taux normal' },
+              { value: 0.1, label: '10 % — restauration, transport, travaux' },
+              { value: 0.055, label: '5,5 % — alimentaire, livres, énergie' },
+              { value: 0.021, label: '2,1 % — presse, médicaments' },
+              { value: 0, label: '0 % — exonéré ou franchise en base' },
+            ],
+            help: 'tva',
+            onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
+          }),
+        ),
       ),
 
-      section('Prix et coût de revient'),
-      h('div', { class: 'grid grid-4' },
-        numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', hint: `Ce que paie un ${voc.client} pour une ${voc.one}.`, onInput: (v) => set({ unitPrice: v }) }),
-        numberField({ label: `Coût de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: `Ce qu'une ${voc.one} vous coûte directement : achats, sous-traitance, consommables.`, onInput: (v) => set({ unitCost: v }) }),
-        numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '€ HT', hint: 'Laissez à 0 si vente ponctuelle.', onInput: (v) => set({ recurringPrice: v }) }),
-        numberField({ label: 'Coût mensuel récurrent', field: 'recurringPrice', value: a.recurringCost, suffix: '€ HT', hint: 'Hébergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
+      block(2, 'Prix et coût de revient', `Ce que paie un ${voc.client}, et ce que la vente vous coûte directement.`, null,
+        h('div', { class: 'grid grid-2' },
+          numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT', onInput: (v) => set({ unitPrice: v }) }),
+          numberField({ label: `Coût de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '€ HT', hint: 'Achats, sous-traitance, consommables. Ni loyer ni salaires.', onInput: (v) => set({ unitCost: v }) }),
+          numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '€ HT', hint: 'Laissez à 0 si vente ponctuelle.', onInput: (v) => set({ recurringPrice: v }) }),
+          numberField({ label: 'Coût mensuel récurrent', field: 'recurringPrice', value: a.recurringCost, suffix: '€ HT', hint: 'Hébergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
+        ),
+        margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
+          h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
+          marginAdvice(margin)),
+        (Number(a.recurringPrice) || 0) > 0 && h('div', { class: 'grid grid-2 mt' },
+          numberField({ label: 'Durée du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
+          numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c’est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+        ),
       ),
-      margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
-        h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
-        marginAdvice(margin)),
 
-      (Number(a.recurringPrice) || 0) > 0 && h('div', { class: 'grid grid-2 mt' },
-        numberField({ label: 'Durée du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', hint: "Durée pendant laquelle l'abonnement est facturé.", onInput: (v) => set({ contractMonths: v }) }),
-        numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: 'Part des clients qui résilient chaque mois. 2 % par mois signifie perdre un quart de sa base en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+      block(3, 'Volumes de vente', `Combien de ${voc.many}, et à quel rythme.`, null,
+        volumesEditor(a, setVolumes, level, detail),
       ),
 
-      section('Volumes de vente'),
-      volumesEditor(a, setVolumes, level, detail),
-
-      level !== 'easy' && [
-        section('Conditions de paiement', 'Ces délais ne changent pas votre résultat, mais déterminent votre trésorerie et votre besoin en fonds de roulement.', 'bfr'),
-        h('div', { class: 'grid grid-4' },
-          numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', hint: 'Entre la commande et la livraison.', onInput: (v) => set({ deliveryLag: v }) }),
-          numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = paiement comptant.', onInput: (v) => set({ paymentLag: v }) }),
+      level !== 'easy' && block(4, 'Conditions de paiement',
+        'Ces délais ne changent pas votre résultat, mais ils décident de votre trésorerie.', 'bfr',
+        h('div', { class: 'grid grid-2' },
+          numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
+          numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
           numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement votre besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
-          numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, hint: 'Versé à mi-livraison.', onInput: (v) => set({ milestone: v }) }),
+          numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
         ),
         h('div', { class: 'note plain', style: { marginTop: '10px' } },
-          `Répartition : ${pct(a.deposit || 0, 0)} à la commande, ${pct(a.milestone || 0, 0)} à mi-parcours, ${pct(Math.max(0, 1 - (a.deposit || 0) - (a.milestone || 0)), 0)} à la livraison.`),
+          `${pct(a.deposit || 0, 0)} à la commande, ${pct(a.milestone || 0, 0)} à mi-parcours, ${pct(Math.max(0, 1 - (a.deposit || 0) - (a.milestone || 0)), 0)} à la livraison.`),
         h('div', { class: 'grid grid-2 mt' },
           numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance votre activité.', onInput: (v) => set({ costPaymentLag: v }) }),
           numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
         ),
-      ],
+      ),
 
       level === 'advanced' && priceEvolution(a, set),
 
@@ -246,10 +249,24 @@ function marginAdvice(margin) {
   return "Marge élevée, caractéristique des services et du logiciel. Chaque nouveau client contribue fortement à couvrir vos frais fixes."
 }
 
-function section(title, hint, glossaryKey) {
-  return h('div', { style: { margin: '20px 0 10px' } },
-    h('h4', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, title, glossaryKey && helpButton(glossaryKey)),
-    hint && h('div', { class: 'field-hint', style: { marginTop: '3px', maxWidth: '70ch' } }, hint),
+/**
+ * Un bloc de saisie.
+ *
+ * Les quatre groupes d'une offre — l'identité, le prix, les volumes, les
+ * délais — se lisaient à la suite dans un même corps, séparés par de simples
+ * titres. C'était un formulaire. Chacun a maintenant sa surface, sa règle et
+ * son numéro : on voit qu'il y a quatre sujets, et on peut n'en traiter qu'un.
+ */
+function block(n, title, hint, glossaryKey, ...children) {
+  return h('section', { class: 'slice' },
+    h('div', { class: 'slice-head' },
+      h('span', { class: 'slice-no num' }, String(n)),
+      h('div', {},
+        h('h4', { class: 'slice-title' }, title, glossaryKey && helpButton(glossaryKey)),
+        hint && h('div', { class: 'slice-hint' }, hint),
+      ),
+    ),
+    h('div', { class: 'slice-body' }, ...children.filter(Boolean)),
   )
 }
 

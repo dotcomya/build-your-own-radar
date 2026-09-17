@@ -24,7 +24,6 @@ import { renderResults } from './ui/pages/results.js'
 import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
 import { renderFounder } from './ui/pages/founder.js'
-import { renderJourney } from './ui/pages/journey.js'
 import { renderModel } from './ui/pages/model.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { journey, points } from './engine/journey.js'
@@ -33,7 +32,6 @@ import { guideBar } from './ui/guide.js'
 import { renderAccount } from './ui/pages/account.js'
 
 const PAGES = {
-  parcours: { label: 'Mon parcours', icon: '◍', render: renderJourney, levels: ['easy', 'intermediate', 'advanced'], tab: true },
   'tableau-de-bord': { label: 'Tableau de bord', icon: '◱', render: renderDashboard, levels: ['easy', 'intermediate', 'advanced'], tab: true },
   modele: { label: 'Mon modèle', icon: '◈', render: renderModel, levels: ['easy', 'intermediate', 'advanced'], tab: true },
   offre: { label: 'Offre et clients', icon: '◑', render: renderOffer, levels: ['easy', 'intermediate', 'advanced'], tab: true },
@@ -51,9 +49,9 @@ const PAGES = {
 // L'ordre du rail suit le parcours, pas l'organigramme d'un cabinet : on
 // construit d'abord, on analyse ensuite.
 const GROUPS = [
-  { title: '', keys: ['parcours'] },
   { title: 'Construire', keys: ['modele', 'offre', 'marketing', 'equipe', 'charges', 'financement'] },
-  { title: 'Lire', keys: ['tableau-de-bord', 'resultats', 'mon-revenu', 'business-case'] },
+  { title: '', keys: ['tableau-de-bord'] },
+  { title: 'Analyser', keys: ['resultats', 'mon-revenu', 'business-case'] },
   { title: '', keys: ['compte', 'reglages'] },
 ]
 
@@ -92,9 +90,9 @@ function render({ preserveScroll = false } = {}) {
     return
   }
 
-  const page = PAGES[key] || PAGES.parcours
-  if (!PAGES[key]) { navigate('#/parcours'); return }
-  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/parcours'); return }
+  const page = PAGES[key] || PAGES['tableau-de-bord']
+  if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
+  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/tableau-de-bord'); return }
 
   const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render))
   clear(root).appendChild(h('div', { class: 'shell' },
@@ -218,7 +216,7 @@ function progressPill() {
   return h('button', {
     class: `progress-pill ${j.completion >= 1 ? 'complete' : ''}`,
     title: `${j.done} étapes terminées sur ${j.total}`,
-    onClick: () => navigate('#/parcours'),
+    onClick: () => navigate('#/tableau-de-bord'),
   },
     h('span', { class: 'progress-pill-bar', 'aria-hidden': 'true' },
       h('i', { style: { width: `${pts}%` } })),
@@ -241,7 +239,7 @@ function tabbar(active) {
   )
 }
 
-const shortLabel = (l) => ({ 'Mon parcours': 'Parcours', 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle',
+const shortLabel = (l) => ({ 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle',
   'Offre et clients': 'Clients', 'États financiers': 'Comptes', 'Ce que je touche': 'Ma paie',
   'Business case': 'Dossier' }[l] || l)
 
@@ -362,7 +360,7 @@ store.subscribe((_, reason) => {
 })
 
 markJourney()
-if (!location.hash) location.hash = store.scenario ? '#/parcours' : '#/'
+if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/'
 render()
 
 // Le compte s'ouvre après le premier rendu : la page ne doit jamais attendre

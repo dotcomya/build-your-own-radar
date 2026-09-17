@@ -27,20 +27,7 @@ export function renderFounder(navigate, refresh) {
 
   return h('div', { class: 'content' },
     stepBanner('remuneration', journey(store.scenario, store.result), navigate),
-    h('section', { class: 'persona-banner' },
-      h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)', marginBottom: '7px' } }, `Dirigeant · ${yearLabel(y)}`),
-      h('div', { class: 'persona-question' }, "Combien puis-je dépenser, une fois tout le monde payé ?"),
-      h('p', { class: 'persona-answer' }, headline(income, r, y)),
-    ),
-
-    h('div', { class: 'takehome' },
-      bigNumber('Disponible', row.disposable, `soit ${euro(row.monthly)} par mois`, 'signal'),
-      h('div', { class: 'takehome-split' },
-        splitCell('Salaire net', row.netBeforeTax, row.gross > 0 ? `sur ${euro(row.gross)} de brut` : 'aucune rémunération'),
-        splitCell('Dividendes nets', row.netDividends, row.grossDividends > 0 ? `sur ${euro(row.grossDividends)} distribués` : 'aucune distribution'),
-        splitCell("Impôt sur le revenu", -row.incomeTax, `taux marginal ${pct(row.marginalRate, 0)}`, true),
-      ),
-    ),
+    payLadder(income, row, r, y),
 
     h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
       waterfall(income, r, y),
@@ -80,6 +67,67 @@ export function renderFounder(navigate, refresh) {
     ),
 
     tutorial('remuneration', navigate),
+  )
+}
+
+/**
+ * L'échelle : quatre marches, dans l'ordre où l'argent descend.
+ *
+ * La page ouvrait sur une cascade de douze lignes — exacte, et illisible pour
+ * qui découvre la différence entre un brut et un super brut. Ces quatre
+ * montants-là sont ceux qu'on retient, et chacun porte en une phrase ce qui le
+ * sépare du précédent. Le détail complet reste juste en dessous.
+ */
+function payLadder(income, row, r, y) {
+  const salaryCost = row.employerCost || 0
+  const employerCharges = salaryCost - (row.gross || 0)
+  const employeeCharges = (row.gross || 0) - (row.netBeforeTax || 0)
+  const steps = [
+    row.gross > 0 ? {
+      k: "Ce que l'entreprise débourse",
+      v: salaryCost,
+      note: `Le « super brut » : votre brut plus ${euro(employerCharges)} de cotisations patronales.`,
+      tone: 'cost',
+    } : null,
+    row.gross > 0 ? {
+      k: 'Votre salaire brut',
+      v: row.gross,
+      note: `Ce qui figure sur la fiche de paie, avant ${euro(employeeCharges)} de cotisations salariales.`,
+    } : null,
+    row.gross > 0 ? {
+      k: 'Votre net avant impôt',
+      v: row.netBeforeTax,
+      note: "Ce qui arrive sur le compte chaque mois, avant l'impôt sur le revenu.",
+    } : null,
+    row.grossDividends > 0 ? {
+      k: 'Vos dividendes nets',
+      v: row.netDividends,
+      note: `Sur ${euro(row.grossDividends)} distribués, après prélèvements sociaux${row.dividendIncomeTax > 0 ? ' et flat tax' : ''}.`,
+    } : null,
+    {
+      k: 'Ce qui vous reste, net de tout',
+      v: row.disposable,
+      note: `Impôt sur le revenu déduit — tranche marginale ${pct(row.marginalRate, 0)}. Soit ${euro(row.monthly)} par mois.`,
+      tone: 'final',
+    },
+  ].filter(Boolean)
+
+  return h('section', { class: 'pay' },
+    h('div', { class: 'pay-head' },
+      h('h2', {}, 'De ce que paie l’entreprise à ce que vous touchez'),
+      h('span', { class: 'pay-year' }, yearLabel(y)),
+    ),
+    h('div', { class: 'pay-steps' },
+      ...steps.map((st, i) => h('div', { class: `pay-step ${st.tone || ''}` },
+        h('div', { class: 'pay-step-main' },
+          h('span', { class: 'pay-step-k' }, st.k),
+          h('span', { class: 'pay-step-v num' }, euro(st.v)),
+        ),
+        h('p', { class: 'pay-step-note' }, st.note),
+      )),
+    ),
+    row.costPerEuro > 0 ? h('p', { class: 'pay-foot' },
+      `Autrement dit : l'entreprise doit produire ${num(row.costPerEuro, 2)} € de valeur pour en laisser 1 € dans votre poche.`) : null,
   )
 }
 
