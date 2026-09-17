@@ -1,6 +1,6 @@
 /** Charges externes et investissements. */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, pageBar } from '../dom.js'
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -34,44 +34,68 @@ export function renderCosts(navigate, refresh) {
 
   const missing = OPEX_TEMPLATES.filter((t) => !s.opex.some((o) => o.label === t.label))
 
+  const views = [
+    { key: 'charges', label: 'Charges', count: s.opex.length },
+    level !== 'easy' || s.capex.length ? { key: 'invest', label: 'Investissements', count: s.capex.length } : null,
+    r && s.opex.length > 0 ? { key: 'repartition', label: 'Répartition' } : null,
+  ]
+  const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
+  renderCosts.view = view
+
+  const addCapex = () => { store.update((sc) => sc.capex.push(newCapex()), { label: "Ajout d'investissement" }); refresh() }
+  const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
+
   return h('div', { class: 'content' },
     stepBanner('charges', journey(store.scenario, store.result), navigate),
 
-    s.opex.length === 0 && h('div', { class: 'card mb' },
-      h('div', { class: 'empty' },
-        h('div', { class: 'empty-icon' }, '▦'),
-        h('h3', {}, 'Aucune charge saisie'),
-        h('p', { class: 'muted', style: { maxWidth: '54ch', margin: '0 auto 4px' } },
-          "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoutez-les d'un clic, puis ajustez les montants."),
-        h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
-      ),
+    pageBar(
+      view === 'invest' ? 'Investissements' : 'Charges de fonctionnement',
+      view === 'invest'
+        ? "Le matériel durable n'est pas une charge de l'année : son coût s'étale sur sa durée d'usage."
+        : `${euro(monthlyTotal)} par mois, soit ${euro(monthlyTotal * 12)} par an`,
+      view === 'charges' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCustom }, '＋ Ajouter une charge') : null,
+      view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
     ),
 
-    ...s.opex.map((o) => opexRow(o, r, level, refresh)),
+    tabs(views, view, (k) => { renderCosts.view = k; refresh() }),
 
-    h('div', { class: 'row-wrap mt' },
-      h('button', { class: 'btn', onClick: addCustom }, '＋ Charge sur mesure'),
-      ...missing.slice(0, 5).map((t) => h('button', { class: 'btn btn-sm btn-ghost', onClick: () => addFromTemplate(t) }, `+ ${t.label}`)),
-    ),
+    view === 'charges' ? h('div', { class: 'view' },
+      s.opex.length === 0
+        ? h('div', { class: 'card' }, h('div', { class: 'empty' },
+            h('div', { class: 'empty-icon' }, '▦'),
+            h('h3', {}, 'Aucune charge saisie'),
+            h('p', { class: 'muted', style: { maxWidth: '54ch', margin: '0 auto 4px' } },
+              "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoutez-les d'un clic, puis ajustez les montants."),
+            h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
+          ))
+        : h('div', {}, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
 
-    r && s.opex.length > 0 && h('div', { class: 'grid grid-2 mt' },
-      h('div', { class: 'card' },
-        h('div', { class: 'card-head' }, h('h2', {}, 'Répartition des charges'), h('span', { class: 'tiny muted' }, 'Année 1')),
-        h('div', { class: 'card-body' },
-          donut({ items: r.opex.perItem.map((i, idx) => ({ label: i.label, value: i.yearly[0], color: PALETTE[idx % PALETTE.length] })) }),
+      missing.length > 0 ? h('div', { class: 'suggest' },
+        h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
+        ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: () => addFromTemplate(t) }, `＋ ${t.label}`)),
+      ) : null,
+    ) : null,
+
+    view === 'invest' ? h('div', { class: 'view' }, capexSection(s, r, level, refresh)) : null,
+
+    view === 'repartition' && r ? h('div', { class: 'view' },
+      h('div', { class: 'board-pair' },
+        h('div', { class: 'card' },
+          h('div', { class: 'card-head' }, h('h2', {}, 'Répartition des charges'), h('span', { class: 'spacer' }), h('span', { class: 'tiny muted' }, 'Année 1')),
+          h('div', { class: 'card-body' },
+            donut({ items: r.opex.perItem.map((i, idx) => ({ label: i.label, value: i.yearly[0], color: PALETTE[idx % PALETTE.length] })) }),
+          ),
+        ),
+        h('div', { class: 'card' },
+          h('div', { class: 'card-head' }, h('h2', {}, 'Évolution')),
+          h('div', { class: 'card-body' },
+            barChart({ categories: YEAR_CATEGORIES, series: [{ label: 'Charges externes', values: r.opex.yearly, color: PALETTE[2] }] }),
+            h('div', { class: 'note plain mt' },
+              `Ces charges représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.yearly[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Combinées à la masse salariale, elles fixent votre point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.`),
+          ),
         ),
       ),
-      h('div', { class: 'card' },
-        h('div', { class: 'card-head' }, h('h2', {}, 'Évolution')),
-        h('div', { class: 'card-body' },
-          barChart({ categories: YEAR_CATEGORIES, series: [{ label: 'Charges externes', values: r.opex.yearly, color: PALETTE[2] }] }),
-          h('div', { class: 'note plain mt' },
-            `Ces charges représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.yearly[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Combinées à la masse salariale, elles fixent votre point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.`),
-        ),
-      ),
-    ),
-
-    capexSection(s, r, level, refresh),
+    ) : null,
 
     tutorial('charges', navigate),
   )
@@ -194,15 +218,11 @@ function capexSection(s, r, level, refresh) {
       h('div', { class: 'note-title' }, 'Investissements'),
       "Passez en niveau Intermédiaire pour ajouter du matériel, des aménagements ou du crédit-bail, et suivre leur amortissement.")
   }
-  const add = () => { store.update((sc) => sc.capex.push(newCapex()), { label: 'Ajout d\'investissement' }); refresh() }
-
-  return h('div', { style: { marginTop: '32px' } },
-    h('div', { class: 'page-head' },
-      h('h2', { style: { fontSize: '21px' } }, 'Investissements'),
-      h('p', {}, "Le matériel durable n'est pas une charge de l'année : son coût est étalé sur sa durée d'usage. La trésorerie sort en une fois, le résultat est impacté progressivement."),
-    ),
+  return h('div', {},
+    s.capex.length === 0
+      ? h('p', { class: 'view-intro' }, "Aucun investissement. La trésorerie sort en une fois, le résultat est impacté progressivement par l'amortissement.")
+      : null,
     ...s.capex.map((c) => capexRow(c, r, level, refresh)),
-    h('button', { class: 'btn btn-block mt', onClick: add }, '＋ Ajouter un investissement'),
 
     r && s.capex.length > 0 && h('div', { class: 'card mt' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Amortissements'), helpButton('ebit')),

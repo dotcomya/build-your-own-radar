@@ -7,7 +7,7 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, levelBlock } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, levelBlock, tabs } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
@@ -43,38 +43,55 @@ export function renderDashboard(navigate, refresh) {
   renderDashboard.year = y
   const pickYearFn = (next) => { renderDashboard.year = next; refresh() }
 
+  const views = [
+    { key: 'pilotage', label: 'Pilotage' },
+    { key: 'analyse', label: 'Analyse' },
+    { key: 'conseils', label: 'Conseils' },
+  ]
+  const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'pilotage'
+  renderDashboard.view = view
+
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
 
     boardHead(health, s, sector, y, navigate),
 
-    cockpit(j, r, navigate),
+    tabs(views, view, (k) => { renderDashboard.view = k; refresh() }),
 
-    yearBar(y, r, pickYearFn),
+    view === 'pilotage' ? h('div', { class: 'view board-stack' },
+      cockpit(j, r, navigate),
+      yearBar(y, r, pickYearFn),
+      (() => {
+        const figs = keyFigures(r, s, y, navigate)
+        const flow = moneyPanel(r, y)
+        // Le tableau de bord suit le geste : les six nombres et la cascade se
+        // réécrivent à chaque pixel du curseur, sans redessiner la page.
+        renderDashboard.live = (provisional) => {
+          try { figs.updateWith(provisional); flow.updateWith(provisional) } catch { /* rendu concurrent */ }
+        }
+        return h('div', { class: 'board-stack' }, figs, controlDeck(persona, s, r, refresh), flow)
+      })(),
+    ) : null,
 
-    keyFigures(r, s, y, navigate),
-
-    controlDeck(persona, s, r, refresh),
-
-    h('section', { class: 'panel story-panel' },
-      h('div', { class: 'card-head' },
-        h('div', {},
-          h('h2', {}, 'Les cinq ans qui viennent'),
-          h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
+    view === 'analyse' ? h('div', { class: 'view board-stack' },
+      h('section', { class: 'panel story-panel' },
+        h('div', { class: 'card-head' },
+          h('div', {},
+            h('h2', {}, 'Trajectoire sur cinq ans'),
+            h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
+          ),
+          h('span', { class: 'spacer' }),
+          h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
         ),
-        h('span', { class: 'spacer' }),
-        h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
+        // La frise se dessine dans un cadre adapté à la largeur disponible :
+        // rétrécir un dessin de bureau rendrait ses annotations illisibles.
+        storyline(r, s, { compact: narrow() }),
       ),
-      // La frise se dessine dans un cadre adapté à la largeur disponible :
-      // rétrécir un dessin de bureau rendrait ses annotations illisibles.
-      storyline(r, s, { compact: narrow() }),
-    ),
+      ...boardCharts(r, s, y, level, sector, navigate),
+      detailDisclosure(persona, r, s, y, sector, navigate, refresh),
+    ) : null,
 
-    ...boardCharts(r, s, y, level, sector, navigate),
-
-    adviceTabs(r, s, sector, y, navigate, refresh),
-
-    detailDisclosure(persona, r, s, y, sector, navigate, refresh),
+    view === 'conseils' ? h('div', { class: 'view' }, adviceTabs(r, s, sector, y, navigate, refresh)) : null,
   )
 }
 
@@ -175,12 +192,18 @@ function controlDeck(persona, s, r, refresh) {
   const board = metricBoard(persona, r, { glossary: false })
   return h('section', { class: 'deck' },
     h('div', { class: 'deck-head' },
-      h('h2', {}, 'Les manettes'),
+      h('h2', {}, 'Simulation'),
       h('span', { class: 'spacer' }),
       h('span', { class: 'tiny muted' }, 'Tirez un curseur : tout se recalcule pendant le geste'),
     ),
     h('div', { class: 'deck-body' },
-      h('div', { class: 'deck-levers' }, leverPanel(levers, { onLive: (provisional) => board.updateWith(provisional), onDone: refresh })),
+      h('div', { class: 'deck-levers' }, leverPanel(levers, {
+        onLive: (provisional) => {
+          board.updateWith(provisional)
+          if (renderDashboard.live) renderDashboard.live(provisional)
+        },
+        onDone: refresh,
+      })),
       h('div', { class: 'deck-metrics' }, board),
     ),
   )
@@ -242,40 +265,67 @@ function verdictCard(health, navigate) {
  * sa courbe sur cinq ans : c'est la différence entre un tableau de chiffres et
  * un tableau de bord.
  */
-function keyFigures(r, s, y, navigate) {
+/** Les six nombres, calculés à part pour pouvoir être rejoués à la volée. */
+function figureSet(r, s, y) {
   const k = r.kpis, p = r.pnl
   const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
-  const figures = [
+  return [
     { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y),
       spark: p.revenue, go: 'offre' },
     { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du CA`,
       tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda' },
-    { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '—',
+    { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
       note: reached ? 'atteint' : 'non atteint',
       tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort' },
-    { label: 'Résultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
+    { label: 'R\u00e9sultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
       tone: p.netResult[y] >= 0 ? 'pos' : 'neg', spark: p.netResult, go: 'resultats' },
-    { label: 'Trésorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
+    { label: 'Tr\u00e9sorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
       note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos',
       spark: r.cash.balance, go: 'financement' },
-    { label: 'À financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
+    { label: '\u00c0 financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
       note: k.fundingNeed > 0 ? 'avant ' + monthLabel(k.cashLow.month, r.startDate) : 'caisse couverte',
       tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement' },
   ]
+}
 
-  const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
-  return h('section', { class: 'figures' },
-    ...figures.map((f) => h('button', {
-      class: `figure ${f.tone || ''}`, onClick: () => navigate(`#/${f.go}`),
-    },
+function keyFigures(r, s, y, navigate) {
+  const figures = figureSet(r, s, y)
+   const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
+  const cells = figures.map((f) => {
+    const valueEl = h('span', { class: 'figure-value num' }, f.value)
+    const noteEl = h('span', { class: 'figure-note' }, f.note)
+    const btn = h('button', { class: `figure ${f.tone || ''}`, onClick: () => navigate(`#/${f.go}`) },
       h('span', { class: 'figure-label' }, f.label),
-      h('span', { class: 'figure-value num' }, f.value),
+      valueEl,
       h('span', { class: 'figure-foot' },
-        h('span', { class: 'figure-note' }, f.note),
-        f.spark && f.spark.some((v) => v) && sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }),
+        noteEl,
+        f.spark && f.spark.some((v) => v) ? sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }) : null,
       ),
-    )),
-  )
+    )
+    return { btn, valueEl, noteEl }
+  })
+
+  const section = h('section', { class: 'figures' }, ...cells.map((c) => c.btn))
+
+  // Pendant qu'un curseur bouge, on ne redessine pas la page : on réécrit les
+  // six nombres. C'est ce qui rend le geste continu au lieu de saccadé.
+  section.updateWith = (live) => {
+    if (section.isConnected === false) return
+    const next = figureSet(live, s, y)
+    next.forEach((f, i) => {
+      const cell = cells[i]
+      if (!cell) return
+      if (cell.valueEl.textContent !== f.value) {
+        cell.valueEl.textContent = f.value
+        cell.valueEl.classList.remove('changed')
+        void cell.valueEl.offsetWidth
+        cell.valueEl.classList.add('changed')
+      }
+      cell.noteEl.textContent = f.note
+      cell.btn.className = `figure ${f.tone || ''}`
+    })
+  }
+  return section
 }
 
 /* ────────────────────── Le plan, en graphiques ───────────────────── */
@@ -292,13 +342,6 @@ function boardCharts(r, s, y, level, sector, navigate) {
   const k = r.kpis, p = r.pnl
   const out = []
 
-  out.push(panel(
-    'Où part chaque euro',
-    `De votre chiffre d'affaires à votre résultat net — ${yearLabel(y).toLowerCase()}`,
-    waterfall({ items: moneyFlow(r, y) }),
-    h('p', { class: 'chart-note' }, moneyFlowSentence(r, y)),
-  ))
-
   const trajectory = panel("Chiffre d'affaires et résultat", 'Les cinq exercices',
     barChart({
       categories: YEAR_CATEGORIES,
@@ -312,7 +355,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
         : null,
     }))
 
-  const costs = panel('Ce que coûte votre activité', 'Structure des charges, par exercice',
+  const costs = panel('Structure des charges', 'Par exercice',
     stackedBar({
       categories: YEAR_CATEGORIES,
       series: [
@@ -331,12 +374,12 @@ function boardCharts(r, s, y, level, sector, navigate) {
   // Un camembert à une part ne dit rien : il ne s'affiche qu'à partir de deux
   // sources de revenus.
   const mix = activities.length > 1
-    ? panel("D'où vient le chiffre d'affaires", 'Cumul sur cinq ans', donut({ items: activities }))
+    ? panel('Répartition du chiffre d\'affaires', 'Cumul sur cinq ans', donut({ items: activities }))
     : null
 
   const payrollY = yearly(r.payroll.gross)
   const team = payrollY.some((v) => v > 0)
-    ? panel('Ce que pèse votre équipe', 'Brut, cotisations patronales et avantages',
+    ? panel('Masse salariale', 'Brut, cotisations patronales et avantages',
         barChart({
           categories: YEAR_CATEGORIES,
           series: [
@@ -352,16 +395,54 @@ function boardCharts(r, s, y, level, sector, navigate) {
   if (mix || team) out.push(pair(mix, team))
 
   if (level !== 'easy') {
-    const bfr = panel('Ce que le cycle immobilise',
-      k.peakBfr > 0 ? "Besoin en fonds de roulement — l'argent avancé aux clients et aux stocks" : 'Le cycle dégage de la ressource',
+    const bfr = panel('Besoin en fonds de roulement',
+      k.peakBfr > 0 ? "L'argent avancé aux clients et immobilisé dans les stocks" : 'Le cycle dégage de la ressource',
       areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
-    const cashPanel = panel('Combien de temps la caisse tient',
+    const cashPanel = panel('Trésorerie',
       Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
       areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }))
     out.push(levelBlock('intermediate', 'Ce que la profondeur intermédiaire ajoute', pair(bfr, cashPanel)))
   }
 
   return out
+}
+
+
+/**
+ * Du chiffre d'affaires au résultat net.
+ *
+ * La cascade est le seul dessin qui répond à « et il m'en reste combien » sans
+ * qu'on ait à lire un compte de résultat. Elle sait se redessiner pendant
+ * qu'un curseur bouge : c'est là que la manipulation devient parlante.
+ */
+function moneyPanel(r, y) {
+  const host = h('div', { class: 'panel-body' })
+  const note = h('p', { class: 'chart-note' })
+  // Un rendu complet peut survenir entre deux images du geste : les nœuds de
+  // la passe précédente ne sont alors plus dans le document, et il n'y a plus
+  // rien à repeindre. On sort, plutôt que d'écrire dans le vide.
+  // Le premier rendu a lieu avant que le nœud ne rejoigne le document ; on ne
+  // s'abstient que pour les repeints suivants, quand un rendu complet est
+  // passé entre-temps et a détaché ce qu'on s'apprêtait à mettre à jour.
+  let painted = false
+  const paint = (res) => {
+    if (painted && !host.isConnected) return
+    painted = true
+    host.replaceChildren(waterfall({ items: moneyFlow(res, y) }))
+    note.textContent = moneyFlowSentence(res, y)
+  }
+  paint(r)
+  const section = h('section', { class: 'panel' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, 'Du chiffre d\'affaires au r\u00e9sultat net'),
+        h('div', { class: 'tiny muted' }, `Soldes interm\u00e9diaires de gestion \u2014 ${yearLabel(y).toLowerCase()}`),
+      ),
+    ),
+    host, note,
+  )
+  section.updateWith = paint
+  return section
 }
 
 /** Deux graphiques côte à côte, un seul s'il n'y en a qu'un. */
@@ -417,10 +498,10 @@ function moneyFlowSentence(r, y) {
  */
 function adviceTabs(r, s, sector, y, navigate, refresh) {
   const panels = [
-    { key: 'actions', label: 'Ce qui changerait le plus', node: () => actionsPanel(r, s, navigate, refresh) },
-    { key: 'reperes', label: 'Vos repères métier', node: () => (sector ? gaugePanel(r, s, sector, y) : null) },
+    { key: 'actions', label: 'Leviers', node: () => actionsPanel(r, s, navigate, refresh) },
+    { key: 'reperes', label: 'Repères métier', node: () => (sector ? gaugePanel(r, s, sector, y) : null) },
     {
-      key: 'alertes', label: 'À surveiller', node: () => nudgesSection(s, r, navigate),
+      key: 'alertes', label: 'Alertes', node: () => nudgesSection(s, r, navigate),
       count: () => nudges(s, r).length + store.issues.filter((i) => i.level === 'error').length,
     },
   ].map((t) => ({ ...t, built: t.node() })).filter((t) => t.built)
@@ -468,7 +549,7 @@ function actionsPanel(r, s, navigate, refresh) {
   return h('section', { class: 'panel actions-panel' },
     h('div', { class: 'card-head' },
       h('div', {},
-        h('h2', {}, 'Ce qui changerait le plus'),
+        h('h2', {}, 'Leviers classés par impact'),
         h('div', { class: 'tiny muted' },
           suggestion.shortOfCash
             ? 'Classé par ce que cela libère en trésorerie'
@@ -547,7 +628,7 @@ function gaugePanel(r, s, sector, y) {
   return h('section', { class: 'panel' },
     h('div', { class: 'card-head' },
       h('div', {},
-        h('h2', {}, `Où vous situez-vous ?`),
+        h('h2', {}, 'Position dans le métier'),
         h('div', { class: 'tiny muted' }, `Comparé aux ordres de grandeur observés — ${sector.label.toLowerCase()}`),
       ),
     ),
@@ -588,7 +669,7 @@ function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
 
   const details = h('details', { class: 'detail-block', open: open || null },
     h('summary', { class: 'detail-summary' },
-      h('span', { class: 'detail-title' }, 'Aller plus loin'),
+      h('span', { class: 'detail-title' }, 'Indicateurs détaillés'),
       h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs détaillés et les pièges du métier`),
     ),
     h('div', { class: 'detail-body' },

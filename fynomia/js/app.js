@@ -6,7 +6,7 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, toast, euro, narrow, levelFooter } from './ui/dom.js'
+import { h, clear, setDrawerHost, toast, euro, narrow, levelFooter, levelAdds } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
 import { LEVEL_META } from './state/schema.js'
@@ -65,8 +65,13 @@ function navigate(to) {
   location.hash = to.startsWith('#') ? to : `#/${to}`
 }
 
+// La route courante, retenue pour que la barre du haut puisse annoncer ce que
+// chaque profondeur ajoute à cette page-ci.
+let currentKey = ''
+
 function render({ preserveScroll = false } = {}) {
   const key = route()
+  currentKey = key
   const scrollY = preserveScroll ? window.scrollY : 0
   const activeId = preserveScroll ? document.activeElement?.dataset?.fieldKey : null
   currentRoute = key
@@ -116,6 +121,43 @@ function render({ preserveScroll = false } = {}) {
   } else {
     window.scrollTo(0, 0)
   }
+}
+
+/**
+ * Ce qu'une profondeur ajoute, en une ligne, sur la page ouverte.
+ * Le texte est porté par l'attribut : la bulle est entièrement en CSS, donc
+ * elle ne coûte ni écouteur ni rendu.
+ */
+function levelPreview(key, page) {
+  const meta = LEVEL_META[key]
+  const order = ['easy', 'intermediate', 'advanced']
+  const from = order.indexOf(store.level)
+  const to = order.indexOf(key)
+  if (to === from) return `Niveau actuel — ${meta.tagline}`
+  const gained = order.slice(Math.min(from, to) + 1, Math.max(from, to) + 1)
+    .flatMap((lvl) => levelAdds(page, lvl) || [])
+  if (!gained.length) return meta.tagline
+  return to > from
+    ? `Ajoute ici : ${gained.join(', ')}`
+    : `Masque ici : ${gained.join(', ')}`
+}
+
+/**
+ * Le changement de niveau n'est pas une rupture : la page reste la même, des
+ * éléments s'ajoutent. On le dit, et on l'anime dans ce sens.
+ */
+function switchLevel(key, meta, render) {
+  const order = ['easy', 'intermediate', 'advanced']
+  const up = order.indexOf(key) > order.indexOf(store.level)
+  store.setLevel(key)
+  render()
+  const shell = document.querySelector('.shell')
+  if (shell) {
+    shell.setAttribute('data-shift', up ? 'up' : 'down')
+    setTimeout(() => shell.removeAttribute('data-shift'), 700)
+  }
+  const gained = levelAdds(currentKey, key)
+  toast(up && gained ? `${meta.label} — ajouté : ${gained.join(', ')}` : `${meta.label} — ${meta.tagline}`)
 }
 
 function rail(active) {
@@ -195,12 +237,15 @@ function topbar(page) {
     progressPill(),
     // La profondeur ne concerne que le fondateur : les autres metiers ont un
     // perimetre defini par leur fonction, pas par un curseur de detail.
-    getPersona(store.persona).hasDepth && h('div', { class: 'levels desktop-only', title: LEVEL_META[store.level]?.description },
+    // Chaque profondeur annonce ce qu'elle ajoute à la page ouverte, avant le
+    // clic : on ne doit jamais changer de niveau sans savoir ce qui apparaît.
+    getPersona(store.persona).hasDepth && h('div', { class: 'levels desktop-only' },
       ...Object.entries(LEVEL_META).map(([k, v]) => h('button', {
         class: `level-btn ${store.level === k ? 'active' : ''}`,
         'aria-label': `Niveau ${v.label}`,
         'aria-pressed': store.level === k ? 'true' : 'false',
-        onClick: () => { store.setLevel(k); render(); toast(`${v.label} — ${v.tagline}`) },
+        'data-preview': levelPreview(k, currentKey),
+        onClick: () => switchLevel(k, v, render),
       },
         h('span', { class: 'lvl-long', 'aria-hidden': 'true' }, v.label),
         h('span', { class: 'lvl-short', 'aria-hidden': 'true' }, v.short || v.label))),

@@ -1,6 +1,6 @@
 /** États financiers : résultat, trésorerie, bilan, BFR, fiscalité. */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, pageBar } from '../dom.js'
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
@@ -20,26 +20,26 @@ export function renderResults(navigate, refresh) {
   const available = Object.entries(TABS).filter(([k]) => level === 'advanced' || ['resultat', 'tresorerie'].includes(k) || (level === 'intermediate' && k === 'fiscalite'))
   const current = available.some(([k]) => k === renderResults.tab) ? renderResults.tab : 'resultat'
 
-  return h('div', { class: 'content' },
-    h('div', { class: 'page-head' },
-      h('h1', {}, 'États financiers'),
-      h('p', {}, "Tout est calculé à partir de ce que vous avez saisi. Aucune ligne n'est à remplir ici."),
-    ),
-    h('div', { class: 'levels mb', style: { flexWrap: 'wrap' } },
-      ...available.map(([k, label]) => h('button', {
-        class: `level-btn ${current === k ? 'active' : ''}`,
-        onClick: () => { renderResults.tab = k; refresh() },
-      }, label)),
-    ),
-    current === 'resultat' ? pnlView(r, level)
-      : current === 'tresorerie' ? cashView(r, level, refresh)
-      : current === 'bilan' ? balanceView(r)
-      : current === 'bfr' ? bfrView(r)
-      : taxView(r),
+  const views = [
+    ...available.map(([k, label]) => ({ key: k, label })),
+    { key: 'revenu', label: 'Ce que vous touchez' },
+  ]
+  const view = views.some((v) => v.key === renderResults.tab) ? renderResults.tab : 'resultat'
+  renderResults.tab = view
 
-    // « Ce que je touche » n'était qu'une page de plus à trouver : c'est la
-    // dernière ligne des états financiers, elle vit désormais avec eux.
-    h('div', { class: 'merged' }, renderFounder(navigate, refresh)),
+  return h('div', { class: 'content' },
+    pageBar('États financiers', "Tout est calculé à partir de ce que vous avez saisi. Aucune ligne n'est à remplir ici."),
+
+    tabs(views, view, (k) => { renderResults.tab = k; refresh() }),
+
+    h('div', { class: 'view' },
+      view === 'resultat' ? pnlView(r, level)
+        : view === 'tresorerie' ? cashView(r, level, refresh)
+        : view === 'bilan' ? balanceView(r)
+        : view === 'bfr' ? bfrView(r)
+        : view === 'revenu' ? h('div', { class: 'merged' }, renderFounder(navigate, refresh))
+        : taxView(r),
+    ),
   )
 }
 

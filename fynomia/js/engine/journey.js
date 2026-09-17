@@ -133,7 +133,7 @@ export const STEPS = [
     page: 'equipe',
     label: 'Mon équipe',
     question: 'Qui travaille avec vous ?',
-    promise: "Vous donnez un brut mensuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
+    promise: "Vous donnez un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
     investor: "Les salaires sont le premier poste de dépense et le plus difficile à réduire. Le mois d'arrivée compte autant que le montant.",
     minutes: 6,
     unlocks: 'Masse salariale chargée et point mort',

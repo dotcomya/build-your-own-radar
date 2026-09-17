@@ -4,7 +4,7 @@
  * budget publicitaire déplace immédiatement le résultat et la trésorerie.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar } from '../dom.js'
 import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -35,32 +35,50 @@ export function renderMarketing(navigate, refresh) {
   const totalBudget = (r?.revenue.campaigns || []).reduce((a, c) => a + c.totalSpend, 0)
   const totalClients = (r?.revenue.campaigns || []).reduce((a, c) => a + c.totalClients, 0)
 
+  const views = [
+    { key: 'campagnes', label: 'Campagnes', count: s.marketing.length },
+    r && s.marketing.length > 0 ? { key: 'mix', label: 'Répartition' } : null,
+    level === 'advanced' && r && s.marketing.length > 0 ? { key: 'rentabilite', label: 'Rentabilité' } : null,
+  ]
+  const view = views.some((v) => v && v.key === renderMarketing.view) ? renderMarketing.view : 'campagnes'
+  renderMarketing.view = view
+
   return h('div', { class: 'content' },
     stepBanner('acquisition', journey(store.scenario, store.result), navigate),
 
-    r && s.marketing.length > 0 && h('div', { class: 'grid grid-4 kpis mb' },
-      tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),
-      tile('Clients acquis', num(Math.round(totalClients)), 'Toutes campagnes'),
-      tile('CAC moyen', r.kpis.cac ? euro(r.kpis.cac) : '—', "Coût d'acquisition", 'cac'),
-      tile('LTV / CAC', r.kpis.ltvCacRatio ? `${num(r.kpis.ltvCacRatio, 1)}×` : '—',
-        r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'Rentable' : r.kpis.ltvCacRatio >= 1 ? 'Juste' : 'Non rentable') : '—', 'ltv',
-        r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'pos' : r.kpis.ltvCacRatio >= 1 ? 'warn' : 'neg') : ''),
+    pageBar(
+      s.marketing.length > 1 ? `${s.marketing.length} campagnes` : 'Acquisition de clients',
+      r && totalClients > 0
+        ? `${euro(totalBudget, { compact: true })} investis pour ${num(Math.round(totalClients))} clients · ${r.kpis.cac ? euro(r.kpis.cac) : '—'} par client`
+        : 'Ce que vous dépensez pour trouver des clients, et ce que ça rapporte',
+      view === 'campagnes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter une campagne') : null,
     ),
 
-    s.marketing.length === 0
-      ? h('div', { class: 'card' }, h('div', { class: 'empty' },
-          h('div', { class: 'empty-icon' }, '◎'),
-          h('h3', {}, 'Aucune campagne'),
-          h('p', { class: 'muted', style: { maxWidth: '52ch', margin: '0 auto' } },
-            "Sans campagne, vos volumes de vente reposent uniquement sur la courbe de croissance saisie dans l'onglet Offre. Ajoutez une campagne pour relier un budget marketing à une acquisition de clients."),
-          h('button', { class: 'btn btn-primary mt', onClick: add }, 'Créer une campagne'),
-        ))
-      : h('div', {}, ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh))),
+    tabs(views, view, (k) => { renderMarketing.view = k; refresh() }),
 
-    s.marketing.length > 0 && h('button', { class: 'btn btn-block mt', onClick: add }, '＋ Ajouter une campagne'),
+    view === 'campagnes' ? h('div', { class: 'view' },
+      r && s.marketing.length > 0 ? h('div', { class: 'grid grid-4 kpis mb' },
+        tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),
+        tile('Clients acquis', num(Math.round(totalClients)), 'Toutes campagnes'),
+        tile('CAC moyen', r.kpis.cac ? euro(r.kpis.cac) : '—', "Coût d'acquisition", 'cac'),
+        tile('LTV / CAC', r.kpis.ltvCacRatio ? `${num(r.kpis.ltvCacRatio, 1)}×` : '—',
+          r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'Rentable' : r.kpis.ltvCacRatio >= 1 ? 'Juste' : 'Non rentable') : '—', 'ltv',
+          r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'pos' : r.kpis.ltvCacRatio >= 1 ? 'warn' : 'neg') : ''),
+      ) : null,
 
-    r && s.marketing.length > 0 && mixPanel(r),
-    level === 'advanced' && r && s.marketing.length > 0 && levelBlock('advanced', 'La rentabilité de votre acquisition', unitEconomicsPanel(r, s)),
+      s.marketing.length === 0
+        ? h('div', { class: 'card' }, h('div', { class: 'empty' },
+            h('div', { class: 'empty-icon' }, '◎'),
+            h('h3', {}, 'Aucune campagne'),
+            h('p', { class: 'muted', style: { maxWidth: '52ch', margin: '0 auto' } },
+              "Sans campagne, vos volumes de vente reposent uniquement sur la courbe de croissance saisie dans l'onglet Offre. Ajoutez une campagne pour relier un budget marketing à une acquisition de clients."),
+            h('button', { class: 'btn btn-primary mt', onClick: add }, 'Créer une campagne'),
+          ))
+        : h('div', {}, ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh))),
+    ) : null,
+
+    view === 'mix' && r ? h('div', { class: 'view' }, mixPanel(r)) : null,
+    view === 'rentabilite' && r ? h('div', { class: 'view' }, unitEconomicsPanel(r, s)) : null,
 
     tutorial('acquisition', navigate),
   )

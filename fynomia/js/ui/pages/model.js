@@ -1,265 +1,319 @@
 /**
- * « Ton modèle économique » — la brique dont tout le reste est fait.
+ * « Combien de clients pour vivre » — la seule question à laquelle aucune
+ * autre page ne répond.
  *
- * Un fondateur qui ouvre un prévisionnel ne sait généralement pas par où
- * commencer, parce qu'un tableur lui demande soixante chiffres à la fois. Cette
- * page n'en demande que quatre : ce que tu vends, à quel prix, ce que ça te
- * coûte, et si l'argent revient une fois ou tous les mois.
+ * Le reste du logiciel décrit : voici votre chiffre d'affaires, voici vos
+ * charges, voici votre résultat. Cette page-ci décide. Elle prend ce qu'il
+ * faut couvrir chaque mois, ce que rapporte un client, et en tire le nombre
+ * qui gouverne tout le projet — combien de clients il faut, et à quelle date
+ * vous les aurez au rythme prévu.
  *
- * Et à chaque frappe elle répond à la seule question qui compte à ce stade :
- * combien de clients il te faut pour vivre.
+ * Trois curseurs suffisent à en faire un instrument : le prix, le coût de
+ * revient, votre rémunération. Tout se recalcule pendant le geste.
  */
 
-import { h, euro, pct, num, numberField, textField } from '../dom.js'
+import { h, euro, pct, num, monthLabel, tabs, pageBar } from '../dom.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
-import { referenceYear } from '../../format.js'
-import { STEPS, journey } from '../../engine/journey.js'
+import { referenceYear } from '../impact.js'
+import { journey } from '../../engine/journey.js'
+import { compute } from '../../engine/engine.js'
 import { tutorial, stepBanner } from '../tutorial.js'
+import { areaChart, PALETTE, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 
-/** Les trois moteurs de revenu, en langage de fondateur. */
-const ENGINES = [
-  {
-    key: 'unitaire', label: 'À la vente', glyph: '◇',
-    line: 'Vous facturez une prestation, un produit, une mission.',
-    detail: "L'argent rentre une fois. Pour croître, il faut vendre à nouveau.",
-    applies: (a) => (Number(a.unitPrice) || 0) > 0 && (Number(a.recurringPrice) || 0) === 0,
-    apply(a) {
-      if (!(Number(a.unitPrice) > 0)) a.unitPrice = 500
-      a.recurringPrice = 0
-      a.recurringCost = 0
-      a.contractMonths = 0
-    },
-  },
-  {
-    key: 'abonnement', label: 'Par abonnement', glyph: '◉',
-    line: 'Vos clients paient tous les mois tant qu’ils restent.',
-    detail: "Chaque vente se répète. C'est le modèle le mieux valorisé, et le plus exigeant sur la rétention.",
-    applies: (a) => (Number(a.recurringPrice) || 0) > 0 && (Number(a.unitPrice) || 0) === 0,
-    apply(a) {
-      if (!(Number(a.recurringPrice) > 0)) a.recurringPrice = 49
-      a.unitPrice = 0
-      a.unitCost = 0
-      if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
-      if (!(Number(a.churnMonthly) > 0)) a.churnMonthly = 0.03
-    },
-  },
-  {
-    key: 'mixte', label: 'Les deux', glyph: '◈',
-    line: 'Un montant à la signature, puis un abonnement.',
-    detail: "Installation puis maintenance, matériel puis service, forfait puis suivi.",
-    applies: (a) => (Number(a.unitPrice) || 0) > 0 && (Number(a.recurringPrice) || 0) > 0,
-    apply(a) {
-      if (!(Number(a.unitPrice) > 0)) a.unitPrice = 900
-      if (!(Number(a.recurringPrice) > 0)) a.recurringPrice = 49
-      if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
-    },
-  },
-]
-
-export const engineOf = (a) => ENGINES.find((e) => e.applies(a)) || ENGINES[0]
+/**
+ * Qui est le fondateur dans l'équipe.
+ * Construit à partir d'une chaîne, jamais écrit en littéral : esbuild n'échappe
+ * pas les accents d'une expression régulière, et le fichier unique s'en trouve
+ * corrompu dès qu'il est servi sans jeu de caractères explicite.
+ */
+const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
 
 export function renderModel(navigate, refresh) {
   const s = store.scenario
   const r = store.result
-  if (!s) return h('div', { class: 'content' }, h('p', {}, 'Aucun scénario.'))
-
-  const a = s.activities?.[0]
-  if (!a) return h('div', { class: 'content' }, h('p', {}, 'Aucune offre définie.'))
-
   const voc = vocabulary(s)
-  const sector = getSector(s.meta?.sectorKey)
-  const step = STEPS.find((x) => x.key === 'modele')
-  const set = (patch, label) => store.update((sc) => Object.assign(sc.activities[0], patch), { label })
+  const sector = getSector(s.meta.sectorKey)
+
+  if (!r || !s.activities.length) {
+    return h('div', { class: 'content' },
+      stepBanner('modele', journey(s, r), navigate),
+      h('div', { class: 'card' }, h('div', { class: 'empty' },
+        h('h3', {}, 'Rien à calculer pour l’instant'),
+        h('p', { class: 'muted' }, "Renseignez une offre et un prix : ce tableau vous dira combien de clients il vous faut."),
+        h('button', { class: 'btn btn-primary mt', onClick: () => navigate('#/offre') }, 'Définir mon offre'),
+      )),
+    )
+  }
+
+  const views = [
+    { key: 'seuil', label: 'Combien de clients' },
+    { key: 'sensibilite', label: 'Ce qui change tout' },
+  ]
+  const view = views.some((v) => v.key === renderModel.view) ? renderModel.view : 'seuil'
+  renderModel.view = view
+
+  const host = h('div', { class: 'view' })
+  // Le premier rendu a lieu avant que le nœud ne rejoigne le document ; on ne
+  // s'abstient que pour les repeints suivants, quand un rendu complet est
+  // passé entre-temps et a détaché ce qu'on s'apprêtait à mettre à jour.
+  let painted = false
+  const paint = (res) => {
+    if (painted && !host.isConnected) return
+    painted = true
+    host.replaceChildren(view === 'seuil' ? breakEvenBoard(res, s, voc) : sensitivityBoard(res, s, voc))
+  }
+  paint(r)
 
   return h('div', { class: 'content' },
     stepBanner('modele', journey(s, r), navigate),
 
-    engineChooser(a, set, refresh),
+    pageBar('Votre modèle', headline(r, s, voc)),
 
-    h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
-      priceCard(a, s, voc, set, refresh),
-      verdictCard(a, s, r, voc, navigate),
-    ),
+    tabs(views, view, (k) => { renderModel.view = k; refresh() }),
 
-    sector && sectorNote(sector, voc),
+    knobs(s, voc, paint, refresh),
 
-    tutorial(step, navigate),
+    host,
+
+    sector ? h('p', { class: 'model-sector' },
+      `Repère du métier — ${sector.label.toLowerCase()} : ${sector.tagline}`) : null,
+
+    tutorial('modele', navigate),
   )
 }
 
-/* ───────────────────────── Le moteur de revenu ──────────────────────────── */
-
-function engineChooser(a, set, refresh) {
-  const active = engineOf(a)
-  return h('section', { class: 'panel' },
-    h('div', { class: 'panel-head' },
-      h('h2', {}, "D'où vient l'argent ?"),
-      h('p', { class: 'panel-sub' }, "Ce choix décide de la forme de la courbe. Il se change à tout moment : rien n'est perdu."),
-    ),
-    h('div', { class: 'engines' },
-      ...ENGINES.map((e) => h('button', {
-        class: `engine ${e.key === active.key ? 'active' : ''}`,
-        onClick: () => {
-          store.update((sc) => e.apply(sc.activities[0]), { label: `Modèle : ${e.label.toLowerCase()}` })
-          refresh()
-        },
-      },
-        h('span', { class: 'engine-glyph' }, e.glyph),
-        h('span', { class: 'engine-label' }, e.label),
-        h('span', { class: 'engine-line' }, e.line),
-        h('span', { class: 'engine-detail' }, e.detail),
-      )),
-    ),
-  )
+/** La phrase du bandeau : l'état du modèle en une ligne. */
+function headline(r, s, voc) {
+  const m = metrics(r, s)
+  if (m.marginPerClient <= 0) return `Chaque ${voc.one} vendu vous coûte plus qu'il ne rapporte : le seuil n'existe pas.`
+  if (!Number.isFinite(m.needed)) return 'Renseignez vos charges pour connaître votre seuil.'
+  return `Il vous faut ${num(Math.ceil(m.needed))} ${voc.many} par mois pour couvrir vos charges.`
 }
 
-/* ──────────────────────────── Prix et coût ──────────────────────────────── */
-
-function priceCard(a, s, voc, set, refresh) {
-  const engine = engineOf(a)
-  const fields = []
-
-  fields.push(textField({
-    label: 'Ce que vous vendez', value: a.name,
-    placeholder: `Ex. ${voc.one}`,
-    hint: "Le nom employé devant un client.",
-    onInput: (v) => set({ name: v }, 'Nom de l’offre'),
-  }))
-
-  if (engine.key !== 'abonnement') {
-    fields.push(numberField({
-      label: `Prix ${voc.unitArticle || 'd’une'} ${voc.one}`, value: a.unitPrice, field: 'unitPrice', suffix: '€',
-      hint: 'Hors taxes. Le prix que le client voit sur la facture.',
-      onInput: (v) => set({ unitPrice: v }, 'Prix'),
-    }))
-    fields.push(numberField({
-      label: 'Ce que ça vous coûte', value: a.unitCost, field: 'unitCost', suffix: '€',
-      hint: 'Tout ce qui augmente quand vous vendez une unité de plus : matières, sous-traitance, commission, livraison.',
-      onInput: (v) => set({ unitCost: v }, 'Coût de revient'),
-    }))
-  }
-
-  if (engine.key !== 'unitaire') {
-    fields.push(numberField({
-      label: 'Abonnement mensuel', value: a.recurringPrice, field: 'recurringPrice', suffix: '€/mois',
-      hint: 'Ce que le client paie chaque mois tant qu’il reste.',
-      onInput: (v) => set({ recurringPrice: v }, 'Abonnement'),
-    }))
-    fields.push(numberField({
-      label: 'Coût mensuel du service', value: a.recurringCost, field: 'recurringCost', suffix: '€/mois',
-      hint: 'Hébergement, support, licences : ce que coûte un abonné chaque mois.',
-      onInput: (v) => set({ recurringCost: v }, 'Coût récurrent'),
-    }))
-    fields.push(numberField({
-      label: 'Durée d’engagement', value: a.contractMonths, field: 'contractMonths', suffix: 'mois',
-      hint: 'Douze mois est la norme. Sans engagement, mettez 1 et comptez sur l’attrition.',
-      onInput: (v) => set({ contractMonths: v }, 'Durée de contrat'),
-    }))
-    fields.push(numberField({
-      label: 'Attrition mensuelle', value: a.churnMonthly, field: 'churnMonthly', percent: true,
-      hint: 'La part des abonnés qui partent chaque mois. 2 à 3 % est courant ; 5 % est alarmant.',
-      onInput: (v) => set({ churnMonthly: v }, 'Attrition'),
-    }))
-  }
-
-  return h('section', { class: 'panel' },
-    h('div', { class: 'panel-head' }, h('h2', {}, 'Vos quatre chiffres')),
-    h('div', { class: 'panel-body stack' }, ...fields),
-  )
-}
-
-/* ─────────────────── La réponse : combien de clients ? ──────────────────── */
+/* ─────────────────── Ce qu'il faut couvrir, et avec quoi ────────────────── */
 
 /**
- * Le chiffre qui décide.
+ * Les nombres qui gouvernent le seuil.
  *
- * Tant que le fondateur n'a pas saisi ses charges, on ne peut pas lui donner
- * son vrai point mort — mais on peut déjà lui donner sa marge unitaire, qui est
- * la moitié de la réponse, et lui dire ce qui manque pour l'autre moitié.
+ * On raisonne sur l'exercice de référence, au mois : c'est l'échelle à
+ * laquelle un fondateur pense — « combien par mois ».
  */
-function verdictCard(a, s, r, voc, navigate) {
-  const price = Number(a.unitPrice) || 0
-  const cost = Number(a.unitCost) || 0
-  const rPrice = Number(a.recurringPrice) || 0
-  const rCost = Number(a.recurringCost) || 0
-  const months = Math.max(1, Number(a.contractMonths) || 1)
+function metrics(r, s) {
+  const y = referenceYear(r)
+  const p = r.pnl
+  const months = 12
 
-  const unitMargin = price - cost
-  const monthlyMargin = rPrice - rCost
-  const lifetime = unitMargin + monthlyMargin * months
-  const marginRate = price + rPrice * months > 0 ? lifetime / (price + rPrice * months) : 0
+  const fixed = (p.external[y] + p.payroll[y] + p.duties[y] + p.amortisation[y]) / months
+  const units = r.revenue.units.slice(y * 12, y * 12 + 12).reduce((a, b) => a + b, 0)
+  const contribution = (p.revenue[y] - p.variableCost[y]) / months
+  const marginPerClient = units > 0 ? (p.revenue[y] - p.variableCost[y]) / units : 0
+  const perMonthNow = units / months
 
-  const y = r ? referenceYear(r) : 0
-  const fixed = r ? (r.kpis.fixedCosts[y] || 0) : 0
-  const clientsNeeded = lifetime > 0 && fixed > 0 ? Math.ceil(fixed / lifetime) : null
+  const founder = (s.team || [])
+    .filter((m) => m.enabled !== false && ME.test(m.role || ''))
+    .reduce((a, m) => a + (Number(m.monthlyGross) || 0) * (Number(m.count) || 1), 0)
 
-  const bad = lifetime <= 0
+  return {
+    y, fixed, contribution, marginPerClient, perMonthNow,
+    needed: marginPerClient > 0 ? fixed / marginPerClient : Infinity,
+    founder,
+    covered: contribution - fixed,
+    monthReached: firstMonthAbove(r, marginPerClient > 0 ? fixed / marginPerClient : Infinity),
+  }
+}
 
-  return h('section', { class: `panel verdict-panel ${bad ? 'is-bad' : ''}` },
-    h('div', { class: 'panel-head' },
-      h('h2', {}, bad ? 'Vous vendez à perte' : 'Ce que rapporte un client'),
-      h('p', { class: 'panel-sub' }, bad
-        ? "Le coût dépasse le prix : aucun volume ne rattrapera ça."
-        : `Sur toute la durée de la relation, marge comprise.`),
+/** Le premier mois où le volume mensuel dépasse le seuil. */
+function firstMonthAbove(r, needed) {
+  if (!Number.isFinite(needed)) return null
+  const i = r.revenue.units.findIndex((v) => v >= needed)
+  return i === -1 ? null : i
+}
+
+/**
+ * Le tableau du seuil.
+ *
+ * Un nombre énorme, et ce qui le compose de part et d'autre : ce qu'il faut
+ * couvrir, ce que rapporte un client. Rien d'autre à l'écran.
+ */
+function breakEvenBoard(r, s, voc) {
+  const m = metrics(r, s)
+  const reachable = Number.isFinite(m.needed)
+  const ratio = reachable && m.needed > 0 ? Math.min(1, m.perMonthNow / m.needed) : 0
+  const ok = m.perMonthNow >= m.needed
+
+  return h('div', {},
+    h('div', { class: 'seuil' },
+      h('div', { class: 'seuil-side' },
+        h('div', { class: 'seuil-tag' }, 'À couvrir chaque mois'),
+        h('div', { class: 'seuil-amount num' }, euro(m.fixed)),
+        h('p', { class: 'seuil-note' },
+          'Charges externes, salaires et cotisations, impôts et taxes, amortissements. Tout ce qui tombe que vous vendiez ou non.'),
+      ),
+
+      h('div', { class: `seuil-core ${ok ? 'is-ok' : ''}` },
+        h('div', { class: 'seuil-tag' }, `${voc.many} par mois`),
+        h('div', { class: 'seuil-big num' }, reachable ? num(Math.ceil(m.needed)) : '—'),
+        h('div', { class: 'seuil-meter' },
+          h('i', { style: { width: `${Math.round(ratio * 100)}%` } }),
+        ),
+        h('div', { class: 'seuil-state' },
+          reachable
+            ? ok
+              ? `Vous en êtes à ${num(Math.round(m.perMonthNow))} : le seuil est franchi.`
+              : `Vous en êtes à ${num(Math.round(m.perMonthNow))}, soit ${pct(ratio, 0)} du chemin.`
+            : 'Votre marge par client est nulle ou négative.'),
+      ),
+
+      h('div', { class: 'seuil-side' },
+        h('div', { class: 'seuil-tag' }, `Ce que rapporte un ${voc.one}`),
+        h('div', { class: 'seuil-amount num' }, euro(m.marginPerClient)),
+        h('p', { class: 'seuil-note' },
+          'Prix encaissé moins ce que la vente coûte directement. Ni loyer ni salaires : eux sont déjà de l’autre côté.'),
+      ),
     ),
-    h('div', { class: 'panel-body' },
-      h('div', { class: 'model-figure' },
-        h('span', { class: `model-figure-value num ${bad ? 'neg' : ''}` }, euro(lifetime)),
-        h('span', { class: 'model-figure-unit' }, `par ${voc.client}`),
-      ),
-      h('div', { class: 'model-breakdown' },
-        unitMargin !== 0 && breakdownRow('À la vente', euro(unitMargin), price > 0 ? pct(unitMargin / price, 0) : null),
-        monthlyMargin !== 0 && breakdownRow('Chaque mois', `${euro(monthlyMargin)}/mois`, `× ${months} mois`),
-        breakdownRow('Taux de marge', pct(marginRate, 0), null, true),
-      ),
 
+    m.monthReached !== null
+      ? h('div', { class: 'note ok mt' },
+          h('div', { class: 'note-title' }, `Seuil atteint en ${monthLabel(m.monthReached, r.startDate)}`),
+          `Au rythme de croissance que vous avez saisi, vos volumes passent au-dessus du seuil à cette date. Avant elle, chaque mois creuse la trésorerie de ${euro(Math.max(0, m.fixed - m.contribution))} en moyenne.`)
+      : h('div', { class: 'note warn mt' },
+          h('div', { class: 'note-title' }, 'Le seuil n’est jamais atteint sur cinq ans'),
+          reachable
+            ? `Il faudrait ${num(Math.ceil(m.needed))} ${voc.many} par mois et vos volumes plafonnent à ${num(Math.round(Math.max(...r.revenue.units)))}. Trois issues : monter le prix, baisser le coût de revient, ou réduire les charges fixes.`
+            : `Tant qu’un ${voc.one} rapporte moins qu’il ne coûte, aucun volume ne rend le modèle viable.`),
 
+    h('div', { class: 'card mt' },
+      h('div', { class: 'card-head' },
+        h('div', {},
+          h('h2', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} par mois, face au seuil`),
+          h('div', { class: 'tiny muted' }, 'La ligne pointillée est le nombre à dépasser'),
+        ),
+      ),
+      h('div', { class: 'card-body' },
+        areaChart({
+          values: r.revenue.units, startDate: r.startDate, height: 190,
+          color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
+        }),
+        h('p', { class: 'chart-note' },
+          reachable
+            ? `Seuil : ${num(Math.ceil(m.needed))} ${voc.many} par mois. En dessous, vous perdez de l’argent quel que soit votre chiffre d’affaires.`
+            : 'Le seuil ne peut pas être tracé tant que la marge par client est négative.'),
+      ),
     ),
   )
 }
 
-const breakdownRow = (label, value, note, strong = false) => h('div', { class: `model-row ${strong ? 'strong' : ''}` },
-  h('span', {}, label),
-  h('span', { class: 'spacer' }),
-  note ? h('span', { class: 'tiny muted' }, note) : null,
-  h('span', { class: 'num' }, value),
-)
+/* ────────────────────────── Ce qui change tout ──────────────────────────── */
 
-/* ───────────────────── L'économie unitaire, en clair ────────────────────── */
+/**
+ * La sensibilité du seuil.
+ *
+ * Trois questions valent toutes les explications : si j'augmente mon prix de
+ * 10 %, combien de clients en moins me faut-il ? Et si je baisse mon coût de
+ * revient ? Et si je me paie plus ? Chaque réponse est obtenue en rejouant le
+ * modèle entier, pas estimée.
+ */
+function sensitivityBoard(r, s, voc) {
+  const base = metrics(r, s)
 
-function unitEconomics(a, s, r, voc) {
-  const price = (Number(a.unitPrice) || 0) + (Number(a.recurringPrice) || 0) * Math.max(1, Number(a.contractMonths) || 1)
-  const cost = (Number(a.unitCost) || 0) + (Number(a.recurringCost) || 0) * Math.max(1, Number(a.contractMonths) || 1)
-  if (price <= 0) return null
-  const margin = Math.max(0, price - cost)
-  const marginPart = Math.max(0, Math.min(100, (margin / price) * 100))
+  const trials = [
+    { label: 'Prix de vente +10 %', apply: (sc) => sc.activities.forEach((a) => { a.unitPrice = (Number(a.unitPrice) || 0) * 1.1; a.recurringPrice = (Number(a.recurringPrice) || 0) * 1.1 }) },
+    { label: 'Prix de vente −10 %', apply: (sc) => sc.activities.forEach((a) => { a.unitPrice = (Number(a.unitPrice) || 0) * 0.9; a.recurringPrice = (Number(a.recurringPrice) || 0) * 0.9 }) },
+    { label: 'Coût de revient −20 %', apply: (sc) => sc.activities.forEach((a) => { a.unitCost = (Number(a.unitCost) || 0) * 0.8; a.recurringCost = (Number(a.recurringCost) || 0) * 0.8 }) },
+    { label: 'Charges externes −20 %', apply: (sc) => sc.opex.forEach((o) => { o.monthlyAmount = (Number(o.monthlyAmount) || 0) * 0.8 }) },
+    { label: 'Une embauche de plus', apply: (sc) => { const t = sc.team?.[0]; if (t) sc.team.push({ ...t, id: `sim_${Math.random().toString(36).slice(2, 7)}`, role: 'Embauche simulée' }) } },
+  ]
 
-  return h('section', { class: 'panel mt' },
-    h('div', { class: 'panel-head' },
-      h('h2', {}, 'Où part chaque euro'),
-      h('p', { class: 'panel-sub' }, `Sur ${euro(price)} encaissés auprès d'un ${voc.client}, voilà ce qui reste pour payer tout le reste.`),
+  const rows = trials.map((t) => {
+    let needed = null
+    try {
+      const copy = JSON.parse(JSON.stringify(s))
+      t.apply(copy)
+      needed = metrics(compute(copy), copy).needed
+    } catch { needed = null }
+    const delta = needed !== null && Number.isFinite(needed) && Number.isFinite(base.needed)
+      ? Math.ceil(needed) - Math.ceil(base.needed)
+      : null
+    return { label: t.label, needed, delta }
+  })
+
+  return h('div', {},
+    h('p', { class: 'view-intro' },
+      `Chaque ligne rejoue le modèle entier avec une seule modification et lit le nouveau seuil. Aujourd’hui il vous faut ${Number.isFinite(base.needed) ? num(Math.ceil(base.needed)) : '—'} ${voc.many} par mois.`),
+
+    h('div', { class: 'sens' },
+      ...rows.map((row) => h('div', { class: `sens-row ${row.delta === null ? '' : row.delta < 0 ? 'is-good' : row.delta > 0 ? 'is-bad' : ''}` },
+        h('span', { class: 'sens-label' }, row.label),
+        h('span', { class: 'sens-value num' }, Number.isFinite(row.needed) ? `${num(Math.ceil(row.needed))} ${voc.many}` : '—'),
+        h('span', { class: 'sens-delta num' },
+          row.delta === null ? '' : row.delta === 0 ? 'inchangé' : `${row.delta > 0 ? '+' : ''}${num(row.delta)}`),
+      )),
     ),
-    h('div', { class: 'panel-body' },
-      h('div', { class: 'split-bar' },
-        h('span', { class: 'split-cost', style: { width: `${100 - marginPart}%` } }),
-        h('span', { class: 'split-margin', style: { width: `${marginPart}%` } }),
-      ),
-      h('div', { class: 'split-legend' },
-        h('span', {}, h('i', { class: 'swatch split-cost' }), `Coût de revient · ${euro(cost)}`),
-        h('span', {}, h('i', { class: 'swatch split-margin' }), `Marge brute · ${euro(margin)}`),
-      ),
-      h('p', { class: 'tiny muted', style: { margin: '14px 0 0' } },
-        "Cette marge doit couvrir les salaires, le loyer, le comptable, les impôts — et vous payer. C'est pour ça qu'une marge de 30 % n'est pas 30 % de bénéfice."),
-    ),
+
+    h('p', { class: 'chart-note mt' },
+      'Un seuil qui baisse est un modèle qui devient plus sûr : moins de clients à trouver pour la même viabilité.'),
   )
 }
 
-function sectorNote(sector, voc) {
-  const range = sector.benchmarks?.grossMargin
-  if (!range) return null
-  return h('div', { class: 'note plain mt' },
-    h('div', { class: 'note-title' }, `Dans ce métier : ${pct(range[0], 0)} à ${pct(range[1], 0)} de marge brute`),
-    sector.vat?.note || `Ordre de grandeur observé en ${sector.label.toLowerCase()}. En dessous, il faut une raison ; au-dessus, il faut la démontrer.`,
+/* ──────────────────────────── Les trois curseurs ────────────────────────── */
+
+/**
+ * Les manettes du modèle.
+ *
+ * Elles écrivent dans le scénario pendant le geste et recalculent tout sans
+ * redessiner la page : c'est ce qui permet de sentir la pente au lieu de la
+ * lire.
+ */
+function knobs(s, voc, paint, refresh) {
+  const act = s.activities[0]
+  if (!act) return null
+  const founder = (s.team || []).find((m) => ME.test(m.role || ''))
+
+  const rows = [
+    {
+      key: 'prix', label: `Prix par ${voc.one}`,
+      get: () => Number(act.recurringPrice) > 0 ? Number(act.recurringPrice) : Number(act.unitPrice) || 0,
+      set: (sc, v) => { const a = sc.activities[0]; if (Number(a.recurringPrice) > 0) a.recurringPrice = v; else a.unitPrice = v },
+      format: (v) => euro(v),
+    },
+    {
+      key: 'cout', label: `Coût de revient par ${voc.one}`,
+      get: () => Number(act.recurringPrice) > 0 ? Number(act.recurringCost) || 0 : Number(act.unitCost) || 0,
+      set: (sc, v) => { const a = sc.activities[0]; if (Number(a.recurringPrice) > 0) a.recurringCost = v; else a.unitCost = v },
+      format: (v) => euro(v),
+    },
+    founder ? {
+      key: 'salaire', label: 'Votre rémunération',
+      get: () => (Number(founder.monthlyGross) || 0) * 12,
+      set: (sc, v) => { const f = sc.team.find((m) => m.id === founder.id); if (f) f.monthlyGross = v / 12 },
+      format: (v) => `${euro(v)} / an`,
+    } : null,
+  ].filter(Boolean)
+
+  return h('div', { class: 'knobs' },
+    ...rows.map((row) => {
+      const start = row.get()
+      const max = Math.max(start * 2.5, start + 100, 10)
+      const out = h('output', { class: 'knob-value num' }, row.format(start))
+      const input = h('input', {
+        type: 'range', class: 'knob-range', min: 0, max, step: Math.max(1, Math.round(max / 200)), value: start,
+        'aria-label': row.label,
+      })
+      input.addEventListener('input', () => {
+        const v = Number(input.value)
+        out.textContent = row.format(v)
+        row.set(store.scenario, v)
+        paint(compute(store.scenario))
+      })
+      input.addEventListener('change', () => {
+        store.update((sc) => row.set(sc, Number(input.value)), { label: row.label })
+        refresh()
+      })
+      return h('div', { class: 'knob' },
+        h('div', { class: 'knob-top' }, h('span', { class: 'knob-label' }, row.label), out),
+        input,
+      )
+    }),
   )
 }

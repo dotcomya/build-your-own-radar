@@ -422,9 +422,17 @@ function migrate(scenario) {
     a.volumes = a.volumes || { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0, manual: [] }
     if (a.volumes.growthDecay === undefined) a.volumes.growthDecay = 0.96
   }
-  for (const m of s.team) {
-    if (!m.benefits) m.benefits = ['cdi', 'cdd', 'dirigeant'].includes(m.contractType) ? { mutuelle: 45 } : {}
+  // Les avantages étaient saisis poste par poste ; ils relèvent de l'entreprise.
+  // On remonte le plus généreux de ce qui avait été saisi, puis on oublie le reste.
+  s.hr = s.hr || {}
+  if (!s.hr.benefits) {
+    const merged = {}
+    for (const m of s.team) {
+      for (const [k, v] of Object.entries(m.benefits || {})) merged[k] = Math.max(merged[k] || 0, Number(v) || 0)
+    }
+    s.hr.benefits = Object.keys(merged).length ? merged : { mutuelle: 45 }
   }
+  for (const m of s.team) delete m.benefits
   s.version = SCHEMA_VERSION
   return s
 }

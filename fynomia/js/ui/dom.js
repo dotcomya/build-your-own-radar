@@ -38,7 +38,13 @@ export function svg(tag, props = {}, ...children) {
 
 // replaceChildren vide en une opération : un removeChild en boucle échoue si un
 // gestionnaire de blur déclenche un nouveau rendu pendant qu'on retire les nœuds.
-export const clear = (el) => { el.replaceChildren(); return el }
+// Le repli sur innerHTML couvre le cas où un rendu concurrent — un curseur
+// relâché pendant qu'une mise à jour live était en cours — a déjà déplacé un
+// nœud sous nos pieds.
+export const clear = (el) => {
+  try { el.replaceChildren() } catch { el.innerHTML = '' }
+  return el
+}
 export const qs = (sel, root = document) => root.querySelector(sel)
 
 /**
@@ -199,6 +205,10 @@ export function levelBlock(level, title, ...children) {
  * sache lesquels ni pourquoi. Cette ligne le dit à l'endroit exact où ça se
  * joue, et permet de basculer sans aller chercher le sélecteur en haut.
  */
+export function levelAdds(page, level) {
+  return (LEVEL_ADDS[page] || {})[level] || null
+}
+
 export function levelFooter(page, level, onSwitch) {
   const next = level === 'easy' ? 'intermediate' : level === 'intermediate' ? 'advanced' : null
   const adds = LEVEL_ADDS[page] || {}
@@ -253,6 +263,104 @@ const LEVEL_ADDS = {
     intermediate: ['le tableau de flux de trésorerie'],
     advanced: ['le bilan prévisionnel et le détail de la TVA'],
   },
+}
+
+/**
+ * Navigation horizontale.
+ *
+ * Une page de saisie est une pile de sujets ; empilés verticalement, ils
+ * obligent à dérouler pour savoir ce qui existe. Rangés sur une ligne, ils se
+ * comptent d'un regard et ne coûtent qu'un clic. Les entrées sans contenu ne
+ * sont pas grises : elles ne sont pas là.
+ *
+ * @param {{key:string,label:string,count?:number,tone?:string}[]} items
+ */
+export function tabs(items, active, onPick) {
+  const list = items.filter(Boolean)
+  if (list.length <= 1) return null
+  return h('div', { class: 'hnav', role: 'tablist' },
+    ...list.map((it) => h('button', {
+      class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
+      role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
+      onClick: () => onPick(it.key),
+    },
+      h('span', {}, it.label),
+      it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,
+    )),
+  )
+}
+
+/**
+ * Un volet.
+ *
+ * Tout ce qui se vérifie plutôt qu'il ne se lit — un détail de calcul, une
+ * liste de réglages rares — tient replié derrière un chevron. Le titre porte
+ * déjà l'essentiel : on n'ouvre que pour vérifier.
+ */
+export function fold(title, summary, body, { open = false, id = null, tone = '' } = {}) {
+  const el = h('details', { class: `volet ${tone}`, open: open || null },
+    h('summary', { class: 'volet-head' },
+      h('span', { class: 'volet-chev', 'aria-hidden': 'true' }, '\u203a'),
+      h('span', { class: 'volet-title' }, title),
+      summary ? h('span', { class: 'volet-sum' }, summary) : null,
+    ),
+    h('div', { class: 'volet-body' }, body),
+  )
+  if (id) {
+    const memory = fold.open || (fold.open = new Set())
+    if (memory.has(id)) el.open = true
+    el.addEventListener('toggle', () => { el.open ? memory.add(id) : memory.delete(id) })
+  }
+  return el
+}
+
+/**
+ * Le bandeau d'une page : ce qu'on regarde, et l'action qui va avec.
+ * L'action d'ajout est toujours ici, jamais au bas d'une liste qu'il faudrait
+ * dérouler pour la trouver.
+ */
+export function pageBar(title, sub, ...actions) {
+  return h('header', { class: 'pagebar' },
+    h('div', { class: 'pagebar-id' },
+      h('h2', { class: 'pagebar-title' }, title),
+      sub ? h('div', { class: 'pagebar-sub' }, sub) : null,
+    ),
+    h('span', { class: 'spacer' }),
+    ...actions.filter(Boolean),
+  )
+}
+
+/**
+ * Un montant avec son unité commutable.
+ *
+ * Un salaire se dit à l'année, un loyer au mois, une commission en pourcentage.
+ * Plutôt que d'imposer une convention, le champ porte son unité et la bascule
+ * d'un clic — la valeur stockée, elle, ne change jamais de nature.
+ */
+export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, help }) {
+  const def = units.find((u) => u.key === unit) || units[0]
+  const shown = def.toDisplay ? def.toDisplay(value) : value
+  const input = h('input', {
+    class: 'num', inputmode: 'decimal', value: shown === 0 ? '0' : String(Math.round(shown * 100) / 100),
+    onInput: (e) => {
+      const raw = Number(String(e.target.value).replace(/\s/g, '').replace(',', '.')) || 0
+      onInput(def.fromDisplay ? def.fromDisplay(raw) : raw)
+    },
+  })
+  return h('div', { class: 'field' },
+    h('label', {}, label, help ? helpButton(help) : null),
+    h('div', { class: 'control unit-control' },
+      input,
+      h('div', { class: 'unit-switch' },
+        ...units.map((u) => h('button', {
+          class: `unit-btn ${u.key === def.key ? 'active' : ''}`, type: 'button',
+          title: u.title || u.label,
+          onClick: () => onUnit(u.key),
+        }, u.label)),
+      ),
+    ),
+    hint ? h('div', { class: 'field-hint' }, hint) : null,
+  )
 }
 
 export function helpButton(key) {

@@ -104,7 +104,7 @@ export function founderIncome(scenario, result) {
   for (let y = 0; y < YEARS; y++) {
     // ─── 1. Rémunération ───────────────────────────────────────────────
     const months = activeMonths(member, y)
-    const cost = member ? monthlyCost(member, { headcount: result.payroll.headcount[y * 12 + 11] || 1, fiscal: scenario.fiscal || {} }) : null
+    const cost = member ? monthlyCost(member, { headcount: result.payroll.headcount[y * 12 + 11] || 1, fiscal: scenario.fiscal || {}, benefits: scenario.hr?.benefits }) : null
     const gross = cost ? cost.gross * months : 0
     const employerCost = cost ? cost.cost * months : 0
     // Un TNS n'a pas de cotisations salariales : sa rémunération est déjà nette

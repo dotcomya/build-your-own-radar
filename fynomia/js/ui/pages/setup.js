@@ -429,7 +429,7 @@ function legalScreen(ctx) {
  * là : la frappe, elle, ne reconstruit rien.
  */
 /**
- * D'où vient l'argent.
+ * Le modèle de revenus.
  *
  * Quatre formes, et une seule question derrière : est-ce que cette vente se
  * répète ? La commission mérite sa place — marketplace, agence, apporteur

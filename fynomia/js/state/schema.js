@@ -94,9 +94,6 @@ export function newTeamMember(overrides = {}) {
     id: uid('emp'), role: 'Nouveau poste', contractType: 'cdi', status: 'non-cadre',
     monthlyGross: 2500, count: 1, startMonth: 0, endMonth: '',
     rdShare: 0, innovShare: 0, youngDoctor: false, allocation: {},
-    // La mutuelle collective n'est pas une option : elle est obligatoire dès le
-    // premier salarié. Un plan qui l'oublie sous-estime chaque embauche.
-    benefits: { mutuelle: 45 },
     ...overrides,
   }
 }
@@ -155,6 +152,10 @@ export function emptyScenario(name = 'Mon business plan') {
     capex: [],
     financing: { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [] },
     assumptions: { stockDays: 0 },
+    // La politique sociale se décide une fois, pour toute l'entreprise. La
+    // complémentaire santé n'est pas une option : elle est obligatoire dès le
+    // premier salarié, et un plan qui l'oublie sous-estime chaque embauche.
+    hr: { benefits: { mutuelle: 45 } },
     // Ce que le dirigeant retire réellement : part du capital, situation
     // fiscale du foyer et politique de distribution.
     founder: { memberId: null, equityShare: 1, taxParts: 1, dividendPayout: 0, dividendRegime: 'pfu', majorityManager: false, otherIncome: 0 },

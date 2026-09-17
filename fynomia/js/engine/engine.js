@@ -28,7 +28,7 @@ export function compute(scenario) {
   const revenueCash = rev.totals.cash
 
   // ─── 2. Personnel (première passe, sans JEI, pour évaluer l'éligibilité) ─
-  const payroll0 = payrollSeries(team, { fiscal })
+  const payroll0 = payrollSeries(team, { fiscal, benefits: scenario.hr?.benefits })
 
   // ─── 3. Charges externes ───────────────────────────────────────────────
   const opex = opexSeries(scenario.opex || [], { revenue: revenueMonthly, headcount: payroll0.headcount })
@@ -52,7 +52,7 @@ export function compute(scenario) {
   const jeiByMonth = zeros().map((_, m) => (jei[Math.floor(m / 12)]?.eligible ? 1 : 0))
 
   // ─── 6. Personnel (seconde passe, exonération JEI appliquée) ───────────
-  const payroll = payrollSeries(team, { fiscal, jeiByMonth })
+  const payroll = payrollSeries(team, { fiscal, jeiByMonth, benefits: scenario.hr?.benefits })
 
   // ─── 7. TVA ────────────────────────────────────────────────────────────
   const vat = vatModel({

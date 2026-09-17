@@ -83,12 +83,17 @@ export function stepBanner(stepKey, journeyState, navigate) {
   const live = journeyState?.steps?.find((x) => x.key === stepKey)
   const index = STEPS.indexOf(step) + 1
 
-  return h('div', { class: `step-line ${live?.status || 'todo'}` },
-    h('span', { class: 'step-line-no num' }, `${index}`),
-    h('div', { class: 'step-line-text' },
+  // Le pourquoi de la page tient sur une ligne, et se déplie pour qui le
+  // demande. Un paragraphe en tête de chaque écran finit par ne plus être lu,
+  // et coûte trois centimètres à chaque visite.
+  const el = h('details', { class: `step-line ${live?.status || 'todo'}` },
+    h('summary', { class: 'step-line-head' },
+      h('span', { class: 'step-line-no num' }, `${index}`),
       h('span', { class: 'step-line-q' }, step.question),
-      h('span', { class: 'step-line-why' }, step.promise),
+      live?.status === 'done' ? h('span', { class: 'step-line-done' }, 'fait') : null,
+      h('span', { class: 'step-line-chev' }, '›'),
     ),
-    live?.status === 'done' ? h('span', { class: 'step-line-done' }, 'fait') : null,
+    h('p', { class: 'step-line-why' }, step.promise),
   )
+  return el
 }

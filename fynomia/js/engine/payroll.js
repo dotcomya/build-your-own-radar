@@ -44,6 +44,7 @@ export const BENEFITS = {
     help: "Complémentaire santé collective, obligatoire depuis 2016 pour tout salarié en CDI ou CDD de plus de trois mois. L'employeur en finance au moins la moitié. Comptez 40 à 60 € par mois et par personne pour un contrat d'entrée de gamme.",
     forfaitSocial: true,
     contracts: ['cdi', 'cdd', 'dirigeant'],
+    only: 'CDI, CDD et dirigeants assimil\u00e9s salari\u00e9s',
   },
   transport: {
     label: 'Abonnement de transport',
@@ -94,15 +95,21 @@ const SALARIED = ['cdi', 'cdd', 'dirigeant', 'alternance', 'stage']
 
 /**
  * Dépense mensuelle d'avantages pour un poste, et forfait social éventuel.
+ *
+ * Les avantages ne se négocient pas poste par poste : une entreprise met en
+ * place une mutuelle, des titres-restaurant, un forfait mobilités, et tous les
+ * salariés en bénéficient. La politique est donc portée par le scénario, et
+ * ce calcul l'applique à chaque poste concerné.
+ *
  * @returns {{total:number,lines:Array,forfaitSocial:number}}
  */
-export function benefitsCost(member, { headcount = 1, fiscal = {} } = {}) {
+export function benefitsCost(member, { headcount = 1, fiscal = {}, policy = {} } = {}) {
   const ctx = fiscal && fiscal.get ? fiscal : fiscalContext(fiscal)
   const lines = []
   let total = 0
   let forfaitSocial = 0
   if (!SALARIED.includes(member.contractType)) return { total: 0, lines, forfaitSocial: 0 }
-  const chosen = member.benefits || {}
+  const chosen = policy || {}
   for (const [key, def] of Object.entries(BENEFITS)) {
     const amount = Math.max(0, Number(chosen[key]) || 0)
     if (amount <= 0) continue
@@ -134,7 +141,7 @@ export function reductionCoefficient(monthlyGross, headcount, ctx) {
  * Coût complet d'un poste pour un mois donné.
  * @returns {{gross,employerBase,reduction,jeiExemption,employerCharges,superGross,employeeCharges,net,detail}}
  */
-export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal = {} } = {}) {
+export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal = {}, benefits = {} } = {}) {
   const ctx = fiscalContext(fiscal)
   const gross = Math.max(0, Number(member.monthlyGross) || 0)
   const detail = []
@@ -142,7 +149,7 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
   // Mutuelle, transport, titres-restaurant : une dépense réelle, qui ne passe
   // ni par le brut ni par les cotisations. On la calcule une fois et on
   // l'ajoute au coût de chaque régime concerné.
-  const ben = benefitsCost(member, { headcount, fiscal: ctx })
+  const ben = benefitsCost(member, { headcount, fiscal: ctx, policy: benefits })
   const withBenefits = (res) => {
     if (ben.total <= 0) return { ...res, benefits: 0, benefitsLines: [] }
     const lines = ben.lines.map((line) => ({
@@ -292,7 +299,7 @@ export function isActive(member, m) {
  * Masse salariale mensuelle sur l'horizon complet.
  * @returns {{cost:number[],gross:number[],employerCharges:number[],benefits:number[],headcount:number[],fte:number[],jeiExemption:number[],byMember:Array}}
  */
-export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {} } = {}) {
+export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {}, benefits: policy = {} } = {}) {
   const cost = new Array(months).fill(0)
   const gross = new Array(months).fill(0)
   const employerCharges = new Array(months).fill(0)
@@ -317,7 +324,7 @@ export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {} 
     for (let m = 0; m < months; m++) {
       if (!isActive(member, m)) continue
       const n = Number(member.count) || 1
-      const r = monthlyCost(member, { headcount: headcount[m], jeiActive: !!jeiByMonth[m], fiscal })
+      const r = monthlyCost(member, { headcount: headcount[m], jeiActive: !!jeiByMonth[m], fiscal, benefits: policy })
       series[m] = r.cost * n
       cost[m] += r.cost * n
       gross[m] += r.gross * n

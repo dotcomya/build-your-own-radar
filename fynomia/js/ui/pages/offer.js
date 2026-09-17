@@ -1,6 +1,6 @@
 /** Offre et clients : ce que vous vendez, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
@@ -36,22 +36,27 @@ export function renderOffer(navigate, refresh) {
 
   const total = (r?.revenue.perActivity || []).reduce((acc, x) => acc + x.total.reduce((p, q) => p + q, 0), 0)
 
+  const views = [
+    { key: 'offres', label: 'Offres', count: s.activities.length },
+    s.activities.length > 1 && r ? { key: 'compare', label: 'Comparaison' } : null,
+  ]
+  const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
+  renderOffer.view = view
+
   return h('div', { class: 'content' },
     stepBanner('clients', journey(store.scenario, store.result), navigate),
 
-    h('div', { class: 'list-head' },
-      h('div', {},
-        h('h2', {}, s.activities.length > 1 ? `Vos ${s.activities.length} offres` : 'Votre offre'),
-        h('div', { class: 'tiny muted' },
-          total > 0 ? `${euro(total, { compact: true })} de chiffre d'affaires cumulé sur cinq ans` : 'Ce que vous vendez, à quel prix, à combien de clients'),
-      ),
-      h('span', { class: 'spacer' }),
-      h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre'),
+    pageBar(
+      s.activities.length > 1 ? `${s.activities.length} offres` : 'Votre offre',
+      total > 0 ? `${euro(total, { compact: true })} de chiffre d'affaires cumulé sur cinq ans` : 'Ce que vous vendez, à quel prix, à combien de clients',
+      view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null,
     ),
 
-    ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)),
+    tabs(views, view, (k) => { renderOffer.view = k; refresh() }),
 
-    s.activities.length > 1 && comparisonCard(r),
+    view === 'offres'
+      ? h('div', { class: 'view' }, ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)))
+      : h('div', { class: 'view' }, comparisonCard(r)),
 
     tutorial('clients', navigate),
   )
@@ -80,6 +85,15 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
   }
 
   const margin = (Number(a.unitPrice) || 0) > 0 ? 1 - (Number(a.unitCost) || 0) / (Number(a.unitPrice) || 1) : null
+
+  const secs = [
+    { key: 'offre', label: "L'offre" },
+    { key: 'prix', label: 'Prix et marge' },
+    { key: 'volumes', label: 'Volumes' },
+    level !== 'easy' ? { key: 'paiement', label: 'Paiement' } : null,
+    level === 'advanced' ? { key: 'evolution', label: 'Prix par ann\u00e9e' } : null,
+  ]
+  const sec = secs.some((x) => x && x.key === activityCard.sec) ? activityCard.sec : 'offre'
 
   const key = (kind) => `${a.id}:${kind}`
   const hasUnit = (Number(a.unitPrice) || 0) > 0 || (Number(a.unitCost) || 0) > 0 || parts.has(key('unit'))
@@ -113,8 +127,11 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
       }, '⧉'),
       h('span', { class: 'disclose' }, '›'),
     ),
-    isOpen && h('div', { class: 'item-body sliced' },
-      block(1, "L'offre", null, null,
+    isOpen && h('div', { class: 'item-body' },
+      tabs(secs, sec, (k) => { activityCard.sec = k; refresh() }),
+
+      sec === 'offre' ? h('div', { class: 'view' },
+
         h('div', { class: 'grid grid-2' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
           level !== 'easy' && selectField({
@@ -129,10 +146,11 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
             help: 'tva',
             onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
           }),
-        ),
-      ),
+        )
+      ) : null,
 
-      block(2, 'Prix et coût de revient', `Ce que paie un ${voc.client}, et ce que la vente vous coûte directement.`, null,
+      sec === 'prix' ? h('div', { class: 'view' },
+
         // Vente à l'unité et abonnement ne s'excluent pas : une offre peut
         // être l'une, l'autre, ou les deux. Chaque part apparaît dès qu'elle
         // porte un prix, et s'ajoute d'un clic quand elle n'en a pas encore.
@@ -172,15 +190,16 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
               ),
               lifetimeValue(a),
             )
-          : h('button', { class: 'part-add', onClick: () => addPart('recurring') }, '\uFF0B', h('span', {}, 'Un abonnement mensuel')),
-      ),
+          : h('button', { class: 'part-add', onClick: () => addPart('recurring') }, '\uFF0B', h('span', {}, 'Un abonnement mensuel'))
+      ) : null,
 
-      block(3, 'Volumes de vente', `Combien de ${voc.many}, et à quel rythme.`, null,
-        volumesEditor(a, setVolumes, level, detail),
-      ),
+      sec === 'volumes' ? h('div', { class: 'view' },
 
-      level !== 'easy' && block(4, 'Conditions de paiement',
-        'Ces délais ne changent pas votre résultat, mais ils décident de votre trésorerie.', 'bfr',
+        volumesEditor(a, setVolumes, level, detail)
+      ) : null,
+
+      sec === 'paiement' ? h('div', { class: 'view' },
+
         h('div', { class: 'grid grid-2' },
           numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
           numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
@@ -191,12 +210,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         h('div', { class: 'grid grid-2 mt' },
           numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance votre activité.', onInput: (v) => set({ costPaymentLag: v }) }),
           numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
-        ),
-      ),
+        )
+      ) : null,
 
-      level === 'advanced' && priceEvolution(a, set),
+      sec === 'evolution' ? h('div', { class: 'view' }, priceEvolutionFields(a, set)) : null,
 
-      h('div', { class: 'row mt', style: { justifyContent: 'flex-end' } },
+      h('div', { class: 'view-foot' },
         h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Supprimer cette offre')),
     ),
   )
@@ -429,10 +448,11 @@ function manualGrid(a, setVolumes) {
   )
 }
 
-function priceEvolution(a, set) {
+function priceEvolutionFields(a, set) {
   const years = [1, 2, 3, 4]
-  return block(5, 'Évolution des prix',
-    "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseignez une case pour appliquer une hausse à partir de cette année.", null,
+  return h('div', {},
+    h('p', { class: 'view-intro' },
+      "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseignez une case pour appliquer une hausse à partir de cette année."),
     h('div', { class: 'grid grid-4' },
       ...years.map((y) => numberField({
         label: `Prix unitaire — année ${y + 1}`, field: 'unitPrice',
@@ -475,27 +495,6 @@ function marginAdvice(margin) {
   if (margin < 0.2) return "Marge faible : il faudra un volume important pour couvrir vos frais fixes. Vérifiez que vos volumes projetés sont atteignables."
   if (margin < 0.5) return "Marge correcte, typique du négoce et de la production. Votre point mort dépendra surtout de vos frais fixes."
   return "Marge élevée, caractéristique des services et du logiciel. Chaque nouveau client contribue fortement à couvrir vos frais fixes."
-}
-
-/**
- * Un bloc de saisie.
- *
- * Les quatre groupes d'une offre — l'identité, le prix, les volumes, les
- * délais — se lisaient à la suite dans un même corps, séparés par de simples
- * titres. C'était un formulaire. Chacun a maintenant sa surface, sa règle et
- * son numéro : on voit qu'il y a quatre sujets, et on peut n'en traiter qu'un.
- */
-function block(n, title, hint, glossaryKey, ...children) {
-  return h('section', { class: 'slice' },
-    h('div', { class: 'slice-head' },
-      h('span', { class: 'slice-no num' }, String(n)),
-      h('div', {},
-        h('h4', { class: 'slice-title' }, title, glossaryKey && helpButton(glossaryKey)),
-        hint && h('div', { class: 'slice-hint' }, hint),
-      ),
-    ),
-    h('div', { class: 'slice-body' }, ...children.filter(Boolean)),
-  )
 }
 
 const sumRange = (arr, a, b) => arr.slice(a, b).reduce((x, y) => x + y, 0)

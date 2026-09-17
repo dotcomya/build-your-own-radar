@@ -1,6 +1,6 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel } from '../dom.js'
+import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, pageBar } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
@@ -112,46 +112,39 @@ export function renderFinancing(navigate, refresh) {
   const setField = (key, id, patch, opts = {}) =>
     store.update((sc) => Object.assign(sc.financing[key].find((x) => x.id === id), patch), { label: 'Financement', ...(opts || {}) })
 
+  const views = [
+    { key: 'sources', label: 'Sources', count: SOURCES.reduce((a, src) => a + ((f[src.key] || []).length), 0) },
+    r ? { key: 'tresorerie', label: 'Trésorerie' } : null,
+    r && level === 'advanced' ? { key: 'plan', label: 'Plan de financement' } : null,
+  ]
+  const view = views.some((v) => v && v.key === renderFinancing.view) ? renderFinancing.view : 'sources'
+  renderFinancing.view = view
+
   return h('div', { class: 'content' },
     stepBanner('financement', journey(store.scenario, store.result), navigate),
 
-    r && h('div', { class: 'grid grid-4 kpis mb' },
-      tile('Financements r\u00e9unis', euro(totalRaised, { compact: true }), 'Tous apports confondus'),
-      tile('Besoin identifi\u00e9', r.kpis.fundingNeed > 0 ? euro(r.kpis.fundingNeed, { compact: true }) : 'Couvert',
-        r.kpis.fundingNeed > 0 ? `Point bas ${monthLabel(r.kpis.cashLow.month, r.startDate)}` : 'Tr\u00e9sorerie positive', 'tresorerie',
-        r.kpis.fundingNeed > 0 ? 'neg' : 'pos'),
-      tile('Tr\u00e9sorerie fin ann\u00e9e 1', euro(r.cash.yearEnd[0], { compact: true }), 'Solde au 12\u1d49 mois', null, r.cash.yearEnd[0] >= 0 ? 'pos' : 'neg'),
-      tile('Autonomie', r.kpis.runwayMonths === null ? '\u2014' : `${num(r.kpis.runwayMonths, 0)} mois`, 'Au rythme actuel', 'runway',
-        r.kpis.runwayMonths !== null && r.kpis.runwayMonths < 6 ? 'neg' : ''),
+    pageBar(
+      'Financement',
+      r && r.kpis.fundingNeed > 0
+        ? `${euro(totalRaised, { compact: true })} réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
+        : `${euro(totalRaised, { compact: true })} réunis · trésorerie couverte`,
+      view === 'sources' && source ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, `＋ ${source.label}`) : null,
     ),
 
-    r && h('div', { class: 'card mb' },
-      h('div', { class: 'card-head' }, h('h2', {}, 'Trajectoire de tr\u00e9sorerie'), helpButton('tresorerie')),
-      h('div', { class: 'card-body' },
-        areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
-        r.kpis.fundingNeed > 0 && h('div', { class: 'note warn mt' },
-          h('div', { class: 'note-title' }, `Il manque ${euro(r.kpis.fundingNeed)}`),
-          `Votre solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : ajouter une source ci-dessous, n\u00e9gocier des acomptes clients plus \u00e9lev\u00e9s dans l'onglet Offre, ou d\u00e9caler des recrutements et investissements.`),
-      ),
-    ),
+    tabs(views, view, (k) => { renderFinancing.view = k; refresh() }),
 
-    h('div', { class: 'card mb' },
-      h('div', { class: 'card-head' },
-        h('h2', {}, "D'o\u00f9 vient l'argent"),
-        h('span', { class: 'spacer' }),
-        h('span', { class: 'tiny muted' }, 'Cliquez une source pour la d\u00e9tailler'),
-      ),
+    view === 'sources' ? h('div', { class: 'view' },
       h('div', { class: 'sources' },
         h('div', { class: 'source source-cash' },
-          h('span', { class: 'source-glyph' }, '\u25cf'),
-          h('span', { class: 'source-name' }, 'D\u00e9j\u00e0 en caisse'),
+          h('span', { class: 'source-glyph' }, '●'),
+          h('span', { class: 'source-name' }, 'Déjà en caisse'),
           (() => {
             const input = h('input', {
               class: 'num source-input', inputmode: 'decimal', value: String(f.openingCash ?? 0),
-              'aria-label': 'Tr\u00e9sorerie de d\u00e9part',
-              onInput: (e) => store.update((sc) => { sc.financing.openingCash = Number(e.target.value.replace(',', '.')) || 0 }, { label: 'Tr\u00e9sorerie initiale', silent: true }),
+              'aria-label': 'Trésorerie de départ',
+              onInput: (e) => store.update((sc) => { sc.financing.openingCash = Number(e.target.value.replace(',', '.')) || 0 }, { label: 'Trésorerie initiale', silent: true }),
             })
-            return h('label', { class: 'source-money' }, input, h('span', {}, '\u20ac'))
+            return h('label', { class: 'source-money' }, input, h('span', {}, '€'))
           })(),
         ),
         ...visible.map((src) => {
@@ -168,14 +161,35 @@ export function renderFinancing(navigate, refresh) {
           )
         }),
       ),
-    ),
+      source ? sourceDetail(source, f[source.key] || [], r, { add, drop, setField }) : null,
+    ) : null,
 
-    source && sourceDetail(source, f[source.key] || [], r, { add, drop, setField }),
+    view === 'tresorerie' && r ? h('div', { class: 'view' },
+      h('div', { class: 'grid grid-4 kpis mb' },
+        tile('Financements réunis', euro(totalRaised, { compact: true }), 'Tous apports confondus'),
+        tile('Besoin identifié', r.kpis.fundingNeed > 0 ? euro(r.kpis.fundingNeed, { compact: true }) : 'Couvert',
+          r.kpis.fundingNeed > 0 ? `Point bas ${monthLabel(r.kpis.cashLow.month, r.startDate)}` : 'Trésorerie positive', 'tresorerie',
+          r.kpis.fundingNeed > 0 ? 'neg' : 'pos'),
+        tile('Fin année 1', euro(r.cash.yearEnd[0], { compact: true }), 'Solde au 12ᵉ mois', null, r.cash.yearEnd[0] >= 0 ? 'pos' : 'neg'),
+        tile('Autonomie', r.kpis.runwayMonths === null ? '—' : `${num(r.kpis.runwayMonths, 0)} mois`, 'Au rythme actuel', 'runway',
+          r.kpis.runwayMonths !== null && r.kpis.runwayMonths < 6 ? 'neg' : ''),
+      ),
+      h('div', { class: 'card' },
+        h('div', { class: 'card-body' },
+          areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
+          r.kpis.fundingNeed > 0 ? h('div', { class: 'note warn mt' },
+            h('div', { class: 'note-title' }, `Il manque ${euro(r.kpis.fundingNeed)}`),
+            `Votre solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : ajouter une source, négocier des acomptes clients plus élevés dans l'onglet Offre, ou décaler des recrutements et investissements.`) : null,
+        ),
+      ),
+    ) : null,
 
-    r && level === 'advanced' && h('div', { class: 'card mt' },
-      h('div', { class: 'card-head' }, h('h2', {}, 'Plan de financement'), helpButton('planFinancement')),
-      h('div', { class: 'table-wrap' }, financingPlanTable(r)),
-    ),
+    view === 'plan' && r ? h('div', { class: 'view' },
+      h('div', { class: 'card' },
+        h('div', { class: 'card-head' }, h('h2', {}, 'Plan de financement'), helpButton('planFinancement')),
+        h('div', { class: 'table-wrap' }, financingPlanTable(r)),
+      ),
+    ) : null,
 
     tutorial('financement', navigate),
   )
