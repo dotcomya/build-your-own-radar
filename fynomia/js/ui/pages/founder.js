@@ -43,7 +43,7 @@ export function renderFounder(navigate, refresh) {
           categories: YEAR_CATEGORIES,
           series: [
             { label: "Ce que l'entreprise débourse", values: income.rows.map((x) => x.employerCost + x.distributed), color: PALETTE[1] },
-            { label: 'Ce qui arrive sur votre compte', values: income.rows.map((x) => x.disposable), color: PALETTE[0] },
+            { label: 'Ce qui arrive sur ton compte', values: income.rows.map((x) => x.disposable), color: PALETTE[0] },
           ],
         }),
         h('p', { class: 'tiny muted', style: { margin: '10px 0 0' } },
@@ -57,13 +57,13 @@ export function renderFounder(navigate, refresh) {
     ),
 
     income.settings.liberalBnc && h('div', { class: 'note warn mt' },
-      h('div', { class: 'note-title' }, "Vous exercez en bénéfices non commerciaux"),
-      "Fynomia modélise une société soumise à l'impôt sur les sociétés. En exercice libéral classique, il n'y a ni impôt sur les sociétés ni dividendes : le bénéfice du cabinet est imposé directement à votre nom, au barème progressif, et vos prélèvements ne sont que des acomptes sur ce bénéfice. Les montants ci-dessus restent utiles pour dimensionner votre train de vie, mais votre imposition réelle portera sur le résultat du cabinet, pas sur vos prélèvements. En SELARL en revanche, le calcul ci-dessus s'applique tel quel.",
+      h('div', { class: 'note-title' }, "Toi exercez en bénéfices non commerciaux"),
+      "Fynomia modélise une société soumise à l'impôt sur les sociétés. En exercice libéral classique, il n'y a ni impôt sur les sociétés ni dividendes : le bénéfice du cabinet est imposé directement à ton nom, au barème progressif, et tes prélèvements ne sont que des acomptes sur ce bénéfice. Les montants ci-dessus restent utiles pour dimensionner ton train de vie, mais ton imposition réelle portera sur le résultat du cabinet, pas sur tes prélèvements. En SELARL en revanche, le calcul ci-dessus s'applique tel quel.",
     ),
 
     h('div', { class: 'note plain mt' },
       h('div', { class: 'note-title' }, 'Ce que ce calcul ne dit pas'),
-      "Le prélèvement à la source lisse l'impôt sur l'année mais ne le change pas. Ne sont pas modélisés ici : la CSG déductible en cas d'option pour le barème, les réductions et crédits d'impôt personnels, ni l'éventuelle contribution exceptionnelle sur les hauts revenus. Un expert-comptable affinera votre arbitrage entre rémunération et dividendes, qui dépend aussi de vos droits à retraite et à prévoyance.",
+      "Le prélèvement à la source lisse l'impôt sur l'année mais ne le change pas. Ne sont pas modélisés ici : la CSG déductible en cas d'option pour le barème, les réductions et crédits d'impôt personnels, ni l'éventuelle contribution exceptionnelle sur les hauts revenus. Un expert-comptable affinera ton arbitrage entre rémunération et dividendes, qui dépend aussi de tes droits à retraite et à prévoyance.",
     ),
 
     tutorial('remuneration', navigate),
@@ -86,26 +86,26 @@ function payLadder(income, row, r, y) {
     row.gross > 0 ? {
       k: "Ce que l'entreprise débourse",
       v: salaryCost,
-      note: `Le « super brut » : votre brut plus ${euro(employerCharges)} de cotisations patronales.`,
+      note: `Le « super brut » : ton brut plus ${euro(employerCharges)} de cotisations patronales.`,
       tone: 'cost',
     } : null,
     row.gross > 0 ? {
-      k: 'Votre salaire brut',
+      k: 'Ton salaire brut',
       v: row.gross,
       note: `Ce qui figure sur la fiche de paie, avant ${euro(employeeCharges)} de cotisations salariales.`,
     } : null,
     row.gross > 0 ? {
-      k: 'Votre net avant impôt',
+      k: 'Ton net avant impôt',
       v: row.netBeforeTax,
       note: "Ce qui arrive sur le compte chaque mois, avant l'impôt sur le revenu.",
     } : null,
     row.grossDividends > 0 ? {
-      k: 'Vos dividendes nets',
+      k: 'Tes dividendes nets',
       v: row.netDividends,
       note: `Sur ${euro(row.grossDividends)} distribués, après prélèvements sociaux${row.dividendIncomeTax > 0 ? ' et flat tax' : ''}.`,
     } : null,
     {
-      k: 'Ce qui vous reste, net de tout',
+      k: 'Ce qui toi reste, net de tout',
       v: row.disposable,
       note: `Impôt sur le revenu déduit — tranche marginale ${pct(row.marginalRate, 0)}. Soit ${euro(row.monthly)} par mois.`,
       tone: 'final',
@@ -114,7 +114,7 @@ function payLadder(income, row, r, y) {
 
   return h('section', { class: 'pay' },
     h('div', { class: 'pay-head' },
-      h('h2', {}, 'De ce que paie l’entreprise à ce que vous touchez'),
+      h('h2', {}, 'De ce que paie l’entreprise à ce que tu touches'),
       h('span', { class: 'pay-year' }, yearLabel(y)),
     ),
     h('div', { class: 'pay-steps' },
@@ -127,7 +127,7 @@ function payLadder(income, row, r, y) {
       )),
     ),
     row.costPerEuro > 0 ? h('p', { class: 'pay-foot' },
-      `Autrement dit : l'entreprise doit produire ${num(row.costPerEuro, 2)} € de valeur pour en laisser 1 € dans votre poche.`) : null,
+      `Autrement dit : l'entreprise doit produire ${num(row.costPerEuro, 2)} € de valeur pour en laisser 1 € dans ton poche.`) : null,
   )
 }
 
@@ -143,7 +143,7 @@ function waterfall(income, r, y) {
   const steps = []
 
   steps.push({ label: "EBITDA de l'entreprise", value: ebitda, kind: 'start' })
-  if (row.employerCost > 0) steps.push({ label: 'dont votre rémunération chargée', value: -row.employerCost, kind: 'info', note: `${euro(row.gross)} de brut, ${euro(row.employerCost - row.gross)} de cotisations` })
+  if (row.employerCost > 0) steps.push({ label: 'dont ta rémunération chargée', value: -row.employerCost, kind: 'info', note: `${euro(row.gross)} de brut, ${euro(row.employerCost - row.gross)} de cotisations` })
   steps.push({ label: 'Amortissements et frais financiers', value: -(r.pnl.amortisation[y] + r.pnl.interest[y]), kind: 'cost' })
   if (r.pnl.credits[y] > 0) steps.push({ label: "Crédits d'impôt", value: r.pnl.credits[y], kind: 'gain' })
   steps.push({ label: 'Impôt sur les sociétés', value: -r.pnl.corporateTax[y], kind: 'cost' })
@@ -154,12 +154,12 @@ function waterfall(income, r, y) {
     note: row.retained > 0 ? `${euro(row.retained)} restent en réserves dans l'entreprise` : "rien n'est mis en réserve",
   })
 
-  steps.push({ label: 'Vos dividendes bruts', value: row.grossDividends, kind: 'start' })
+  steps.push({ label: 'Tes dividendes bruts', value: row.grossDividends, kind: 'start' })
   if (row.dividendSocial > 0) steps.push({ label: row.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : 'Prélèvements sociaux (17,2 %)', value: -row.dividendSocial, kind: 'cost' })
   if (row.dividendIncomeTax > 0) steps.push({ label: "Impôt forfaitaire sur dividendes (12,8 %)", value: -row.dividendIncomeTax, kind: 'cost' })
-  steps.push({ label: 'Votre salaire net', value: row.netBeforeTax, kind: 'gain' })
+  steps.push({ label: 'Ton salaire net', value: row.netBeforeTax, kind: 'gain' })
   steps.push({ label: "Impôt sur le revenu", value: -row.incomeTax, kind: 'cost' })
-  steps.push({ label: 'Sur votre compte', value: row.disposable, kind: 'total' })
+  steps.push({ label: 'Sur ton compte', value: row.disposable, kind: 'total' })
 
   return h('section', { class: 'panel' },
     h('div', { class: 'card-head' },
@@ -176,8 +176,8 @@ function waterfall(income, r, y) {
     ),
     row.costPerEuro && row.costPerEuro > 0 ? h('div', { class: 'panel-body', style: { paddingTop: 0 } },
       h('div', { class: 'note plain' },
-        h('div', { class: 'note-title' }, `${num(row.costPerEuro, 2)} € pour un euro dans votre poche`),
-        `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour vous laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
+        h('div', { class: 'note-title' }, `${num(row.costPerEuro, 2)} € pour un euro dans ton poche`),
+        `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour toi laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
     ) : null,
   )
 }
@@ -187,25 +187,25 @@ function settingsPanel(s, income, set, refresh) {
   const isSarl = ['SARL', 'EURL'].includes(s.meta.legalForm)
   return h('section', { class: 'panel' },
     h('header', { class: 'panel-head' },
-      h('h2', {}, 'Vos paramètres'),
-      h('p', { class: 'panel-sub' }, "Ce qui détermine le partage entre vous, l'entreprise et l'État."),
+      h('h2', {}, 'Tes paramètres'),
+      h('p', { class: 'panel-sub' }, "Ce qui détermine le partage entre toi, l'entreprise et l'État."),
     ),
     h('div', { class: 'panel-body stack' },
       income.member
         ? selectField({
-            label: 'Poste correspondant à votre rémunération',
+            label: 'Poste correspondant à ta rémunération',
             value: f.memberId || income.member.id,
             options: (s.team || []).map((m) => ({ value: m.id, label: `${m.role} — ${euro(m.monthlyGross)}/mois` })),
-            hint: "Modifiez le montant dans l'onglet Équipe.",
+            hint: "Modifie le montant dans l'onglet Équipe.",
             onInput: (v) => set({ memberId: v }),
           })
         : h('div', { class: 'note warn' },
             h('div', { class: 'note-title' }, "Aucun poste n'est défini"),
-            "Ajoutez votre poste dans l'onglet Équipe pour que votre rémunération entre dans le calcul."),
+            "Ajoute ton poste dans l'onglet Équipe pour que ta rémunération entre dans le calcul."),
 
       h('div', { class: 'grid grid-2' },
-        numberField({ label: 'Votre part du capital', field: 'rdShare', value: f.equityShare, percent: true,
-          hint: 'Détermine la part des dividendes qui vous revient.', onInput: (v) => set({ equityShare: v }) }),
+        numberField({ label: 'Ta part du capital', field: 'rdShare', value: f.equityShare, percent: true,
+          hint: 'Détermine la part des dividendes qui toi revient.', onInput: (v) => set({ equityShare: v }) }),
         numberField({ label: 'Part du résultat distribuée', field: 'rdShare', value: f.dividendPayout, percent: true,
           hint: "Le reste alimente les réserves et reste dans l'entreprise.", onInput: (v) => set({ dividendPayout: v }) }),
       ),
@@ -213,7 +213,7 @@ function settingsPanel(s, income, set, refresh) {
         numberField({ label: 'Parts fiscales du foyer', field: 'count', value: f.taxParts, step: 0.5, max: 10,
           hint: 'Célibataire 1, couple 2, plus une demi-part par enfant.', onInput: (v) => set({ taxParts: v }) }),
         numberField({ label: 'Autres revenus du foyer', field: 'amount', value: f.otherIncome, suffix: '€/an',
-          hint: "Salaire du conjoint, revenus fonciers. Ils modifient votre tranche.", onInput: (v) => set({ otherIncome: v }) }),
+          hint: "Salaire du conjoint, revenus fonciers. Ils modifient ton tranche.", onInput: (v) => set({ otherIncome: v }) }),
       ),
       selectField({
         label: 'Imposition des dividendes', value: f.dividendRegime,
@@ -221,7 +221,7 @@ function settingsPanel(s, income, set, refresh) {
           { value: 'pfu', label: 'Flat tax — 30 % (12,8 % + 17,2 %)' },
           { value: 'bareme', label: 'Barème progressif — abattement de 40 %' },
         ],
-        hint: "Le barème devient intéressant quand votre taux marginal est faible.",
+        hint: "Le barème devient intéressant quand ton taux marginal est faible.",
         onInput: (v) => set({ dividendRegime: v }),
       }),
       isSarl && switchField({
@@ -245,12 +245,12 @@ function comparison(income, s) {
   if (total <= 0) return null
   const salaryShare = row.netBeforeTax / total
   return h('div', { class: 'note' },
-    h('div', { class: 'note-title' }, 'Votre équilibre actuel'),
+    h('div', { class: 'note-title' }, 'Ton équilibre actuel'),
     salaryShare > 0.85
-      ? "Vous vous rémunérez presque exclusivement en salaire. C'est le choix le plus protecteur — retraite, chômage en SAS, prévoyance — mais aussi le plus coûteux pour l'entreprise. Un peu de dividende peut alléger la facture une fois le résultat installé."
+      ? "Toi tu te rémunères presque exclusivement en salaire. C'est le choix le plus protecteur — retraite, chômage en SAS, prévoyance — mais aussi le plus coûteux pour l'entreprise. Un peu de dividende peut alléger la facture une fois le résultat installé."
       : salaryShare < 0.25
-        ? "Vous vivez surtout de dividendes. C'est fiscalement efficace, mais les dividendes n'ouvrent aucun droit à la retraite ni à la prévoyance, et ils supposent un résultat bénéficiaire chaque année. Une rémunération minimale sécurise votre couverture."
-        : "Vous combinez salaire et dividendes. C'est l'équilibre le plus courant : le salaire assure la couverture sociale, le dividende récompense le résultat sans en supporter les cotisations.",
+        ? "Tu vis surtout de dividendes. C'est fiscalement efficace, mais les dividendes n'ouvrent aucun droit à la retraite ni à la prévoyance, et ils supposent un résultat bénéficiaire chaque année. Une rémunération minimale sécurise ton couverture."
+        : "Toi combinez salaire et dividendes. C'est l'équilibre le plus courant : le salaire assure la couverture sociale, le dividende récompense le résultat sans en supporter les cotisations.",
   )
 }
 
@@ -269,7 +269,7 @@ function detailTable(income, r) {
       line('Net avant impôt', (x) => x.netBeforeTax, 'highlight'),
       h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Dividendes')),
       h('tr', {}, h('td', {}, 'Résultat net de la société'), ...r.pnl.netResult.map((v) => h('td', { class: 'num' }, euro(v)))),
-      line('Dividendes bruts qui vous reviennent', (x) => x.grossDividends),
+      line('Dividendes bruts qui toi reviennent', (x) => x.grossDividends),
       line('Prélèvements sociaux et cotisations', (x) => -x.dividendSocial, '', true),
       line('Impôt forfaitaire', (x) => -x.dividendIncomeTax, '', true),
       line('Dividendes nets', (x) => x.netDividends, 'highlight'),
@@ -277,7 +277,7 @@ function detailTable(income, r) {
       line('Revenu imposable du foyer', (x) => x.taxableIncome),
       h('tr', {}, h('td', {}, 'Taux marginal'), ...rows.map((x) => h('td', { class: 'num pct' }, pct(x.marginalRate, 0)))),
       line('Impôt dû', (x) => -x.incomeTax),
-      h('tr', { class: 'total' }, h('td', {}, 'Disponible sur votre compte'), ...rows.map((x) => h('td', { class: 'num' }, euro(x.disposable)))),
+      h('tr', { class: 'total' }, h('td', {}, 'Disponible sur ton compte'), ...rows.map((x) => h('td', { class: 'num' }, euro(x.disposable)))),
       h('tr', {}, h('td', { class: 'muted small' }, 'soit par mois'), ...rows.map((x) => h('td', { class: 'num muted small' }, euro(x.monthly)))),
     ),
   )
@@ -305,11 +305,11 @@ function headline(income, r, y) {
   const row = income.rows[y]
   const sector = getSector(store.scenario.meta.sectorKey)
   if (row.disposable <= 0) {
-    return "Rien ne remonte encore jusqu'à vous. Tant que l'entreprise ne dégage pas de résultat et que vous ne vous versez pas de rémunération, votre revenu est nul — beaucoup de dirigeants passent une à deux années dans cette situation, mais il faut alors savoir de quoi on vit."
+    return "Rien ne remonte encore jusqu'à toi. Tant que l'entreprise ne dégage pas de résultat et que toi ne tu verses pas de rémunération, ton revenu est nul — beaucoup de dirigeants passent une à deux années dans cette situation, mais il faut alors savoir de quoi on vit."
   }
   const parts = []
   parts.push(`${euro(row.monthly)} par mois, net de tout : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`)
-  if (row.costPerEuro) parts.push(`L'entreprise produit ${num(row.costPerEuro, 2)} € de valeur pour chaque euro qui arrive chez vous.`)
+  if (row.costPerEuro) parts.push(`L'entreprise produit ${num(row.costPerEuro, 2)} € de valeur pour chaque euro qui arrive chez toi.`)
   if (sector) parts.push(`Référence ${sector.label.toLowerCase()}.`)
   return parts.join(' ')
 }

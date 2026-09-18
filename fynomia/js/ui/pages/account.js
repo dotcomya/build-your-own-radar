@@ -24,8 +24,8 @@ export function renderAccount(navigate, refresh) {
     h('div', { class: 'page-head' },
       h('h1', {}, 'Mon compte'),
       h('p', {}, online
-        ? 'Vos plans vous suivent sur tous vos appareils. Rien à sauvegarder à la main.'
-        : "Vos plans sont enregistrés dans ce navigateur. Exportez-les pour les emporter."),
+        ? 'Tes plans toi suivent sur tous tes appareils. Rien à sauvegarder à la main.'
+        : "Tes plans sont enregistrés dans ce navigateur. Exportez-les pour les emporter."),
     ),
 
     identityCard(online),
@@ -55,18 +55,18 @@ function identityCard(online) {
     h('div', { class: 'account-rows' },
       row('Sauvegarde', syncLabel(), online ? 'ok' : ''),
       row('Appareils', online
-        ? 'Tous ceux où vous ouvrez Fynomia avec ce compte'
+        ? 'Tous ceux où tu ouvres Fynomia avec ce compte'
         : 'Ce navigateur uniquement'),
       row('Confidentialité', online
         ? 'Espace privé : personne d’autre n’y accède, pas même l’éditeur de la page'
         : 'Rien ne quitte cet appareil'),
       row('Identification', online
-        ? 'Héritée de votre session — Fynomia ne stocke aucun identifiant'
+        ? 'Héritée de ton session — Fynomia ne stocke aucun identifiant'
         : 'Aucune'),
     ),
 
     !online ? h('p', { class: 'account-note' },
-      "Fynomia n'a pas trouvé de session à laquelle rattacher vos plans. Tout continue de fonctionner : le travail est conservé dans ce navigateur, et l'export JSON vous permet de le reprendre ailleurs.",
+      "Fynomia n'a pas trouvé de session à laquelle rattacher tes plans. Tout continue de fonctionner : le travail est conservé dans ce navigateur, et l'export JSON toi permet de le reprendre ailleurs.",
     ) : null,
   )
 }
@@ -129,7 +129,7 @@ function planRow(meta, navigate, refresh) {
       onClick: async () => {
         const ok = await confirmDialog({
           title: `Supprimer « ${meta.name} » ?`,
-          message: "Le plan est retiré de cet appareil et de votre compte. C'est définitif.",
+          message: "Le plan est retiré de cet appareil et de ton compte. C'est définitif.",
           confirmLabel: 'Supprimer', danger: true,
         })
         if (!ok) return
@@ -147,7 +147,7 @@ function dataCard(navigate, refresh) {
   return h('section', { class: 'panel mt' },
     h('div', { class: 'panel-head' },
       h('h2', {}, 'Emporter mes données'),
-      h('p', { class: 'panel-sub' }, "Un fichier JSON complet : vos chiffres vous appartiennent, et rien ne vous retient ici."),
+      h('p', { class: 'panel-sub' }, "Un fichier JSON complet : tes chiffres toi appartiennent, et rien ne toi retient ici."),
     ),
     h('div', { class: 'panel-body row-wrap' },
       h('button', {

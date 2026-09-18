@@ -1,7 +1,7 @@
 /**
  * Simulation d'actions.
  *
- * Dire « votre marge est faible » n'aide personne. Chiffrer « passer le prix de
+ * Dire « ta marge est faible » n'aide personne. Chiffrer « passer le prix de
  * 24 à 26 € rapporte 38 000 € d'EBITDA et avance le point mort de quatre
  * mois » est une décision qu'on peut prendre.
  *
@@ -69,7 +69,7 @@ export const ACTIONS = [
   },
   {
     key: 'cutFixed', label: 'Réduire les charges fixes de 15 %',
-    rationale: 'Les charges fixes se paient que vous vendiez ou non.',
+    rationale: 'Les charges fixes se paient que tu vendes ou non.',
     applies: (s) => (s.opex || []).some((o) => (Number(o.monthlyAmount) || 0) > 0),
     apply: (s) => { for (const o of s.opex) o.monthlyAmount = round2((Number(o.monthlyAmount) || 0) * 0.85) },
     describe: (s) => {
@@ -139,7 +139,7 @@ export function suggestActions(scenario, baseResult, { limit = 3 } = {}) {
       key: action.key, label: action.label, rationale: action.rationale,
       detail: safeDescribe(action, scenario),
       delta, score, apply: action.apply,
-      // Une action peut se retourner contre vous : on le dit.
+      // Une action peut se retourner contre toi : on le dit.
       harmful: delta.ebitda < 0 && delta.fundingNeed > 0,
     })
   }

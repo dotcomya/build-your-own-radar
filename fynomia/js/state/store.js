@@ -233,8 +233,13 @@ class Store {
   canUndo() { return this.history.length > 0 }
   canRedo() { return this.future.length > 0 }
 
-  setLevel(level) { this.update((s) => { s.meta.level = level }, { label: 'Changement de niveau' }) }
-  get level() { return this.scenario?.meta?.level || 'easy' }
+  // Les niveaux « facile / intermédiaire / expert » ont disparu : personne ne
+  // sait répondre à « êtes-toi débutant ? », et la mauvaise réponse cachait
+  // des réglages utiles à ceux qui en avaient besoin. Le modèle est le même
+  // pour tout le monde ; la profondeur se demande là où elle sert, au moyen
+  // d'un « affiner ». Ce getter reste, figé, pour que le code qui n'a pas
+  // encore été converti n'aille rien masquer.
+  get level() { return 'advanced' }
 
   // ─────────────────────────── Calcul et sauvegarde ─────────────────────
   recompute() {

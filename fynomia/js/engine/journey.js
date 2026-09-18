@@ -21,7 +21,7 @@ import { euro, pct } from '../format.js'
 export const ACTS = [
   { key: 'projet', title: 'Les bases', tagline: 'Le projet et son modèle' },
   { key: 'moyens', title: 'Ce que ça coûte', tagline: "L'équipe et les frais" },
-  { key: 'argent', title: 'Ce que ça rapporte', tagline: 'Les clients, la caisse, votre part' },
+  { key: 'argent', title: 'Ce que ça rapporte', tagline: 'Les clients, la caisse, ta part' },
   { key: 'plus', title: 'Pour aller plus loin', tagline: 'Quand le reste est posé' },
 ]
 
@@ -49,15 +49,15 @@ export const STEPS = [
     act: 'projet',
     page: 'reglages',
     label: 'Mon projet',
-    question: 'Quel est votre projet ?',
-    promise: "Le métier choisi commande tout le reste : la TVA, votre statut social, les repères auxquels on vous comparera.",
-    investor: "La première chose qu'on regarde : savez-vous dire en une phrase ce que vous vendez et à qui.",
+    question: 'Quel est ton projet ?',
+    promise: "Le métier choisi commande tout le reste : la TVA, ton statut social, les repères auxquels on toi comparera.",
+    investor: "La première chose qu'on regarde : savez-toi dire en une phrase ce que tu vends et à qui.",
     minutes: 2,
     unlocks: "Repères du métier et régime de TVA applicable",
     tips: [
       {
         title: 'Le métier décide de la TVA',
-        body: "Un cabinet médical ou paramédical est exonéré : vous ne la facturez pas, mais vous ne la récupérez pas non plus sur vos achats. Saisissez alors tout en TTC — sinon vous sous-estimez vos charges de 20 %.",
+        body: "Un cabinet médical ou paramédical est exonéré : toi ne la facturez pas, mais toi ne la récupérez pas non plus sur tes achats. Saisis alors tout en TTC — sinon toi sous-estimez tes charges de 20 %.",
       },
       {
         title: 'SAS ou SARL : ce n’est pas un détail',
@@ -65,7 +65,7 @@ export const STEPS = [
       },
       {
         title: 'La date de départ n’est pas aujourd’hui',
-        body: "Indiquez la date du premier euro encaissé, pas celle de l'immatriculation. Un décalage de trois mois déplace tout le besoin de trésorerie.",
+        body: "Indique la date du premier euro encaissé, pas celle de l'immatriculation. Un décalage de trois mois déplace tout le besoin de trésorerie.",
       },
     ],
     check(s) {
@@ -76,7 +76,7 @@ export const STEPS = [
       const bits = []
       if (s.meta?.sectorKey) bits.push(s.meta.sectorLabel || 'métier choisi')
       if (s.meta?.legalForm) bits.push(s.meta.legalForm)
-      return state(score, bits.join(' · ') || 'Choisissez votre métier pour démarrer')
+      return state(score, bits.join(' · ') || 'Choisis ton métier pour démarrer')
     },
   },
   {
@@ -84,9 +84,9 @@ export const STEPS = [
     act: 'projet',
     page: 'modele',
     label: 'Mon modèle',
-    question: 'Comment gagnez-vous de l’argent ?',
+    question: 'Comment gagnez-toi de l’argent ?',
     promise: "Un prix, un coût de revient, et la façon dont l'argent revient — une fois ou tous les mois. C'est la brique dont tout le reste est fait.",
-    investor: "On vérifiera que votre marge unitaire est positive avant même de regarder votre chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
+    investor: "On vérifiera que ta marge unitaire est positive avant même de regarder ton chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
     minutes: 5,
     unlocks: 'Marge unitaire et point mort',
     tips: [
@@ -100,7 +100,7 @@ export const STEPS = [
       },
       {
         title: "L'erreur classique : oublier le coût de revient",
-        body: "Hébergement, commission de paiement, matières, sous-traitance, livraison. Tout ce qui augmente quand vous vendez une unité de plus est un coût variable — pas une charge fixe.",
+        body: "Hébergement, commission de paiement, matières, sous-traitance, livraison. Tout ce qui augmente quand tu vends une unité de plus est un coût variable — pas une charge fixe.",
       },
     ],
     check(s) {
@@ -132,8 +132,8 @@ export const STEPS = [
     act: 'moyens',
     page: 'equipe',
     label: 'Mon équipe',
-    question: 'Qui travaille avec vous ?',
-    promise: "Vous donnez un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
+    question: 'Qui travaille avec toi ?',
+    promise: "Toi donnez un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
     investor: "Les salaires sont le premier poste de dépense et le plus difficile à réduire. Le mois d'arrivée compte autant que le montant.",
     minutes: 6,
     unlocks: 'Masse salariale chargée et point mort',
@@ -147,13 +147,13 @@ export const STEPS = [
         body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer au modèle. Mesurez l'effet avant d'aller chercher de l'argent.",
       },
       {
-        title: 'Comptez-vous dedans',
-        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscrivez votre rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
+        title: 'Compte-toi dedans',
+        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscrivez ta rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
       },
     ],
     check(s, r) {
       const team = liveTeam(s)
-      if (!team.length) return state(0, "Personne dans l'équipe, pas même vous")
+      if (!team.length) return state(0, "Personne dans l'équipe, pas même toi")
       const paid = team.filter((m) => n(m.monthlyGross) > 0 || m.contractType === 'stage')
       const cost = r ? (r.pnl.payroll[0] || 0) : 0
       const score = paid.length === team.length ? 1 : 0.6
@@ -166,7 +166,7 @@ export const STEPS = [
     page: 'charges',
     label: 'Mes charges',
     question: 'Que coûte le fonctionnement ?',
-    promise: "Loyer, comptable, logiciels, assurances, matériel. Les dépenses qui tombent que vous vendiez ou non — celles qui fixent votre point mort.",
+    promise: "Loyer, comptable, logiciels, assurances, matériel. Les dépenses qui tombent que tu vendes ou non — celles qui fixent ton point mort.",
     investor: "Un prévisionnel sans comptable, sans assurance et sans banque n'a pas été relu. C'est le premier signe qu'on cherche.",
     minutes: 4,
     unlocks: 'Point mort et besoin en fonds de roulement',
@@ -202,13 +202,13 @@ export const STEPS = [
     label: 'Mes clients',
     question: 'Combien de clients, et à quel rythme ?',
     promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
-    investor: "Un investisseur ne discute presque jamais vos charges. Il discute vos volumes. Préparez-vous à dire d'où vient ce premier chiffre.",
+    investor: "Un investisseur ne discute presque jamais tes charges. Il discute tes volumes. Préparez-toi à dire d'où vient ce premier chiffre.",
     minutes: 6,
     unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
     tips: [
       {
-        title: 'Partez de ce que vous savez livrer, pas du marché',
-        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de votre capacité réelle à livrer.",
+        title: 'Partez de ce que tu sais livrer, pas du marché',
+        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de ton capacité réelle à livrer.",
       },
       {
         title: '10 % par mois, c’est déjà énorme',
@@ -238,7 +238,7 @@ export const STEPS = [
     label: 'Mon financement',
     question: 'Comment tenir jusqu’à la rentabilité ?',
     promise: "Apport, prêt, subvention, levée. Fynomia calcule le trou à combler et la date avant laquelle il doit l'être.",
-    investor: "Le chiffre qu'on retient d'un dossier : combien vous demandez, et pour combien de mois d'autonomie.",
+    investor: "Le chiffre qu'on retient d'un dossier : combien tu demandes, et pour combien de mois d'autonomie.",
     minutes: 5,
     unlocks: 'Plan de financement et date limite',
     tips: [
@@ -249,7 +249,7 @@ export const STEPS = [
       },
       {
         title: 'La règle du 1 pour 1',
-        body: "Une banque prête rarement plus que les fonds propres. 20 000 € d'apport ouvrent la porte à 20 000 € de prêt — rarement à 60 000. Prévoyez l'apport avant de compter sur l'emprunt.",
+        body: "Une banque prête rarement plus que les fonds propres. 20 000 € d'apport ouvrent la porte à 20 000 € de prêt — rarement à 60 000. Prévois l'apport avant de compter sur l'emprunt.",
       },
       {
         title: 'Lève pour 18 mois, pas pour 6',
@@ -276,8 +276,8 @@ export const STEPS = [
     act: 'argent',
     page: 'mon-revenu',
     label: 'Ma rémunération',
-    question: 'Combien vous en reste-t-il ?',
-    promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur votre compte.",
+    question: 'Combien toi en reste-t-il ?',
+    promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur ton compte.",
     investor: "Un fondateur qui sait ce qu'il touche net a compris son propre modèle. C'est plus rare qu'on ne croit.",
     minutes: 3,
     unlocks: 'Revenu disponible, mois par mois',
@@ -288,7 +288,7 @@ export const STEPS = [
       },
       {
         title: 'Le « coût d’un euro net »',
-        body: "L'entreprise doit souvent produire 1,70 à 2,20 € de valeur pour en laisser un dans votre poche. Le savoir change la façon de fixer ses prix.",
+        body: "L'entreprise doit souvent produire 1,70 à 2,20 € de valeur pour en laisser un dans ton poche. Le savoir change la façon de fixer ses prix.",
       },
       {
         title: "Le gérant majoritaire de SARL n'échappe pas aux cotisations",
@@ -300,7 +300,7 @@ export const STEPS = [
       const team = liveTeam(s)
       const paysSelf = team.some((m) => n(m.monthlyGross) > 0)
       const hasPayout = n(f.dividendPayout) > 0
-      if (!paysSelf && !hasPayout) return state(0, 'Vous ne vous versez rien pour le moment')
+      if (!paysSelf && !hasPayout) return state(0, 'Toi ne tu verses rien pour le moment')
       let score = 0.6
       if (n(f.taxParts) >= 1 && f.dividendRegime) score = 1
       return state(score, paysSelf ? 'Rémunération saisie' : 'Distribution de dividendes prévue')
@@ -311,8 +311,8 @@ export const STEPS = [
     act: 'plus',
     page: 'marketing',
     label: 'Mon acquisition',
-    question: 'Comment les trouvez-vous ?',
-    promise: "Combien vous coûte un client, et combien il vous rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
+    question: 'Comment les trouvez-toi ?',
+    promise: "Combien toi coûte un client, et combien il toi rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
     investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
     minutes: 5,
     optional: true,
@@ -347,22 +347,22 @@ export const STEPS = [
     page: 'business-case',
     label: 'Mon dossier',
     question: 'Prêt à le présenter ?',
-    promise: "La synthèse rédigée à partir de vos chiffres, et le PowerPoint qui dit exactement la même chose que votre écran.",
+    promise: "La synthèse rédigée à partir de tes chiffres, et le PowerPoint qui dit exactement la même chose que ton écran.",
     investor: "Le dossier ne remplace pas la conversation : il prouve que le travail est fait avant d'entrer dans la pièce.",
     minutes: 2,
     unlocks: 'Business plan exportable',
     tips: [
       {
         title: 'Douze diapositives, pas quarante',
-        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que vous touchez. C'est l'ordre dans lequel on vous lira.",
+        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que tu touches. C'est l'ordre dans lequel on toi lira.",
       },
       {
         title: 'Emporte le CSV',
-        body: "Une banque ou un fonds demande presque toujours le détail mois par mois. Le CSV contient les soixante mois : vous répondez en trente secondes au lieu de trois jours.",
+        body: "Une banque ou un fonds demande presque toujours le détail mois par mois. Le CSV contient les soixante mois : tu réponds en trente secondes au lieu de trois jours.",
       },
       {
-        title: 'Relisez vos hypothèses avant d’envoyer',
-        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que vous ne sauriez pas défendre se corrige maintenant, pas en réunion.",
+        title: 'Relisez tes hypothèses avant d’envoyer',
+        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que toi ne sauriez pas défendre se corrige maintenant, pas en réunion.",
       },
     ],
     check(s, r) {

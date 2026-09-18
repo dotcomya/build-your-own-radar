@@ -9,8 +9,8 @@
  * Trois règles tenues bout à bout :
  *
  *  1. UNE question par écran. Jamais deux idées à la fois.
- *  2. Le vocabulaire du fondateur, pas celui du comptable. On demande « vous
- *     démarrez avec combien ? », pas « quel est votre plan de financement
+ *  2. Le vocabulaire du fondateur, pas celui du comptable. On demande « toi
+ *     démarrez avec combien ? », pas « quel est ton plan de financement
  *     initial ». Le mot juste arrive plus tard, quand le chiffre est là.
  *  3. Chaque réponse produit immédiatement une conséquence visible. C'est ce
  *     qui distingue ce parcours d'un formulaire : on voit le modèle se
@@ -47,16 +47,16 @@ export function resetSetup() { flow.index = 0; flow.touched = new Set() }
 
 const STEPS = [
   {
-    key: 'metier', short: 'Votre métier',
-    question: 'Commençons. Vous faites quoi ?',
-    help: "Nous allons construire votre business plan une question à la fois. Celle-ci commande la TVA, votre statut et les repères de marge — c'est la seule qui change tout le reste.",
+    key: 'metier', short: 'Ton métier',
+    question: 'Commençons. Tu fais quoi ?',
+    help: "Nous allons construire ton business plan une question à la fois. Celle-ci commande la TVA, ton statut et les repères de marge — c'est la seule qui change tout le reste.",
     render: sectorPicker,
     ready: (s) => !!s?.meta?.sectorKey,
   },
   {
     key: 'nom', short: 'Le nom',
     question: 'Ça s’appelle comment ?',
-    help: 'Le nom de votre projet. Vous pourrez le changer quand vous voudrez.',
+    help: 'Le nom de ton projet. Tu pourras le changer quand tu voudras.',
     render: (ctx) => field(ctx, {
       type: 'text', placeholder: 'Mon projet',
       value: (s) => s.meta.company || '',
@@ -67,22 +67,22 @@ const STEPS = [
   {
     key: 'forme', short: 'La forme juridique',
     question: 'Sous quelle forme ?',
-    help: "Elle décide de votre statut social et de la façon dont vous vous rémunérez. Rien n'est définitif : on la change en un clic.",
+    help: "Elle décide de ton statut social et de la façon dont toi tu te rémunères. Rien n'est définitif : on la change en un clic.",
     render: legalScreen,
     ready: (s) => !!s?.meta?.legalForm,
   },
   {
-    key: 'depart', short: 'Votre mise de départ',
-    question: 'Vous démarrez avec combien ?',
-    help: "L'argent déjà disponible : votre apport, celui de vos associés. On verra à la fin s'il en manque.",
+    key: 'depart', short: 'Ton mise de départ',
+    question: 'Tu démarres avec combien ?',
+    help: "L'argent déjà disponible : ton apport, celui de tes associés. On verra à la fin s'il en manque.",
     optional: true,
     render: cashScreen,
     ready: () => true,
   },
   {
-    key: 'offre', short: 'Ce que vous vendez',
-    question: 'Vous vendez quoi ?',
-    help: (s) => `Une ${vocabulary(s).one}, un forfait, un abonnement — dites-le comme vous le diriez à un client.`,
+    key: 'offre', short: 'Ce que tu vends',
+    question: 'Tu vends quoi ?',
+    help: (s) => `Une ${vocabulary(s).one}, un forfait, un abonnement — dites-le comme toi le diriez à un client.`,
     render: (ctx) => field(ctx, {
       type: 'text', placeholder: (s) => vocabulary(s).one,
       value: (s) => (s.activities[0]?.name === 'À définir' ? '' : s.activities[0]?.name || ''),
@@ -98,36 +98,36 @@ const STEPS = [
     ready: (s) => (Number(s?.activities?.[0]?.unitPrice) || 0) > 0 || (Number(s?.activities?.[0]?.recurringPrice) || 0) > 0,
   },
   {
-    key: 'salaire', short: 'Votre rémunération',
-    question: 'Vous vous payez combien ?',
+    key: 'salaire', short: 'Ta rémunération',
+    question: 'Toi tu paies combien ?',
     help: "Fynomia calcule ce que ça coûte vraiment à l'entreprise. Un plan où le fondateur ne se paie pas n'est pas prudent — il est faux.",
     optional: true,
     render: salaryScreen,
     ready: () => true,
   },
   {
-    key: 'frais', short: 'Vos frais fixes',
-    question: 'Vos frais tous les mois',
-    help: 'Cochez ce qui vous concerne. Ce sont eux qui fixent le nombre de clients dont vous avez besoin.',
+    key: 'frais', short: 'Tes frais fixes',
+    question: 'Tes frais tous les mois',
+    help: 'Coche ce qui toi concerne. Ce sont eux qui fixent le nombre de clients dont tu as besoin.',
     optional: true,
     render: costsScreen,
     ready: () => true,
   },
   {
-    key: 'clients', short: 'Vos premiers clients',
+    key: 'clients', short: 'Tes premiers clients',
     question: 'Combien de clients le premier mois ?',
-    help: "Pas une ambition : ce que vous pouvez livrer et facturer dès le début. C'est le chiffre le plus discuté d'un business plan.",
+    help: "Pas une ambition : ce que tu peux livrer et facturer dès le début. C'est le chiffre le plus discuté d'un business plan.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
   {
     key: 'cout', short: 'Le coût de revient',
     // On ne demande le coût de revient qu'ici, une fois les frais connus : sans
-    // ce repère, « ce que ça vous coûte de produire » ne veut rien dire pour
+    // ce repère, « ce que ça toi coûte de produire » ne veut rien dire pour
     // quelqu'un qui n'a jamais tenu de comptabilité — et la confusion la plus
     // fréquente est justement d'y ranger le loyer ou le comptable.
-    question: 'Et chaque vente, elle vous coûte quoi ?',
-    help: "Uniquement ce qui augmente quand vous vendez une unité de plus : matières, sous-traitance, commission. Pas le loyer ni le comptable — ceux-là, vous venez de les saisir.",
+    question: 'Et chaque vente, elle toi coûte quoi ?',
+    help: "Uniquement ce qui augmente quand tu vends une unité de plus : matières, sous-traitance, commission. Pas le loyer ni le comptable — ceux-là, tu viens de les saisir.",
     optional: true,
     render: costScreen,
     ready: () => true,
@@ -142,7 +142,7 @@ const STEPS = [
   },
   {
     key: 'fin', short: 'Le résultat',
-    question: 'Votre business plan est prêt',
+    question: 'Ton business plan est prêt',
     render: doneScreen,
     ready: () => true,
     last: true,
@@ -229,7 +229,7 @@ export function renderSetup(navigate, refresh) {
 function stepList(s, jump, navigate) {
   return h('nav', { class: 'setup-steps', 'aria-label': 'Les questions' },
     h('div', { class: 'setup-steps-head' },
-      h('span', { class: 'setup-steps-title' }, 'Votre business plan'),
+      h('span', { class: 'setup-steps-title' }, 'Ton business plan'),
       h('span', { class: 'setup-steps-sub' }, `${STEPS.length} questions · tout reste modifiable`),
     ),
     ...STEPS.map((st, i) => {
@@ -315,7 +315,7 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
       suffix ? h('span', { class: 'setup-suffix' }, suffix) : null,
     ),
     suggested
-      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans votre métier — écrivez la vôtre par-dessus.')
+      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans ton métier — écrivez la vôtre par-dessus.')
       : null,
   )
 }
@@ -389,12 +389,12 @@ function legalScreen(ctx) {
   const current = () => store.scenario.meta.legalForm
 
   const FORMS = {
-    SASU: { label: 'SASU', note: "Vous seul. Président assimilé salarié : environ 41 % de cotisations patronales sur votre brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.", contract: 'dirigeant' },
+    SASU: { label: 'SASU', note: "Toi seul. Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.", contract: 'dirigeant' },
     SAS: { label: 'SAS', note: "Plusieurs associés possibles. Même régime que la SASU pour le président. C'est la forme des projets qui lèvent des fonds.", contract: 'dirigeant' },
-    EURL: { label: 'EURL', note: "Vous seul. Gérant travailleur non salarié : environ 45 % de cotisations, sensiblement moins cher qu'un assimilé salarié à revenu égal, mais une couverture plus légère.", contract: 'tns' },
+    EURL: { label: 'EURL', note: "Toi seul. Gérant travailleur non salarié : environ 45 % de cotisations, sensiblement moins cher qu'un assimilé salarié à revenu égal, mais une couverture plus légère.", contract: 'tns' },
     SARL: { label: 'SARL', note: "Plusieurs associés. Gérant majoritaire TNS. Attention aux dividendes : au-delà de 10 % du capital, ils supportent les cotisations d'indépendant, pas la flat tax.", contract: 'tns' },
-    EI: { label: 'Entreprise individuelle', note: "Pas de société, pas de capital. Le bénéfice est votre revenu : il est impôté à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.", contract: 'tns' },
-    BNC: { label: 'Exercice libéral', note: "Professions libérales non réglementées en société. Bénéfices non commerciaux : le résultat est votre revenu imposable, sans abattement de 10 %.", contract: 'tns' },
+    EI: { label: 'Entreprise individuelle', note: "Pas de société, pas de capital. Le bénéfice est ton revenu : il est impôté à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.", contract: 'tns' },
+    BNC: { label: 'Exercice libéral', note: "Professions libérales non réglementées en société. Bénéfices non commerciaux : le résultat est ton revenu imposable, sans abattement de 10 %.", contract: 'tns' },
     SELARL: { label: 'SELARL', note: "Réservée aux professions réglementées. Gérant majoritaire TNS, même traitement des dividendes qu'une SARL.", contract: 'tns' },
     SELAS: { label: 'SELAS', note: "Réservée aux professions réglementées. Président assimilé salarié, dividendes à la flat tax.", contract: 'dirigeant' },
     Association: { label: 'Association', note: "Loi 1901. Gestion désintéressée : aucun bénéfice ne peut être distribué. Un dirigeant rémunéré relève du régime général.", contract: 'dirigeant' },
@@ -415,7 +415,7 @@ function legalScreen(ctx) {
       }, { label: 'Forme juridique', silent: true }),
     }))),
     h('p', { class: 'setup-note' },
-      "Ce choix fixe votre statut social — c'est lui qui décide du coût de votre rémunération, pas l'inverse."),
+      "Ce choix fixe ton statut social — c'est lui qui décide du coût de ta rémunération, pas l'inverse."),
   )
 }
 
@@ -516,7 +516,7 @@ function priceScreen(ctx) {
       }),
     },
     {
-      label: 'À la commission', note: 'Vous prélevez un pourcentage sur ce qui passe par vous.',
+      label: 'À la commission', note: 'Toi prélevez un pourcentage sur ce qui passe par toi.',
       active: () => mode() === 'commission',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -548,9 +548,9 @@ function commissionFields(ctx) {
       value: (sc) => (Number(sc.meta.commissionBasket) > 0 ? sc.meta.commissionBasket : ''),
       apply: (sc, v) => { sc.meta.commissionBasket = v; recompute(sc) },
     }),
-    h('p', { class: 'setup-note' }, 'Le montant moyen de ce qui passe par vous.'),
+    h('p', { class: 'setup-note' }, 'Le montant moyen de ce qui passe par toi.'),
     field(ctx, {
-      type: 'number', placeholder: '10', suffix: '% pour vous',
+      type: 'number', placeholder: '10', suffix: '% pour toi',
       value: (sc) => (Number(sc.meta.commissionRate) > 0 ? Math.round(sc.meta.commissionRate * 1000) / 10 : ''),
       apply: (sc, v) => { sc.meta.commissionRate = (Number(v) || 0) / 100; recompute(sc) },
     }),
@@ -560,7 +560,7 @@ function commissionFields(ctx) {
 /**
  * Le coût de revient, détaillé.
  *
- * « Ça vous coûte combien à produire ? » est une question à laquelle personne
+ * « Ça toi coûte combien à produire ? » est une question à laquelle personne
  * ne sait répondre d'un seul nombre. En revanche, chacun sait dire s'il a des
  * matières, une commission de paiement, une livraison — et combien. On propose
  * donc les postes du métier, on additionne, et le total devient le coût de
@@ -662,7 +662,7 @@ function costScreen(ctx) {
   draw(); drawSummary()
   return h('div', {}, host, summary,
     h('p', { class: 'setup-note' },
-      "Cochez ce qui vous concerne ; les montants proposés sont des ordres de grandeur pour votre métier. Rien ici n'est un frais fixe — le loyer et le comptable, vous venez de les saisir."))
+      "Coche ce qui toi concerne ; les montants proposés sont des ordres de grandeur pour ton métier. Rien ici n'est un frais fixe — le loyer et le comptable, tu viens de les saisir."))
 }
 
 /* ───────────────────── Écran : clients et croissance ────────────────────── */
@@ -685,7 +685,7 @@ function growthScreen(ctx) {
     { label: 'Croissance', silent: true })
   return choice(ctx, [
     { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: () => g() > 0 && g() <= 0.04, pick: () => pick(0.03) },
-    { label: 'Normalement', note: '+8 % par mois — vous prospectez', active: () => g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
+    { label: 'Normalement', note: '+8 % par mois — tu prospectes', active: () => g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
     { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: () => g() > 0.10, pick: () => pick(0.15) },
   ])
 }
@@ -693,7 +693,7 @@ function growthScreen(ctx) {
 /* ──────────────────── Écran : rémunération et frais ─────────────────────── */
 
 /**
- * Votre rémunération, et ce qu'elle coûte vraiment.
+ * Ta rémunération, et ce qu'elle coûte vraiment.
  *
  * Le statut n'est pas demandé : il découle de la forme juridique choisie deux
  * questions plus tôt. On l'affiche pour que le fondateur comprenne pourquoi le
@@ -708,7 +708,7 @@ function salaryScreen(ctx) {
   const draw = () => {
     const m = me()
     const gross = Number(m?.monthlyGross) || 0
-    if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laissez vide si vous ne vous versez rien la première année.')); return }
+    if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laisse vide si toi ne tu verses rien la première année.')); return }
     let c = null
     try { c = monthlyCost({ ...m, monthlyGross: gross }, { headcount: 1, fiscal: store.scenario.fiscal }) } catch { /* rien */ }
     if (!c) { host.replaceChildren(); return }
@@ -720,15 +720,15 @@ function salaryScreen(ctx) {
       {
         label: 'Ce que débourse l’entreprise', value: c.superGross, tone: 'top',
         note: tns
-          ? `Votre rémunération plus les cotisations d'indépendant.`
-          : `Votre brut plus ${euro(c.employerCharges)} de cotisations patronales${perks > 0 ? ` et ${euro(perks)} de mutuelle obligatoire` : ''}.`,
+          ? `Ta rémunération plus les cotisations d'indépendant.`
+          : `Ton brut plus ${euro(c.employerCharges)} de cotisations patronales${perks > 0 ? ` et ${euro(perks)} de mutuelle obligatoire` : ''}.`,
       },
       {
-        label: tns ? 'Votre rémunération' : 'Votre salaire brut', value: gross,
-        note: tns ? "C'est la base sur laquelle vos cotisations sont appelées." : 'Le chiffre qui figure sur le contrat.',
+        label: tns ? 'Ta rémunération' : 'Ton salaire brut', value: gross,
+        note: tns ? "C'est la base sur laquelle tes cotisations sont appelées." : 'Le chiffre qui figure sur le contrat.',
       },
       {
-        label: 'Ce que vous touchez', value: tns ? gross : c.net, tone: 'bottom',
+        label: 'Ce que tu touches', value: tns ? gross : c.net, tone: 'bottom',
         note: tns
           ? "Un indépendant n'a pas de cotisations salariées : ce montant est celui versé, avant impôt sur le revenu."
           : `Après ${euro(c.employeeCharges)} de cotisations salariales, avant impôt sur le revenu.`,
@@ -749,7 +749,7 @@ function salaryScreen(ctx) {
         )),
       ),
       h('p', { class: 'setup-note' },
-        `Statut ${label()}. Pour vous laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que vous pouvez vous verser.`),
+        `Statut ${label()}. Pour toi laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que tu peux toi verser.`),
     )
   }
 
@@ -775,7 +775,7 @@ function salaryScreen(ctx) {
 
   return h('div', {},
     h('div', { class: 'setup-status' },
-      h('span', { class: 'setup-status-tag' }, 'Votre statut'),
+      h('span', { class: 'setup-status-tag' }, 'Ton statut'),
       h('span', { class: 'setup-status-value' }, label()),
       h('span', { class: 'setup-status-why' }, `découle de la forme ${store.scenario.meta.legalForm}`),
     ),
@@ -853,7 +853,7 @@ function costsScreen(ctx) {
 
   draw()
   return h('div', {}, host,
-    h('p', { class: 'setup-note' }, 'Ces montants sont des ordres de grandeur pour votre métier. Corrigez-les maintenant ou plus tard.'))
+    h('p', { class: 'setup-note' }, 'Ces montants sont des ordres de grandeur pour ton métier. Corrige-les maintenant ou plus tard.'))
 }
 
 function cashScreen(ctx) {
@@ -866,7 +866,7 @@ function cashScreen(ctx) {
       },
       apply: (sc, v) => { sc.financing.equityFounders = v > 0 ? [{ month: 0, amount: v }] : [] },
     }),
-    h('p', { class: 'setup-note' }, "Si vous n'avez rien de côté, mettez zéro : Fynomia vous dira exactement combien il vous manque et à quelle date."),
+    h('p', { class: 'setup-note' }, "Si tu n'as rien de côté, mettez zéro : Fynomia toi dira exactement combien il toi manque et à quelle date."),
   )
 }
 
@@ -888,17 +888,17 @@ function doneScreen(ctx) {
       resultRow('Premier exercice rentable',
         k.firstProfitableYear !== null ? `Année ${k.firstProfitableYear + 1}` : 'Au-delà de 5 ans',
         k.firstProfitableYear !== null ? 'ok' : 'warn'),
-      resultRow(k.fundingNeed > 0 ? 'Il vous manque' : 'Trésorerie',
+      resultRow(k.fundingNeed > 0 ? 'Il toi manque' : 'Trésorerie',
         k.fundingNeed > 0 ? euro(k.fundingNeed) : 'Jamais négative',
         k.fundingNeed > 0 ? 'warn' : 'ok'),
     ),
     h('div', { class: 'setup-unlocked' },
-      h('div', { class: 'setup-unlocked-title' }, 'Le logiciel complet vous attend'),
+      h('div', { class: 'setup-unlocked-title' }, 'Le logiciel complet toi attend'),
       h('ul', { class: 'setup-unlocked-list' },
-        h('li', {}, 'Ajoutez des salariés, des campagnes, des offres, des investissements — et mettez chaque ligne en pause pour voir ce qu’elle coûte vraiment.'),
+        h('li', {}, 'Ajoute des salariés, des campagnes, des offres, des investissements — et mettez chaque ligne en pause pour voir ce qu’elle coûte vraiment.'),
         h('li', {}, 'Réglez les délais de paiement, la TVA, la saisonnalité, les crédits d’impôt.'),
         h('li', {}, 'Lisez les graphiques : trésorerie mois par mois, compte de résultat, bilan, point mort.'),
-        h('li', {}, 'Un guide reste à droite pour vous emmener page après page.'),
+        h('li', {}, 'Un guide reste à droite pour toi emmener page après page.'),
       ),
     ),
     h('div', { class: 'setup-actions' },

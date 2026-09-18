@@ -42,7 +42,7 @@ export function renderTeam(navigate, refresh) {
     { key: 'postes', label: 'Équipe', count: s.team.length },
     { key: 'avantages', label: 'Avantages', count: perks },
     r && s.team.length > 0 ? { key: 'masse', label: 'Masse salariale' } : null,
-    level === 'advanced' && s.team.length > 0 ? { key: 'jei', label: 'Recherche et JEI' } : null,
+    s.team.length > 0 ? { key: 'jei', label: 'Recherche et JEI' } : null,
   ]
   const view = views.some((v) => v && v.key === renderTeam.view) ? renderTeam.view : 'postes'
   renderTeam.view = view
@@ -56,7 +56,7 @@ export function renderTeam(navigate, refresh) {
       s.team.length > 1 ? `${s.team.length} postes` : 'Équipe',
       r && s.team.length
         ? `${euro(payrollY)} la première année, avantages compris`
-        : 'Vous compris, si vous vous rémunérez',
+        : 'Toi compris, si toi tu te rémunères',
       view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null,
     ),
 
@@ -67,7 +67,7 @@ export function renderTeam(navigate, refresh) {
         ? h('div', { class: 'card' }, h('div', { class: 'empty' },
             h('div', { class: 'empty-icon' }, '◷'),
             h('h3', {}, 'Aucun poste'),
-            h('p', { class: 'muted' }, "Ajoutez les personnes de l'équipe, y compris les fondateurs rémunérés."),
+            h('p', { class: 'muted' }, "Ajoute les personnes de l'équipe, y compris les fondateurs rémunérés."),
             h('button', { class: 'btn btn-primary mt', onClick: add }, 'Ajouter un premier poste'),
           ))
         : h('div', {}, ...s.team.map((m, i) => memberCard(m, i, r, level, refresh, jeiActive))),
@@ -129,8 +129,8 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
   const sections = [
     { key: 'poste', label: 'Le poste' },
     { key: 'dates', label: 'Dates et effectif' },
-    level === 'advanced' ? { key: 'cout', label: 'Du brut au coût réel' } : null,
-    level === 'advanced' && ['cdi', 'cdd'].includes(m.contractType) ? { key: 'rd', label: 'Recherche' } : null,
+    { key: 'cout', label: 'Du brut au coût réel' },
+    ['cdi', 'cdd'].includes(m.contractType) ? { key: 'rd', label: 'Recherche' } : null,
   ]
   const sec = sections.some((x) => x && x.key === memberCard.sec) ? memberCard.sec : 'poste'
 
@@ -200,7 +200,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         h('div', { class: 'grid grid-3' },
           numberField({ label: 'Nombre de personnes', field: 'count', value: m.count, suffix: 'pers.', hint: 'Un même poste dupliqué.', onInput: (v) => set({ count: v }) }),
           monthField({ label: "Mois d'arrivée", value: m.startMonth, startDate: r?.startDate, onInput: (v) => set({ startMonth: v }) }),
-          level !== 'easy' ? monthField({ label: 'Mois de départ', value: m.endMonth, startDate: r?.startDate, allowEmpty: true, onInput: (v) => set({ endMonth: v }) }) : null,
+          monthField({ label: 'Mois de départ', value: m.endMonth, startDate: r?.startDate, allowEmpty: true, onInput: (v) => set({ endMonth: v }) }),
         ),
       ) : null,
 
@@ -257,7 +257,7 @@ function costBreakdown(cost, count, member) {
         `Ce salaire bénéficie de l'allègement de cotisations patronales applicable jusqu'à 3 SMIC. Le taux effectif de charges tombe à ${pct(cost.employerCharges / Math.max(1, cost.gross), 0)} au lieu de ${pct(cost.employerBase / Math.max(1, cost.gross), 0)}.`),
       cost.jeiExemption > 0 && h('div', { class: 'note ok', style: { marginTop: '10px' } },
         h('div', { class: 'note-title' }, `Exonération JEI : ${euro(cost.jeiExemption)} par mois`),
-        `Votre entreprise remplit les conditions du statut Jeune entreprise innovante et ce poste est affecté à la recherche.`),
+        `Ton entreprise remplit les conditions du statut Jeune entreprise innovante et ce poste est affecté à la recherche.`),
     ),
   )
   details.addEventListener('toggle', () => { details.open ? open.add(id) : open.delete(id) })
@@ -330,7 +330,7 @@ function benefitsPanel(r, refresh) {
 
     missing.length > 0 ? h('div', { class: 'note warn mt' },
       h('div', { class: 'note-title' }, 'Une obligation manque à l’appel'),
-      `${missing.map(([, d]) => d.label).join(' et ')} : ce n’est pas un avantage que vous choisissez d’accorder, c’est une dépense que vous aurez. La laisser à zéro rend le plan optimiste de ${euro(missing.reduce((a, [, d]) => a + d.suggested, 0) * 12 * Math.max(1, heads))} par an.`) : null,
+      `${missing.map(([, d]) => d.label).join(' et ')} : ce n’est pas un avantage que tu choisis d’accorder, c’est une dépense que tu auras. La laisser à zéro rend le plan optimiste de ${euro(missing.reduce((a, [, d]) => a + d.suggested, 0) * 12 * Math.max(1, heads))} par an.`) : null,
   )
 }
 

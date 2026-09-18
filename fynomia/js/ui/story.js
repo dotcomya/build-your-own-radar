@@ -2,8 +2,8 @@
  * Le film des cinq ans.
  *
  * Un tableau de chiffres oblige à reconstruire mentalement l'histoire. Une
- * courbe de trésorerie annotée la raconte : voici quand vous embauchez, quand
- * la caisse touche le fond, quand vous franchissez le point mort, quand vous
+ * courbe de trésorerie annotée la raconte : voici quand tu embauches, quand
+ * la caisse touche le fond, quand tu franchis le point mort, quand toi
  * devenez rentable. Un seul axe, une seule échelle, des repères posés dessus.
  *
  * Le choix des repères appartient au moteur (engine/milestones.js) ; ici on

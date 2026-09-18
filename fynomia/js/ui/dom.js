@@ -181,91 +181,6 @@ export function enableToggle(on, onChange) {
 }
 
 /**
- * Un bloc qui n'existe qu'à partir d'un certain niveau de détail.
- *
- * Sans marque, on ne sait pas pourquoi une section apparaît ou disparaît en
- * changeant de profondeur. Un filet de couleur et une étiquette suffisent à
- * rendre l'échange visible : bleu pour l'intermédiaire, violet pour l'expert.
- */
-export function levelBlock(level, title, ...children) {
-  const label = { intermediate: 'Intermédiaire', advanced: 'Expert' }[level] || level
-  return h('div', { class: `lv lv-${level}` },
-    h('div', { class: 'lv-head' },
-      h('span', { class: 'lv-tag' }, label),
-      title && h('span', { class: 'lv-title' }, title),
-    ),
-    ...children,
-  )
-}
-
-/**
- * Ce que la profondeur suivante ajoute sur cette page.
- *
- * Changer de niveau faisait apparaître et disparaître des blocs sans qu'on
- * sache lesquels ni pourquoi. Cette ligne le dit à l'endroit exact où ça se
- * joue, et permet de basculer sans aller chercher le sélecteur en haut.
- */
-export function levelAdds(page, level) {
-  return (LEVEL_ADDS[page] || {})[level] || null
-}
-
-export function levelFooter(page, level, onSwitch) {
-  const next = level === 'easy' ? 'intermediate' : level === 'intermediate' ? 'advanced' : null
-  const adds = LEVEL_ADDS[page] || {}
-  const items = next ? adds[next] : null
-  const removed = level !== 'easy' ? adds[level] : null
-
-  if (!items && !removed) return null
-  const name = { intermediate: 'Intermédiaire', advanced: 'Expert' }
-  return h('div', { class: `levelfoot lf-${level}` },
-    removed ? h('div', { class: 'levelfoot-now' },
-      h('span', { class: 'levelfoot-tag' }, `Grâce au niveau ${name[level]}`),
-      h('span', {}, removed.join(' · ')),
-    ) : null,
-    items ? h('div', { class: 'levelfoot-next' },
-      h('span', { class: 'levelfoot-tag' }, `En ${name[next]}, cette page ajoute`),
-      h('span', {}, items.join(' · ')),
-      h('button', { class: 'btn btn-sm', onClick: () => onSwitch(next) }, `Passer en ${name[next]}`),
-    ) : null,
-  )
-}
-
-/**
- * Ce que chaque profondeur apporte, page par page.
- * C'est la seule source de vérité de ce que le sélecteur de niveau promet.
- */
-const LEVEL_ADDS = {
-  offre: {
-    intermediate: ['le taux de TVA par offre', 'la saisie des volumes mois par mois', 'les conditions de paiement'],
-    advanced: ["l'évolution des prix année par année"],
-  },
-  equipe: {
-    intermediate: ['la date de départ de chaque poste'],
-    advanced: ['les avantages salariés', 'le détail du brut au coût réel', 'le temps passé en recherche et le statut JEI'],
-  },
-  charges: {
-    intermediate: ['les investissements et leur amortissement'],
-    advanced: ['les dates de début et de fin', 'le rattachement au crédit d’impôt recherche'],
-  },
-  financement: {
-    intermediate: ['la levée de fonds', 'le compte courant d’associé'],
-    advanced: ['les avances remboursables', 'le plan de financement complet'],
-  },
-  marketing: {
-    intermediate: ['les campagnes par canal', "l'entonnoir de conversion"],
-    advanced: ['le rapport LTV/CAC et le délai de retour'],
-  },
-  'tableau-de-bord': {
-    intermediate: ['le besoin en fonds de roulement et la courbe de trésorerie'],
-    advanced: ['les indicateurs détaillés'],
-  },
-  resultats: {
-    intermediate: ['le tableau de flux de trésorerie'],
-    advanced: ['le bilan prévisionnel et le détail de la TVA'],
-  },
-}
-
-/**
  * Navigation horizontale.
  *
  * Une page de saisie est une pile de sujets ; empilés verticalement, ils
@@ -361,6 +276,36 @@ export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, h
     ),
     hint ? h('div', { class: 'field-hint' }, hint) : null,
   )
+}
+
+/**
+ * Affiner.
+ *
+ * Le logiciel ne demande plus à qui que ce soit de s'auto-étiqueter
+ * « débutant » ou « expert » — une question à laquelle personne ne sait
+ * répondre, et dont la mauvaise réponse cache des réglages utiles ou en impose
+ * d'inutiles. Chaque question se pose donc au premier degré, et ce qui la
+ * raffine tient derrière un lien discret.
+ *
+ * Le modèle, lui, est le même pour tout le monde : ouvrir un volet n'active
+ * aucun mode, ça montre des champs qui existaient déjà.
+ *
+ * @param {string} id     identité stable du volet, pour qu'il reste ouvert
+ * @param {string} label  ce que l'ouverture apporte, dit en clair
+ */
+export function refine(id, label, ...children) {
+  const body = children.flat(4).filter(Boolean)
+  if (!body.length) return null
+  const memory = refine.open || (refine.open = new Set())
+  const el = h('details', { class: 'refine', open: memory.has(id) || null },
+    h('summary', { class: 'refine-head' },
+      h('span', { class: 'refine-sign' }, '+'),
+      h('span', { class: 'refine-label' }, label),
+    ),
+    h('div', { class: 'refine-body' }, ...body),
+  )
+  el.addEventListener('toggle', () => { el.open ? memory.add(id) : memory.delete(id) })
+  return el
 }
 
 export function helpButton(key) {

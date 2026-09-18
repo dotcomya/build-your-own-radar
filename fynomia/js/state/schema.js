@@ -15,12 +15,12 @@ export const LEVEL_META = {
   easy: {
     label: 'Facile', short: 'Facile',
     tagline: 'Une offre, quelques clients, un résultat.',
-    description: "Le strict nécessaire pour chiffrer une idée : ce que vous vendez, à quel prix, à combien de clients, et ce que ça coûte. Les délais de paiement, la TVA et les cotisations sont calculés avec des valeurs de marché que vous n'avez pas à connaître.",
+    description: "Le strict nécessaire pour chiffrer une idée : ce que tu vends, à quel prix, à combien de clients, et ce que ça coûte. Les délais de paiement, la TVA et les cotisations sont calculés avec des valeurs de marché que tu n'as pas à connaître.",
   },
   intermediate: {
     label: 'Intermédiaire', short: 'Inter.',
     tagline: 'Plusieurs offres, des campagnes, du financement.',
-    description: "Vous pilotez plusieurs sources de revenus, vous branchez vos campagnes marketing sur votre acquisition client, vous gérez vos investissements et vos emprunts. Les conditions de paiement deviennent modifiables.",
+    description: "Toi pilotez plusieurs sources de revenus, tu branches tes campagnes marketing sur ton acquisition client, tu gères tes investissements et tes emprunts. Les conditions de paiement deviennent modifiables.",
   },
   advanced: {
     label: 'Expert', short: 'Expert',
@@ -87,6 +87,54 @@ export function newActivity(overrides = {}) {
     volumes: { mode: 'growth', launchMonth: 0, startUnits: 3, monthlyGrowth: 0.08, growthDecay: 0.96, cap: '', seasonality: null, manual: [] },
     ...overrides,
   }
+}
+
+
+/**
+ * Les formes juridiques que le modèle sait distinguer.
+ *
+ * On ne propose que celles dont Fynomia tire un calcul différent : statut
+ * social du dirigeant, imposition du bénéfice, traitement des dividendes.
+ * Une SCI ou une SCM n'abritent pas une activité d'exploitation et ne
+ * changeraient rien au prévisionnel — les proposer serait du décor.
+ */
+export const LEGAL_FORMS = {
+  SASU: {
+    label: 'SASU', short: 'Toi seul · assimilé salarié', contract: 'dirigeant',
+    note: "Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.",
+  },
+  SAS: {
+    label: 'SAS', short: 'Plusieurs associés · assimilé salarié', contract: 'dirigeant',
+    note: "Même régime que la SASU pour le président. C'est la forme des projets qui lèvent des fonds.",
+  },
+  EURL: {
+    label: 'EURL', short: 'Toi seul · travailleur non salarié', contract: 'tns',
+    note: "Gérant TNS : environ 45 % de cotisations, sensiblement moins cher qu'un assimilé salarié à revenu égal, mais une couverture plus légère.",
+  },
+  SARL: {
+    label: 'SARL', short: 'Plusieurs associés · gérant TNS', contract: 'tns',
+    note: "Attention aux dividendes : au-delà de 10 % du capital, ils supportent les cotisations d'indépendant, pas la flat tax.",
+  },
+  EI: {
+    label: 'Entreprise individuelle', short: 'Pas de société', contract: 'tns',
+    note: "Le bénéfice est ton revenu : il est imposé à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.",
+  },
+  BNC: {
+    label: 'Exercice libéral', short: 'Bénéfices non commerciaux', contract: 'tns',
+    note: "Le résultat est ton revenu imposable, sans l'abattement de 10 % des salaires.",
+  },
+  SELARL: {
+    label: 'SELARL', short: 'Profession réglementée · TNS', contract: 'tns',
+    note: "Réservée aux professions réglementées. Même traitement des dividendes qu'une SARL.",
+  },
+  SELAS: {
+    label: 'SELAS', short: 'Profession réglementée · assimilé salarié', contract: 'dirigeant',
+    note: "Réservée aux professions réglementées. Président assimilé salarié, dividendes à la flat tax.",
+  },
+  Association: {
+    label: 'Association', short: 'Loi 1901 · gestion désintéressée', contract: 'dirigeant',
+    note: "Aucun bénéfice ne peut être distribué. Un dirigeant rémunéré relève du régime général.",
+  },
 }
 
 export function newTeamMember(overrides = {}) {
@@ -255,21 +303,21 @@ export function validate(scenario, result) {
   const issues = []
   const add = (level, page, message, hint) => issues.push({ level, page, message, hint })
 
-  if (!scenario.activities?.length) add('error', 'offre', "Aucune offre définie.", "Ajoutez au moins une offre pour générer un chiffre d'affaires.")
+  if (!scenario.activities?.length) add('error', 'offre', "Aucune offre définie.", "Ajoute au moins une offre pour générer un chiffre d'affaires.")
 
   for (const a of scenario.activities || []) {
     const split = (Number(a.deposit) || 0) + (Number(a.milestone) || 0)
     if (split > 1.0001) add('error', 'offre', `« ${a.name} » : acompte et solde intermédiaire dépassent 100 %.`, 'La somme acompte + solde intermédiaire ne peut excéder le prix total.')
     if ((Number(a.unitPrice) || 0) === 0 && (Number(a.recurringPrice) || 0) === 0) add('warning', 'offre', `« ${a.name} » n'a ni prix unitaire ni abonnement.`, "Cette offre ne produira aucun revenu.")
     const price = Number(a.unitPrice) || 0, cost = Number(a.unitCost) || 0
-    if (price > 0 && cost > price) add('warning', 'offre', `« ${a.name} » se vend à perte (coût ${fmt(cost)} € pour un prix de ${fmt(price)} €).`, "Vérifiez le coût de revient unitaire.")
-    if ((Number(a.contractMonths) || 0) === 0 && (Number(a.recurringPrice) || 0) > 0) add('warning', 'offre', `« ${a.name} » a un abonnement mais aucune durée de contrat.`, "Renseignez une durée de contrat pour que l'abonnement génère du revenu.")
+    if (price > 0 && cost > price) add('warning', 'offre', `« ${a.name} » se vend à perte (coût ${fmt(cost)} € pour un prix de ${fmt(price)} €).`, "Vérifie le coût de revient unitaire.")
+    if ((Number(a.contractMonths) || 0) === 0 && (Number(a.recurringPrice) || 0) > 0) add('warning', 'offre', `« ${a.name} » a un abonnement mais aucune durée de contrat.`, "Renseigne une durée de contrat pour que l'abonnement génère du revenu.")
     if ((Number(a.volumes?.monthlyGrowth) || 0) > 0.3) add('warning', 'offre', `« ${a.name} » croît de plus de 30 % par mois.`, "Une croissance de 30 % par mois multiplie les volumes par 23 en un an. Un investisseur la considérera comme non étayée.")
   }
 
   for (const m of scenario.team || []) {
     const gross = Number(m.monthlyGross) || 0
-    if (m.contractType === 'cdi' && gross > 0 && gross < 1700) add('warning', 'equipe', `« ${m.role} » est rémunéré ${fmt(gross)} € brut, sous le SMIC temps plein.`, "Vérifiez qu'il s'agit bien d'un temps partiel.")
+    if (m.contractType === 'cdi' && gross > 0 && gross < 1700) add('warning', 'equipe', `« ${m.role} » est rémunéré ${fmt(gross)} € brut, sous le SMIC temps plein.`, "Vérifie qu'il s'agit bien d'un temps partiel.")
     const alloc = Object.values(m.allocation || {}).reduce((a, b) => a + (Number(b) || 0), 0)
     if (alloc > 1.0001) add('error', 'equipe', `« ${m.role} » : la répartition par activité dépasse 100 %.`, 'Le total des affectations doit être inférieur ou égal à 100 %.')
     if ((Number(m.rdShare) || 0) + (Number(m.innovShare) || 0) > 1.0001) add('error', 'equipe', `« ${m.role} » : recherche et innovation cumulées dépassent 100 % du temps.`, "Un salarié ne peut consacrer plus de 100 % de son temps à ces activités.")
@@ -282,11 +330,11 @@ export function validate(scenario, result) {
 
   if (result) {
     const need = result.kpis.fundingNeed
-    if (need > 0) add('warning', 'financement', `Votre trésorerie devient négative : il manque ${fmt(need)} € au point bas.`, "Augmentez le capital, décalez des dépenses ou accélérez les encaissements.")
+    if (need > 0) add('warning', 'financement', `Ta trésorerie devient négative : il manque ${fmt(need)} € au point bas.`, "Augmente le capital, décalez des dépenses ou accélérez les encaissements.")
     result.balance.forEach((b, y) => {
       if (Math.abs(b.gap) > Math.max(50, b.totalAssets * 0.01)) add('info', 'resultats', `Bilan année ${y + 1} : écart actif/passif de ${fmt(b.gap)} €.`, "Écart d'arrondi ou poste non modélisé ; sans incidence sur la trésorerie.")
     })
-    if (result.kpis.marginRate.every((r) => r <= 0) && result.pnl.revenue.some((r) => r > 0)) add('error', 'offre', 'Votre marge brute est nulle ou négative sur tout l\'horizon.', "Aucun point mort ne peut être calculé : le prix de vente ne couvre pas le coût variable.")
+    if (result.kpis.marginRate.every((r) => r <= 0) && result.pnl.revenue.some((r) => r > 0)) add('error', 'offre', 'Ta marge brute est nulle ou négative sur tout l\'horizon.', "Aucun point mort ne peut être calculé : le prix de vente ne couvre pas le coût variable.")
   }
   return issues
 }

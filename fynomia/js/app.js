@@ -6,17 +6,15 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, toast, euro, narrow, levelFooter, levelAdds } from './ui/dom.js'
+import { h, clear, setDrawerHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
-import { LEVEL_META } from './state/schema.js'
 import { PERSONAS, getPersona } from './ui/personas.js'
 import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
-import { renderMarketing } from './ui/pages/marketing.js'
 import { renderTeam } from './ui/pages/team.js'
 import { renderCosts } from './ui/pages/costs.js'
 import { renderFinancing } from './ui/pages/financing.js'
@@ -24,32 +22,52 @@ import { renderResults } from './ui/pages/results.js'
 import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
 import { renderFounder } from './ui/pages/founder.js'
-import { renderModel } from './ui/pages/model.js'
+import { renderProject } from './ui/pages/project.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { journey, points } from './engine/journey.js'
+import { buildState } from './engine/build.js'
+import { liveRail } from './ui/live.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
-import { guideBar } from './ui/guide.js'
 import { renderAccount } from './ui/pages/account.js'
 
+/**
+ * Les neuf modules.
+ *
+ * L'ordre suit la construction d'un prévisionnel, pas l'organigramme d'un
+ * cabinet comptable : on pose le cadre, on décrit ce qu'on vend, ce que ça
+ * coûte, qui le fait, avec quel argent — puis on lit ce que ça donne.
+ *
+ * Il n'y a plus de niveaux. Chaque module pose ses questions au premier degré
+ * et range la profondeur derrière « affiner », là où elle sert. Personne n'a
+ * à se déclarer débutant ou expert pour construire le même modèle.
+ */
 const PAGES = {
-  'tableau-de-bord': { label: 'Tableau de bord', icon: '◱', render: renderDashboard, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  modele: { label: 'Mon modèle', icon: '◈', render: renderModel, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  offre: { label: 'Offre et clients', icon: '◑', render: renderOffer, levels: ['easy', 'intermediate', 'advanced'], tab: true },
-  marketing: { label: 'Marketing', icon: '◎', render: renderMarketing, levels: ['easy', 'intermediate', 'advanced'] },
-  equipe: { label: 'Équipe', icon: '◷', render: renderTeam, levels: ['easy', 'intermediate', 'advanced'] },
-  charges: { label: 'Charges', icon: '▦', render: renderCosts, levels: ['easy', 'intermediate', 'advanced'] },
-  financement: { label: 'Financement', icon: '◇', render: renderFinancing, levels: ['easy', 'intermediate', 'advanced'] },
-  resultats: { label: 'États financiers', icon: '▤', render: renderResults, levels: ['easy', 'intermediate', 'advanced'] },
-  'business-case': { label: 'Business case', icon: '◆', render: renderBusinessCase, levels: ['easy', 'intermediate', 'advanced'] },
-  reglages: { label: 'Réglages', icon: '⚙', render: renderSettings, levels: ['easy', 'intermediate', 'advanced'] },
+  projet: { no: '01', label: 'Projet', render: renderProject, build: true },
+  offre: { no: '02', label: 'Offre & revenus', render: renderOffer, build: true },
+  achats: { no: '03', label: 'Achats & coûts', render: renderCosts, build: true },
+  equipe: { no: '04', label: 'Équipe', render: renderTeam, build: true },
+  financement: { no: '05', label: 'Financement', render: renderFinancing, build: true },
+  'tableau-de-bord': { no: '06', label: 'Tableau de bord', render: renderDashboard },
+  resultats: { no: '07', label: 'États financiers', render: renderResults },
+  'business-case': { no: '08', label: 'Business case', render: renderBusinessCase },
+  reglages: { no: '09', label: 'Réglages', render: renderSettings },
 }
 
-// L'ordre du rail suit le parcours, pas l'organigramme d'un cabinet : on
-// construit d'abord, on analyse ensuite.
+// Les anciennes adresses restent valides : un lien enregistré ou un signet ne
+// doit pas tomber à côté parce que le produit s'est réorganisé.
+const ALIASES = {
+  modele: 'projet',
+  charges: 'achats',
+  marketing: 'offre',
+  clients: 'offre',
+  compte: 'reglages',
+  'mon-revenu': 'resultats',
+  parcours: 'tableau-de-bord',
+}
+
 const GROUPS = [
-  { title: 'Construire', keys: ['modele', 'offre', 'marketing', 'equipe', 'charges', 'financement'] },
-  { title: '', keys: ['tableau-de-bord'] },
-  { title: 'Analyser', keys: ['resultats', 'business-case'] },
+  { title: 'Construire', keys: ['projet', 'offre', 'achats', 'equipe', 'financement'] },
+  { title: 'Lire', keys: ['tableau-de-bord', 'resultats', 'business-case'] },
   { title: '', keys: ['reglages'] },
 ]
 
@@ -82,7 +100,7 @@ function render({ preserveScroll = false } = {}) {
   // rien d'autre que la question en cours. C'est ce qui le rend lisible.
   if (key === 'creer') {
     clear(root).appendChild(renderSetup(navigate, render))
-    document.title = 'Fynomia — Votre business plan'
+    document.title = 'Fynomia — Ton business plan'
     return
   }
 
@@ -96,19 +114,13 @@ function render({ preserveScroll = false } = {}) {
     return
   }
 
+  if (ALIASES[key]) { navigate(`#/${ALIASES[key]}`); return }
   const page = PAGES[key] || PAGES['tableau-de-bord']
   if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
-  if (!getPersona(store.persona).pages.includes(key)) { navigate('#/tableau-de-bord'); return }
 
-  // Le pied de page dit ce que la profondeur suivante ajoute à cette page-ci.
-  const levelFoot = getPersona(store.persona).hasDepth
-    ? levelFooter(key, store.level, (next) => { store.setLevel(next); render(); toast(`${LEVEL_META[next].label} — ${LEVEL_META[next].tagline}`) })
-    : null
-  const main = h('div', { class: 'main' }, topbar(page), page.render(navigate, render), levelFoot)
-  // Le niveau de détail se voit : chaque profondeur a sa couleur, et tout ce
-  // qu'elle débloque la porte. Changer de niveau change la teinte de l'app.
-  clear(root).appendChild(h('div', { class: 'shell', 'data-level': store.level },
-    rail(key), main, guideBar(key, navigate), tabbar(key), impactRail(render)))
+  const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, render))
+  clear(root).appendChild(h('div', { class: 'shell' },
+    rail(key), main, liveRail(navigate), tabbar(key), impactRail(render)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)
@@ -123,161 +135,94 @@ function render({ preserveScroll = false } = {}) {
   }
 }
 
-/**
- * Ce qu'une profondeur ajoute, en une ligne, sur la page ouverte.
- * Le texte est porté par l'attribut : la bulle est entièrement en CSS, donc
- * elle ne coûte ni écouteur ni rendu.
- */
-function levelPreview(key, page) {
-  const meta = LEVEL_META[key]
-  const order = ['easy', 'intermediate', 'advanced']
-  const from = order.indexOf(store.level)
-  const to = order.indexOf(key)
-  if (to === from) return `Niveau actuel — ${meta.tagline}`
-  const gained = order.slice(Math.min(from, to) + 1, Math.max(from, to) + 1)
-    .flatMap((lvl) => levelAdds(page, lvl) || [])
-  if (!gained.length) return meta.tagline
-  return to > from
-    ? `Ajoute ici : ${gained.join(', ')}`
-    : `Masque ici : ${gained.join(', ')}`
-}
 
-/**
- * Le changement de niveau n'est pas une rupture : la page reste la même, des
- * éléments s'ajoutent. On le dit, et on l'anime dans ce sens.
- */
-function switchLevel(key, meta, render) {
-  const order = ['easy', 'intermediate', 'advanced']
-  const up = order.indexOf(key) > order.indexOf(store.level)
-  store.setLevel(key)
-  render()
-  const shell = document.querySelector('.shell')
-  if (shell) {
-    shell.setAttribute('data-shift', up ? 'up' : 'down')
-    setTimeout(() => shell.removeAttribute('data-shift'), 700)
-  }
-  const gained = levelAdds(currentKey, key)
-  toast(up && gained ? `${meta.label} — ajouté : ${gained.join(', ')}` : `${meta.label} — ${meta.tagline}`)
-}
 
 function rail(active) {
+  const b = buildState(store.scenario)
+  const doneByPage = Object.fromEntries(b.bricks.map((x) => [x.page, x.done]))
+
   const el = h('nav', { class: 'rail', id: 'rail' },
     h('div', { class: 'rail-brand' },
-      h('div', { class: 'rail-logo' }, 'F'),
-      h('div', {}, h('div', { class: 'rail-name' }, 'Fynomia'), h('div', { class: 'rail-tag' }, 'Business plan')),
+      h('span', { class: 'rail-mark' }, 'FYNOMIA'),
+      h('span', { class: 'rail-year' }, 'FR / 2026'),
     ),
-    ...GROUPS.flatMap((group) => {
-      const allowed = getPersona(store.persona).pages
-      const keys = group.keys.filter((k) => PAGES[k].levels.includes(store.level) && allowed.includes(k))
-      if (!keys.length) return []
-      return [
-        group.title && h('div', { class: 'rail-section' }, group.title),
-        ...keys.map((k) => {
-          const p = PAGES[k]
-          const warn = store.issues.some((i) => i.page === k && i.level !== 'info')
-          return h('button', {
-            class: `rail-link ${active === k ? 'active' : ''}`,
-            onClick: () => { navigate(`#/${k}`); document.getElementById('rail')?.classList.remove('open') },
-          }, h('span', { class: 'ico' }, p.icon), h('span', {}, p.label), warn && h('span', { class: 'badge-dot' }))
-        }),
-      ]
-    }),
-    // Sur mobile, la barre supérieure n'a pas la place du sélecteur de
-    // profondeur : il trouve sa place ici, dans le menu.
-    getPersona(store.persona).hasDepth && h('div', { class: 'rail-levels' },
-      h('div', { class: 'rail-section' }, 'Profondeur'),
-      h('div', { class: 'levels', style: { width: '100%' } },
-        ...Object.entries(LEVEL_META).map(([k, v]) => h('button', {
-          class: `level-btn ${store.level === k ? 'active' : ''}`,
-          style: { flex: '1' },
-          'aria-label': `Niveau ${v.label}`,
-          onClick: () => {
-            store.setLevel(k)
-            document.getElementById('rail')?.classList.remove('open')
-            render()
-            toast(`${v.label} \u2014 ${v.tagline}`)
-          },
-        }, h('span', { class: 'lvl-short', 'aria-hidden': 'true' }, v.short || v.label))),
-      ),
-    ),
+    h('div', { class: 'rail-claim' },
+      h('b', {}, 'Le business plan, sans la couche de vernis.'),
+      'On construit le mod\u00e8le. Les \u00e9tats financiers suivent.'),
+
+    ...GROUPS.flatMap((group) => [
+      group.title ? h('div', { class: 'rail-section' }, group.title) : null,
+      ...group.keys.map((k) => {
+        const p = PAGES[k]
+        const warn = store.issues.some((i) => i.page === k && i.level !== 'info')
+        const done = p.build ? !!doneByPage[k] : false
+        return h('button', {
+          class: `rail-link ${active === k ? 'active' : ''} ${done ? 'done' : ''}`,
+          onClick: () => { navigate(`#/${k}`); document.getElementById('rail')?.classList.remove('open') },
+        },
+          h('span', { class: 'rail-no' }, p.no),
+          h('span', {}, p.label),
+          warn ? h('span', { class: 'badge-dot' }) : p.build ? h('span', { class: 'rail-tick' }, done ? '\u25cf' : '\u25cb') : null,
+        )
+      }),
+    ]),
 
     h('div', { class: 'rail-foot' },
       h('button', { class: 'rail-link', onClick: () => { resetSetup(); navigate('#/creer') } },
-        h('span', { class: 'ico' }, '＋'), h('span', {}, 'Nouveau plan')),
+        h('span', { class: 'rail-no' }, '\uff0b'), h('span', {}, 'Nouveau plan')),
       h('button', {
-        class: 'rail-account', onClick: () => { navigate('#/compte'); document.getElementById('rail')?.classList.remove('open') },
+        class: 'rail-account', onClick: () => { navigate('#/reglages'); document.getElementById('rail')?.classList.remove('open') },
       },
-        h('span', { class: 'rail-account-name' }, cloud.name || store.profile?.name || 'Mon compte'),
-        h('span', { class: `rail-account-sync ${cloud.status === 'ready' ? 'live' : ''}` },
-          cloud.status === 'ready' ? h('i', { class: 'sync-dot' }) : null,
-          saveLabel()),
+        h('span', { class: 'rail-account-name' }, cloud.user?.name || 'Mon compte'),
+        h('span', { class: 'rail-account-sync' }, syncLabel()),
       ),
     ),
   )
   return el
 }
 
-function saveLabel() {
-  if (store.saveState === 'error') return 'Sauvegarde impossible'
-  return syncLabel()
-}
-
-function topbar(page) {
+function topbar(page, key) {
   const canUndo = store.canUndo(), canRedo = store.canRedo()
   return h('header', { class: 'topbar' },
     h('button', {
       class: 'btn btn-sm btn-ghost mobile-only', 'aria-label': 'Menu',
       onClick: () => document.getElementById('rail')?.classList.toggle('open'),
-    }, '☰'),
-    h('div', {},
-      h('div', { class: 'crumb' }, store.scenario.meta.name),
-      h('h1', {}, page.label),
-    ),
+    }, '\u2630'),
+    h('div', { class: 'crumb' },
+      `${store.scenario.meta.company || store.scenario.meta.name} / ${page.label}`),
     h('span', { class: 'spacer' }),
     progressPill(),
-    // La profondeur ne concerne que le fondateur : les autres metiers ont un
-    // perimetre defini par leur fonction, pas par un curseur de detail.
-    // Chaque profondeur annonce ce qu'elle ajoute à la page ouverte, avant le
-    // clic : on ne doit jamais changer de niveau sans savoir ce qui apparaît.
-    getPersona(store.persona).hasDepth && h('div', { class: 'levels desktop-only' },
-      ...Object.entries(LEVEL_META).map(([k, v]) => h('button', {
-        class: `level-btn ${store.level === k ? 'active' : ''}`,
-        'aria-label': `Niveau ${v.label}`,
-        'aria-pressed': store.level === k ? 'true' : 'false',
-        'data-preview': levelPreview(k, currentKey),
-        onClick: () => switchLevel(k, v, render),
-      },
-        h('span', { class: 'lvl-long', 'aria-hidden': 'true' }, v.label),
-        h('span', { class: 'lvl-short', 'aria-hidden': 'true' }, v.short || v.label))),
-    ),
-    h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canUndo, title: 'Annuler', onClick: () => { store.undo(); render() } }, '↶'),
-    h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canRedo, title: 'Rétablir', onClick: () => { store.redo(); render() } }, '↷'),
+    h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canUndo, title: 'Annuler', onClick: () => { store.undo(); render() } }, '\u21b6'),
+    h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canRedo, title: 'R\u00e9tablir', onClick: () => { store.redo(); render() } }, '\u21b7'),
+    key !== 'tableau-de-bord' ? h('button', {
+      class: 'btn btn-sm btn-go btn-pill desktop-only', onClick: () => navigate('#/tableau-de-bord'),
+    }, 'Voir la synth\u00e8se') : null,
   )
 }
 
 /**
- * La pastille d'avancement.
+ * L'avancement, dit par ce qu'il débloque.
  *
- * Elle remplace le sélecteur de métier en tête de page : ce qu'un fondateur
- * veut savoir en permanence, ce n'est pas quelle casquette il porte, c'est
- * combien il lui reste à faire. Un clic ramène au parcours.
+ * « Étape 4 sur 12 » mesure le remplissage d'un formulaire. Ce qui donne envie
+ * de continuer, c'est de savoir ce qu'on vient de rendre possible : d'abord le
+ * chiffre d'affaires, puis la marge, puis la rentabilité, puis le besoin de
+ * financement. La barre suit les briques posées ; le mot dit la capacité
+ * atteinte.
  */
 function progressPill() {
-  const j = journey(store.scenario, store.result)
-  const pts = points(j)
+  const b = buildState(store.scenario)
+  const label = b.latest ? b.latest.label.replace(/^Ton |^Ta /, '').replace(/ est calculable\.$/, '') : 'Mod\u00e8le \u00e0 poser'
+  const done = !!b.latest && b.latest.key === 'dossier'
   return h('button', {
-    class: `progress-pill ${j.completion >= 1 ? 'complete' : ''}`,
-    title: `${j.done} étapes terminées sur ${j.total}`,
-    onClick: () => navigate('#/tableau-de-bord'),
+    class: `progress-pill ${done ? 'complete' : ''}`,
+    title: b.upcoming ? `Ensuite : ${b.upcoming.label}` : 'Ton business plan est prêt.',
+    onClick: () => navigate(b.next ? `#/${b.next.page}` : '#/tableau-de-bord'),
   },
-    h('span', { class: 'progress-pill-bar', 'aria-hidden': 'true' },
-      h('i', { style: { width: `${pts}%` } })),
-    h('span', { class: 'progress-pill-value num' }, `${pts} %`),
-    h('span', { class: 'progress-pill-label desktop-only' },
-      j.completion >= 1 ? 'complet' : `${j.done}/${j.total} étapes`),
+    h('span', { class: 'progress-pill-bar' }, h('i', { style: { width: `${Math.round(b.ratio * 100)}%` } })),
+    h('span', { class: 'progress-pill-value' }, done ? 'Dossier pr\u00eat' : label),
+    h('span', { class: 'progress-pill-label' }, `${b.done}/${b.total}`),
   )
 }
-
 
 function tabbar(active) {
   const allowed = getPersona(store.persona).pages
@@ -346,7 +291,7 @@ function currentValue(key) {
   const value = map[key]?.()
   if (!value) return null
   return h('div', { class: 'note ok', style: { marginTop: '18px' } },
-    h('div', { class: 'note-title' }, 'Dans votre scénario'),
+    h('div', { class: 'note-title' }, 'Dans ton scénario'),
     value)
 }
 

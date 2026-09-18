@@ -16,9 +16,9 @@ export function renderOnboarding(navigate) {
   return h('div', { class: 'landing' },
     h('div', { class: 'landing-inner' },
       h('div', { class: 'landing-mark' }, 'F'),
-      h('h1', { class: 'landing-title' }, 'Nous allons vous aider à faire votre business plan'),
+      h('h1', { class: 'landing-title' }, 'Nous allons toi aider à faire ton business plan'),
       h('p', { class: 'landing-line' },
-        'Une question à la fois. Vous répondez, Fynomia calcule — cotisations, TVA, impôts, trésorerie.'),
+        'Une question à la fois. Tu réponds, Fynomia calcule — cotisations, TVA, impôts, trésorerie.'),
 
       h('div', { class: 'landing-actions' },
         h('button', {
@@ -48,7 +48,7 @@ export function renderOnboarding(navigate) {
     ),
 
     h('p', { class: 'landing-foot' },
-      'Fiscalité française. Vos chiffres restent les vôtres — export libre à tout moment.'),
+      'Fiscalité française. Tes chiffres restent les vôtres — export libre à tout moment.'),
   )
 }
 

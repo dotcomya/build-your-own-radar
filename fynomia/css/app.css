@@ -14,39 +14,50 @@
 :root {
   color-scheme: light;
 
-  /* Papier et encre — neutres légèrement froids, choisis et non hérités */
-  --paper:      #F2F3F0;
+  /* Papier et encre.
+     Le crème remplace le gris froid : il réchauffe la page sans la décorer,
+     et fait tenir le noir profond sans le contraste violent d'un blanc pur. */
+  --paper:      #F2F0E8;
   --surface:    #FFFFFF;
-  --surface-2:  #FAFAF8;
-  --ink:        #0B0E10;
-  --ink-2:      #23292E;
-  --ink-3:      #4A535B;
-  --ink-4:      #78838C;
-  --ink-5:      #A8B1B8;
-  --rule:       #D8DCD8;
-  --rule-strong:#0B0E10;
+  --surface-2:  #FAF8F2;
+  --ink:        #0E0F0C;
+  --ink-2:      #24261F;
+  --ink-3:      #4C4F45;
+  --ink-4:      #7C7F72;
+  --ink-5:      #A9ACA0;
+  --rule:       #DCD9CD;
+  --rule-strong:#0E0F0C;
 
-  /* Signal : un seul bleu, saturé, jamais décoratif */
+  /* L'accent : un vert acide, emprunté au balisage de chantier.
+     Il ne veut pas dire « bien », il veut dire « ici ». Il ne sert qu'à
+     l'action en cours, au module ouvert et au bouton qui fait avancer. */
+  --accent:     #D6F034;
+  --accent-ink: #0E0F0C;
+  --accent-dim: #B8CF2A;
+  --accent-wash:#F2FAC9;
+
+  /* Signal secondaire : le bleu ne décore plus, il relie les renvois. */
   --signal:     #1B3BFF;
   --signal-ink: #0F27C4;
-  --signal-wash:#E4E8FF;
+  --signal-wash:#E6E9FF;
 
   /* Sémantique : gagné, perdu, à surveiller */
-  --gain:       #0A7A54;
-  --gain-wash:  #D8F0E5;
+  --gain:       #157A4A;
+  --gain-wash:  #DCEFE2;
   --loss:       #C4142F;
-  --loss-wash:  #FBDFE3;
-  --warn:       #9A5B00;
-  --warn-wash:  #FBEBD2;
+  --loss-wash:  #FBE0E1;
+  --warn:       #8A5A00;
+  --warn-wash:  #F7EBCF;
 
   --display: 'Bricolage Grotesque', 'Archivo', system-ui, sans-serif;
   --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --rail-w: 236px;
-  --header-h: 58px;
+  --rail-w: 214px;
+  --live-w: 250px;
+  --header-h: 54px;
   --impact-h: 62px;
-  --space: 20px;
+  --space: 22px;
   --ease: cubic-bezier(.2, .8, .2, 1);
 }
 
@@ -3012,3 +3023,243 @@ table.data th, table.data td { padding: 9px 12px; }
 @media (max-width: 720px) {
   .step-guide { padding-left: 12px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRUT — la couche éditoriale
+
+   Le logiciel cesse de ressembler à un formulaire bien élevé. Titres de
+   poster, libellés en capitales étroites, cartes blanches sur crème, un seul
+   vert acide pour dire « ici ». La densité vient de la typographie, pas de
+   l'accumulation de blocs. Ce qui précède reste en place : cette couche ne
+   remplace pas le système, elle lui donne une voix.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body { background: var(--paper); }
+
+/* ─── Le rail : neuf modules numérotés, rien d'autre ─── */
+.rail {
+  background: var(--ink);
+  padding: 20px 0 14px;
+  gap: 0;
+  --rail-dim: #83857A;
+}
+.rail-brand { display: block; padding: 0 16px 22px; }
+.rail-mark {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #fff; color: var(--ink); border-radius: 5px; padding: 5px 9px;
+  font-family: var(--display); font-weight: 800; font-size: 15.5px; letter-spacing: -.035em;
+}
+.rail-year {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  border: 1px solid #34362E; border-radius: 4px; padding: 3px 7px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--rail-dim);
+}
+.rail-claim {
+  padding: 0 16px 18px; font-size: 11.5px; line-height: 1.5; color: var(--rail-dim);
+  border-bottom: 1px solid #22241D; margin-bottom: 10px;
+}
+.rail-claim b { color: #fff; font-weight: 600; display: block; }
+
+.rail-link {
+  display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px;
+  padding: 9px 16px; border: 0; background: none; width: 100%; text-align: left;
+  color: #C3C5BA; font-weight: 500; font-size: 13px; cursor: pointer;
+  border-left: 0; position: relative;
+  transition: background .12s var(--ease), color .12s var(--ease);
+}
+.rail-no {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--rail-dim);
+}
+.rail-link:hover { background: #191B15; color: #fff; }
+.rail-link.active { background: var(--accent); color: var(--ink); font-weight: 700; }
+.rail-link.active .rail-no { color: var(--ink); opacity: .6; }
+.rail-link .badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--warn); }
+.rail-tick { font-size: 11px; color: #5E6156; }
+.rail-link.done .rail-tick { color: var(--accent); }
+.rail-link.active .rail-tick { color: var(--ink); opacity: .55; }
+.rail-foot { margin-top: auto; padding: 14px 16px 0; border-top: 1px solid #22241D; }
+.rail-foot .rail-link { padding-left: 0; padding-right: 0; grid-template-columns: 22px 1fr; }
+
+/* ─── La barre du haut : un fil d'ariane, deux actions ─── */
+.topbar { border-bottom: 1px solid var(--rule); gap: 14px; }
+.crumb {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.topbar h1 { display: none; }
+
+/* ─── Le titre de module : un poster, pas un en-tête de formulaire ─── */
+.module-tag { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.module-bar { width: 30px; height: 7px; background: var(--accent); border-radius: 2px; flex: none; }
+.module-tag span {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.module-title {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(38px, 5.4vw, 62px); line-height: .92; letter-spacing: -.045em;
+  color: var(--ink); margin: 0 0 14px; max-width: 16ch; text-wrap: balance;
+}
+.module-lede {
+  font-size: 14px; line-height: 1.6; color: var(--ink-3); max-width: 62ch; margin: 0 0 26px;
+}
+
+/* ─── Les cartes de saisie ─── */
+.slab {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 20px 22px; margin-bottom: 14px;
+}
+.slab-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.slab-title { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em; color: var(--ink); }
+.slab-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5; }
+.slab-tags { display: flex; gap: 5px; margin-left: auto; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+.slab-tag {
+  border: 1px solid var(--rule); border-radius: 5px; padding: 3px 7px;
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); white-space: nowrap;
+}
+
+/* Les choix en pavés : un intitulé, une glose */
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 9px; }
+.pick {
+  text-align: left; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+  padding: 11px 13px; cursor: pointer; font: inherit;
+  transition: border-color .12s, background .12s, color .12s, transform .08s;
+}
+.pick:hover { border-color: var(--ink-4); }
+.pick:active { transform: translateY(1px); }
+.pick-name { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
+.pick-note { font-size: 10.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.4; }
+.pick.active { background: var(--ink); border-color: var(--ink); }
+.pick.active .pick-name { color: #fff; }
+.pick.active .pick-note { color: #9EA196; }
+
+/* Le bouton qui fait avancer */
+.btn-go {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  border-radius: 999px; font-weight: 650; padding: 11px 22px;
+}
+.btn-go:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--accent-ink); }
+.btn-pill { border-radius: 999px; }
+
+/* ─── Le bandeau de droite : le modèle, en direct ─── */
+/* La colonne de droite n'existe qu'au-dessus du seuil où le rail est visible :
+   déclarée sans garde, cette règle écraserait la grille mobile définie plus haut
+   et réduirait le contenu à une colonne de quarante pixels. */
+@media (min-width: 861px) {
+  .shell { grid-template-columns: var(--rail-w) minmax(0, 1fr) auto; }
+}
+.live {
+  width: var(--live-w); flex: none; padding: 26px 18px 26px 0;
+  display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: var(--header-h); align-self: start;
+  max-height: calc(100dvh - var(--header-h)); overflow-y: auto; scrollbar-width: thin;
+}
+.live-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 15px; }
+.live-head {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 12px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gain); flex: none; animation: live-pulse 2.4s infinite; }
+@keyframes live-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .3 } }
+.live-local { margin-left: auto; color: var(--ink-4); letter-spacing: .1em; }
+.live-hero-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.live-hero-value {
+  font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: -.045em;
+  color: var(--ink); line-height: 1; margin-top: 4px;
+}
+.live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.live-cell { border: 1px solid var(--rule); border-radius: 9px; padding: 9px 10px; }
+.live-cell-label {
+  font-family: var(--mono); font-size: 8px; letter-spacing: .11em;
+  text-transform: uppercase; color: var(--ink-4); line-height: 1.3;
+}
+.live-cell-value { font-size: 16px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); margin-top: 4px; }
+.live-cell.is-neg .live-cell-value { color: var(--loss); }
+
+.live-rows { display: flex; flex-direction: column; }
+.live-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 11.5px;
+}
+.live-row:last-child { border-bottom: 0; }
+.live-row b { font-weight: 600; color: var(--ink); }
+.live-row span { color: var(--ink-4); text-align: right; font-size: 10.5px; }
+
+/* La complétude : une pastille par jalon, ce qui se débloque en clair */
+.live-steps { display: flex; flex-direction: column; gap: 7px; }
+.live-step { display: flex; align-items: center; gap: 9px; font-size: 11.5px; color: var(--ink-4); }
+.live-step i {
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  border: 1.5px solid var(--rule-strong); opacity: .28;
+}
+.live-step.done { color: var(--ink-2); }
+.live-step.done i { background: var(--gain); border-color: var(--gain); opacity: 1; }
+.live-step.current { color: var(--ink); font-weight: 600; }
+.live-step.current i { border-color: var(--ink); opacity: 1; }
+
+.live-unlock {
+  border: 1px solid var(--accent-dim); background: var(--accent-wash);
+  border-radius: 10px; padding: 11px 12px;
+}
+.live-unlock-tag {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.live-unlock-text { font-size: 12.5px; font-weight: 600; color: var(--ink); margin-top: 4px; line-height: 1.4; }
+.live-unlock-next { font-size: 11px; color: var(--ink-3); margin-top: 6px; line-height: 1.45; }
+
+@media (max-width: 1180px) {
+  .live { display: none; }
+}
+
+/* ─── « + Affiner » : la profondeur, là où elle sert ─── */
+.refine { margin-top: 14px; border-top: 1px dashed var(--rule); }
+.refine-head {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+  padding: 11px 0 0; user-select: none; color: var(--ink-3);
+  font-size: 12.5px; transition: color .12s;
+}
+.refine-head::-webkit-details-marker { display: none; }
+.refine-head:hover { color: var(--ink); }
+.refine-sign {
+  width: 17px; height: 17px; border-radius: 5px; display: grid; place-items: center;
+  border: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; line-height: 1;
+  color: var(--ink-3); flex: none; transition: background .14s var(--ease), color .14s, border-color .14s, transform .18s var(--ease);
+}
+.refine-head:hover .refine-sign { border-color: var(--ink); color: var(--ink); }
+.refine[open] .refine-sign { background: var(--ink); border-color: var(--ink); color: var(--accent); transform: rotate(45deg); }
+.refine-label { font-weight: 500; }
+.refine[open] .refine-label { color: var(--ink); font-weight: 600; }
+.refine-body { padding-top: 14px; animation: refine-in .24s var(--ease); }
+@keyframes refine-in { from { opacity: 0; transform: translateY(-4px); } }
+.refine-body > .grid + .grid { margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .refine-body { animation: none; } }
+
+/* Le métier une fois choisi : un état, pas une grille de seize cartes. */
+.picked {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; background: var(--surface-2);
+}
+.picked-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.picked-name { font-size: 15px; font-weight: 650; color: var(--ink); margin-top: 3px; letter-spacing: -.015em; }
+.picked-note { font-size: 12px; color: var(--ink-4); margin-top: 2px; }
+.picked .btn { margin-left: auto; }
+.sector-family + .sector-family { margin-top: 16px; }
+.sector-family-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 7px;
+}
+
+/* La complétude : des lignes cliquables, pas des boutons de formulaire. */
+.live-step {
+  border: 0; background: none; padding: 0; width: 100%; text-align: left;
+  font: inherit; cursor: pointer;
+}
+.live-step:hover { color: var(--ink); }

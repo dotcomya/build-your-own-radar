@@ -25,8 +25,8 @@ export function leverPanel(levers, { onLive, onDone }) {
 
   return h('section', { class: 'panel panel-levers' },
     h('header', { class: 'panel-head' },
-      h('h2', {}, 'Vos leviers'),
-      h('p', { class: 'panel-sub' }, "Tirez un curseur : tout se recalcule pendant le geste."),
+      h('h2', {}, 'Tes leviers'),
+      h('p', { class: 'panel-sub' }, "Tire un curseur : tout se recalcule pendant le geste."),
     ),
     h('div', { class: 'levers' }, ...levers.map((lever) => leverRow(lever, { onLive, onDone }))),
   )

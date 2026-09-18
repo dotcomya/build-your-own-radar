@@ -18,12 +18,12 @@ export function renderResults(navigate, refresh) {
   const r = store.result
   const level = store.level
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
-  const available = Object.entries(TABS).filter(([k]) => level === 'advanced' || ['resultat', 'tresorerie'].includes(k) || (level === 'intermediate' && k === 'fiscalite'))
+  const available = Object.entries(TABS)
   const current = available.some(([k]) => k === renderResults.tab) ? renderResults.tab : 'resultat'
 
   const views = [
     ...available.map(([k, label]) => ({ key: k, label })),
-    { key: 'revenu', label: 'Ce que vous touchez' },
+    { key: 'revenu', label: 'Ce que tu touches' },
   ]
   const view = views.some((v) => v.key === renderResults.tab) ? renderResults.tab : 'resultat'
   renderResults.tab = view
@@ -31,7 +31,7 @@ export function renderResults(navigate, refresh) {
   return h('div', { class: 'content' },
     partBanner('resultats'),
 
-    pageBar('États financiers', "Tout est calculé à partir de ce que vous avez saisi. Aucune ligne n'est à remplir ici."),
+    pageBar('États financiers', "Tout est calculé à partir de ce que tu as saisi. Aucune ligne n'est à remplir ici."),
 
     tabs(views, view, (k) => { renderResults.tab = k; refresh() }),
 
@@ -77,7 +77,7 @@ function pnlView(r, level) {
             rate('marge d\'EBITDA', k.ebitdaMargin),
             line('Dotations aux amortissements', p.amortisation, { negate: true }),
             line("Résultat d'exploitation", p.ebit, { help: 'ebit' }),
-            ...(level !== 'easy' ? [line('Charges financières', p.interest, { negate: true })] : []),
+            line('Charges financières', p.interest, { negate: true }),
             line('Résultat avant impôt', p.preTax),
             ...(p.credits.some((v) => v) ? [line("Crédits d'impôt recherche et innovation", p.credits, { help: 'cir' })] : []),
             line('Impôt sur les sociétés', p.corporateTax, { negate: true, help: 'is' }),
@@ -124,8 +124,8 @@ function pnlView(r, level) {
           h('div', { class: 'note mt' },
             h('div', { class: 'note-title' }, 'Comment le lire'),
             k.breakEven[0]
-              ? `En année 1, il faut réaliser ${euro(k.breakEven[0])} de chiffre d'affaires pour couvrir vos charges. Avec un taux de marge de ${pct(k.marginRate[0], 0)}, chaque euro vendu en dégage ${euro(k.marginRate[0])} pour financer vos frais fixes de ${euro(k.fixedCosts[0])}.`
-              : "Le point mort n'est calculable qu'avec une marge brute positive. Vérifiez vos prix et coûts de revient."),
+              ? `En année 1, il faut réaliser ${euro(k.breakEven[0])} de chiffre d'affaires pour couvrir tes charges. Avec un taux de marge de ${pct(k.marginRate[0], 0)}, chaque euro vendu en dégage ${euro(k.marginRate[0])} pour financer tes frais fixes de ${euro(k.fixedCosts[0])}.`
+              : "Le point mort n'est calculable qu'avec une marge brute positive. Vérifie tes prix et coûts de revient."),
         ),
       ),
     ),
@@ -244,7 +244,7 @@ function balanceView(r) {
       r.balance.some((b) => b.equity < 0)
         ? h('div', { class: 'note danger' },
             h('div', { class: 'note-title' }, 'Capitaux propres négatifs'),
-            "Vos pertes cumulées dépassent les apports. Juridiquement, les associés doivent se prononcer sur la poursuite de l'activité dès que les capitaux propres passent sous la moitié du capital social. Renforcez les apports ou accélérez le retour à l'équilibre.")
+            "Tes pertes cumulées dépassent les apports. Juridiquement, les associés doivent se prononcer sur la poursuite de l'activité dès que les capitaux propres passent sous la moitié du capital social. Renforcez les apports ou accélérez le retour à l'équilibre.")
         : h('div', { class: 'note ok' },
             h('div', { class: 'note-title' }, 'Structure financière saine'),
             `Les capitaux propres restent positifs sur tout l'horizon, à ${euro(r.balance[4].equity)} en fin d'année 5, pour un total de bilan de ${euro(r.balance[4].totalAssets)}.`),
@@ -260,7 +260,7 @@ function bfrView(r) {
         areaChart({ values: r.bfr.total, startDate: r.startDate, color: PALETTE[2], markZero: false }),
         h('div', { class: 'note mt' },
           h('div', { class: 'note-title' }, `Pic de besoin : ${euro(r.kpis.peakBfr)}`),
-          "C'est l'argent immobilisé en permanence dans le cycle d'exploitation. Il doit être financé par du capital ou du crédit — jamais par le découvert. Négocier un acompte client plus élevé ou un délai fournisseur plus long le réduit sans rien changer à votre rentabilité."),
+          "C'est l'argent immobilisé en permanence dans le cycle d'exploitation. Il doit être financé par du capital ou du crédit — jamais par le découvert. Négocier un acompte client plus élevé ou un délai fournisseur plus long le réduit sans rien changer à ta rentabilité."),
       ),
     ),
     h('div', { class: 'card' },
@@ -354,7 +354,7 @@ function taxView(r) {
       h('div', { class: 'card-body' },
         h('div', { class: 'note warn' },
           h('div', { class: 'note-title' }, 'Point de vigilance'),
-          "La qualification de « recherche » au sens fiscal suppose une incertitude scientifique ou technique levée par des travaux méthodiques — pas un simple développement. Faites valider votre éligibilité par un conseil ou par un rescrit fiscal avant d'intégrer ces montants à un plan de financement présenté à un tiers.")),
+          "La qualification de « recherche » au sens fiscal suppose une incertitude scientifique ou technique levée par des travaux méthodiques — pas un simple développement. Faites valider ton éligibilité par un conseil ou par un rescrit fiscal avant d'intégrer ces montants à un plan de financement présenté à un tiers.")),
     ),
   )
 }

@@ -58,10 +58,10 @@ export function nudges(scenario, result) {
     const [low, high] = b.grossMargin
     if (rate < low) {
       push('bad', `Marge de ${pct(rate)} contre ${pct(low)} à ${pct(high)} dans le métier`,
-        `Vous êtes ${pct(low - rate)} sous le bas de la fourchette. Sur ${euro(p.revenue[yy])} de chiffre d'affaires, revenir dans la norme dégagerait ${euro((low - rate) * p.revenue[yy])} de marge supplémentaire — sans vendre une unité de plus.`, 'offre')
+        `Tu es ${pct(low - rate)} sous le bas de la fourchette. Sur ${euro(p.revenue[yy])} de chiffre d'affaires, revenir dans la norme dégagerait ${euro((low - rate) * p.revenue[yy])} de marge supplémentaire — sans vendre une unité de plus.`, 'offre')
     } else if (rate > high + 0.1) {
       push('watch', `Marge de ${pct(rate)}, au-dessus des ${pct(high)} habituels`,
-        `C'est possible, mais un financeur le vérifiera. Assurez-vous que tous les coûts directs sont bien saisis : sous-traitance, livraison, commissions de paiement, pertes.`, 'offre')
+        `C'est possible, mais un financeur le vérifiera. Assurez-toi que tous les coûts directs sont bien saisis : sous-traitance, livraison, commissions de paiement, pertes.`, 'offre')
     }
   }
 
@@ -90,11 +90,11 @@ export function nudges(scenario, result) {
     const ratio = overhead / p.revenue[yy]
     const [low, high] = b.overheadRatio
     if (ratio > high) {
-      push('bad', `Vos charges absorbent ${pct(ratio, 0)} des honoraires`,
-        `Un cabinet comparable tient entre ${pct(low, 0)} et ${pct(high, 0)}. Ce qui dépasse sort directement de votre revenu : à ce niveau, ${euro((ratio - high) * p.revenue[yy])} par an vous échappent.`, 'charges')
+      push('bad', `Tes charges absorbent ${pct(ratio, 0)} des honoraires`,
+        `Un cabinet comparable tient entre ${pct(low, 0)} et ${pct(high, 0)}. Ce qui dépasse sort directement de ton revenu : à ce niveau, ${euro((ratio - high) * p.revenue[yy])} par an t’échappent.`, 'charges')
     } else if (ratio < low * 0.7) {
       push('info', `Charges à ${pct(ratio, 0)} des honoraires, sous les ${pct(low, 0)} habituels`,
-        `Vérifiez que rien ne manque : cotisations ordinales, assurance responsabilité civile professionnelle, logiciel métier, entretien du matériel et remplacement des consommables.`, 'charges')
+        `Vérifie que rien ne manque : cotisations ordinales, assurance responsabilité civile professionnelle, logiciel métier, entretien du matériel et remplacement des consommables.`, 'charges')
     }
   }
 
@@ -121,7 +121,7 @@ export function nudges(scenario, result) {
       if (churn > high) {
         const annual = 1 - Math.pow(1 - churn, 12)
         push('bad', `${pct(churn, 1)} d'attrition par mois, soit ${pct(annual, 0)} par an`,
-          `Vous renouvelez la moitié de votre base tous les ${Math.round(Math.log(0.5) / Math.log(1 - churn))} mois. Tant que ce chiffre n'est pas maîtrisé, augmenter l'acquisition revient à remplir une baignoire percée.`, 'offre')
+          `Tu renouvelles la moitié de ta base tous les ${Math.round(Math.log(0.5) / Math.log(1 - churn))} mois. Tant que ce chiffre n'est pas maîtrisé, augmenter l'acquisition revient à remplir une baignoire percée.`, 'offre')
       }
     }
   }
@@ -131,7 +131,7 @@ export function nudges(scenario, result) {
     const [low] = b.ltvCac
     if (k.ltvCacRatio < low) {
       push('bad', `Un client rapporte ${num(k.ltvCacRatio, 1)} fois son coût, contre ${num(low, 1)} attendu`,
-        `Dans ce métier, l'acquisition n'est tenable qu'au-delà de ${num(low, 1)}. Travaillez la conversion ou la rétention avant d'augmenter les budgets : dépenser plus à ce ratio accélère les pertes.`, 'marketing')
+        `Dans ce métier, l'acquisition n'est tenable qu'au-delà de ${num(low, 1)}. Travaille la conversion ou la rétention avant d'augmenter les budgets : dépenser plus à ce ratio accélère les pertes.`, 'marketing')
     }
   }
 
@@ -148,16 +148,16 @@ export function nudges(scenario, result) {
   // ── Rémunération du dirigeant ──────────────────────────────────────────
   const founderPay = (scenario.team || [])[0]
   if (founderPay && (Number(founderPay.monthlyGross) || 0) === 0) {
-    push('watch', 'Vous ne vous versez rien',
-      "Un prévisionnel sans rémunération du dirigeant donne une rentabilité flatteuse et fausse. Si vous ne vous payez pas la première année, dites-le explicitement — mais chiffrez ce dont vous avez besoin pour vivre.", 'equipe')
+    push('watch', 'Tu ne te verses rien',
+      "Un prévisionnel sans rémunération du dirigeant donne une rentabilité flatteuse et fausse. Si tu ne tu paies pas la première année, dites-le explicitement — mais chiffrez ce dont tu as besoin pour vivre.", 'equipe')
   }
 
   // ── Saisonnalité ───────────────────────────────────────────────────────
   if (['restaurant', 'fleuriste', 'commerce', 'coiffeur'].includes(scenario.meta?.sectorKey)) {
     const a = (scenario.activities || [])[0]
     if (a && a.volumes?.mode !== 'manual' && !a.volumes?.seasonality) {
-      push('info', 'Votre activité est saisonnière, votre projection ne l\'est pas',
-        "Une courbe régulière lisse précisément les mois creux, ceux où la trésorerie casse. Passez en saisie mois par mois dans l'onglet Offre pour refléter les creux et les pics.", 'offre')
+      push('info', 'Ton activité est saisonnière, ton projection ne l\'est pas',
+        "Une courbe régulière lisse précisément les mois creux, ceux où la trésorerie casse. Passe en saisie mois par mois dans l'onglet Offre pour refléter les creux et les pics.", 'offre')
     }
   }
 
@@ -171,7 +171,7 @@ export function nudgePanel(list, navigate) {
   const sorted = [...list].sort((a, b) => order[a.tone] - order[b.tone])
   return h('section', { class: 'nudges' },
     h('div', { class: 'nudges-head' },
-      h('span', { class: 'eyebrow' }, `Ce que votre métier dit de vos chiffres`),
+      h('span', { class: 'eyebrow' }, `Ce que ton métier dit de tes chiffres`),
       h('span', { class: 'chip chip-quiet' }, `${sorted.length}`),
     ),
     ...sorted.slice(0, 4).map((n) => h('div', { class: `nudge nudge-${n.tone}` },
@@ -189,7 +189,7 @@ export function sectorTraps(scenario) {
   return h('section', { class: 'panel' },
     h('header', { class: 'panel-head' },
       h('h2', {}, `Les pièges du métier`),
-      h('p', { class: 'panel-sub' }, `Ce qui fait échouer un ${sector.label.toLowerCase()}, indépendamment de vos chiffres.`),
+      h('p', { class: 'panel-sub' }, `Ce qui fait échouer un ${sector.label.toLowerCase()}, indépendamment de tes chiffres.`),
     ),
     h('div', { class: 'traps' },
       ...sector.traps.map((t, i) => h('div', { class: 'trap' },
@@ -208,7 +208,7 @@ export function sectorRegime(scenario) {
   const sector = getSector(scenario.meta?.sectorKey)
   if (!sector) return null
   return h('section', { class: 'panel' },
-    h('header', { class: 'panel-head' }, h('h2', {}, 'Votre cadre réglementaire')),
+    h('header', { class: 'panel-head' }, h('h2', {}, 'Ton cadre réglementaire')),
     h('div', { class: 'regime' },
       h('div', { class: 'regime-row' },
         h('span', { class: 'eyebrow' }, 'TVA'),

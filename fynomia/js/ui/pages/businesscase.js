@@ -58,7 +58,7 @@ export function renderBusinessCase(navigate, refresh) {
         h('div', { class: 'grid grid-3' },
           exportTile('Présentation PowerPoint', "Le dossier complet, prêt à présenter : le verdict en ouverture, les chiffres clés, la trajectoire, le compte de résultat, la frise de trésorerie annotée, le point mort, l'équipe, le financement, ce qui changerait le plus, ce que touche le dirigeant, et les hypothèses.", 'Télécharger le .pptx', doPptx, true),
           exportTile('Tableau de chiffres', "Le prévisionnel complet au format CSV, ouvrable dans Excel, Numbers ou Google Sheets.", 'Télécharger le .csv', doCsv),
-          exportTile('Sauvegarde du scénario', "Toutes vos données dans un fichier, pour les archiver ou les transférer sur un autre appareil.", 'Télécharger le .json', doJson),
+          exportTile('Sauvegarde du scénario', "Toutes tes données dans un fichier, pour les archiver ou les transférer sur un autre appareil.", 'Télécharger le .json', doJson),
         ),
       ),
     ),
@@ -273,7 +273,7 @@ function readiness(s, r, y) {
           label: 'Apport personnel',
           ok: debt === 0 || equity >= debt * 0.8,
           value: debt > 0 ? `${euro(equity, { compact: true })} pour ${euro(debt, { compact: true })} empruntés` : euro(equity, { compact: true }),
-          need: "Une banque suit rarement au-delà de un pour un. Prévoyez un apport au moins égal au prêt demandé.",
+          need: "Une banque suit rarement au-delà de un pour un. Prévois un apport au moins égal au prêt demandé.",
         },
         {
           label: 'Capacité de remboursement',
@@ -309,7 +309,7 @@ function readiness(s, r, y) {
           label: 'Un client rapporte plus qu’il ne coûte',
           ok: k.ltvCacRatio === null || k.ltvCacRatio >= 3,
           value: k.ltvCacRatio === null ? 'Acquisition non chiffrée' : `${num(k.ltvCacRatio, 1)}× le coût d'acquisition`,
-          need: "En dessous de 3, dépenser plus en acquisition accélère les pertes. Travaillez la conversion ou la rétention.",
+          need: "En dessous de 3, dépenser plus en acquisition accélère les pertes. Travaille la conversion ou la rétention.",
         },
         {
           label: 'Le fondateur se rémunère',
@@ -351,7 +351,7 @@ function readiness(s, r, y) {
           label: 'Autonomie financée',
           ok: k.fundingNeed === 0 || k.runwayMonths === null || k.runwayMonths >= 18,
           value: k.runwayMonths === null ? 'Pas de consommation nette' : `${num(k.runwayMonths, 0)} mois d'autonomie`,
-          need: "Une levée prend quatre à six mois. Financez dix-huit mois, pas six, sinon vous repartez en levée le jour où vous finissez.",
+          need: "Une levée prend quatre à six mois. Financez dix-huit mois, pas six, sinon tu repars en levée le jour où tu finis.",
         },
       ],
     },
@@ -359,8 +359,8 @@ function readiness(s, r, y) {
 
   return h('section', { class: 'panel mb' },
     h('div', { class: 'panel-head' },
-      h('h2', {}, 'Ce qu’on va vérifier dans votre dossier'),
-      h('p', { class: 'panel-sub' }, "Les mêmes chiffres, lus par trois lecteurs différents. Ce qui manque ici est ce qu'on vous demandera."),
+      h('h2', {}, 'Ce qu’on va vérifier dans ton dossier'),
+      h('p', { class: 'panel-sub' }, "Les mêmes chiffres, lus par trois lecteurs différents. Ce qui manque ici est ce qu'on toi demandera."),
     ),
     h('div', { class: 'audiences' },
       ...audiences.map((a) => {

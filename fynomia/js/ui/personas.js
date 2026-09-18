@@ -81,7 +81,7 @@ export const LEVERS = {
     format: (v) => pct(v, 1),
     absent: 'Sans revenu récurrent, il n\'y a pas de base à retenir.',
     applies: (s) => (Number(firstActivity(s)?.recurringPrice) || 0) > 0,
-    why: 'Ce que vous perdez chaque mois par le bas pendant que vous remplissez par le haut.',
+    why: 'Ce que tu perds chaque mois par le bas pendant que tu remplis par le haut.',
   },
   growth: {
     label: 'Croissance mensuelle des ventes', unit: '%', field: 'monthlyGrowth',
@@ -115,7 +115,7 @@ export const LEVERS = {
     format: (v) => euro(v),
     absent: "Aucune campagne n'est définie.",
     applies: (s) => (s.marketing || []).length > 0,
-    why: 'Convertit du cash en clients — au taux que vous avez saisi.',
+    why: 'Convertit du cash en clients — au taux que tu as saisi.',
   },
   conversion: {
     label: 'Taux de conversion en client', unit: '%', field: 'leadToClient',
@@ -155,13 +155,13 @@ export const LEVERS = {
     format: (v) => euro(v),
     absent: "Aucune charge fixe n'est définie.",
     applies: (s) => (s.opex || []).length > 0,
-    why: 'Les charges fixes se paient que vous vendiez ou non.',
+    why: 'Les charges fixes se paient que tu vendes ou non.',
   },
   openingCash: {
     label: 'Trésorerie de départ', unit: '€', field: 'amount',
     target: (s) => ({ object: s.financing, key: 'openingCash' }), min: 0, max: 500000, step: 1000,
     format: (v) => euro(v),
-    why: "Ce que vous mettez sur la table avant le premier euro encaissé.",
+    why: "Ce que tu mets sur la table avant le premier euro encaissé.",
   },
 }
 
@@ -211,8 +211,8 @@ const sumYear = (arr, y) => arr.slice(y * 12, y * 12 + 12).reduce((a, b) => a + 
 export const PERSONAS = {
   founder: {
     label: 'Fondateur', short: 'Fondateur', code: 'FDR',
-    tagline: "Vous décidez de tout, donc vous répondez de tout.",
-    brief: "La vue d'ensemble : ce que vous vendez, ce que ça coûte, ce qu'il reste, et combien de temps vous tenez.",
+    tagline: "Tu décides de tout, donc tu réponds de tout.",
+    brief: "La vue d'ensemble : ce que tu vends, ce que ça coûte, ce qu'il reste, et combien de temps tu tiens.",
     hasDepth: true,
     metrics: ['revenue', 'ebitda', 'breakEven', 'netResult', 'fundingNeed', 'runway'],
     levers: ['price', 'subscription', 'growth', 'budget', 'salary', 'hireMonth'],

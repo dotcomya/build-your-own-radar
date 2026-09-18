@@ -23,7 +23,7 @@ export function verdict(result, scenario) {
     const units = result.revenue.units.reduce((a, b) => a + b, 0)
     return {
       word: 'Ne tient pas', tone: 'bad',
-      line: 'Vous vendez à perte.',
+      line: 'Tu vends à perte.',
       body: "Le coût de revient dépasse le prix de vente : chaque unité supplémentaire creuse le résultat, et aucun point mort n'existe. Rien d'autre ne compte tant que ce n'est pas corrigé.",
       figure: { label: 'Marge unitaire', value: euro(k.marginRate[y] * (p.revenue[y] / Math.max(1, units))), tone: 'bad' },
     }
@@ -33,7 +33,7 @@ export function verdict(result, scenario) {
     return {
       word: 'À chiffrer', tone: 'neutral',
       line: "Aucun revenu n'est encore modélisé.",
-      body: "Renseignez ce que vous vendez, à quel prix et à combien de clients : tout le reste en découle.",
+      body: "Renseigne ce que tu vends, à quel prix et à combien de clients : tout le reste en découle.",
       figure: { label: "Chiffre d'affaires", value: '—', tone: 'neutral' },
     }
   }
@@ -60,7 +60,7 @@ export function verdict(result, scenario) {
     return {
       word: 'À consolider', tone: 'watch',
       line: 'La trésorerie tient, la rentabilité non.',
-      body: "Vous ne manquerez pas d'argent, mais aucun exercice n'est bénéficiaire. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.",
+      body: "Toi ne manquerez pas d'argent, mais aucun exercice n'est bénéficiaire. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.",
       figure: { label: 'EBITDA année 5', value: euro(p.ebitda[4]), tone: 'watch' },
     }
   }
@@ -79,7 +79,7 @@ export function verdict(result, scenario) {
     line: `Rentable dès l'année ${k.firstProfitableYear + 1}, sans financement complémentaire.`,
     body: `${euro(p.revenue[y])} de chiffre d'affaires, ${euro(p.ebitda[y])} d'EBITDA, point mort à ${euro(k.breakEven[y] || 0)}. Le modèle se finance seul — reste à démontrer que les volumes sont atteignables.`,
     figure: takeHome !== null
-      ? { label: 'Pour vous, par mois', value: euro(takeHome), tone: 'good', link: '#/mon-revenu' }
+      ? { label: 'Pour toi, par mois', value: euro(takeHome), tone: 'good', link: '#/mon-revenu' }
       : { label: `EBITDA ${yearLabel(y).toLowerCase()}`, value: euro(p.ebitda[y]), tone: 'good' },
   }
 }

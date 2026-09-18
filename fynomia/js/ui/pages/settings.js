@@ -2,7 +2,6 @@
 
 import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton } from '../dom.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
-import { LEVEL_META } from '../../state/schema.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
 import { renderAccount } from './account.js'
@@ -17,7 +16,7 @@ export function renderSettings(navigate, refresh) {
   return h('div', { class: 'content' },
     h('div', { class: 'page-head' },
       h('h1', {}, 'Réglages'),
-      h('p', {}, "Votre projet, vos scénarios et les paramètres fiscaux du modèle."),
+      h('p', {}, "Ton projet, tes scénarios et les paramètres fiscaux du modèle."),
     ),
 
     teamViews(navigate, refresh),
@@ -31,7 +30,7 @@ export function renderSettings(navigate, refresh) {
           selectField({
             label: "Type d'activité", value: s.meta.sectorKey || '',
             options: [{ value: '', label: '— Aucun —' }, ...SECTOR_KEYS.map((k) => ({ value: k, label: SECTORS[k].label }))],
-            hint: "Détermine le vocabulaire, le régime de TVA, les repères de marché et les alertes. Changer ce choix ne modifie pas vos chiffres.",
+            hint: "Détermine le vocabulaire, le régime de TVA, les repères de marché et les alertes. Changer ce choix ne modifie pas tes chiffres.",
             onInput: (v) => store.update((sc) => {
               sc.meta.sectorKey = v || null
               if (v && SECTORS[v].vat.exempt) sc.meta.vatExempt = true
@@ -51,12 +50,6 @@ export function renderSettings(navigate, refresh) {
             })(),
             h('div', { class: 'field-hint' }, "Premier mois du prévisionnel."),
           ),
-          selectField({
-            label: "Niveau d'analyse", value: s.meta.level,
-            options: Object.entries(LEVEL_META).map(([k, v]) => ({ value: k, label: `${v.label} — ${v.tagline}` })),
-            hint: LEVEL_META[s.meta.level]?.description,
-            onInput: (v) => { store.setLevel(v); refresh() },
-          }),
         ),
         h('div', { class: 'grid grid-2 mt' },
           switchField({
@@ -72,7 +65,7 @@ export function renderSettings(navigate, refresh) {
             onInput: (v) => store.update((sc) => { sc.meta.jeiClaimed = v }, { label: 'Statut JEI' }),
           }),
         ),
-        store.level === 'advanced' && h('div', { class: 'grid grid-2 mt' },
+        h('div', { class: 'grid grid-2 mt' },
           numberField({
             label: 'Stock moyen', field: 'stockDays', value: s.assumptions?.stockDays, suffix: 'jours',
             hint: "Nombre de jours d'achats immobilisés en stock. Augmente le besoin en fonds de roulement.",
@@ -104,12 +97,12 @@ function scenarioManager(navigate, refresh) {
       h('button', { class: 'btn btn-sm', onClick: create }, '＋ Nouveau')),
     h('div', { class: 'card-body' },
       h('p', { class: 'small muted', style: { marginTop: 0 } },
-        "Dupliquez un scénario pour comparer plusieurs hypothèses — un cas prudent et un cas optimiste, par exemple — sans perdre votre travail."),
+        "Dupliquez un scénario pour comparer plusieurs hypothèses — un cas prudent et un cas optimiste, par exemple — sans perdre ton travail."),
       ...list.map((item) => h('div', { class: 'row', style: { padding: '10px 0', borderTop: '1px solid var(--ink-100)' } },
         h('div', { class: 'spacer' },
           h('div', { style: { fontWeight: '600' } }, item.name,
             item.id === store.currentId ? h('span', { class: 'chip chip-brand', style: { marginLeft: '7px' } }, 'Actuel') : null),
-          h('div', { class: 'tiny muted' }, `${LEVEL_META[item.level]?.label || item.level} · modifié ${relative(item.updatedAt)}`),
+          h('div', { class: 'tiny muted' }, `Modifié ${relative(item.updatedAt)}`),
         ),
         item.id !== store.currentId && h('button', { class: 'btn btn-sm', onClick: () => { store.load(item.id); navigate('#/tableau-de-bord') } }, 'Ouvrir'),
         h('button', { class: 'btn btn-sm btn-ghost', onClick: () => { store.duplicate(item.id); toast('Scénario dupliqué.', 'ok'); refresh() } }, 'Dupliquer'),
@@ -154,7 +147,7 @@ function fiscalPanel(refresh) {
           + `Un plan démarrant en ${LAST_ENACTED_YEAR + 1} les reconduit : aucune loi de finances ${LAST_ENACTED_YEAR + 1} `
           + `n'existe encore, et Fynomia préfère le dire plutôt que d'inventer un barème. `
           + `Les valeurs ci-dessous sont revalorisées chaque année — confirmez-les avant un dossier bancaire ou une levée.`),
-        "Les règles pérennes — barème de l'impôt sur les sociétés, taux de TVA, seuils de la CVAE et de la C3S — sont appliquées telles quelles. En revanche, les valeurs revalorisées chaque année (SMIC, plafond de la Sécurité sociale, coefficients de la réduction générale, barème de la CFE) sont ici des valeurs de référence reconduites. Confirmez-les avec votre expert-comptable avant tout usage officiel.",
+        "Les règles pérennes — barème de l'impôt sur les sociétés, taux de TVA, seuils de la CVAE et de la C3S — sont appliquées telles quelles. En revanche, les valeurs revalorisées chaque année (SMIC, plafond de la Sécurité sociale, coefficients de la réduction générale, barème de la CFE) sont ici des valeurs de référence reconduites. Confirmez-les avec ton expert-comptable avant tout usage officiel.",
       ),
 
       h('h4', { class: 'mb' }, 'Ajuster les taux'),
@@ -210,16 +203,16 @@ function dataPanel(navigate, refresh, usage) {
   }
 
   return h('div', { class: 'card' },
-    h('div', { class: 'card-head' }, h('h2', {}, 'Vos données')),
+    h('div', { class: 'card-head' }, h('h2', {}, 'Tes données')),
     h('div', { class: 'card-body' },
       h('p', { class: 'small muted', style: { marginTop: 0, maxWidth: '72ch' } },
-        `Tout est enregistré dans le stockage local de ce navigateur — rien n'est envoyé sur un serveur. Espace occupé : ${usage.human}. Vider les données du navigateur effacerait vos scénarios : exportez-les régulièrement.`),
+        `Tout est enregistré dans le stockage local de ce navigateur — rien n'est envoyé sur un serveur. Espace occupé : ${usage.human}. Vider les données du navigateur effacerait tes scénarios : exportez-les régulièrement.`),
       h('div', { class: 'row-wrap mt' },
         h('button', { class: 'btn', onClick: importFile }, 'Importer un scénario'),
         h('button', {
           class: 'btn btn-danger',
           onClick: async () => {
-            if (await confirmDialog({ title: 'Tout effacer ?', message: "Tous vos scénarios et votre profil seront définitivement supprimés de cet appareil. Cette action est irréversible.", confirmLabel: 'Tout effacer', danger: true })) {
+            if (await confirmDialog({ title: 'Tout effacer ?', message: "Tous tes scénarios et ton profil seront définitivement supprimés de cet appareil. Cette action est irréversible.", confirmLabel: 'Tout effacer', danger: true })) {
               for (const k of ['scenarios', 'current', 'profile']) { localStorage.removeItem('fynomia.' + k); localStorage.removeItem('fizzy.' + k) }
               location.hash = '#/'
               location.reload()
@@ -251,7 +244,7 @@ function teamViews(navigate, refresh) {
     ),
     h('div', { class: 'detail-inner' },
       h('p', { class: 'small muted', style: { margin: '0 0 12px' } },
-        "Fynomia est construit pour un fondateur qui bâtit son dossier seul. Si vous partagez le modèle avec un associé ou un directeur financier, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
+        "Fynomia est construit pour un fondateur qui bâtit son dossier seul. Si tu partages le modèle avec un associé ou un directeur financier, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
       personaPicker((p) => {
         if (!p.pages.includes('reglages')) navigate('#/parcours')
         else refresh()

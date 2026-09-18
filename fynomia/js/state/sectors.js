@@ -37,7 +37,7 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.75, 0.9], payrollRatio: [0.4, 0.65], churn: [0.01, 0.03], ltvCac: [3, 5] },
     metrics: ['recurringShare', 'ltvCac', 'grossMargin', 'runway'],
     traps: [
-      { title: "L'attrition mange la croissance", body: "À 3 % d'attrition mensuelle, vous perdez 30 % de votre base chaque année. Il faut donc courir pour rester immobile : avant d'augmenter le budget d'acquisition, mesurez ce que vous retenez." },
+      { title: "L'attrition mange la croissance", body: "À 3 % d'attrition mensuelle, tu perds 30 % de ta base chaque année. Il faut donc courir pour rester immobile : avant d'augmenter le budget d'acquisition, mesurez ce que tu retiens." },
       { title: 'Le CIR se mérite', body: "Développer un produit n'est pas faire de la recherche au sens fiscal. Le CIR suppose une incertitude scientifique ou technique levée par des travaux méthodiques. Un rescrit vaut mieux qu'un redressement." },
     ],
     build(s) {
@@ -56,7 +56,7 @@ export const SECTORS = {
 
   developpeur: {
     family: 'tech', label: 'Développeur indépendant', glyph: '⟨⟩',
-    tagline: "Votre chiffre d'affaires a un plafond : le nombre de jours dans l'année.",
+    tagline: "Ton chiffre d'affaires a un plafond : le nombre de jours dans l'année.",
     unit: { one: 'jour facturé', many: 'jours facturés', verb: 'vendus', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Sous 39 100 € de recettes, la franchise en base dispense de facturer la TVA — mais interdit de la récupérer. Au-delà, le régime réel s'impose." },
     legal: { forms: ['EI', 'EURL', 'SASU'], regime: 'TNS ou assimilé salarié', note: "En EURL le gérant est TNS : environ 45 % de cotisations sur la rémunération. En SASU il est assimilé salarié : environ 80 % de charges sur le net, mais une meilleure couverture et la possibilité de se verser des dividendes sans cotisations." },
@@ -64,7 +64,7 @@ export const SECTORS = {
     metrics: ['revenue', 'arpu', 'payrollCost', 'runway'],
     traps: [
       { title: 'Les jours non facturables', body: "Sur 365 jours, retirez week-ends, congés, jours fériés, prospection, administratif et formation : il reste rarement plus de 200 jours facturables. Un TJM de 500 € ne fait pas 182 500 € de chiffre d'affaires, mais plutôt 100 000 €." },
-      { title: 'La dépendance à un client', body: "Au-delà de 70 % du chiffre d'affaires sur un seul client, l'URSSAF peut requalifier la relation en salariat déguisé, et la fin du contrat vous laisse sans revenu du jour au lendemain." },
+      { title: 'La dépendance à un client', body: "Au-delà de 70 % du chiffre d'affaires sur un seul client, l'URSSAF peut requalifier la relation en salariat déguisé, et la fin du contrat toi laisse sans revenu du jour au lendemain." },
     ],
     build(s) {
       s.activities = [newActivity({ name: 'Développement au forfait jour', unitPrice: 550, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 1, deposit: 0.3, unitCost: 0, vatRateSales: 0.2, volumes: { mode: 'growth', launchMonth: 0, startUnits: 12, monthlyGrowth: 0.03, growthDecay: 0.94, cap: 18, manual: [] } })]
@@ -78,7 +78,7 @@ export const SECTORS = {
   // ───────────────────────── Services aux entreprises ────────────────────
   conseil: {
     family: 'services', label: 'Cabinet de conseil', glyph: '◈',
-    tagline: "Vous vendez du temps d'expert : le taux d'occupation fait le résultat.",
+    tagline: "Tu vends du temps d'expert : le taux d'occupation fait le résultat.",
     unit: { one: 'mission', many: 'missions', verb: 'signées', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: 'Prestation de conseil au taux normal.' },
     legal: { forms: ['SAS', 'SASU', 'SARL'], regime: 'Assimilé salarié ou TNS', note: "La structure importe moins que le pilotage du taux d'occupation et du délai de règlement des grands comptes." },
@@ -123,15 +123,15 @@ export const SECTORS = {
   // ─────────────────────────────── Santé ─────────────────────────────────
   medecin: {
     family: 'health', label: 'Cabinet médical', glyph: '✚',
-    tagline: "Votre plafond n'est pas commercial : c'est le nombre d'heures de consultation.",
+    tagline: "Ton plafond n'est pas commercial : c'est le nombre d'heures de consultation.",
     unit: { one: 'consultation', many: 'consultations', verb: 'réalisées', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Les soins dispensés aux personnes par les membres des professions médicales et paramédicales réglementées sont exonérés de TVA. En contrepartie, la TVA payée sur vos achats, votre matériel et votre loyer n'est pas récupérable : raisonnez toujours en montants toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Les soins dispensés aux personnes par les membres des professions médicales et paramédicales réglementées sont exonérés de TVA. En contrepartie, la TVA payée sur tes achats, ton matériel et ton loyer n'est pas récupérable : raisonnez toujours en montants toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARMF)', note: "Le médecin libéral cotise à la CARMF. En secteur 1, l'assurance maladie prend en charge une part des cotisations en contrepartie du respect des tarifs opposables." },
     benchmarks: { grossMargin: [0.95, 1], actsPerDay: [20, 30], overheadRatio: [0.3, 0.45] }, ownerIsProfit: true,
     metrics: ['revenue', 'payrollCost', 'breakEven', 'runway'],
     traps: [
-      { title: 'La TVA non récupérable', body: "Exonéré ne veut pas dire avantagé. Un fauteuil à 12 000 € HT vous coûte 14 400 € : la TVA reste à votre charge. Saisissez vos investissements et vos charges toutes taxes comprises." },
-      { title: 'Le taux de charges', body: "Les charges d'un cabinet représentent couramment 35 à 45 % des honoraires : local, secrétariat, cotisations, RCP, matériel. Ce sont les honoraires nets, pas bruts, qui déterminent votre revenu." },
+      { title: 'La TVA non récupérable', body: "Exonéré ne veut pas dire avantagé. Un fauteuil à 12 000 € HT toi coûte 14 400 € : la TVA reste à ton charge. Saisis tes investissements et tes charges toutes taxes comprises." },
+      { title: 'Le taux de charges', body: "Les charges d'un cabinet représentent couramment 35 à 45 % des honoraires : local, secrétariat, cotisations, RCP, matériel. Ce sont les honoraires nets, pas bruts, qui déterminent ton revenu." },
     ],
     build(s) {
       s.activities = [newActivity({ name: 'Consultations', unitPrice: 30, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 1.5, vatRateSales: 0, vatRatePurchase: 0, volumes: { mode: 'growth', launchMonth: 0, startUnits: 260, monthlyGrowth: 0.035, growthDecay: 0.93, cap: 480, manual: [] } })]
@@ -149,9 +149,9 @@ export const SECTORS = {
 
   kine: {
     family: 'health', label: 'Cabinet de kinésithérapie', glyph: '⟿',
-    tagline: "Trente minutes par patient : votre agenda est votre compte de résultat.",
+    tagline: "Trente minutes par patient : ton agenda est ton compte de résultat.",
     unit: { one: 'séance', many: 'séances', verb: 'réalisées', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Actes de soins exonérés. La TVA sur vos achats et votre matériel n'est pas récupérable : saisissez tout en montants toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Actes de soins exonérés. La TVA sur tes achats et ton matériel n'est pas récupérable : saisissez tout en montants toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARPIMKO)', note: "Le kinésithérapeute cotise à la CARPIMKO. L'exercice en cabinet de groupe via une SCM permet de partager les charges sans partager les honoraires." },
     benchmarks: { grossMargin: [0.95, 1], sessionsPerDay: [18, 26], overheadRatio: [0.3, 0.4] }, ownerIsProfit: true,
     metrics: ['revenue', 'breakEven', 'payrollCost', 'runway'],
@@ -174,12 +174,12 @@ export const SECTORS = {
     family: 'health', label: 'Cabinet dentaire', glyph: '⌇',
     tagline: "Fort investissement, forte charge variable : la prothèse décide de la marge.",
     unit: { one: 'acte', many: 'actes', verb: 'réalisés', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Soins dentaires et prothèses exonérés. La TVA sur le fauteuil, l'imagerie et les consommables reste à votre charge : comptez tout toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Soins dentaires et prothèses exonérés. La TVA sur le fauteuil, l'imagerie et les consommables reste à ton charge : comptez tout toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARCDSF)', note: "Le chirurgien-dentiste cotise à la CARCDSF. L'exercice en SELARL permet d'arbitrer entre rémunération et dividendes, avec la contrainte des cotisations sur les dividendes du gérant majoritaire." },
     benchmarks: { grossMargin: [0.6, 0.75], prostheticCost: [0.2, 0.28], overheadRatio: [0.3, 0.45] }, ownerIsProfit: true,
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
-      { title: 'Le laboratoire de prothèse', body: "La sous-traitance prothétique représente 20 à 28 % du chiffre d'affaires correspondant. C'est une charge variable pure : elle doit figurer en coût de revient, sinon votre marge brute est fausse de vingt points." },
+      { title: 'Le laboratoire de prothèse', body: "La sous-traitance prothétique représente 20 à 28 % du chiffre d'affaires correspondant. C'est une charge variable pure : elle doit figurer en coût de revient, sinon ta marge brute est fausse de vingt points." },
       { title: "L'investissement initial", body: "Un fauteuil équipé, l'imagerie et l'aménagement dépassent fréquemment 150 000 €. Amorti sur sept ans, cela pèse près de 1 800 € par mois sur le résultat, et la totalité sort de la trésorerie la première année." },
     ],
     build(s) {
@@ -201,7 +201,7 @@ export const SECTORS = {
     family: 'retail', label: 'Restaurant', glyph: '☗',
     tagline: "Matière plus personnel sous 65 % du chiffre d'affaires, sinon rien ne reste.",
     unit: { one: 'couvert', many: 'couverts', verb: 'servis', client: 'client' },
-    vat: { sales: 0.1, label: 'TVA 10 %', note: "La restauration sur place et la vente à emporter de produits à consommation immédiate relèvent du taux de 10 %. Les boissons alcoolisées restent à 20 %, les produits vendus pour une consommation différée à 5,5 %. Si vous servez du vin, votre taux moyen sera supérieur à 10 %." },
+    vat: { sales: 0.1, label: 'TVA 10 %', note: "La restauration sur place et la vente à emporter de produits à consommation immédiate relèvent du taux de 10 %. Les boissons alcoolisées restent à 20 %, les produits vendus pour une consommation différée à 5,5 %. Si tu sers du vin, ton taux moyen sera supérieur à 10 %." },
     legal: { forms: ['SARL', 'SAS', 'EURL'], regime: 'TNS ou assimilé salarié', note: "Licence, formation hygiène, affichage des allergènes et registre HACCP conditionnent l'ouverture autant que le financement." },
     benchmarks: { grossMargin: [0.68, 0.75], payrollRatio: [0.32, 0.4], rentRatio: [0.06, 0.1], ticket: [18, 35] },
     metrics: ['revenue', 'grossMargin', 'payrollRatio', 'breakEven'],
@@ -227,7 +227,7 @@ export const SECTORS = {
 
   ecommerce: {
     family: 'retail', label: 'E-commerce', glyph: '⬒',
-    tagline: "Vous n'achetez pas des ventes, vous achetez des clients.",
+    tagline: "Toi n'achetez pas des ventes, tu achètes des clients.",
     unit: { one: 'commande', many: 'commandes', verb: 'passées', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Taux normal pour la plupart des produits manufacturés. Les ventes à distance vers un autre pays de l'Union basculent au taux du pays de destination au-delà de 10 000 € annuels, via le guichet unique." },
     legal: { forms: ['SASU', 'SAS', 'EURL'], regime: 'Assimilé salarié ou TNS', note: "Mentions légales, conditions générales de vente, droit de rétractation de quatorze jours et registre des traitements sont des obligations, pas des options." },
@@ -251,14 +251,14 @@ export const SECTORS = {
 
   fleuriste: {
     family: 'retail', label: 'Fleuriste', glyph: '❁',
-    tagline: "Votre stock se fane : la démarque est votre vraie charge.",
+    tagline: "Ton stock se fane : la démarque est ton vraie charge.",
     unit: { one: 'vente', many: 'ventes', verb: 'réalisées', client: 'client' },
-    vat: { sales: 0.1, label: 'TVA 10 %', note: "Les fleurs coupées et plantes d'ornement relèvent du taux de 10 %. Les contenants, accessoires et articles de décoration restent à 20 % : votre taux moyen dépend de votre mix." },
+    vat: { sales: 0.1, label: 'TVA 10 %', note: "Les fleurs coupées et plantes d'ornement relèvent du taux de 10 %. Les contenants, accessoires et articles de décoration restent à 20 % : ton taux moyen dépend de ton mix." },
     legal: { forms: ['EI', 'EURL', 'SARL'], regime: 'TNS', note: "Commerce de détail : emplacement et flux passants comptent davantage que la surface." },
     benchmarks: { grossMargin: [0.5, 0.6], shrinkage: [0.08, 0.12], rentRatio: [0.08, 0.12], ticket: [22, 40] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
-      { title: 'La démarque invisible', body: "Huit à douze pour cent des achats finissent à la poubelle. Si vous ne l'intégrez pas au coût de revient, votre marge affichée est fausse d'autant, et vous croirez gagner de l'argent que vous jetez." },
+      { title: 'La démarque invisible', body: "Huit à douze pour cent des achats finissent à la poubelle. Si toi ne l'intégrez pas au coût de revient, ta marge affichée est fausse d'autant, et tu croiras gagner de l'argent que tu jettes." },
       { title: 'Les pics de saison', body: "Fête des mères, Saint-Valentin et Toussaint peuvent représenter le quart de l'année. Ces pics exigent une avance de trésorerie sur les achats, quelques jours avant l'encaissement." },
     ],
     build(s) {
@@ -356,10 +356,10 @@ export const SECTORS = {
   // ───────────────────── Formation et intérêt général ────────────────────
   formation: {
     family: 'impact', label: 'Organisme de formation', glyph: '◫',
-    tagline: "Sans certification, vos clients ne peuvent pas vous financer.",
+    tagline: "Sans certification, tes clients ne peuvent pas toi financer.",
     unit: { one: 'stagiaire-jour', many: 'stagiaires-jours', verb: 'formés', client: 'stagiaire' },
     vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "La formation professionnelle continue est exonérée de TVA pour les organismes titulaires de l'attestation délivrée par la préfecture. À défaut, le taux normal s'applique. L'exonération prive du droit à déduction sur les achats." },
-    legal: { forms: ['SAS', 'SASU', 'SARL', 'Association'], regime: 'Assimilé salarié ou TNS', note: "Un numéro de déclaration d'activité est obligatoire dès la première convention. La certification Qualiopi conditionne l'accès aux financements publics et mutualisés : sans elle, la plupart des entreprises ne peuvent pas faire prendre en charge vos formations." },
+    legal: { forms: ['SAS', 'SASU', 'SARL', 'Association'], regime: 'Assimilé salarié ou TNS', note: "Un numéro de déclaration d'activité est obligatoire dès la première convention. La certification Qualiopi conditionne l'accès aux financements publics et mutualisés : sans elle, la plupart des entreprises ne peuvent pas faire prendre en charge tes formations." },
     benchmarks: { grossMargin: [0.55, 0.75], payrollRatio: [0.35, 0.5], fillRate: [0.6, 0.8] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'runway'],
     traps: [

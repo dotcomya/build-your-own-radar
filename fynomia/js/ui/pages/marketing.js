@@ -9,11 +9,18 @@ import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
-import { enableToggle, levelBlock } from '../dom.js'
+import { enableToggle, refine } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 
-export function renderMarketing(navigate, refresh) {
+/**
+ * L'acquisition, en onglet de « Offre & revenus ».
+ *
+ * Elle n'est plus un module : ce qu'on dépense pour trouver des clients décide
+ * des volumes vendus, donc du chiffre d'affaires. La ranger ailleurs revenait
+ * à séparer la cause de son effet.
+ */
+export function renderAcquisition(navigate, refresh) {
   const s = store.scenario
   const r = store.result
   const level = store.level
@@ -23,7 +30,6 @@ export function renderMarketing(navigate, refresh) {
   // En mode simple, l'acquisition tient en deux nombres : ce que coûte un
   // client et combien on en veut par mois. L'entonnoir, les canaux et le
   // rapport LTV/CAC sont de vraies questions — mais pas les premières.
-  if (level === 'easy') return simpleAcquisition(s, r, navigate, refresh)
 
   const add = () => {
     const c = newCampaign({ name: `Campagne ${s.marketing.length + 1}`, activityId: s.activities[0]?.id || null })
@@ -38,19 +44,17 @@ export function renderMarketing(navigate, refresh) {
   const views = [
     { key: 'campagnes', label: 'Campagnes', count: s.marketing.length },
     r && s.marketing.length > 0 ? { key: 'mix', label: 'Répartition' } : null,
-    level === 'advanced' && r && s.marketing.length > 0 ? { key: 'rentabilite', label: 'Rentabilité' } : null,
+    r && s.marketing.length > 0 ? { key: 'rentabilité', label: 'Rentabilité' } : null,
   ]
   const view = views.some((v) => v && v.key === renderMarketing.view) ? renderMarketing.view : 'campagnes'
   renderMarketing.view = view
 
   return h('div', { class: 'content' },
-    stepBanner('acquisition', journey(store.scenario, store.result), navigate, 'marketing'),
-
     pageBar(
       s.marketing.length > 1 ? `${s.marketing.length} campagnes` : 'Acquisition de clients',
       r && totalClients > 0
         ? `${euro(totalBudget, { compact: true })} investis pour ${num(Math.round(totalClients))} clients · ${r.kpis.cac ? euro(r.kpis.cac) : '—'} par client`
-        : 'Ce que vous dépensez pour trouver des clients, et ce que ça rapporte',
+        : 'Ce que tu dépenses pour trouver des clients, et ce que ça rapporte',
       view === 'campagnes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter une campagne') : null,
     ),
 
@@ -71,16 +75,15 @@ export function renderMarketing(navigate, refresh) {
             h('div', { class: 'empty-icon' }, '◎'),
             h('h3', {}, 'Aucune campagne'),
             h('p', { class: 'muted', style: { maxWidth: '52ch', margin: '0 auto' } },
-              "Sans campagne, vos volumes de vente reposent uniquement sur la courbe de croissance saisie dans l'onglet Offre. Ajoutez une campagne pour relier un budget marketing à une acquisition de clients."),
+              "Sans campagne, tes volumes de vente reposent uniquement sur la courbe de croissance saisie dans l'onglet Offre. Ajoute une campagne pour relier un budget marketing à une acquisition de clients."),
             h('button', { class: 'btn btn-primary mt', onClick: add }, 'Créer une campagne'),
           ))
         : h('div', {}, ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh))),
     ) : null,
 
     view === 'mix' && r ? h('div', { class: 'view' }, mixPanel(r)) : null,
-    view === 'rentabilite' && r ? h('div', { class: 'view' }, unitEconomicsPanel(r, s)) : null,
+    view === 'rentabilité' && r ? h('div', { class: 'view' }, unitEconomicsPanel(r, s)) : null,
 
-    tutorial('acquisition', navigate),
   )
 }
 
@@ -120,13 +123,11 @@ function simpleAcquisition(s, r, navigate, refresh) {
   const ratio = cac > 0 && ltv > 0 ? ltv / cac : null
 
   return h('div', { class: 'content' },
-    stepBanner('acquisition', journey(store.scenario, store.result), navigate, 'marketing'),
-
     h('div', { class: 'card' },
       h('div', { class: 'card-head' },
         h('div', {},
-          h('h2', {}, 'Ce que vous coûte un client'),
-          h('div', { class: 'tiny muted' }, "Deux nombres suffisent à chiffrer votre acquisition."),
+          h('h2', {}, 'Ce que toi coûte un client'),
+          h('div', { class: 'tiny muted' }, "Deux nombres suffisent à chiffrer ton acquisition."),
         ),
       ),
       h('div', { class: 'card-body' },
@@ -134,12 +135,12 @@ function simpleAcquisition(s, r, navigate, refresh) {
           numberField({
             label: "Coût moyen pour gagner un client", field: 'cac', value: cac, suffix: '€',
             help: 'cac',
-            hint: "Tout ce que vous dépensez pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
+            hint: "Tout ce que tu dépenses pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
             onInput: (v) => setSimple({ cac: v }),
           }),
           numberField({
             label: 'Nouveaux clients visés par mois', field: 'count', value: perMonth, suffix: 'clients',
-            hint: "En plus de ceux qui viennent seuls. Laissez à zéro si vous ne dépensez rien pour en trouver.",
+            hint: "En plus de ceux qui viennent seuls. Laisse à zéro si toi ne dépensez rien pour en trouver.",
             onInput: (v) => setSimple({ clientsPerMonth: v }),
           }),
         ),
@@ -161,7 +162,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
 
         cac > 0 && ltv > 0 && h('div', { class: 'acq-scale' },
           h('div', { class: 'acq-scale-head' },
-            h('span', {}, 'Ce qu’un client vous rapporte, face à ce qu’il vous coûte'),
+            h('span', {}, 'Ce qu’un client toi rapporte, face à ce qu’il toi coûte'),
           ),
           h('div', { class: 'acq-scale-row' },
             h('span', { class: 'acq-scale-tag' }, 'Rapporte'),
@@ -180,23 +181,22 @@ function simpleAcquisition(s, r, navigate, refresh) {
 
         cac > 0 && ltv <= 0 && h('div', { class: 'note mt' },
           h('div', { class: 'note-title' }, 'Il manque un prix de vente'),
-          "Renseignez le prix et le coût de revient de votre offre pour que Fynomia puisse comparer ce qu'un client vous rapporte à ce qu'il vous coûte."),
+          "Renseigne le prix et le coût de revient de ton offre pour que Fynomia puisse comparer ce qu'un client toi rapporte à ce qu'il toi coûte."),
       ),
     ),
 
     h('div', { class: 'note plain mt' },
       h('div', { class: 'note-title' }, 'Et si je veux détailler ?'),
-      "Passez en niveau Intermédiaire ou Expert pour décomposer votre acquisition en campagnes, choisir un canal par campagne et chiffrer un entonnoir complet — impressions, clics, contacts, clients — avec le rapport entre ce qu'un client coûte et ce qu'il rapporte sur toute sa durée de vie."),
+      "Passe en niveau Intermédiaire ou Expert pour décomposer ton acquisition en campagnes, choisir un canal par campagne et chiffrer un entonnoir complet — impressions, clics, contacts, clients — avec le rapport entre ce qu'un client coûte et ce qu'il rapporte sur toute sa durée de vie."),
 
-    tutorial('acquisition', navigate),
   )
 }
 
 function ratioAdvice(ratio) {
   if (ratio === null) return ''
-  if (ratio >= 3) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. Au-delà de trois, l'acquisition est saine : vous pouvez dépenser davantage sans fragiliser le modèle.`
-  if (ratio >= 1) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. C'est positif mais court : le retour est lent et laisse peu de marge d'erreur. Travaillez la conversion ou la valeur client avant d'augmenter le budget.`
-  return `Un client vous coûte plus qu'il ne vous rapporte. En l'état, chaque client gagné creuse la perte : baissez le coût d'acquisition ou augmentez le prix avant de dépenser.`
+  if (ratio >= 3) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. Au-delà de trois, l'acquisition est saine : tu peux dépenser davantage sans fragiliser le modèle.`
+  if (ratio >= 1) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. C'est positif mais court : le retour est lent et laisse peu de marge d'erreur. Travaille la conversion ou la valeur client avant d'augmenter le budget.`
+  return `Un client toi coûte plus qu'il ne toi rapporte. En l'état, chaque client gagné creuse la perte : baissez le coût d'acquisition ou augmentez le prix avant de dépenser.`
 }
 
 /* ───────────────── Mode expert : la rentabilité, en détail ──────────────── */
@@ -243,8 +243,8 @@ function unitEconomicsPanel(r, s) {
     payback !== null && h('div', { class: 'card-body', style: { paddingTop: '0' } },
       h('p', { class: 'tiny muted', style: { margin: 0, maxWidth: '78ch' } },
         payback <= 12
-          ? `Vous récupérez ce que coûte un client en ${num(payback, 1)} mois. Sous douze mois, l'acquisition s'autofinance presque : accelérer ne crée pas de trou de trésorerie durable.`
-          : `Il faut ${num(payback, 1)} mois pour récupérer ce que coûte un client. Chaque client supplémentaire creuse d'abord la trésorerie avant de la remplir : c'est ce délai, plus que la rentabilité, qui fixe le rythme auquel vous pouvez croître.`),
+          ? `Toi récupérez ce que coûte un client en ${num(payback, 1)} mois. Sous douze mois, l'acquisition s'autofinance presque : accelérer ne crée pas de trou de trésorerie durable.`
+          : `Il faut ${num(payback, 1)} mois pour récupérer ce que coûte un client. Chaque client supplémentaire creuse d'abord la trésorerie avant de la remplir : c'est ce délai, plus que la rentabilité, qui fixe le rythme auquel tu peux croître.`),
     ),
   )
 }
@@ -355,7 +355,7 @@ function funnelFields(c, set) {
     fields.push(numberField({ label: 'Coût par contact', field: 'cpl', value: c.cpl, suffix: '€', onInput: (v) => set({ cpl: v }) }))
     fields.push(numberField({ label: 'Contact → client', field: 'leadToClient', value: c.leadToClient, percent: true, onInput: (v) => set({ leadToClient: v }) }))
   } else if (c.model === 'cac') {
-    fields.push(numberField({ label: "Coût d'acquisition", field: 'cac', value: c.cac, suffix: '€', hint: 'Si vous connaissez déjà votre CAC réel.', onInput: (v) => set({ cac: v }) }))
+    fields.push(numberField({ label: "Coût d'acquisition", field: 'cac', value: c.cac, suffix: '€', hint: 'Si tu connais déjà ton CAC réel.', onInput: (v) => set({ cac: v }) }))
   } else {
     fields.push(numberField({ label: 'Clients par mois', field: 'count', value: c.clientsPerMonth, suffix: 'clients', onInput: (v) => set({ clientsPerMonth: v }) }))
   }
@@ -428,8 +428,8 @@ function mixPanel(r) {
       h('div', { class: 'note plain mt' },
         h('div', { class: 'note-title' }, 'Comment lire ces chiffres'),
         r.kpis.ltvCacRatio
-          ? `Chaque client vous coûte ${euro(r.kpis.cac)} à acquérir et vous rapporte ${euro(r.kpis.ltv)} de marge. Le rapport est de ${num(r.kpis.ltvCacRatio, 1)}, ${r.kpis.ltvCacRatio >= 3 ? "au-dessus du seuil de 3 généralement retenu comme sain : votre acquisition est rentable et peut être accélérée." : r.kpis.ltvCacRatio >= 1 ? "au-dessus de 1 mais en dessous de 3 : l'acquisition est rentable mais le retour est lent. Améliorez la conversion ou la valeur client avant d'augmenter les budgets." : "en dessous de 1 : chaque client acquis vous coûte plus qu'il ne rapporte. Augmenter le budget aggraverait les pertes."}`
-          : "Renseignez un prix de vente et un coût de revient dans l'onglet Offre pour que Fynomia calcule la rentabilité de votre acquisition.",
+          ? `Chaque client toi coûte ${euro(r.kpis.cac)} à acquérir et toi rapporte ${euro(r.kpis.ltv)} de marge. Le rapport est de ${num(r.kpis.ltvCacRatio, 1)}, ${r.kpis.ltvCacRatio >= 3 ? "au-dessus du seuil de 3 généralement retenu comme sain : ton acquisition est rentable et peut être accélérée." : r.kpis.ltvCacRatio >= 1 ? "au-dessus de 1 mais en dessous de 3 : l'acquisition est rentable mais le retour est lent. Améliore la conversion ou la valeur client avant d'augmenter les budgets." : "en dessous de 1 : chaque client acquis toi coûte plus qu'il ne rapporte. Augmenter le budget aggraverait les pertes."}`
+          : "Renseigne un prix de vente et un coût de revient dans l'onglet Offre pour que Fynomia calcule la rentabilité de ton acquisition.",
       ),
     ),
   )

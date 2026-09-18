@@ -24,7 +24,6 @@ export function personaPicker(onPick) {
       class: `persona-option ${store.persona === key ? 'active' : ''}`,
       onClick: () => {
         store.setPersona(key)
-        if (p.forceLevel) store.setLevel(p.forceLevel)
         toast(`${p.label} — ${p.tagline}`)
         onPick(p)
       },

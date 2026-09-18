@@ -633,9 +633,9 @@ export function buildDeck(scenario, result, profile) {
     // chemin qui explique pourquoi l'écart est si grand.
     const steps = [
       { label: "EBITDA de l'entreprise", value: p.ebitda[refYear], kind: 'start' },
-      // Votre rémunération est déjà déduite au-dessus : la rappeler en gris
+      // Ta rémunération est déjà déduite au-dessus : la rappeler en gris
       // évite de croire, trois lignes plus bas, qu'elle sort du résultat net.
-      ...(incomeRow.employerCost > 0 ? [{ label: 'dont votre rémunération chargée', value: -incomeRow.employerCost, kind: 'info',
+      ...(incomeRow.employerCost > 0 ? [{ label: 'dont ta rémunération chargée', value: -incomeRow.employerCost, kind: 'info',
         note: `${eur(incomeRow.gross)} de brut et ${eur(incomeRow.employerCost - incomeRow.gross)} de cotisations patronales` }] : []),
       { label: 'Amortissements et frais financiers', value: -(p.amortisation[refYear] + p.interest[refYear]), kind: 'cost' },
       ...(p.credits[refYear] > 0 ? [{ label: "Crédits d'impôt", value: p.credits[refYear], kind: 'gain' }] : []),
@@ -643,10 +643,10 @@ export function buildDeck(scenario, result, profile) {
       { label: "Résultat net de l'entreprise", value: p.netResult[refYear], kind: 'sub' },
       ...(incomeRow.distributed > 0 ? [{ label: `Distribué aux associés (${formatPct(income.settings.payout)})`, value: -incomeRow.distributed, kind: 'info',
         note: incomeRow.retained > 0 ? `${eur(incomeRow.retained)} restent en réserves dans l'entreprise` : "rien n'est mis en réserve" }] : []),
-      ...(incomeRow.grossDividends > 0 ? [{ label: 'Vos dividendes bruts', value: incomeRow.grossDividends, kind: 'start' }] : []),
+      ...(incomeRow.grossDividends > 0 ? [{ label: 'Tes dividendes bruts', value: incomeRow.grossDividends, kind: 'start' }] : []),
       ...(incomeRow.dividendSocial > 0 ? [{ label: incomeRow.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : 'Prélèvements sociaux sur dividendes (17,2 %)', value: -incomeRow.dividendSocial, kind: 'cost' }] : []),
       ...(incomeRow.dividendIncomeTax > 0 ? [{ label: 'Impôt forfaitaire sur dividendes (12,8 %)', value: -incomeRow.dividendIncomeTax, kind: 'cost' }] : []),
-      ...(incomeRow.gross > 0 ? [{ label: 'Votre salaire net', value: incomeRow.netBeforeTax, kind: 'gain' }] : []),
+      ...(incomeRow.gross > 0 ? [{ label: 'Ton salaire net', value: incomeRow.netBeforeTax, kind: 'gain' }] : []),
       { label: "Impôt sur le revenu", value: -incomeRow.incomeTax, kind: 'cost',
         note: `Barème progressif, tranche marginale ${formatPct(incomeRow.marginalRate)}` },
     ].filter((st) => st.kind !== 'cost' || Math.abs(st.value) >= 1)
@@ -659,7 +659,7 @@ export function buildDeck(scenario, result, profile) {
     const colW = CONTENT_W * 0.58
 
     slides.push(slideXml([
-      ...slideHeader('Ce que touche le dirigeant', `Le chemin de l'argent, jusqu'à votre compte — ${YEARS[refYear].toLowerCase()}`),
+      ...slideHeader('Ce que touche le dirigeant', `Le chemin de l'argent, jusqu'à ton compte — ${YEARS[refYear].toLowerCase()}`),
       ...steps.flatMap((st, i) => {
         const y = flowTop + i * rowH
         const strong = st.kind === 'start' || st.kind === 'sub'
@@ -675,7 +675,7 @@ export function buildDeck(scenario, result, profile) {
       }),
       rect({ x: M, y: flowTop + steps.length * rowH + 80000, w: colW, h: 480000, fill: INK }),
       textBox({ x: M + 220000, y: flowTop + steps.length * rowH + 200000, w: colW * 0.6, h: 260000,
-        text: 'Sur votre compte', size: 13, bold: true, color: 'FFFFFF' }),
+        text: 'Sur ton compte', size: 13, bold: true, color: 'FFFFFF' }),
       textBox({ x: M + colW - 2300000, y: flowTop + steps.length * rowH + 180000, w: 2100000, h: 300000,
         text: eur(incomeRow.disposable), size: 17, bold: true, align: 'r', color: 'FFFFFF' }),
 
@@ -687,12 +687,12 @@ export function buildDeck(scenario, result, profile) {
         text: eur(incomeRow.monthly), size: 32, bold: true, color: MINT }),
       textBox({ x: M + CONTENT_W * 0.64 + 300000, y: flowTop + 1330000, w: CONTENT_W * 0.36 - 600000, h: 700000,
         text: incomeRow.costPerEuro > 0
-          ? `L'entreprise produit ${formatRatioEuro(incomeRow.costPerEuro)} de valeur pour chaque euro qui arrive chez vous.`
+          ? `L'entreprise produit ${formatRatioEuro(incomeRow.costPerEuro)} de valeur pour chaque euro qui arrive chez toi.`
           : '',
         size: 10.5, color: MUTED, lineSpacing: 130 }),
       textBox({ x: M + CONTENT_W * 0.64, y: flowTop + 2400000, w: CONTENT_W * 0.36, h: 1600000,
         text: income.settings.liberalBnc
-          ? "Bénéfices non commerciaux : l'abattement de 10 % des salaires ne s'applique pas ; les frais réels sont déjà déduits du bénéfice imposable. En exercice libéral classique, le bénéfice du cabinet est imposé directement à votre nom."
+          ? "Bénéfices non commerciaux : l'abattement de 10 % des salaires ne s'applique pas ; les frais réels sont déjà déduits du bénéfice imposable. En exercice libéral classique, le bénéfice du cabinet est imposé directement à ton nom."
           : "Barème progressif avec quotient familial et plafonnement. Ne sont pas modélisés : la CSG déductible en cas d'option pour le barème, les réductions et crédits d'impôt personnels, ni la contribution exceptionnelle sur les hauts revenus.",
         size: 9.5, color: MUTED, lineSpacing: 140 }),
       ...footer(slides.length + 1, name),
@@ -727,7 +727,7 @@ export function buildDeck(scenario, result, profile) {
   // Le modèle impose l'association comme une société : hypothèse prudente, mais
   // qui doit être dite plutôt que subie par le lecteur.
   if (meta.nonProfit) {
-    assumptions.push({ cells: ['Régime associatif', "Le prévisionnel applique l'impôt sur les sociétés de droit commun. Une association dont la gestion est désintéressée et l'activité non lucrative en est exonérée : faites qualifier votre situation."] })
+    assumptions.push({ cells: ['Régime associatif', "Le prévisionnel applique l'impôt sur les sociétés de droit commun. Une association dont la gestion est désintéressée et l'activité non lucrative en est exonérée : faites qualifier ton situation."] })
   }
   if (scenario.meta.jeiClaimed) assumptions.push({ cells: ['Statut JEI', result.jei.some((j) => j.eligible) ? 'Éligible : exonération de cotisations patronales sur la R&D' : 'Revendiqué mais seuil de R&D non atteint'] })
 

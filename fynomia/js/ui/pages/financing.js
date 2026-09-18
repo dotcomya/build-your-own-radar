@@ -18,7 +18,7 @@ import store from '../../state/store.js'
 const SOURCES = [
   {
     key: 'equityFounders', label: 'Apport des fondateurs', glyph: '\u25c8', level: 'easy',
-    hint: "Ce que vous et vos associ\u00e9s mettez au capital. C'est l'apport que toute banque regarde en premier.",
+    hint: "Ce que toi et tes associ\u00e9s mettez au capital. C'est l'apport que toute banque regarde en premier.",
     make: () => ({ id: uid('eqf'), month: 0, amount: 10000 }),
     fields: [
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
@@ -60,7 +60,7 @@ const SOURCES = [
   },
   {
     key: 'shareholderLoans', label: "Compte courant d'associ\u00e9", glyph: '\u25a1', level: 'intermediate',
-    hint: "De l'argent que vous pr\u00eatez \u00e0 votre soci\u00e9t\u00e9 et qui vous sera rendu. Ce n'est pas du capital : \u00e7a n'entre pas dans les fonds propres.",
+    hint: "De l'argent que toi pr\u00eatez \u00e0 ton soci\u00e9t\u00e9 et qui toi sera rendu. Ce n'est pas du capital : \u00e7a n'entre pas dans les fonds propres.",
     make: () => ({ id: uid('cca'), label: 'Compte courant', amount: 20000, month: 0, repayMonth: '' }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
@@ -115,7 +115,7 @@ export function renderFinancing(navigate, refresh) {
   const views = [
     { key: 'sources', label: 'Sources', count: SOURCES.reduce((a, src) => a + ((f[src.key] || []).length), 0) },
     r ? { key: 'tresorerie', label: 'Trésorerie' } : null,
-    r && level === 'advanced' ? { key: 'plan', label: 'Plan de financement' } : null,
+    r ? { key: 'plan', label: 'Plan de financement' } : null,
   ]
   const view = views.some((v) => v && v.key === renderFinancing.view) ? renderFinancing.view : 'sources'
   renderFinancing.view = view
@@ -179,7 +179,7 @@ export function renderFinancing(navigate, refresh) {
           areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
           r.kpis.fundingNeed > 0 ? h('div', { class: 'note warn mt' },
             h('div', { class: 'note-title' }, `Il manque ${euro(r.kpis.fundingNeed)}`),
-            `Votre solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : ajouter une source, négocier des acomptes clients plus élevés dans l'onglet Offre, ou décaler des recrutements et investissements.`) : null,
+            `Ton solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : ajouter une source, négocier des acomptes clients plus élevés dans l'onglet Offre, ou décaler des recrutements et investissements.`) : null,
         ),
       ),
     ) : null,

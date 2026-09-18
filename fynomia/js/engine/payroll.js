@@ -41,7 +41,7 @@ export const BENEFITS = {
     legal: true,
     suggested: 45,
     short: 'Obligatoire',
-    help: "Complémentaire santé collective, obligatoire depuis 2016 pour tout salarié en CDI ou CDD de plus de trois mois. L'employeur en finance au moins la moitié. Comptez 40 à 60 € par mois et par personne pour un contrat d'entrée de gamme.",
+    help: "Complémentaire santé collective, obligatoire depuis 2016 pour tout salarié en CDI ou CDD de plus de trois mois. L'employeur en finance au moins la moitié. Compte 40 à 60 € par mois et par personne pour un contrat d'entrée de gamme.",
     forfaitSocial: true,
     contracts: ['cdi', 'cdd', 'dirigeant'],
     only: 'CDI, CDD et dirigeants assimil\u00e9s salari\u00e9s',

@@ -36,7 +36,7 @@ export function renderCosts(navigate, refresh) {
 
   const views = [
     { key: 'charges', label: 'Charges', count: s.opex.length },
-    level !== 'easy' || s.capex.length ? { key: 'invest', label: 'Investissements', count: s.capex.length } : null,
+    { key: 'invest', label: 'Investissements', count: s.capex.length },
     r && s.opex.length > 0 ? { key: 'repartition', label: 'Répartition' } : null,
   ]
   const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
@@ -46,7 +46,7 @@ export function renderCosts(navigate, refresh) {
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   return h('div', { class: 'content' },
-    stepBanner('charges', journey(store.scenario, store.result), navigate, 'charges'),
+    stepBanner('charges', journey(store.scenario, store.result), navigate, 'achats'),
 
     pageBar(
       view === 'invest' ? 'Investissements' : 'Charges de fonctionnement',
@@ -65,7 +65,7 @@ export function renderCosts(navigate, refresh) {
             h('div', { class: 'empty-icon' }, '▦'),
             h('h3', {}, 'Aucune charge saisie'),
             h('p', { class: 'muted', style: { maxWidth: '54ch', margin: '0 auto 4px' } },
-              "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoutez-les d'un clic, puis ajustez les montants."),
+              "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoute-les d'un clic, puis ajustez les montants."),
             h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
           ))
         : h('div', {}, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
@@ -91,7 +91,7 @@ export function renderCosts(navigate, refresh) {
           h('div', { class: 'card-body' },
             barChart({ categories: YEAR_CATEGORIES, series: [{ label: 'Charges externes', values: r.opex.yearly, color: PALETTE[2] }] }),
             h('div', { class: 'note plain mt' },
-              `Ces charges représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.yearly[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Combinées à la masse salariale, elles fixent votre point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.`),
+              `Ces charges représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.yearly[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Combinées à la masse salariale, elles fixent ton point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.`),
           ),
         ),
       ),
@@ -185,10 +185,11 @@ function opexRow(o, r, level, refresh) {
 
       detail ? h('span', { class: 'cost-year num' }, `${euro(detail.yearly[0], { compact: true })}/an`) : null,
 
-      level === 'advanced' ? h('button', {
+      h('button', {
         class: 'cost-more', title: 'Dates et recherche',
         onClick: () => { isOpen ? open.delete(o.id) : open.add(o.id); refresh() },
-      }, '\u22EF') : h('button', {
+      }, '\u22EF'),
+      h('button', {
         class: 'cost-more cost-drop', title: 'Supprimer cette charge', onClick: remove,
       }, '\u00d7'),
     ),
@@ -216,7 +217,7 @@ function capexSection(s, r, level, refresh) {
   if (level === 'easy' && s.capex.length === 0) {
     return h('div', { class: 'note plain mt' },
       h('div', { class: 'note-title' }, 'Investissements'),
-      "Passez en niveau Intermédiaire pour ajouter du matériel, des aménagements ou du crédit-bail, et suivre leur amortissement.")
+      "Passe en niveau Intermédiaire pour ajouter du matériel, des aménagements ou du crédit-bail, et suivre leur amortissement.")
   }
   return h('div', {},
     s.capex.length === 0

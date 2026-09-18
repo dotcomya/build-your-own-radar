@@ -1,11 +1,12 @@
-/** Offre et clients : ce que vous vendez, à qui, à quel rythme. */
+/** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar, refine } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
+import { renderAcquisition } from './marketing.js'
 import store from '../../state/store.js'
 
 export function renderOffer(navigate, refresh) {
@@ -38,6 +39,10 @@ export function renderOffer(navigate, refresh) {
 
   const views = [
     { key: 'offres', label: 'Offres', count: s.activities.length },
+    // L'acquisition ne mérite pas un module à elle : ce qu'on dépense pour
+    // trouver des clients décide des volumes, donc du chiffre d'affaires. Elle
+    // vit là où elle agit.
+    { key: 'acquisition', label: 'Acquisition', count: s.marketing.length },
     s.activities.length > 1 && r ? { key: 'compare', label: 'Comparaison' } : null,
   ]
   const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
@@ -47,8 +52,8 @@ export function renderOffer(navigate, refresh) {
     stepBanner('clients', journey(store.scenario, store.result), navigate, 'offre'),
 
     pageBar(
-      s.activities.length > 1 ? `${s.activities.length} offres` : 'Votre offre',
-      total > 0 ? `${euro(total, { compact: true })} de chiffre d'affaires cumulé sur cinq ans` : 'Ce que vous vendez, à quel prix, à combien de clients',
+      s.activities.length > 1 ? `${s.activities.length} offres` : 'Ton offre',
+      total > 0 ? `${euro(total, { compact: true })} de chiffre d'affaires cumulé sur cinq ans` : 'Ce que tu vends, à quel prix, à combien de clients',
       view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null,
     ),
 
@@ -56,7 +61,9 @@ export function renderOffer(navigate, refresh) {
 
     view === 'offres'
       ? h('div', { class: 'view' }, ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)))
-      : h('div', { class: 'view' }, comparisonCard(r)),
+      : view === 'acquisition'
+        ? h('div', { class: 'view' }, renderAcquisition(navigate, refresh))
+        : h('div', { class: 'view' }, comparisonCard(r)),
 
     tutorial('clients', navigate),
   )
@@ -77,7 +84,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
     store.update((sc) => Object.assign(sc.activities.find((x) => x.id === a.id).volumes, patch), { label: 'Volumes' })
 
   const remove = async () => {
-    if (store.scenario.activities.length <= 1) { toast('Gardez au moins une offre.', 'err'); return }
+    if (store.scenario.activities.length <= 1) { toast('Garde au moins une offre.', 'err'); return }
     if (await confirmDialog({ title: 'Supprimer cette offre ?', message: `« ${a.name} » et tout ce qui en dépend seront retirés du modèle.`, confirmLabel: 'Supprimer', danger: true })) {
       store.update((sc) => { sc.activities = sc.activities.filter((x) => x.id !== a.id) }, { label: 'Suppression' })
       refresh()
@@ -90,8 +97,8 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
     { key: 'offre', label: "L'offre" },
     { key: 'prix', label: 'Prix et marge' },
     { key: 'volumes', label: 'Volumes' },
-    level !== 'easy' ? { key: 'paiement', label: 'Paiement' } : null,
-    level === 'advanced' ? { key: 'evolution', label: 'Prix par ann\u00e9e' } : null,
+    { key: 'paiement', label: 'Paiement' },
+    { key: 'evolution', label: 'Prix par ann\u00e9e' },
   ]
   const sec = secs.some((x) => x && x.key === activityCard.sec) ? activityCard.sec : 'offre'
 
@@ -134,7 +141,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
 
         h('div', { class: 'grid grid-2' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
-          level !== 'easy' && selectField({
+          selectField({
             label: 'Taux de TVA', value: a.vatRateSales,
             options: [
               { value: 0.2, label: '20 % — taux normal' },
@@ -184,11 +191,13 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
                 numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '\u20ac HT', onInput: (v) => set({ recurringPrice: v }) }),
                 numberField({ label: 'Co\u00fbt mensuel r\u00e9current', field: 'recurringPrice', value: a.recurringCost, suffix: '\u20ac HT', hint: 'H\u00e9bergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
               ),
-              h('div', { class: 'grid grid-2 mt' },
+              refine(`${a.id}-abo`, 'Affiner : dur\u00e9e de contrat, attrition, valeur vie client',
+                h('div', { class: 'grid grid-2' },
                 numberField({ label: 'Dur\u00e9e du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
                 numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c\u2019est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+                ),
+                lifetimeValue(a),
               ),
-              lifetimeValue(a),
             )
           : h('button', { class: 'part-add', onClick: () => addPart('recurring') }, '\uFF0B', h('span', {}, 'Un abonnement mensuel'))
       ) : null,
@@ -203,12 +212,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         h('div', { class: 'grid grid-2' },
           numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
           numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
-          numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement votre besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
+          numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement ton besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
           numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
         ),
         paymentTimeline(a),
         h('div', { class: 'grid grid-2 mt' },
-          numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance votre activité.', onInput: (v) => set({ costPaymentLag: v }) }),
+          numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance ton activité.', onInput: (v) => set({ costPaymentLag: v }) }),
           numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
         )
       ) : null,
@@ -278,7 +287,7 @@ function lifetimeValue(a) {
       h('div', { class: 'ueco-sum-value num' }, euro(ltv)),
     ),
     h('p', { class: 'ueco-sum-note' },
-      `C'est le plafond de ce que vous pouvez dépenser pour gagner un client. Au-delà de ${euro(ltv / 3)} par client acquis, l'acquisition coûte plus qu'elle ne rapporte à court terme.`),
+      `C'est le plafond de ce que tu peux dépenser pour gagner un client. Au-delà de ${euro(ltv / 3)} par client acquis, l'acquisition coûte plus qu'elle ne rapporte à court terme.`),
   )
 }
 
@@ -325,7 +334,7 @@ function paymentTimeline(a) {
       h('span', {
         class: 'tline-gap',
         style: { left: `${at(delivery)}%`, width: `${Math.max(0, at(last) - at(delivery))}%` },
-        title: "Entre la livraison et l'encaissement, c'est vous qui financez",
+        title: "Entre la livraison et l'encaissement, c'est toi qui financez",
       }),
       // Sous chaque point, la part et la date seulement : le nom du versement
       // tiendrait rarement sans chevaucher le suivant, il se lit en dessous.
@@ -344,7 +353,7 @@ function paymentTimeline(a) {
     ),
     h('p', { class: 'tline-note' },
       h('span', { class: 'tline-split' }, steps.map((st) => `${pct(st.share, 0)} ${st.label.toLowerCase()}`).join(' · ')),
-      `Entre la commande et l'encaissement du solde, ${pct(balance, 0)} du prix reste à votre charge pendant ${num(last, 0)} mois. C'est ce délai, et non votre rentabilité, qui crée le besoin en fonds de roulement.`),
+      `Entre la commande et l'encaissement du solde, ${pct(balance, 0)} du prix reste à ton charge pendant ${num(last, 0)} mois. C'est ce délai, et non ta rentabilité, qui crée le besoin en fonds de roulement.`),
   )
 }
 
@@ -353,7 +362,7 @@ function volumesEditor(a, setVolumes, level, detail) {
   const voc = vocabulary(store.scenario)
   const isManual = v.mode === 'manual'
   return h('div', {},
-    level !== 'easy' && h('div', { class: 'row mb' },
+    h('div', { class: 'row mb' },
       h('div', { class: 'seg' },
         h('button', { class: `seg-btn ${!isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'growth' }) }, 'Courbe de croissance'),
         h('button', { class: `seg-btn ${isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'manual', manual: v.manual?.length ? v.manual : buildManual(a) }) }, 'Saisie mois par mois'),
@@ -366,12 +375,12 @@ function volumesEditor(a, setVolumes, level, detail) {
             numberField({ label: 'Premier mois de vente', field: 'month', value: v.launchMonth, suffix: 'M', hint: 'Mois 0 = démarrage.', onInput: (x) => setVolumes({ launchMonth: x }) }),
             numberField({ label: `${voc.many[0].toUpperCase()}${voc.many.slice(1)} le premier mois`, field: 'startUnits', value: v.startUnits, suffix: voc.many, onInput: (x) => setVolumes({ startUnits: x }) }),
             numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
-            numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que vous ne pouvez physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
+            numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que tu ne peux physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
           level === 'advanced' && h('div', { class: 'grid grid-2 mt' },
             numberField({
               label: 'Décélération de la croissance', field: 'growthDecay', value: v.growthDecay ?? 0.96,
-              step: 0.01, hint: "Aucune croissance ne se maintient cinq ans au même rythme. À 0,96, le taux perd 4 % de sa valeur chaque mois, produisant une courbe en S. Mettez 1 pour une exponentielle pure.",
+              step: 0.01, hint: "Aucune croissance ne se maintient cinq ans au même rythme. À 0,96, le taux perd 4 % de sa valeur chaque mois, produisant une courbe en S. Mets 1 pour une exponentielle pure.",
               onInput: (x) => setVolumes({ growthDecay: x }),
             }),
           ),
@@ -452,7 +461,7 @@ function priceEvolutionFields(a, set) {
   const years = [1, 2, 3, 4]
   return h('div', {},
     h('p', { class: 'view-intro' },
-      "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseignez une case pour appliquer une hausse à partir de cette année."),
+      "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseigne une case pour appliquer une hausse à partir de cette année."),
     h('div', { class: 'grid grid-4' },
       ...years.map((y) => numberField({
         label: `Prix unitaire — année ${y + 1}`, field: 'unitPrice',
@@ -491,10 +500,10 @@ function comparisonCard(r) {
 }
 
 function marginAdvice(margin) {
-  if (margin < 0) return "Vous vendez à perte : chaque vente supplémentaire aggrave le résultat. Revoyez le prix ou le coût de revient."
-  if (margin < 0.2) return "Marge faible : il faudra un volume important pour couvrir vos frais fixes. Vérifiez que vos volumes projetés sont atteignables."
-  if (margin < 0.5) return "Marge correcte, typique du négoce et de la production. Votre point mort dépendra surtout de vos frais fixes."
-  return "Marge élevée, caractéristique des services et du logiciel. Chaque nouveau client contribue fortement à couvrir vos frais fixes."
+  if (margin < 0) return "Tu vends à perte : chaque vente supplémentaire aggrave le résultat. Revois le prix ou le coût de revient."
+  if (margin < 0.2) return "Marge faible : il faudra un volume important pour couvrir tes frais fixes. Vérifie que tes volumes projetés sont atteignables."
+  if (margin < 0.5) return "Marge correcte, typique du négoce et de la production. Ton point mort dépendra surtout de tes frais fixes."
+  return "Marge élevée, caractéristique des services et du logiciel. Chaque nouveau client contribue fortement à couvrir tes frais fixes."
 }
 
 const sumRange = (arr, a, b) => arr.slice(a, b).reduce((x, y) => x + y, 0)

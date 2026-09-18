@@ -26,16 +26,16 @@ const setOpen = (v) => { try { localStorage.setItem(KEY, v ? '1' : '0') } catch 
 const WHAT = {
   modele: 'Fixez le prix, le coût de revient et la façon dont l’argent revient.',
   offre: 'Réglez les volumes, les délais de paiement et la saisonnalité.',
-  marketing: 'Branchez vos budgets d’acquisition sur vos offres.',
-  equipe: 'Ajoutez les postes : Fynomia calcule le coût employeur réel.',
-  charges: 'Listez ce qui tombe tous les mois, et vos investissements.',
+  marketing: 'Branchez tes budgets d’acquisition sur tes offres.',
+  equipe: 'Ajoute les postes : Fynomia calcule le coût employeur réel.',
+  charges: 'Listez ce qui tombe tous les mois, et tes investissements.',
   financement: 'Apport, prêts, subventions — et ce qu’il reste à trouver.',
   'mon-revenu': 'Arbitrez entre salaire et dividendes, et voyez le net.',
   'business-case': 'Relisez le dossier, puis exportez-le.',
   reglages: 'Le métier, la forme juridique, les paramètres fiscaux.',
   'tableau-de-bord': 'Le verdict, la trésorerie annotée et les leviers chiffrés.',
   resultats: 'Compte de résultat, trésorerie, bilan, plan de financement.',
-  parcours: 'Votre avancement, étape par étape.',
+  parcours: 'Ton avancement, étape par étape.',
 }
 
 export function guideBar(route, navigate) {
@@ -101,7 +101,7 @@ export function guideBar(route, navigate) {
         ? h('button', { class: 'guide-done', onClick: () => navigate('#/business-case') },
             'Tout est rempli — exporter le dossier')
         : h('p', { class: 'guide-foot' },
-            `Il reste ${j.total - j.done} étape${j.total - j.done > 1 ? 's' : ''} · environ ${j.remainingMinutes} min. Rien n’est figé : revenez quand vous voulez.`),
+            `Il reste ${j.total - j.done} étape${j.total - j.done > 1 ? 's' : ''} · environ ${j.remainingMinutes} min. Rien n’est figé : revenez quand tu veux.`),
     ),
   )
 

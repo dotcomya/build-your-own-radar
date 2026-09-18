@@ -2,14 +2,14 @@
  * « Combien de clients pour vivre » — la seule question à laquelle aucune
  * autre page ne répond.
  *
- * Le reste du logiciel décrit : voici votre chiffre d'affaires, voici vos
- * charges, voici votre résultat. Cette page-ci décide. Elle prend ce qu'il
+ * Le reste du logiciel décrit : voici ton chiffre d'affaires, voici tes
+ * charges, voici ton résultat. Cette page-ci décide. Elle prend ce qu'il
  * faut couvrir chaque mois, ce que rapporte un client, et en tire le nombre
  * qui gouverne tout le projet — combien de clients il faut, et à quelle date
- * vous les aurez au rythme prévu.
+ * toi les aurez au rythme prévu.
  *
  * Trois curseurs suffisent à en faire un instrument : le prix, le coût de
- * revient, votre rémunération. Tout se recalcule pendant le geste.
+ * revient, ta rémunération. Tout se recalcule pendant le geste.
  */
 
 import { h, euro, pct, num, monthLabel, tabs, pageBar } from '../dom.js'
@@ -40,7 +40,7 @@ export function renderModel(navigate, refresh) {
       stepBanner('modele', journey(s, r), navigate, 'modele'),
       h('div', { class: 'card' }, h('div', { class: 'empty' },
         h('h3', {}, 'Rien à calculer pour l’instant'),
-        h('p', { class: 'muted' }, "Renseignez une offre et un prix : ce tableau vous dira combien de clients il vous faut."),
+        h('p', { class: 'muted' }, "Renseigne une offre et un prix : ce tableau toi dira combien de clients il toi faut."),
         h('button', { class: 'btn btn-primary mt', onClick: () => navigate('#/offre') }, 'Définir mon offre'),
       )),
     )
@@ -68,7 +68,7 @@ export function renderModel(navigate, refresh) {
   return h('div', { class: 'content' },
     stepBanner('modele', journey(s, r), navigate, 'modele'),
 
-    pageBar('Votre modèle', headline(r, s, voc)),
+    pageBar('Ton modèle', headline(r, s, voc)),
 
     tabs(views, view, (k) => { renderModel.view = k; refresh() }),
 
@@ -86,9 +86,9 @@ export function renderModel(navigate, refresh) {
 /** La phrase du bandeau : l'état du modèle en une ligne. */
 function headline(r, s, voc) {
   const m = metrics(r, s)
-  if (m.marginPerClient <= 0) return `Chaque ${voc.one} vendu vous coûte plus qu'il ne rapporte : le seuil n'existe pas.`
-  if (!Number.isFinite(m.needed)) return 'Renseignez vos charges pour connaître votre seuil.'
-  return `Il vous faut ${num(Math.ceil(m.needed))} ${voc.many} par mois pour couvrir vos charges.`
+  if (m.marginPerClient <= 0) return `Chaque ${voc.one} vendu toi coûte plus qu'il ne rapporte : le seuil n'existe pas.`
+  if (!Number.isFinite(m.needed)) return 'Renseigne tes charges pour connaître ton seuil.'
+  return `Il toi faut ${num(Math.ceil(m.needed))} ${voc.many} par mois pour couvrir tes charges.`
 }
 
 /* ─────────────────── Ce qu'il faut couvrir, et avec quoi ────────────────── */
@@ -136,7 +136,7 @@ function firstMonthAbove(r, needed) {
  * Un nombre énorme, et ce qui le compose de part et d'autre : ce qu'il faut
  * couvrir, ce que rapporte un client. Rien d'autre à l'écran.
  */
-function breakEvenBoard(r, s, voc) {
+export function breakEvenBoard(r, s, voc) {
   const m = metrics(r, s)
   const reachable = Number.isFinite(m.needed)
   const ratio = reachable && m.needed > 0 ? Math.min(1, m.perMonthNow / m.needed) : 0
@@ -148,7 +148,7 @@ function breakEvenBoard(r, s, voc) {
         h('div', { class: 'seuil-tag' }, 'À couvrir chaque mois'),
         h('div', { class: 'seuil-amount num' }, euro(m.fixed)),
         h('p', { class: 'seuil-note' },
-          'Charges externes, salaires et cotisations, impôts et taxes, amortissements. Tout ce qui tombe que vous vendiez ou non.'),
+          'Charges externes, salaires et cotisations, impôts et taxes, amortissements. Tout ce qui tombe que tu vendes ou non.'),
       ),
 
       h('div', { class: `seuil-core ${ok ? 'is-ok' : ''}` },
@@ -160,9 +160,9 @@ function breakEvenBoard(r, s, voc) {
         h('div', { class: 'seuil-state' },
           reachable
             ? ok
-              ? `Vous en êtes à ${num(Math.round(m.perMonthNow))} : le seuil est franchi.`
-              : `Vous en êtes à ${num(Math.round(m.perMonthNow))}, soit ${pct(ratio, 0)} du chemin.`
-            : 'Votre marge par client est nulle ou négative.'),
+              ? `Toi en êtes à ${num(Math.round(m.perMonthNow))} : le seuil est franchi.`
+              : `Toi en êtes à ${num(Math.round(m.perMonthNow))}, soit ${pct(ratio, 0)} du chemin.`
+            : 'Ta marge par client est nulle ou négative.'),
       ),
 
       h('div', { class: 'seuil-side' },
@@ -176,11 +176,11 @@ function breakEvenBoard(r, s, voc) {
     m.monthReached !== null
       ? h('div', { class: 'note ok mt' },
           h('div', { class: 'note-title' }, `Seuil atteint en ${monthLabel(m.monthReached, r.startDate)}`),
-          `Au rythme de croissance que vous avez saisi, vos volumes passent au-dessus du seuil à cette date. Avant elle, chaque mois creuse la trésorerie de ${euro(Math.max(0, m.fixed - m.contribution))} en moyenne.`)
+          `Au rythme de croissance que tu as saisi, tes volumes passent au-dessus du seuil à cette date. Avant elle, chaque mois creuse la trésorerie de ${euro(Math.max(0, m.fixed - m.contribution))} en moyenne.`)
       : h('div', { class: 'note warn mt' },
           h('div', { class: 'note-title' }, 'Le seuil n’est jamais atteint sur cinq ans'),
           reachable
-            ? `Il faudrait ${num(Math.ceil(m.needed))} ${voc.many} par mois et vos volumes plafonnent à ${num(Math.round(Math.max(...r.revenue.units)))}. Trois issues : monter le prix, baisser le coût de revient, ou réduire les charges fixes.`
+            ? `Il faudrait ${num(Math.ceil(m.needed))} ${voc.many} par mois et tes volumes plafonnent à ${num(Math.round(Math.max(...r.revenue.units)))}. Trois issues : monter le prix, baisser le coût de revient, ou réduire les charges fixes.`
             : `Tant qu’un ${voc.one} rapporte moins qu’il ne coûte, aucun volume ne rend le modèle viable.`),
 
     h('div', { class: 'card mt' },
@@ -197,7 +197,7 @@ function breakEvenBoard(r, s, voc) {
         }),
         h('p', { class: 'chart-note' },
           reachable
-            ? `Seuil : ${num(Math.ceil(m.needed))} ${voc.many} par mois. En dessous, vous perdez de l’argent quel que soit votre chiffre d’affaires.`
+            ? `Seuil : ${num(Math.ceil(m.needed))} ${voc.many} par mois. En dessous, tu perds de l’argent quel que soit ton chiffre d’affaires.`
             : 'Le seuil ne peut pas être tracé tant que la marge par client est négative.'),
       ),
     ),
@@ -240,7 +240,7 @@ function sensitivityBoard(r, s, voc) {
 
   return h('div', {},
     h('p', { class: 'view-intro' },
-      `Chaque ligne rejoue le modèle entier avec une seule modification et lit le nouveau seuil. Aujourd’hui il vous faut ${Number.isFinite(base.needed) ? num(Math.ceil(base.needed)) : '—'} ${voc.many} par mois.`),
+      `Chaque ligne rejoue le modèle entier avec une seule modification et lit le nouveau seuil. Aujourd’hui il toi faut ${Number.isFinite(base.needed) ? num(Math.ceil(base.needed)) : '—'} ${voc.many} par mois.`),
 
     h('div', { class: 'sens' },
       ...rows.map((row) => h('div', { class: `sens-row ${row.delta === null ? '' : row.delta < 0 ? 'is-good' : row.delta > 0 ? 'is-bad' : ''}` },
@@ -284,7 +284,7 @@ function knobs(s, voc, paint, refresh) {
       format: (v) => euro(v),
     },
     founder ? {
-      key: 'salaire', label: 'Votre rémunération',
+      key: 'salaire', label: 'Ta rémunération',
       get: () => (Number(founder.monthlyGross) || 0) * 12,
       set: (sc, v) => { const f = sc.team.find((m) => m.id === founder.id); if (f) f.monthlyGross = v / 12 },
       format: (v) => `${euro(v)} / an`,

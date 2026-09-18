@@ -7,13 +7,15 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, levelBlock, tabs } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
 import { referenceYear } from '../impact.js'
 import { storyline, gauge } from '../story.js'
 import { partBanner } from '../tutorial.js'
+import { breakEvenBoard } from './model.js'
+import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
@@ -72,7 +74,18 @@ export function renderDashboard(navigate, refresh) {
         renderDashboard.live = (provisional) => {
           try { figs.updateWith(provisional); flow.updateWith(provisional) } catch { /* rendu concurrent */ }
         }
-        return h('div', { class: 'board-stack' }, figs, controlDeck(persona, s, r, refresh), flow)
+        return h('div', { class: 'board-stack' },
+          figs,
+          h('section', { class: 'panel' },
+            h('div', { class: 'card-head' },
+              h('div', {},
+                h('h2', {}, 'Combien de clients pour vivre'),
+                h('div', { class: 'tiny muted' }, "Ce qu'il faut couvrir, ce que rapporte un client, l'\u00e9cart entre les deux"),
+              ),
+            ),
+            h('div', { class: 'panel-body' }, breakEvenBoard(r, s, vocabulary(s))),
+          ),
+          controlDeck(persona, s, r, refresh), flow)
       })(),
     ) : null,
 
@@ -132,7 +145,7 @@ function cockpit(j, r, navigate) {
         h('div', { class: 'cockpit-rank' }, j.rank.label),
         h('div', { class: 'cockpit-sub' },
           j.done === j.total
-            ? "Tout est renseigné — votre dossier est complet."
+            ? "Tout est renseigné — ton dossier est complet."
             : `${j.done} étape${j.done > 1 ? 's' : ''} sur ${j.total} · environ ${j.remainingMinutes} min de saisie restante`),
       ),
     ),
@@ -158,7 +171,7 @@ function cockpit(j, r, navigate) {
         : h('div', { style: { minWidth: '0' } },
             h('div', { class: 'cockpit-next-tag' }, 'Tous les jalons'),
             h('div', { class: 'cockpit-next-label' }, 'Décrochés'),
-            h('div', { class: 'cockpit-next-hint' }, "Votre modèle tient sur tous les points vérifiables."),
+            h('div', { class: 'cockpit-next-hint' }, "Ton modèle tient sur tous les points vérifiables."),
           ),
       j.current && j.current.status !== 'done'
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => navigate(`#/${j.current.page}`) }, j.current.short || 'Continuer')
@@ -197,7 +210,7 @@ function controlDeck(persona, s, r, refresh) {
     h('div', { class: 'deck-head' },
       h('h2', {}, 'Simulation'),
       h('span', { class: 'spacer' }),
-      h('span', { class: 'tiny muted' }, 'Tirez un curseur : tout se recalcule pendant le geste'),
+      h('span', { class: 'tiny muted' }, 'Tire un curseur : tout se recalcule pendant le geste'),
     ),
     h('div', { class: 'deck-body' },
       h('div', { class: 'deck-levers' }, leverPanel(levers, {
@@ -407,14 +420,14 @@ function boardCharts(r, s, y, level, sector, navigate) {
 
   if (mix || team) out.push(pair(mix, team))
 
-  if (level !== 'easy') {
+  {
     const bfr = panel('Besoin en fonds de roulement',
       k.peakBfr > 0 ? "L'argent avancé aux clients et immobilisé dans les stocks" : 'Le cycle dégage de la ressource',
       areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
     const cashPanel = panel('Trésorerie',
       Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
       areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }))
-    out.push(levelBlock('intermediate', 'Ce que la profondeur intermédiaire ajoute', pair(bfr, cashPanel)))
+    out.push(refine('board-cycle', 'Affiner : besoin en fonds de roulement et courbe de trésorerie', pair(bfr, cashPanel)))
   }
 
   return out
@@ -491,15 +504,15 @@ function moneyFlow(r, y) {
 function moneyFlowSentence(r, y) {
   const p = r.pnl
   const rev = p.revenue[y]
-  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseignez vos ventes pour voir la cascade se remplir."
+  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseignez tes ventes pour voir la cascade se remplir."
   const kept = p.netResult[y] / rev
   const biggest = [
     { label: 'les achats', v: p.variableCost[y] },
     { label: 'les charges externes', v: p.external[y] },
     { label: "l'équipe", v: p.payroll[y] },
   ].sort((a, b) => b.v - a.v)[0]
-  if (biggest.v <= 0) return `Sur 100 € facturés, il vous en reste ${Math.round(kept * 100)} € après impôt.`
-  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il vous en reste ${Math.round(kept * 100)} € après impôt.`
+  if (biggest.v <= 0) return `Sur 100 € facturés, il toi en reste ${Math.round(kept * 100)} € après impôt.`
+  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il toi en reste ${Math.round(kept * 100)} € après impôt.`
 }
 
 /**
@@ -581,7 +594,7 @@ function actionsPanel(r, s, navigate, refresh) {
           gainRow('EBITDA', a.delta.ebitda, true),
           a.delta.fundingNeed !== 0 && gainRow('Financement', a.delta.fundingNeed, false),
           a.delta.breakEven !== null && a.delta.breakEven !== 0 && gainRow('Point mort', a.delta.breakEven, false),
-          a.delta.founderMonthly !== 0 && gainRow('Pour vous', a.delta.founderMonthly, true, '/mois'),
+          a.delta.founderMonthly !== 0 && gainRow('Pour toi', a.delta.founderMonthly, true, '/mois'),
         ),
         h('button', { class: 'btn btn-sm', onClick: () => apply(a.key, a.label) }, 'Appliquer'),
       )),
@@ -706,8 +719,8 @@ function demoBanner(navigate, refresh) {
   return h('div', { class: 'note', style: { marginBottom: '18px' } },
     h('div', { class: 'row-wrap', style: { gap: '12px' } },
       h('div', { class: 'spacer', style: { minWidth: '240px' } },
-        h('div', { class: 'note-title' }, 'Vous regardez un exemple'),
-        h('div', {}, "Les chiffres de ce scénario sont fictifs : ils servent à montrer comment tout s'articule. Modifiez-les librement, ou repartez d'une page blanche."),
+        h('div', { class: 'note-title' }, 'Tu regardes un exemple'),
+        h('div', {}, "Les chiffres de ce scénario sont fictifs : ils servent à montrer comment tout s'articule. Modifie-les librement, ou repartez d'une page blanche."),
       ),
       h('button', { class: 'btn btn-primary', onClick: () => { store.adoptDemo(); refresh() } }, 'Partir de cet exemple'),
       h('button', { class: 'btn', onClick: () => navigate('#/demarrer') }, 'Créer le mien'),
