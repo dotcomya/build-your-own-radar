@@ -1,10 +1,11 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, pageBar } from '../dom.js'
+import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, pageBar, moduleHead } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
+import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 
 /**
@@ -60,7 +61,7 @@ const SOURCES = [
   },
   {
     key: 'shareholderLoans', label: "Compte courant d'associ\u00e9", glyph: '\u25a1', level: 'intermediate',
-    hint: "De l'argent que toi pr\u00eatez \u00e0 ton soci\u00e9t\u00e9 et qui toi sera rendu. Ce n'est pas du capital : \u00e7a n'entre pas dans les fonds propres.",
+    hint: "De l'argent que tu pr\u00eates \u00e0 ta soci\u00e9t\u00e9 et qui te sera rendu. Ce n'est pas du capital : \u00e7a n'entre pas dans les fonds propres.",
     make: () => ({ id: uid('cca'), label: 'Compte courant', amount: 20000, month: 0, repayMonth: '' }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
@@ -121,6 +122,9 @@ export function renderFinancing(navigate, refresh) {
   renderFinancing.view = view
 
   return h('div', { class: 'content' },
+
+    moduleHead('05', 'Financement', "Ce que tu r\u00e9unis, et ce qu\u2019il manque au point bas de tr\u00e9sorerie."),
+
     stepBanner('financement', journey(store.scenario, store.result), navigate, 'financement'),
 
     pageBar(
@@ -147,17 +151,31 @@ export function renderFinancing(navigate, refresh) {
             return h('label', { class: 'source-money' }, input, h('span', {}, '€'))
           })(),
         ),
+        // Chaque source s'ajoute et se retire depuis sa tuile : ouvrir le détail
+        // pour supprimer une ligne obligeait à dérouler la page à chaque essai.
         ...visible.map((src) => {
           const items = f[src.key] || []
           const total = sum(items)
-          return h('button', {
+          return h('div', {
             class: `source ${picked === src.key ? 'is-open' : ''} ${items.length ? 'is-on' : ''}`,
+            role: 'button', tabindex: '0',
             onClick: () => { renderFinancing.picked = src.key; if (!items.length) add(src); else refresh() },
+            onKeydown: (e) => { if (e.key === 'Enter') { renderFinancing.picked = src.key; refresh() } },
           },
             h('span', { class: 'source-glyph' }, src.glyph),
             h('span', { class: 'source-name' }, src.label),
-            h('span', { class: 'source-value num' }, items.length ? euro(total, { compact: true }) : 'Ajouter'),
+            h('span', { class: 'source-value num' }, items.length ? euro(total, { compact: true }) : '—'),
             items.length > 1 ? h('span', { class: 'source-count' }, `${items.length} lignes`) : null,
+            h('span', { class: 'source-acts' },
+              items.length ? h('button', {
+                class: 'source-act', title: `Retirer une ligne de ${src.label.toLowerCase()}`,
+                onClick: (e) => { e.stopPropagation(); drop(src.key, items[items.length - 1].id) },
+              }, '−') : null,
+              h('button', {
+                class: 'source-act', title: `Ajouter ${src.label.toLowerCase()}`,
+                onClick: (e) => { e.stopPropagation(); add(src) },
+              }, '＋'),
+            ),
           )
         }),
       ),
@@ -191,6 +209,8 @@ export function renderFinancing(navigate, refresh) {
       ),
     ) : null,
 
+    todoPanel('financement', store.scenario, () => refresh()),
+
     tutorial('financement', navigate),
   )
 }
@@ -216,7 +236,7 @@ function sourceDetail(src, items, r, { add, drop, setField }) {
                 if (fd.type === 'percent') return numberField({ ...common, field: 'rate', percent: true, step: fd.step, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
                 return numberField({ ...common, field: 'amount', suffix: fd.suffix, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
               }),
-              h('button', { class: 'btn btn-sm btn-danger', onClick: () => drop(src.key, item.id) }, 'Retirer'),
+              h('button', { class: 'btn btn-sm btn-danger', title: 'Retirer cette ligne', onClick: () => drop(src.key, item.id) }, '\u2212'),
             ),
             src.note && h('div', { class: 'tiny muted', style: { marginTop: '6px' } }, src.note(item)),
           ))),

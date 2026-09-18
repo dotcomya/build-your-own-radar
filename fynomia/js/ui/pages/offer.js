@@ -1,12 +1,13 @@
 /** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar, refine } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar, refine, moduleHead } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { renderAcquisition } from './marketing.js'
+import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 
 export function renderOffer(navigate, refresh) {
@@ -49,6 +50,9 @@ export function renderOffer(navigate, refresh) {
   renderOffer.view = view
 
   return h('div', { class: 'content' },
+
+    moduleHead('02', 'Offre et revenus', "Tes offres : leur prix, leurs volumes et leurs conditions de paiement."),
+
     stepBanner('clients', journey(store.scenario, store.result), navigate, 'offre'),
 
     pageBar(
@@ -64,6 +68,8 @@ export function renderOffer(navigate, refresh) {
       : view === 'acquisition'
         ? h('div', { class: 'view' }, renderAcquisition(navigate, refresh))
         : h('div', { class: 'view' }, comparisonCard(r)),
+
+    todoPanel('offre', store.scenario, () => refresh()),
 
     tutorial('clients', navigate),
   )
@@ -83,8 +89,9 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
   const setVolumes = (patch) =>
     store.update((sc) => Object.assign(sc.activities.find((x) => x.id === a.id).volumes, patch), { label: 'Volumes' })
 
+  // Supprimer la dernière offre est légitime : on se trompe de modèle, on
+  // recommence. La page sait se présenter vide, et le modèle aussi.
   const remove = async () => {
-    if (store.scenario.activities.length <= 1) { toast('Garde au moins une offre.', 'err'); return }
     if (await confirmDialog({ title: 'Supprimer cette offre ?', message: `« ${a.name} » et tout ce qui en dépend seront retirés du modèle.`, confirmLabel: 'Supprimer', danger: true })) {
       store.update((sc) => { sc.activities = sc.activities.filter((x) => x.id !== a.id) }, { label: 'Suppression' })
       refresh()
@@ -132,6 +139,10 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         class: 'item-act', title: 'Dupliquer cette offre',
         onClick: (e) => { e.stopPropagation(); duplicate(a) },
       }, '⧉'),
+      h('button', {
+        class: 'item-act is-drop', title: 'Supprimer cette offre',
+        onClick: (e) => { e.stopPropagation(); remove() },
+      }, '−'),
       h('span', { class: 'disclose' }, '›'),
     ),
     isOpen && h('div', { class: 'item-body' },
@@ -334,7 +345,7 @@ function paymentTimeline(a) {
       h('span', {
         class: 'tline-gap',
         style: { left: `${at(delivery)}%`, width: `${Math.max(0, at(last) - at(delivery))}%` },
-        title: "Entre la livraison et l'encaissement, c'est toi qui financez",
+        title: "Entre la livraison et l'encaissement, c'est toi qui finances",
       }),
       // Sous chaque point, la part et la date seulement : le nom du versement
       // tiendrait rarement sans chevaucher le suivant, il se lit en dessous.
@@ -402,7 +413,7 @@ function volumeVisual(detail, voc) {
   const total = units.reduce((a, b) => a + b, 0)
   if (total <= 0) {
     return h('div', { class: 'note plain mt' },
-      `Aucun volume projeté pour l'instant : renseignez le premier mois de vente et le nombre de ${voc.many} pour voir la courbe apparaître.`)
+      `Aucun volume projeté pour l'instant : renseigne le premier mois de vente et le nombre de ${voc.many} pour voir la courbe apparaître.`)
   }
   const peak = Math.max(...detail.volumes)
   const peakMonth = detail.volumes.indexOf(peak)

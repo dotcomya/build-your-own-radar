@@ -1,6 +1,6 @@
 /** États financiers : résultat, trésorerie, bilan, BFR, fiscalité. */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, pageBar } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, moduleHead } from '../dom.js'
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
@@ -29,9 +29,10 @@ export function renderResults(navigate, refresh) {
   renderResults.tab = view
 
   return h('div', { class: 'content' },
-    partBanner('resultats'),
+    moduleHead('07', '\u00c9tats financiers',
+      "Le format que comprennent un comptable, une banque et un investisseur. Tout est calcul\u00e9 \u00e0 partir de ce que tu as saisi : aucune ligne n'est \u00e0 remplir ici."),
 
-    pageBar('États financiers', "Tout est calculé à partir de ce que tu as saisi. Aucune ligne n'est à remplir ici."),
+    partBanner('resultats'),
 
     tabs(views, view, (k) => { renderResults.tab = k; refresh() }),
 
@@ -244,7 +245,7 @@ function balanceView(r) {
       r.balance.some((b) => b.equity < 0)
         ? h('div', { class: 'note danger' },
             h('div', { class: 'note-title' }, 'Capitaux propres négatifs'),
-            "Tes pertes cumulées dépassent les apports. Juridiquement, les associés doivent se prononcer sur la poursuite de l'activité dès que les capitaux propres passent sous la moitié du capital social. Renforcez les apports ou accélérez le retour à l'équilibre.")
+            "Tes pertes cumulées dépassent les apports. Juridiquement, les associés doivent se prononcer sur la poursuite de l'activité dès que les capitaux propres passent sous la moitié du capital social. Renforce les apports ou accélère le retour à l'équilibre.")
         : h('div', { class: 'note ok' },
             h('div', { class: 'note-title' }, 'Structure financière saine'),
             `Les capitaux propres restent positifs sur tout l'horizon, à ${euro(r.balance[4].equity)} en fin d'année 5, pour un total de bilan de ${euro(r.balance[4].totalAssets)}.`),

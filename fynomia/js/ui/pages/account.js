@@ -24,8 +24,8 @@ export function renderAccount(navigate, refresh) {
     h('div', { class: 'page-head' },
       h('h1', {}, 'Mon compte'),
       h('p', {}, online
-        ? 'Tes plans toi suivent sur tous tes appareils. Rien à sauvegarder à la main.'
-        : "Tes plans sont enregistrés dans ce navigateur. Exportez-les pour les emporter."),
+        ? 'Tes plans te suivent sur tous tes appareils. Rien à sauvegarder à la main.'
+        : "Tes plans sont enregistrés dans ce navigateur. Exporte-les pour les emporter."),
     ),
 
     identityCard(online),
@@ -66,7 +66,7 @@ function identityCard(online) {
     ),
 
     !online ? h('p', { class: 'account-note' },
-      "Fynomia n'a pas trouvé de session à laquelle rattacher tes plans. Tout continue de fonctionner : le travail est conservé dans ce navigateur, et l'export JSON toi permet de le reprendre ailleurs.",
+      "Fynomia n'a pas trouvé de session à laquelle rattacher tes plans. Tout continue de fonctionner : le travail est conservé dans ce navigateur, et l'export JSON te permet de le reprendre ailleurs.",
     ) : null,
   )
 }
@@ -147,7 +147,7 @@ function dataCard(navigate, refresh) {
   return h('section', { class: 'panel mt' },
     h('div', { class: 'panel-head' },
       h('h2', {}, 'Emporter mes données'),
-      h('p', { class: 'panel-sub' }, "Un fichier JSON complet : tes chiffres toi appartiennent, et rien ne toi retient ici."),
+      h('p', { class: 'panel-sub' }, "Un fichier JSON complet : tes chiffres t’appartiennent, et rien ne te retient ici."),
     ),
     h('div', { class: 'panel-body row-wrap' },
       h('button', {

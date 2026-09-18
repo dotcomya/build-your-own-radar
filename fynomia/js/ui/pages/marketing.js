@@ -126,7 +126,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
     h('div', { class: 'card' },
       h('div', { class: 'card-head' },
         h('div', {},
-          h('h2', {}, 'Ce que toi coûte un client'),
+          h('h2', {}, 'Ce que te coûte un client'),
           h('div', { class: 'tiny muted' }, "Deux nombres suffisent à chiffrer ton acquisition."),
         ),
       ),
@@ -140,7 +140,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
           }),
           numberField({
             label: 'Nouveaux clients visés par mois', field: 'count', value: perMonth, suffix: 'clients',
-            hint: "En plus de ceux qui viennent seuls. Laisse à zéro si toi ne dépensez rien pour en trouver.",
+            hint: "En plus de ceux qui viennent seuls. Laisse à zéro si tu ne dépenses rien pour en trouver.",
             onInput: (v) => setSimple({ clientsPerMonth: v }),
           }),
         ),
@@ -162,7 +162,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
 
         cac > 0 && ltv > 0 && h('div', { class: 'acq-scale' },
           h('div', { class: 'acq-scale-head' },
-            h('span', {}, 'Ce qu’un client toi rapporte, face à ce qu’il toi coûte'),
+            h('span', {}, 'Ce qu’un client te rapporte, face à ce qu’il te coûte'),
           ),
           h('div', { class: 'acq-scale-row' },
             h('span', { class: 'acq-scale-tag' }, 'Rapporte'),
@@ -181,7 +181,7 @@ function simpleAcquisition(s, r, navigate, refresh) {
 
         cac > 0 && ltv <= 0 && h('div', { class: 'note mt' },
           h('div', { class: 'note-title' }, 'Il manque un prix de vente'),
-          "Renseigne le prix et le coût de revient de ton offre pour que Fynomia puisse comparer ce qu'un client toi rapporte à ce qu'il toi coûte."),
+          "Renseigne le prix et le coût de revient de ton offre pour que Fynomia puisse comparer ce qu'un client te rapporte à ce qu'il te coûte."),
       ),
     ),
 
@@ -196,7 +196,7 @@ function ratioAdvice(ratio) {
   if (ratio === null) return ''
   if (ratio >= 3) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. Au-delà de trois, l'acquisition est saine : tu peux dépenser davantage sans fragiliser le modèle.`
   if (ratio >= 1) return `Un client rapporte ${num(ratio, 1)} fois ce qu'il coûte. C'est positif mais court : le retour est lent et laisse peu de marge d'erreur. Travaille la conversion ou la valeur client avant d'augmenter le budget.`
-  return `Un client toi coûte plus qu'il ne toi rapporte. En l'état, chaque client gagné creuse la perte : baissez le coût d'acquisition ou augmentez le prix avant de dépenser.`
+  return `Un client te coûte plus qu'il ne te rapporte. En l'état, chaque client gagné creuse la perte : baisse le coût d'acquisition ou augmente le prix avant de dépenser.`
 }
 
 /* ───────────────── Mode expert : la rentabilité, en détail ──────────────── */
@@ -243,7 +243,7 @@ function unitEconomicsPanel(r, s) {
     payback !== null && h('div', { class: 'card-body', style: { paddingTop: '0' } },
       h('p', { class: 'tiny muted', style: { margin: 0, maxWidth: '78ch' } },
         payback <= 12
-          ? `Toi récupérez ce que coûte un client en ${num(payback, 1)} mois. Sous douze mois, l'acquisition s'autofinance presque : accelérer ne crée pas de trou de trésorerie durable.`
+          ? `Tu récupères ce que coûte un client en ${num(payback, 1)} mois. Sous douze mois, l'acquisition s'autofinance presque : accélérer ne crée pas de trou de trésorerie durable.`
           : `Il faut ${num(payback, 1)} mois pour récupérer ce que coûte un client. Chaque client supplémentaire creuse d'abord la trésorerie avant de la remplir : c'est ce délai, plus que la rentabilité, qui fixe le rythme auquel tu peux croître.`),
     ),
   )
@@ -428,7 +428,7 @@ function mixPanel(r) {
       h('div', { class: 'note plain mt' },
         h('div', { class: 'note-title' }, 'Comment lire ces chiffres'),
         r.kpis.ltvCacRatio
-          ? `Chaque client toi coûte ${euro(r.kpis.cac)} à acquérir et toi rapporte ${euro(r.kpis.ltv)} de marge. Le rapport est de ${num(r.kpis.ltvCacRatio, 1)}, ${r.kpis.ltvCacRatio >= 3 ? "au-dessus du seuil de 3 généralement retenu comme sain : ton acquisition est rentable et peut être accélérée." : r.kpis.ltvCacRatio >= 1 ? "au-dessus de 1 mais en dessous de 3 : l'acquisition est rentable mais le retour est lent. Améliore la conversion ou la valeur client avant d'augmenter les budgets." : "en dessous de 1 : chaque client acquis toi coûte plus qu'il ne rapporte. Augmenter le budget aggraverait les pertes."}`
+          ? `Chaque client te coûte ${euro(r.kpis.cac)} à acquérir et te rapporte ${euro(r.kpis.ltv)} de marge. Le rapport est de ${num(r.kpis.ltvCacRatio, 1)}, ${r.kpis.ltvCacRatio >= 3 ? "au-dessus du seuil de 3 généralement retenu comme sain : ton acquisition est rentable et peut être accélérée." : r.kpis.ltvCacRatio >= 1 ? "au-dessus de 1 mais en dessous de 3 : l'acquisition est rentable mais le retour est lent. Améliore la conversion ou la valeur client avant d'augmenter les budgets." : "en dessous de 1 : chaque client acquis toi coûte plus qu'il ne rapporte. Augmenter le budget aggraverait les pertes."}`
           : "Renseigne un prix de vente et un coût de revient dans l'onglet Offre pour que Fynomia calcule la rentabilité de ton acquisition.",
       ),
     ),

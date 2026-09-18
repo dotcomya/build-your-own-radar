@@ -7,7 +7,7 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleHead } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona, activeLevers, METRICS } from '../personas.js'
 import { leverPanel, metricBoard } from '../levers.js'
@@ -57,7 +57,10 @@ export function renderDashboard(navigate, refresh) {
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
 
-    boardHead(health, s, sector, y, navigate),
+    // Le verdict tient dans la ligne de titre : posé en dessous, il laissait une
+    // bande vide sur toute la largeur pour une carte de 340 pixels.
+    moduleHead('06', 'Tableau de bord', "La synth\u00e8se de tout ce que tu as saisi. Rien ne s\u2019\u00e9crit ici.",
+      verdictCard(health, navigate)),
 
     partBanner('tableau-de-bord'),
 
@@ -236,17 +239,6 @@ function controlDeck(persona, s, r, refresh) {
  * désormais dans une carte étroite, posée à droite du titre — une pastille de
  * couleur, un mot, une ligne. Le détail est à un clic, pas à l'écran.
  */
-function boardHead(health, s, sector, y, navigate) {
-  return h('header', { class: 'board-head' },
-    h('div', { class: 'board-id' },
-      h('div', { class: 'board-eyebrow' },
-        [sector?.label, yearLabel(y)].filter(Boolean).join(' · ')),
-      h('h1', { class: 'board-title' }, s.meta.company || 'Mon projet'),
-    ),
-    verdictCard(health, navigate),
-  )
-}
-
 function verdictCard(health, navigate) {
   const detail = h('div', { class: 'verdict-body' }, health.body,
     health.figure && h('div', { class: 'verdict-figure' },
@@ -504,15 +496,15 @@ function moneyFlow(r, y) {
 function moneyFlowSentence(r, y) {
   const p = r.pnl
   const rev = p.revenue[y]
-  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseignez tes ventes pour voir la cascade se remplir."
+  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseigne tes ventes pour voir la cascade se remplir."
   const kept = p.netResult[y] / rev
   const biggest = [
     { label: 'les achats', v: p.variableCost[y] },
     { label: 'les charges externes', v: p.external[y] },
     { label: "l'équipe", v: p.payroll[y] },
   ].sort((a, b) => b.v - a.v)[0]
-  if (biggest.v <= 0) return `Sur 100 € facturés, il toi en reste ${Math.round(kept * 100)} € après impôt.`
-  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il toi en reste ${Math.round(kept * 100)} € après impôt.`
+  if (biggest.v <= 0) return `Sur 100 € facturés, il t’en reste ${Math.round(kept * 100)} € après impôt.`
+  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il t’en reste ${Math.round(kept * 100)} € après impôt.`
 }
 
 /**
@@ -720,7 +712,7 @@ function demoBanner(navigate, refresh) {
     h('div', { class: 'row-wrap', style: { gap: '12px' } },
       h('div', { class: 'spacer', style: { minWidth: '240px' } },
         h('div', { class: 'note-title' }, 'Tu regardes un exemple'),
-        h('div', {}, "Les chiffres de ce scénario sont fictifs : ils servent à montrer comment tout s'articule. Modifie-les librement, ou repartez d'une page blanche."),
+        h('div', {}, "Les chiffres de ce scénario sont fictifs : ils servent à montrer comment tout s'articule. Modifie-les librement, ou repars d'une page blanche."),
       ),
       h('button', { class: 'btn btn-primary', onClick: () => { store.adoptDemo(); refresh() } }, 'Partir de cet exemple'),
       h('button', { class: 'btn', onClick: () => navigate('#/demarrer') }, 'Créer le mien'),

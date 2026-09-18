@@ -3,7 +3,7 @@
  * C'est la page qu'on montre à un banquier ou à un jury.
  */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField, moduleHead } from '../dom.js'
 import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'
 import { download } from '../../export/zip.js'
@@ -48,6 +48,8 @@ export function renderBusinessCase(navigate, refresh) {
   }
 
   return h('div', { class: 'content' },
+    moduleHead('08', 'Business case', "Le dossier pr\u00eat \u00e0 envoyer, relu par trois lecteurs."),
+
     stepBanner('dossier', journey(store.scenario, store.result), navigate, 'business-case'),
 
     readiness(s, r, y),
@@ -212,13 +214,13 @@ function checklist(s, r, y) {
       label: 'La masse salariale est soutenable',
       detail: k.payrollRatio[y] > 0
         ? `Elle représente ${pct(k.payrollRatio[y], 0)} du chiffre d'affaires en ${yearLabel(y).toLowerCase()}. Au-delà de 60 %, la structure devient difficile à financer.`
-        : "Aucun salarié rémunéré n'est modélisé — vérifiez que c'est volontaire.",
+        : "Aucun salarié rémunéré n'est modélisé — vérifie que c'est volontaire.",
     },
     {
       ok: !r.balance.some((b2) => b2.equity < 0),
       label: 'Les capitaux propres restent positifs',
       detail: r.balance.some((b2) => b2.equity < 0)
-        ? "Les pertes cumulées dépassent les apports sur au moins un exercice : renforcez le capital."
+        ? "Les pertes cumulées dépassent les apports sur au moins un exercice : renforce le capital."
         : `Ils atteignent ${euro(r.balance[4].equity)} en fin de période.`,
     },
   ]
@@ -279,7 +281,7 @@ function readiness(s, r, y) {
           label: 'Capacité de remboursement',
           ok: annuity === 0 || ebitdaY > annuity * 1.3,
           value: annuity > 0 ? `${euro(ebitdaY, { compact: true })} d'EBITDA pour ${euro(annuity, { compact: true })} d'annuité` : 'Aucun emprunt',
-          need: "L'EBITDA doit couvrir l'annuité avec de la marge. Réduisez le montant, allongez la durée, ou remontez la rentabilité.",
+          need: "L'EBITDA doit couvrir l'annuité avec de la marge. Réduis le montant, allonge la durée, ou remonte la rentabilité.",
         },
         {
           label: 'Trésorerie jamais négative',
@@ -291,7 +293,7 @@ function readiness(s, r, y) {
           label: 'Point mort atteint',
           ok: !!k.breakEven[y] && p.revenue[y] >= k.breakEven[y],
           value: k.breakEven[y] ? `Seuil à ${euro(k.breakEven[y], { compact: true })}` : 'Incalculable',
-          need: "Montrez l'exercice où le chiffre d'affaires dépasse les charges, et à quel mois.",
+          need: "Montre l'exercice où le chiffre d'affaires dépasse les charges, et à quel mois.",
         },
       ],
     },
@@ -333,7 +335,7 @@ function readiness(s, r, y) {
           label: 'Croissance annuelle',
           ok: growth !== null && growth >= 0.5,
           value: growth === null ? 'Non mesurable' : `${pct(growth, 0)} par an`,
-          need: "Un fonds attend un doublement annuel sur les premières années. En dessous, visez plutôt la dette ou l'autofinancement.",
+          need: "Un fonds attend un doublement annuel sur les premières années. En dessous, vise plutôt la dette ou l'autofinancement.",
         },
         {
           label: 'Taille à cinq ans',
@@ -351,7 +353,7 @@ function readiness(s, r, y) {
           label: 'Autonomie financée',
           ok: k.fundingNeed === 0 || k.runwayMonths === null || k.runwayMonths >= 18,
           value: k.runwayMonths === null ? 'Pas de consommation nette' : `${num(k.runwayMonths, 0)} mois d'autonomie`,
-          need: "Une levée prend quatre à six mois. Financez dix-huit mois, pas six, sinon tu repars en levée le jour où tu finis.",
+          need: "Une levée prend quatre à six mois. Finance dix-huit mois, pas six, sinon tu repars en levée le jour où tu finis.",
         },
       ],
     },
@@ -360,7 +362,7 @@ function readiness(s, r, y) {
   return h('section', { class: 'panel mb' },
     h('div', { class: 'panel-head' },
       h('h2', {}, 'Ce qu’on va vérifier dans ton dossier'),
-      h('p', { class: 'panel-sub' }, "Les mêmes chiffres, lus par trois lecteurs différents. Ce qui manque ici est ce qu'on toi demandera."),
+      h('p', { class: 'panel-sub' }, "Les mêmes chiffres, lus par trois lecteurs différents. Ce qui manque ici est ce qu'on te demandera."),
     ),
     h('div', { class: 'audiences' },
       ...audiences.map((a) => {

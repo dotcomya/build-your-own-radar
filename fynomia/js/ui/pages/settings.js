@@ -1,6 +1,6 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
-import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton } from '../dom.js'
+import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton, moduleHead } from '../dom.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
@@ -14,6 +14,7 @@ export function renderSettings(navigate, refresh) {
   const usage = store.storageUsage()
 
   return h('div', { class: 'content' },
+    moduleHead('09', 'R\u00e9glages', "Les hypoth\u00e8ses de fond, les valeurs fiscales et tes sc\u00e9narios enregistr\u00e9s."),
     h('div', { class: 'page-head' },
       h('h1', {}, 'Réglages'),
       h('p', {}, "Ton projet, tes scénarios et les paramètres fiscaux du modèle."),
@@ -97,7 +98,7 @@ function scenarioManager(navigate, refresh) {
       h('button', { class: 'btn btn-sm', onClick: create }, '＋ Nouveau')),
     h('div', { class: 'card-body' },
       h('p', { class: 'small muted', style: { marginTop: 0 } },
-        "Dupliquez un scénario pour comparer plusieurs hypothèses — un cas prudent et un cas optimiste, par exemple — sans perdre ton travail."),
+        "Duplique un scénario pour comparer plusieurs hypothèses — un cas prudent et un cas optimiste, par exemple — sans perdre ton travail."),
       ...list.map((item) => h('div', { class: 'row', style: { padding: '10px 0', borderTop: '1px solid var(--ink-100)' } },
         h('div', { class: 'spacer' },
           h('div', { style: { fontWeight: '600' } }, item.name,
@@ -146,8 +147,8 @@ function fiscalPanel(refresh) {
           `Les règles structurelles appliquées sont celles de l'exercice ${LAST_ENACTED_YEAR}, dernier promulgué. `
           + `Un plan démarrant en ${LAST_ENACTED_YEAR + 1} les reconduit : aucune loi de finances ${LAST_ENACTED_YEAR + 1} `
           + `n'existe encore, et Fynomia préfère le dire plutôt que d'inventer un barème. `
-          + `Les valeurs ci-dessous sont revalorisées chaque année — confirmez-les avant un dossier bancaire ou une levée.`),
-        "Les règles pérennes — barème de l'impôt sur les sociétés, taux de TVA, seuils de la CVAE et de la C3S — sont appliquées telles quelles. En revanche, les valeurs revalorisées chaque année (SMIC, plafond de la Sécurité sociale, coefficients de la réduction générale, barème de la CFE) sont ici des valeurs de référence reconduites. Confirmez-les avec ton expert-comptable avant tout usage officiel.",
+          + `Les valeurs ci-dessous sont revalorisées chaque année — confirme-les avant un dossier bancaire ou une levée.`),
+        "Les règles pérennes — barème de l'impôt sur les sociétés, taux de TVA, seuils de la CVAE et de la C3S — sont appliquées telles quelles. En revanche, les valeurs revalorisées chaque année (SMIC, plafond de la Sécurité sociale, coefficients de la réduction générale, barème de la CFE) sont ici des valeurs de référence reconduites. Confirme-les avec ton expert-comptable avant tout usage officiel.",
       ),
 
       h('h4', { class: 'mb' }, 'Ajuster les taux'),
@@ -206,7 +207,7 @@ function dataPanel(navigate, refresh, usage) {
     h('div', { class: 'card-head' }, h('h2', {}, 'Tes données')),
     h('div', { class: 'card-body' },
       h('p', { class: 'small muted', style: { marginTop: 0, maxWidth: '72ch' } },
-        `Tout est enregistré dans le stockage local de ce navigateur — rien n'est envoyé sur un serveur. Espace occupé : ${usage.human}. Vider les données du navigateur effacerait tes scénarios : exportez-les régulièrement.`),
+        `Tout est enregistré dans le stockage local de ce navigateur — rien n'est envoyé sur un serveur. Espace occupé : ${usage.human}. Vider les données du navigateur effacerait tes scénarios : exporte-les régulièrement.`),
       h('div', { class: 'row-wrap mt' },
         h('button', { class: 'btn', onClick: importFile }, 'Importer un scénario'),
         h('button', {

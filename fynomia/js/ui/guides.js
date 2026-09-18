@@ -23,7 +23,7 @@ export const PART_GUIDES = {
   },
   offre: {
     role: "Ce que tu vends, à quel prix, à quel rythme, et quand tu es payé. Une offre peut être une vente à l'unité, un abonnement, ou les deux.",
-    why: "C'est la source de tous les autres chiffres : le chiffre d'affaires, la marge, la TVA collectée, et surtout le besoin en fonds de roulement — car entre la livraison et l'encaissement, c'est toi qui financez le client.",
+    why: "C'est la source de tous les autres chiffres : le chiffre d'affaires, la marge, la TVA collectée, et surtout le besoin en fonds de roulement — car entre la livraison et l'encaissement, c'est toi qui finances le client.",
     first: "La marge unitaire. En dessous de 20 %, il faudra un volume considérable pour couvrir les frais fixes ; en dessous de zéro, chaque vente aggrave la perte.",
   },
   acquisition: {
@@ -44,7 +44,7 @@ export const PART_GUIDES = {
   financement: {
     role: "D'où vient l'argent : tes apports, les emprunts, les subventions, une levée de fonds, un compte courant d'associé.",
     why: "Une entreprise ne meurt pas d'un mauvais résultat, elle meurt de trésorerie. Cette partie répond à la seule question qu'une banque pose : combien te manque-t-il, et à quelle date.",
-    first: "Le point bas de la courbe de trésorerie. C'est le montant à réunir et l'échéance à tenir — prévoyez une marge, un plan tendu à l'euro près ne survit à aucun imprévu.",
+    first: "Le point bas de la courbe de trésorerie. C'est le montant à réunir et l'échéance à tenir — prévois une marge, un plan tendu à l'euro près ne survit à aucun imprévu.",
   },
   resultats: {
     role: "Les états financiers normalisés : compte de résultat, trésorerie, bilan, fiscalité — et ce qui te reste personnellement, une fois tout payé.",

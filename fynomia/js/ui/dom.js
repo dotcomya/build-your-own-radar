@@ -308,6 +308,43 @@ export function refine(id, label, ...children) {
   return el
 }
 
+/**
+ * L'en-tête d'un module.
+ *
+ * Un numéro, un titre, une phrase. Le titre nomme ce qu'on fait — « Mon
+ * projet », « Offre et revenus » — sans chercher la formule : une accroche
+ * publicitaire en tête d'un outil de calcul fatigue dès la deuxième visite.
+ */
+export function moduleHead(no, title, lede, ...actions) {
+  return h('header', { class: 'module' },
+    h('div', { class: 'module-tag' },
+      h('span', { class: 'module-bar' }),
+      h('span', {}, `Module ${no} / 09`),
+    ),
+    h('div', { class: 'module-row' },
+      h('h1', { class: 'module-title' }, title),
+      actions.filter(Boolean).length ? h('div', { class: 'module-actions' }, ...actions.filter(Boolean)) : null,
+    ),
+    lede ? h('p', { class: 'module-lede' }, lede) : null,
+  )
+}
+
+/**
+ * Le chiffre à retenir d'un module.
+ *
+ * Un bloc noir, un quart de cercle acide, un nombre. C'est la seule chose que
+ * l'utilisateur doit emporter en quittant la page ; tout le reste était la
+ * manière de l'obtenir.
+ */
+export function keystone(tag, value, note) {
+  return h('section', { class: 'keystone' },
+    h('span', { class: 'keystone-arc', 'aria-hidden': 'true' }),
+    h('div', { class: 'keystone-tag' }, tag),
+    h('div', { class: 'keystone-value' }, value),
+    note ? h('p', { class: 'keystone-note' }, note) : null,
+  )
+}
+
 export function helpButton(key) {
   return h('button', { class: 'help', type: 'button', title: 'En savoir plus', onClick: (e) => { e.preventDefault(); e.stopPropagation(); drawerHost && drawerHost(key) } }, '?')
 }

@@ -9,8 +9,8 @@
  * Trois règles tenues bout à bout :
  *
  *  1. UNE question par écran. Jamais deux idées à la fois.
- *  2. Le vocabulaire du fondateur, pas celui du comptable. On demande « toi
- *     démarrez avec combien ? », pas « quel est ton plan de financement
+ *  2. Le vocabulaire du fondateur, pas celui du comptable. On demande « tu
+ *     démarres avec combien ? », pas « quel est ton plan de financement
  *     initial ». Le mot juste arrive plus tard, quand le chiffre est là.
  *  3. Chaque réponse produit immédiatement une conséquence visible. C'est ce
  *     qui distingue ce parcours d'un formulaire : on voit le modèle se
@@ -20,7 +20,7 @@
  * ensuite dans les pages détaillées.
  */
 
-import { h, euro, num, pct, toast } from '../dom.js'
+import { h, euro, num, pct, toast, keystone } from '../dom.js'
 import { sectorsByFamily, SECTORS, getSector, vocabulary } from '../../state/sectors.js'
 import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
@@ -43,20 +43,22 @@ const flow = { index: 0, touched: new Set() }
 
 export function resetSetup() { flow.index = 0; flow.touched = new Set() }
 
+const pad = (n) => String(n).padStart(2, '0')
+
 /* ──────────────────────────────── Les écrans ────────────────────────────── */
 
 const STEPS = [
   {
     key: 'metier', short: 'Ton métier',
-    question: 'Commençons. Tu fais quoi ?',
-    help: "Nous allons construire ton business plan une question à la fois. Celle-ci commande la TVA, ton statut et les repères de marge — c'est la seule qui change tout le reste.",
+    question: 'Tu fais quoi ?',
+    help: "Ce choix commande la TVA, ton statut et les repères de marge du reste du parcours.",
     render: sectorPicker,
     ready: (s) => !!s?.meta?.sectorKey,
   },
   {
     key: 'nom', short: 'Le nom',
     question: 'Ça s’appelle comment ?',
-    help: 'Le nom de ton projet. Tu pourras le changer quand tu voudras.',
+    help: 'Modifiable à tout moment.',
     render: (ctx) => field(ctx, {
       type: 'text', placeholder: 'Mon projet',
       value: (s) => s.meta.company || '',
@@ -67,14 +69,14 @@ const STEPS = [
   {
     key: 'forme', short: 'La forme juridique',
     question: 'Sous quelle forme ?',
-    help: "Elle décide de ton statut social et de la façon dont toi tu te rémunères. Rien n'est définitif : on la change en un clic.",
+    help: "Elle fixe ton statut social, donc le coût de ta rémunération. Modifiable ensuite.",
     render: legalScreen,
     ready: (s) => !!s?.meta?.legalForm,
   },
   {
-    key: 'depart', short: 'Ton mise de départ',
+    key: 'depart', short: 'La mise de départ',
     question: 'Tu démarres avec combien ?',
-    help: "L'argent déjà disponible : ton apport, celui de tes associés. On verra à la fin s'il en manque.",
+    help: "L'argent déjà disponible : ton apport et celui de tes associés.",
     optional: true,
     render: cashScreen,
     ready: () => true,
@@ -82,7 +84,7 @@ const STEPS = [
   {
     key: 'offre', short: 'Ce que tu vends',
     question: 'Tu vends quoi ?',
-    help: (s) => `Une ${vocabulary(s).one}, un forfait, un abonnement — dites-le comme toi le diriez à un client.`,
+    help: (s) => `Le nom que tu emploies devant un client. Une ${vocabulary(s).one}, un forfait, un abonnement.`,
     render: (ctx) => field(ctx, {
       type: 'text', placeholder: (s) => vocabulary(s).one,
       value: (s) => (s.activities[0]?.name === 'À définir' ? '' : s.activities[0]?.name || ''),
@@ -93,14 +95,14 @@ const STEPS = [
   {
     key: 'prix', short: 'Le prix',
     question: 'Comment rentre l’argent ?',
-    help: 'La forme du revenu change tout : une vente qui se répète ne vaut pas une vente unique.',
+    help: 'Une vente qui se répète ne vaut pas une vente unique.',
     render: priceScreen,
     ready: (s) => (Number(s?.activities?.[0]?.unitPrice) || 0) > 0 || (Number(s?.activities?.[0]?.recurringPrice) || 0) > 0,
   },
   {
     key: 'salaire', short: 'Ta rémunération',
-    question: 'Toi tu paies combien ?',
-    help: "Fynomia calcule ce que ça coûte vraiment à l'entreprise. Un plan où le fondateur ne se paie pas n'est pas prudent — il est faux.",
+    question: 'Tu te paies combien ?',
+    help: "Un plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Fynomia calcule ce que ça coûte à l'entreprise.",
     optional: true,
     render: salaryScreen,
     ready: () => true,
@@ -108,7 +110,7 @@ const STEPS = [
   {
     key: 'frais', short: 'Tes frais fixes',
     question: 'Tes frais tous les mois',
-    help: 'Coche ce qui toi concerne. Ce sont eux qui fixent le nombre de clients dont tu as besoin.',
+    help: 'Coche ce qui te concerne. Ces frais fixent le nombre de clients qu\'il te faut.',
     optional: true,
     render: costsScreen,
     ready: () => true,
@@ -116,18 +118,18 @@ const STEPS = [
   {
     key: 'clients', short: 'Tes premiers clients',
     question: 'Combien de clients le premier mois ?',
-    help: "Pas une ambition : ce que tu peux livrer et facturer dès le début. C'est le chiffre le plus discuté d'un business plan.",
+    help: "Ce que tu peux livrer et facturer dès le début, pas une ambition. C'est le chiffre le plus discuté d'un business plan.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
   {
     key: 'cout', short: 'Le coût de revient',
     // On ne demande le coût de revient qu'ici, une fois les frais connus : sans
-    // ce repère, « ce que ça toi coûte de produire » ne veut rien dire pour
+    // ce repère, « ce que ça te coûte de produire » ne veut rien dire pour
     // quelqu'un qui n'a jamais tenu de comptabilité — et la confusion la plus
     // fréquente est justement d'y ranger le loyer ou le comptable.
-    question: 'Et chaque vente, elle toi coûte quoi ?',
-    help: "Uniquement ce qui augmente quand tu vends une unité de plus : matières, sous-traitance, commission. Pas le loyer ni le comptable — ceux-là, tu viens de les saisir.",
+    question: 'Et chaque vente, elle te coûte quoi ?',
+    help: "Uniquement ce qui augmente quand tu vends une unité de plus. Pas le loyer ni le comptable : tu viens de les saisir.",
     optional: true,
     render: costScreen,
     ready: () => true,
@@ -135,7 +137,7 @@ const STEPS = [
   {
     key: 'croissance', short: 'La croissance',
     question: 'Ça grandit à quelle vitesse ?',
-    help: 'Fynomia freine automatiquement la courbe dans la durée — aucune croissance ne tient cinq ans au même rythme.',
+    help: 'Aucune croissance ne tient cinq ans au même rythme : Fynomia freine la courbe dans la durée.',
     optional: true,
     render: growthScreen,
     ready: () => true,
@@ -204,6 +206,11 @@ export function renderSetup(navigate, refresh) {
 
       h('div', { class: 'setup-main' },
         h('div', { class: `setup-card ${step.last ? 'is-last' : ''}` },
+          h('div', { class: 'setup-tag' },
+            h('span', { class: 'setup-tag-bar' }),
+            h('span', {}, step.last ? 'Résultat' : `Question ${pad(flow.index + 1)} / ${pad(STEPS.length - 1)}`),
+            step.optional ? h('span', { class: 'setup-tag-opt' }, 'facultatif') : null,
+          ),
           h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question),
           step.help ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
           body,
@@ -230,7 +237,7 @@ function stepList(s, jump, navigate) {
   return h('nav', { class: 'setup-steps', 'aria-label': 'Les questions' },
     h('div', { class: 'setup-steps-head' },
       h('span', { class: 'setup-steps-title' }, 'Ton business plan'),
-      h('span', { class: 'setup-steps-sub' }, `${STEPS.length} questions · tout reste modifiable`),
+      h('span', { class: 'setup-steps-sub' }, `${STEPS.length - 1} questions · tout reste modifiable`),
     ),
     ...STEPS.map((st, i) => {
       const done = i < flow.index && st.ready(s)
@@ -315,7 +322,7 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
       suffix ? h('span', { class: 'setup-suffix' }, suffix) : null,
     ),
     suggested
-      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans ton métier — écrivez la vôtre par-dessus.')
+      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans ton métier. Écris la tienne par-dessus.')
       : null,
   )
 }
@@ -415,7 +422,7 @@ function legalScreen(ctx) {
       }, { label: 'Forme juridique', silent: true }),
     }))),
     h('p', { class: 'setup-note' },
-      "Ce choix fixe ton statut social — c'est lui qui décide du coût de ta rémunération, pas l'inverse."),
+      "C'est ce choix qui décide du coût de ta rémunération, pas l'inverse."),
   )
 }
 
@@ -516,7 +523,7 @@ function priceScreen(ctx) {
       }),
     },
     {
-      label: 'À la commission', note: 'Toi prélevez un pourcentage sur ce qui passe par toi.',
+      label: 'À la commission', note: 'Tu prélèves un pourcentage sur ce qui passe par toi.',
       active: () => mode() === 'commission',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -560,7 +567,7 @@ function commissionFields(ctx) {
 /**
  * Le coût de revient, détaillé.
  *
- * « Ça toi coûte combien à produire ? » est une question à laquelle personne
+ * « Ça te coûte combien à produire ? » est une question à laquelle personne
  * ne sait répondre d'un seul nombre. En revanche, chacun sait dire s'il a des
  * matières, une commission de paiement, une livraison — et combien. On propose
  * donc les postes du métier, on additionne, et le total devient le coût de
@@ -662,7 +669,7 @@ function costScreen(ctx) {
   draw(); drawSummary()
   return h('div', {}, host, summary,
     h('p', { class: 'setup-note' },
-      "Coche ce qui toi concerne ; les montants proposés sont des ordres de grandeur pour ton métier. Rien ici n'est un frais fixe — le loyer et le comptable, tu viens de les saisir."))
+      "Les montants proposés sont des ordres de grandeur pour ton métier. Rien ici n'est un frais fixe : le loyer et le comptable, tu viens de les saisir."))
 }
 
 /* ───────────────────── Écran : clients et croissance ────────────────────── */
@@ -708,7 +715,7 @@ function salaryScreen(ctx) {
   const draw = () => {
     const m = me()
     const gross = Number(m?.monthlyGross) || 0
-    if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laisse vide si toi ne tu verses rien la première année.')); return }
+    if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laisse vide si tu ne te verses rien la première année.')); return }
     let c = null
     try { c = monthlyCost({ ...m, monthlyGross: gross }, { headcount: 1, fiscal: store.scenario.fiscal }) } catch { /* rien */ }
     if (!c) { host.replaceChildren(); return }
@@ -749,7 +756,7 @@ function salaryScreen(ctx) {
         )),
       ),
       h('p', { class: 'setup-note' },
-        `Statut ${label()}. Pour toi laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que tu peux toi verser.`),
+        `Statut ${label()}. Pour te laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que tu peux te verser.`),
     )
   }
 
@@ -853,7 +860,7 @@ function costsScreen(ctx) {
 
   draw()
   return h('div', {}, host,
-    h('p', { class: 'setup-note' }, 'Ces montants sont des ordres de grandeur pour ton métier. Corrige-les maintenant ou plus tard.'))
+    h('p', { class: 'setup-note' }, 'Ordres de grandeur pour ton métier. Corrige-les maintenant ou plus tard.'))
 }
 
 function cashScreen(ctx) {
@@ -866,7 +873,7 @@ function cashScreen(ctx) {
       },
       apply: (sc, v) => { sc.financing.equityFounders = v > 0 ? [{ month: 0, amount: v }] : [] },
     }),
-    h('p', { class: 'setup-note' }, "Si tu n'as rien de côté, mettez zéro : Fynomia toi dira exactement combien il toi manque et à quelle date."),
+    h('p', { class: 'setup-note' }, "Si tu n'as rien de côté, mets zéro : Fynomia te dira exactement combien il te manque et à quelle date."),
   )
 }
 
@@ -879,28 +886,34 @@ function doneScreen(ctx) {
   if (!r) return h('p', {}, 'Le modèle n’a pas pu être calculé.')
 
   const k = r.kpis, p = r.pnl
-  const y = k.firstProfitableYear !== null ? k.firstProfitableYear : 0
+  const need = k.fundingNeed > 0
 
   return h('div', {},
+    // Le chiffre qu'on emporte en quittant le parcours. Le reste était la
+    // manière de l'obtenir.
+    keystone("Chiffre d'affaires année 1", euro(p.revenue[0], { compact: true }),
+      need
+        ? `Il manque ${euro(k.fundingNeed)} au point bas de trésorerie. Le module Financement dit quoi aller chercher.`
+        : 'La trésorerie ne passe jamais sous zéro sur cinq ans.'),
+
     h('div', { class: 'setup-results' },
-      resultRow("Chiffre d'affaires année 1", euro(p.revenue[0], { compact: true })),
       resultRow('Point mort', k.breakEven[0] ? euro(k.breakEven[0], { compact: true }) : '—'),
       resultRow('Premier exercice rentable',
         k.firstProfitableYear !== null ? `Année ${k.firstProfitableYear + 1}` : 'Au-delà de 5 ans',
         k.firstProfitableYear !== null ? 'ok' : 'warn'),
-      resultRow(k.fundingNeed > 0 ? 'Il toi manque' : 'Trésorerie',
-        k.fundingNeed > 0 ? euro(k.fundingNeed) : 'Jamais négative',
-        k.fundingNeed > 0 ? 'warn' : 'ok'),
+      resultRow(need ? 'Financement à trouver' : 'Trésorerie',
+        need ? euro(k.fundingNeed) : 'Jamais négative', need ? 'warn' : 'ok'),
     ),
+
     h('div', { class: 'setup-unlocked' },
-      h('div', { class: 'setup-unlocked-title' }, 'Le logiciel complet toi attend'),
+      h('div', { class: 'setup-unlocked-title' }, 'Ce qui s’ouvre maintenant'),
       h('ul', { class: 'setup-unlocked-list' },
-        h('li', {}, 'Ajoute des salariés, des campagnes, des offres, des investissements — et mettez chaque ligne en pause pour voir ce qu’elle coûte vraiment.'),
-        h('li', {}, 'Réglez les délais de paiement, la TVA, la saisonnalité, les crédits d’impôt.'),
-        h('li', {}, 'Lisez les graphiques : trésorerie mois par mois, compte de résultat, bilan, point mort.'),
-        h('li', {}, 'Un guide reste à droite pour toi emmener page après page.'),
+        h('li', {}, 'Des offres, des salariés, des campagnes et des investissements, chacun activable pour voir ce qu’il coûte.'),
+        h('li', {}, 'Les délais de paiement, la TVA, la saisonnalité et les crédits d’impôt.'),
+        h('li', {}, 'Le tableau de bord, les états financiers et le dossier à exporter.'),
       ),
     ),
+
     h('div', { class: 'setup-actions' },
       h('button', {
         class: 'btn btn-primary btn-lg',

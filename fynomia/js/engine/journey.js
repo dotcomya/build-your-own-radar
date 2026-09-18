@@ -50,14 +50,14 @@ export const STEPS = [
     page: 'reglages',
     label: 'Mon projet',
     question: 'Quel est ton projet ?',
-    promise: "Le métier choisi commande tout le reste : la TVA, ton statut social, les repères auxquels on toi comparera.",
-    investor: "La première chose qu'on regarde : savez-toi dire en une phrase ce que tu vends et à qui.",
+    promise: "Le métier choisi commande tout le reste : la TVA, ton statut social, les repères auxquels on te comparera.",
+    investor: "La première chose qu'on regarde : sais-tu dire en une phrase ce que tu vends et à qui.",
     minutes: 2,
     unlocks: "Repères du métier et régime de TVA applicable",
     tips: [
       {
         title: 'Le métier décide de la TVA',
-        body: "Un cabinet médical ou paramédical est exonéré : toi ne la facturez pas, mais toi ne la récupérez pas non plus sur tes achats. Saisis alors tout en TTC — sinon toi sous-estimez tes charges de 20 %.",
+        body: "Un cabinet médical ou paramédical est exonéré : tu ne la factures pas, mais tu ne la récupères pas non plus sur tes achats. Saisis alors tout en TTC — sinon tu sous-estimes tes charges de 20 %.",
       },
       {
         title: 'SAS ou SARL : ce n’est pas un détail',
@@ -84,7 +84,7 @@ export const STEPS = [
     act: 'projet',
     page: 'modele',
     label: 'Mon modèle',
-    question: 'Comment gagnez-toi de l’argent ?',
+    question: 'Comment gagnes-tu de l’argent ?',
     promise: "Un prix, un coût de revient, et la façon dont l'argent revient — une fois ou tous les mois. C'est la brique dont tout le reste est fait.",
     investor: "On vérifiera que ta marge unitaire est positive avant même de regarder ton chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
     minutes: 5,
@@ -133,7 +133,7 @@ export const STEPS = [
     page: 'equipe',
     label: 'Mon équipe',
     question: 'Qui travaille avec toi ?',
-    promise: "Toi donnez un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
+    promise: "Tu donnes un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
     investor: "Les salaires sont le premier poste de dépense et le plus difficile à réduire. Le mois d'arrivée compte autant que le montant.",
     minutes: 6,
     unlocks: 'Masse salariale chargée et point mort',
@@ -144,11 +144,11 @@ export const STEPS = [
       },
       {
         title: 'Décaler une embauche de trois mois',
-        body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer au modèle. Mesurez l'effet avant d'aller chercher de l'argent.",
+        body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer au modèle. Mesure l'effet avant d'aller chercher de l'argent.",
       },
       {
         title: 'Compte-toi dedans',
-        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscrivez ta rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
+        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscris ta rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
       },
     ],
     check(s, r) {
@@ -181,7 +181,7 @@ export const STEPS = [
       },
       {
         title: 'Les charges qui suivent le chiffre d’affaires',
-        body: "Certaines charges ne sont pas fixes : commission de plateforme, frais de livraison, part variable d'un loyer. Rattachez-les au chiffre d'affaires plutôt que de les figer — le point mort en dépend.",
+        body: "Certaines charges ne sont pas fixes : commission de plateforme, frais de livraison, part variable d'un loyer. Rattache-les au chiffre d'affaires plutôt que de les figer — le point mort en dépend.",
       },
     ],
     check(s) {
@@ -202,13 +202,13 @@ export const STEPS = [
     label: 'Mes clients',
     question: 'Combien de clients, et à quel rythme ?',
     promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
-    investor: "Un investisseur ne discute presque jamais tes charges. Il discute tes volumes. Préparez-toi à dire d'où vient ce premier chiffre.",
+    investor: "Un investisseur ne discute presque jamais tes charges. Il discute tes volumes. Prépare-toi à dire d'où vient ce premier chiffre.",
     minutes: 6,
     unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
     tips: [
       {
-        title: 'Partez de ce que tu sais livrer, pas du marché',
-        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionnez à partir de ton capacité réelle à livrer.",
+        title: 'Pars de ce que tu sais livrer, pas du marché',
+        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionne à partir de ta capacité réelle à livrer.",
       },
       {
         title: '10 % par mois, c’est déjà énorme',
@@ -216,7 +216,7 @@ export const STEPS = [
       },
       {
         title: 'Le délai de paiement tue plus que le prix',
-        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demandez un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
+        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demande un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
       },
     ],
     check(s, r) {
@@ -253,7 +253,7 @@ export const STEPS = [
       },
       {
         title: 'Lève pour 18 mois, pas pour 6',
-        body: "Une levée prend quatre à six mois. En ne finançant que six mois d'autonomie, on repart en levée le jour où l'on a fini. Visez 18 à 24 mois entre deux tours.",
+        body: "Une levée prend quatre à six mois. En ne finançant que six mois d'autonomie, on repart en levée le jour où l'on a fini. Vise 18 à 24 mois entre deux tours.",
       },
     ],
     check(s, r) {
@@ -276,7 +276,7 @@ export const STEPS = [
     act: 'argent',
     page: 'mon-revenu',
     label: 'Ma rémunération',
-    question: 'Combien toi en reste-t-il ?',
+    question: 'Combien t’en reste-t-il ?',
     promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur ton compte.",
     investor: "Un fondateur qui sait ce qu'il touche net a compris son propre modèle. C'est plus rare qu'on ne croit.",
     minutes: 3,
@@ -311,8 +311,8 @@ export const STEPS = [
     act: 'plus',
     page: 'marketing',
     label: 'Mon acquisition',
-    question: 'Comment les trouvez-toi ?',
-    promise: "Combien toi coûte un client, et combien il toi rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
+    question: 'Comment les trouves-tu ?',
+    promise: "Combien te coûte un client, et combien il te rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
     investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
     minutes: 5,
     optional: true,
@@ -324,7 +324,7 @@ export const STEPS = [
       },
       {
         title: 'Le bouche-à-oreille n’est pas un canal',
-        body: "Si les premiers clients viennent du réseau, laissez cette page vide et dites-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
+        body: "Si les premiers clients viennent du réseau, laisse cette page vide et dis-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
       },
       {
         title: 'Le taux de conversion est plus bas qu’on ne croit',
@@ -354,15 +354,15 @@ export const STEPS = [
     tips: [
       {
         title: 'Douze diapositives, pas quarante',
-        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que tu touches. C'est l'ordre dans lequel on toi lira.",
+        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que tu touches. C'est l'ordre dans lequel on te lira.",
       },
       {
         title: 'Emporte le CSV',
         body: "Une banque ou un fonds demande presque toujours le détail mois par mois. Le CSV contient les soixante mois : tu réponds en trente secondes au lieu de trois jours.",
       },
       {
-        title: 'Relisez tes hypothèses avant d’envoyer',
-        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que toi ne sauriez pas défendre se corrige maintenant, pas en réunion.",
+        title: 'Relis tes hypothèses avant d’envoyer',
+        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que tu ne saurais pas défendre se corrige maintenant, pas en réunion.",
       },
     ],
     check(s, r) {
@@ -492,7 +492,7 @@ function rank(completion, result) {
 
   if (completion >= 0.98 && solid) {
     return { key: 'investisseur', label: 'Prêt pour un investisseur', tone: 'good',
-      line: 'Le dossier tient debout tout seul. Allez le défendre.' }
+      line: 'Le dossier tient debout tout seul. Va le défendre.' }
   }
   if (completion >= 0.85) {
     return { key: 'banque', label: 'Présentable à une banque', tone: 'good',

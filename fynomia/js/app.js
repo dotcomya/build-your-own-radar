@@ -80,7 +80,12 @@ function route() {
 }
 
 function navigate(to) {
-  location.hash = to.startsWith('#') ? to : `#/${to}`
+  const next = to.startsWith('#') ? to : `#/${to}`
+  // Cliquer sur le module où l'on se trouve déjà ne change pas l'adresse, donc
+  // ne déclenche aucun événement : l'écran restait figé et le clic semblait
+  // perdu. On redessine explicitement dans ce cas.
+  if (location.hash === next) { render(); window.scrollTo(0, 0); return }
+  location.hash = next
 }
 
 // La route courante, retenue pour que la barre du haut puisse annoncer ce que
@@ -118,9 +123,14 @@ function render({ preserveScroll = false } = {}) {
   const page = PAGES[key] || PAGES['tableau-de-bord']
   if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
 
-  const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, render))
+  // Une page se redessine des dizaines de fois pendant la saisie — un clic sur
+  // un pavé, une case cochée, une ligne ajoutée. Si ce redessin remonte en haut
+  // de page, on perd l'endroit où l'on travaillait. Seule une vraie navigation
+  // remet l'écran à zéro.
+  const refresh = (opts) => render({ preserveScroll: true, ...(opts || {}) })
+  const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, refresh))
   clear(root).appendChild(h('div', { class: 'shell' },
-    rail(key), main, liveRail(navigate), tabbar(key), impactRail(render)))
+    rail(key), main, liveRail(navigate), tabbar(key), impactRail(refresh)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)

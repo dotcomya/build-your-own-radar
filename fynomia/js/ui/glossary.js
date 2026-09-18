@@ -38,7 +38,7 @@ export const GLOSSARY = {
     formula: 'Point mort = Charges fixes ÷ Taux de marge sur coûts variables',
     how: "Fynomia additionne tout ce que tu paies quel que soit ton volume de ventes — salaires, loyer, assurances, amortissements, intérêts d'emprunt — puis divise ce total par la part de chaque euro vendu qui reste après avoir payé les coûts directement liés à la vente.",
     use: "C'est le premier chiffre que regarde un banquier. S'il est très supérieur à ta prévision de ventes, ton modèle ne tient pas : soit tu augmentes tes prix, soit tu réduis tes coûts fixes, soit tu améliores ta marge.",
-    watch: "Certaines charges fixes de Fynomia sont calculées en pourcentage du chiffre d'affaires. Le point mort varie donc légèrement d'une année sur l'autre : retenez l'ordre de grandeur, pas la décimale.",
+    watch: "Certaines charges fixes de Fynomia sont calculées en pourcentage du chiffre d'affaires. Le point mort varie donc légèrement d'une année sur l'autre : retiens l'ordre de grandeur, pas la décimale.",
   },
   ebitda: {
     title: "EBITDA — Excédent brut d'exploitation",
@@ -96,7 +96,7 @@ export const GLOSSARY = {
     what: "Ce que tu dépenses en marketing pour convaincre un client de plus.",
     formula: 'CAC = Budget marketing total ÷ Nombre de clients acquis',
     how: "Fynomia déroule ton entonnoir : budget divisé par le coût du clic, multiplié par le taux de transformation en contact, puis par le taux de transformation en client.",
-    use: "Comparez toujours le CAC à ce que rapporte un client. Un CAC de 300 € est excellent si le client rapporte 3 000 €, catastrophique s'il en rapporte 200.",
+    use: "Compare toujours le CAC à ce que rapporte un client. Un CAC de 300 € est excellent si le client rapporte 3 000 €, catastrophique s'il en rapporte 200.",
   },
   ltv: {
     title: 'Valeur client (LTV)',
@@ -115,7 +115,7 @@ export const GLOSSARY = {
   },
   tva: {
     title: 'TVA',
-    what: "Un impôt que tu collectes pour l'État sur tes ventes, et que tu récupères sur tes achats. Tu ne reversez que la différence.",
+    what: "Un impôt que tu collectes pour l'État sur tes ventes, et que tu récupères sur tes achats. Tu ne reverses que la différence.",
     formula: 'TVA à reverser = TVA collectée sur les ventes − TVA déductible sur les achats',
     how: "Fynomia applique le taux de chaque offre aux encaissements, déduit la TVA des achats, investissements et charges, et reverse le solde le mois suivant. Si la TVA déductible dépasse la collectée, un crédit de TVA est remboursé.",
     use: "La TVA n'affecte pas ton résultat — tous les montants du business plan sont hors taxes. Elle affecte en revanche ta trésorerie, à cause du décalage d'un mois.",
@@ -129,7 +129,7 @@ export const GLOSSARY = {
   },
   cir: {
     title: "CIR — Crédit d'impôt recherche",
-    what: "Un remboursement de 30 % de tes dépenses de recherche, versé même si tu ne payez pas d'impôt.",
+    what: "Un remboursement de 30 % de tes dépenses de recherche, versé même si tu ne paies pas d'impôt.",
     formula: 'CIR = 30 % × (Salaires R&D + 43 % de forfait + amortissements + sous-traitance agréée)',
     how: "Fynomia retient la part du temps que tu as déclarée en recherche pour chaque salarié, y ajoute un forfait de frais de fonctionnement de 43 %, les amortissements du matériel de recherche majorés de 75 %, et la sous-traitance agréée plafonnée à trois fois les autres dépenses. Les subventions perçues viennent en déduction.",
     use: "Pour une équipe de trois ingénieurs à plein temps sur de la R&D, le CIR représente souvent plus de 60 000 € par an — l'équivalent d'un salaire.",

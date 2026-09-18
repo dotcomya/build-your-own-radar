@@ -20,7 +20,7 @@ export const LEVEL_META = {
   intermediate: {
     label: 'Intermédiaire', short: 'Inter.',
     tagline: 'Plusieurs offres, des campagnes, du financement.',
-    description: "Toi pilotez plusieurs sources de revenus, tu branches tes campagnes marketing sur ton acquisition client, tu gères tes investissements et tes emprunts. Les conditions de paiement deviennent modifiables.",
+    description: "Tu pilotes plusieurs sources de revenus, tu branches tes campagnes marketing sur ton acquisition client, tu gères tes investissements et tes emprunts. Les conditions de paiement deviennent modifiables.",
   },
   advanced: {
     label: 'Expert', short: 'Expert',
@@ -219,9 +219,10 @@ export function emptyScenario(name = 'Mon business plan') {
  * apparaîtra ensuite aura été saisi par le fondateur.
  */
 function blankFromSector(s, sector) {
-  const unit = sector.unit?.one || 'offre'
+  // L'offre reste sans nom : un champ déjà rempli oblige à tout effacer avant
+  // d'écrire le sien. Le mot du métier sert de texte fantôme, pas de valeur.
   s.activities = [newActivity({
-    name: unit.charAt(0).toUpperCase() + unit.slice(1),
+    name: 'À définir',
     unitPrice: 0, unitCost: 0, recurringPrice: 0, recurringCost: 0, contractMonths: 0,
     vatRateSales: sector.vat?.sales ?? 0.2,
     volumes: { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0.08, growthDecay: 0.96, cap: '', seasonality: null, manual: [] },
@@ -324,13 +325,13 @@ export function validate(scenario, result) {
   }
 
   for (const c of scenario.marketing || []) {
-    if (c.enabled && !scenario.activities?.some((a) => a.id === c.activityId)) add('warning', 'marketing', `La campagne « ${c.name} » n'est rattachée à aucune offre.`, "Rattachez-la à une offre pour que les clients acquis produisent du revenu.")
+    if (c.enabled && !scenario.activities?.some((a) => a.id === c.activityId)) add('warning', 'marketing', `La campagne « ${c.name} » n'est rattachée à aucune offre.`, "Rattache-la à une offre pour que les clients acquis produisent du revenu.")
     if ((Number(c.leadToClient) || 0) > 0.6) add('warning', 'marketing', `« ${c.name} » convertit plus de 60 % des contacts en clients.`, "Au-delà de 20 %, un taux de conversion doit s'appuyer sur des données réelles.")
   }
 
   if (result) {
     const need = result.kpis.fundingNeed
-    if (need > 0) add('warning', 'financement', `Ta trésorerie devient négative : il manque ${fmt(need)} € au point bas.`, "Augmente le capital, décalez des dépenses ou accélérez les encaissements.")
+    if (need > 0) add('warning', 'financement', `Ta trésorerie devient négative : il manque ${fmt(need)} € au point bas.`, "Augmente le capital, décale des dépenses ou accélère les encaissements.")
     result.balance.forEach((b, y) => {
       if (Math.abs(b.gap) > Math.max(50, b.totalAssets * 0.01)) add('info', 'resultats', `Bilan année ${y + 1} : écart actif/passif de ${fmt(b.gap)} €.`, "Écart d'arrondi ou poste non modélisé ; sans incidence sur la trésorerie.")
     })

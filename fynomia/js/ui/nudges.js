@@ -61,7 +61,7 @@ export function nudges(scenario, result) {
         `Tu es ${pct(low - rate)} sous le bas de la fourchette. Sur ${euro(p.revenue[yy])} de chiffre d'affaires, revenir dans la norme dégagerait ${euro((low - rate) * p.revenue[yy])} de marge supplémentaire — sans vendre une unité de plus.`, 'offre')
     } else if (rate > high + 0.1) {
       push('watch', `Marge de ${pct(rate)}, au-dessus des ${pct(high)} habituels`,
-        `C'est possible, mais un financeur le vérifiera. Assurez-toi que tous les coûts directs sont bien saisis : sous-traitance, livraison, commissions de paiement, pertes.`, 'offre')
+        `C'est possible, mais un financeur le vérifiera. Assure-toi que tous les coûts directs sont bien saisis : sous-traitance, livraison, commissions de paiement, pertes.`, 'offre')
     }
   }
 
@@ -149,7 +149,7 @@ export function nudges(scenario, result) {
   const founderPay = (scenario.team || [])[0]
   if (founderPay && (Number(founderPay.monthlyGross) || 0) === 0) {
     push('watch', 'Tu ne te verses rien',
-      "Un prévisionnel sans rémunération du dirigeant donne une rentabilité flatteuse et fausse. Si tu ne tu paies pas la première année, dites-le explicitement — mais chiffrez ce dont tu as besoin pour vivre.", 'equipe')
+      "Un prévisionnel sans rémunération du dirigeant donne une rentabilité flatteuse et fausse. Si tu ne te paies pas la première année, dis-le explicitement — mais chiffre ce dont tu as besoin pour vivre.", 'equipe')
   }
 
   // ── Saisonnalité ───────────────────────────────────────────────────────

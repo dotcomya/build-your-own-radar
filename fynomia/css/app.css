@@ -226,8 +226,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .btn:hover { background: var(--ink); color: var(--surface); }
 .btn:active { transform: translateY(1px); }
-.btn-primary { background: var(--signal); border-color: var(--signal); color: #fff; }
-.btn-primary:hover { background: var(--signal-ink); border-color: var(--signal-ink); color: #fff; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn-primary:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--accent-ink); }
 .btn-ghost { border-color: transparent; background: transparent; color: var(--ink-3); }
 .btn-ghost:hover { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .btn-quiet { border-color: var(--rule); color: var(--ink-3); background: var(--surface); font-size: 12px; }
@@ -1508,50 +1508,90 @@ i.swatch.split-margin { background: var(--gain); }
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .landing {
-  min-height: 100dvh; display: grid; grid-template-rows: 1fr auto;
-  place-items: center; padding: 40px 20px 24px; background: var(--paper);
+  min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr;
+  background: var(--paper);
 }
-.landing-inner { width: 100%; max-width: 480px; text-align: center; }
+
+/* Le panneau noir : ce que fait l'outil. Un quart de cercle acide en signature,
+   le même que le bloc de synthèse des modules. */
+.landing-brand {
+  position: relative; overflow: hidden; background: var(--ink); color: #fff;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(32px, 6vw, 72px);
+}
+.landing-arc {
+  position: absolute; right: -120px; bottom: -120px; width: 340px; height: 340px;
+  border-radius: 50%; background: var(--accent); pointer-events: none;
+}
 .landing-mark {
-  width: 46px; height: 46px; margin: 0 auto 26px;
-  display: grid; place-items: center; background: var(--ink); color: #fff;
-  font-family: var(--display); font-weight: 800; font-size: 23px;
+  position: relative; width: 42px; height: 42px; margin-bottom: 28px;
+  display: grid; place-items: center; background: var(--accent); color: var(--ink);
+  font-family: var(--display); font-weight: 800; font-size: 22px;
 }
 .landing-title {
-  font-size: clamp(32px, 6vw, 46px); letter-spacing: -.04em; line-height: 1.02;
-  margin-bottom: 14px;
+  position: relative; font-size: clamp(34px, 4.6vw, 58px); letter-spacing: -.045em;
+  line-height: 1; margin: 0 0 16px; color: #fff; max-width: 14ch;
 }
 .landing-line {
-  font-size: 15.5px; color: var(--ink-3); line-height: 1.55;
-  max-width: 40ch; margin: 0 auto 30px;
+  position: relative; font-size: 15px; color: #B7BAAE; line-height: 1.6;
+  max-width: 44ch; margin: 0 0 30px;
 }
-.landing-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.landing-actions .btn-lg { min-width: 220px; }
+.landing-facts {
+  position: relative; list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.landing-facts li {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
+  text-transform: uppercase; color: #8A8D82; padding-left: 16px; position: relative;
+}
+.landing-facts li::before {
+  content: ''; position: absolute; left: 0; top: 6px;
+  width: 7px; height: 1px; background: var(--accent);
+}
+
+/* Le panneau clair : ce qu'on peut faire, tout de suite. */
+.landing-act { display: grid; place-items: center; padding: clamp(28px, 5vw, 56px); }
+.landing-act-inner { width: 100%; max-width: 360px; }
+.landing-kicker {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 10px;
+}
+.landing-sub { margin: 0 0 22px; font-size: 14px; color: var(--ink-3); line-height: 1.55; }
+.landing-go { width: 100%; justify-content: center; }
 /* L'exemple : présent, mais visiblement secondaire. */
 .landing-example {
-  border: 0; background: none; cursor: pointer; font: inherit;
+  display: block; margin-top: 14px; border: 0; background: none; cursor: pointer; font: inherit;
   font-size: 13px; color: var(--ink-4); text-decoration: underline;
-  text-underline-offset: 3px; padding: 2px 4px;
+  text-underline-offset: 3px; padding: 2px 0;
 }
 .landing-example:hover { color: var(--ink); }
 
-.landing-resume {
-  margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--rule); text-align: left;
-}
+.landing-resume { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); }
 .landing-resume-tag {
   display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4); margin-bottom: 8px;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 6px;
 }
 .landing-resume-item {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
   width: 100%; border: 0; border-bottom: 1px solid var(--rule); background: none;
-  cursor: pointer; font: inherit; text-align: left; padding: 9px 2px; color: var(--ink-2);
+  cursor: pointer; font: inherit; text-align: left; padding: 8px 2px; color: var(--ink-2);
 }
 .landing-resume-item:last-child { border-bottom: 0; }
 .landing-resume-item:hover { color: var(--signal-ink); }
 .landing-resume-when { font-family: var(--mono); font-size: 10.5px; color: var(--ink-5); flex: none; }
-.landing-foot {
-  margin: 0; font-size: 11.5px; color: var(--ink-5); text-align: center; max-width: 46ch;
+.landing-foot { margin: 26px 0 0; font-size: 11.5px; color: var(--ink-5); line-height: 1.5; }
+
+@media (max-width: 860px) {
+  .landing { grid-template-columns: 1fr; min-height: 0; }
+  .landing-brand { padding: 30px 20px 34px; }
+  /* Le quartier de cercle reste dans l'angle : à taille de bureau, il remontait
+     jusqu'au texte et le rendait illisible. */
+  .landing-arc { width: 190px; height: 190px; right: -108px; bottom: -108px; }
+  .landing-title { font-size: clamp(30px, 8vw, 40px); max-width: none; }
+  .landing-line { margin-bottom: 20px; }
+  .landing-facts { flex-direction: row; flex-wrap: wrap; gap: 6px 16px; }
+  .landing-act { padding: 26px 20px 40px; justify-items: stretch; }
+  .landing-act-inner { max-width: none; }
 }
 
 /* ───────────────────────────── Le parcours guidé ─────────────────────────── */
@@ -1559,7 +1599,7 @@ i.swatch.split-margin { background: var(--gain); }
 .setup { min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper); }
 
 .setup-bar { height: 2px; background: var(--rule); flex: none; }
-.setup-bar-fill { height: 100%; background: var(--signal); transition: width .4s var(--ease); }
+.setup-bar-fill { height: 100%; background: var(--ink); transition: width .4s var(--ease); }
 
 /* La charpente : les questions à gauche, la question en cours au centre. */
 .setup-shell {
@@ -1592,10 +1632,10 @@ i.swatch.split-margin { background: var(--gain); }
   font-family: var(--mono); font-size: 10px; color: var(--ink-5); background: var(--surface);
 }
 .setup-step-label { font-size: 12.8px; line-height: 1.3; }
-.setup-step.done .setup-step-dot { background: var(--gain); border-color: var(--gain); color: #fff; }
+.setup-step.done .setup-step-dot { background: var(--ink); border-color: var(--ink); color: #fff; }
 .setup-step.done { color: var(--ink-3); }
-.setup-step.current { background: var(--signal-wash); color: var(--ink); }
-.setup-step.current .setup-step-dot { background: var(--signal); border-color: var(--signal); color: #fff; }
+.setup-step.current { background: var(--accent-wash); color: var(--ink); }
+.setup-step.current .setup-step-dot { background: var(--ink); border-color: var(--ink); color: var(--accent); }
 .setup-step.current .setup-step-label { font-weight: 600; }
 .setup-steps-exit {
   margin: 18px 20px 0; padding: 8px 0 0; border: 0; border-top: 1px solid var(--rule);
@@ -1604,26 +1644,42 @@ i.swatch.split-margin { background: var(--gain); }
 }
 .setup-steps-exit:hover { color: var(--signal-ink); }
 
-.setup-main {
-  display: grid; grid-template-columns: minmax(0, 1fr) 286px; gap: 30px;
-  align-items: start; padding: 5vh 26px 60px;
+/* Une seule colonne : le récapitulatif de droite a été retiré, la place qu'il
+   réservait aussi. Le parcours tient dans la hauteur de l'écran. */
+.setup-main { display: block; padding: 4vh 30px 44px; }
+.setup-card { max-width: 660px; }
+
+/* Le compteur : même signature que l'en-tête des modules. */
+.setup-tag { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
+.setup-tag-bar { width: 26px; height: 6px; background: var(--accent); border-radius: 2px; flex: none; }
+.setup-tag > span:not(.setup-tag-bar) {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3);
 }
-.setup-card { max-width: 600px; }
+.setup-tag-opt {
+  color: var(--ink-5) !important; border-left: 1px solid var(--rule); padding-left: 11px;
+}
 .setup-later {
   border: 0; background: none; cursor: pointer; font: inherit;
   font-size: 13px; color: var(--ink-4); text-decoration: underline; text-underline-offset: 3px;
 }
 .setup-later:hover { color: var(--ink); }
-.btn.is-waiting { opacity: .45; }
+/* En attente d'une réponse : le bouton doit se lire comme inerte, pas comme
+   une action en attente de clic. */
+.btn.is-waiting {
+  background: var(--surface); border-color: var(--rule); color: var(--ink-5);
+  font-weight: 500; cursor: not-allowed;
+}
 
 .setup-q {
-  font-size: clamp(27px, 4.6vw, 42px); letter-spacing: -.04em; line-height: 1.04;
-  margin-bottom: 12px;
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(28px, 4.2vw, 46px); letter-spacing: -.045em; line-height: .98;
+  margin-bottom: 10px; max-width: 18ch; text-wrap: balance;
 }
 .setup-help {
-  font-size: 14px; color: var(--ink-3); line-height: 1.55; max-width: 52ch; margin-bottom: 26px;
+  font-size: 13.5px; color: var(--ink-3); line-height: 1.55; max-width: 62ch; margin-bottom: 20px;
 }
-.setup-body { margin-bottom: 26px; }
+.setup-body { margin-bottom: 20px; }
 .setup-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 52ch; }
 
 .setup-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -1642,10 +1698,10 @@ i.swatch.split-margin { background: var(--gain); }
 }
 
 /* Les choix : deux ou trois cartes, jamais une liste déroulante. */
-.setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-bottom: 18px; }
 .setup-choice {
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
-  padding: 14px 15px; border: 1px solid var(--rule); background: var(--surface);
+  padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
   cursor: pointer; font: inherit; text-align: left; transition: border-color .12s, background .12s;
 }
 .setup-choice:hover { border-color: var(--ink-5); }
@@ -1656,12 +1712,12 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-choice.active .setup-choice-note { color: #A8B1B8; }
 
 /* Le choix du métier : quinze pastilles, lisibles d'un coup d'œil. */
-.setup-sectors { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 8px; }
+.setup-sectors { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 7px; }
 .setup-sector {
   display: flex; align-items: center; gap: 9px;
-  padding: 11px 12px; border: 1px solid var(--rule); background: var(--surface);
+  padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
   cursor: pointer; font: inherit; text-align: left; transition: border-color .12s, background .12s;
-  min-height: 46px;
+  min-height: 44px;
 }
 .setup-sector:hover { border-color: var(--ink-5); }
 .setup-sector-glyph { font-size: 15px; color: var(--ink-5); line-height: 1; flex: none; }
@@ -1672,7 +1728,7 @@ i.swatch.split-margin { background: var(--gain); }
 }
 .setup-sector.active { border-color: var(--ink); background: var(--ink); }
 .setup-sector.active .setup-sector-name { color: #fff; }
-.setup-sector.active .setup-sector-glyph { color: var(--signal); }
+.setup-sector.active .setup-sector-glyph { color: var(--accent); }
 
 /* Les frais : une case, un libellé, un montant modifiable. */
 .setup-costs { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
@@ -1718,8 +1774,8 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-echo-row.bad .num { color: var(--loss); }
 
 /* L'écran final. */
-.setup-card.is-last { max-width: 560px; }
-.setup-results { border-top: 1px solid var(--rule); margin-bottom: 20px; }
+.setup-card.is-last { max-width: 660px; }
+.setup-results { border-top: 1px solid var(--rule); margin: 18px 0 20px; }
 .setup-result {
   display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
   padding: 13px 0; border-bottom: 1px solid var(--rule);
@@ -1729,9 +1785,7 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-result.ok .setup-result-value { color: var(--gain); }
 .setup-result.warn .setup-result-value { color: var(--warn); }
 
-@media (max-width: 1040px) {
-  .setup-main { grid-template-columns: 1fr; gap: 26px; }
-}
+
 
 @media (max-width: 860px) {
   /* Sur téléphone, la liste des questions devient une frise horizontale :
@@ -1747,7 +1801,7 @@ i.swatch.split-margin { background: var(--gain); }
   .setup-step { width: auto; flex: none; padding: 5px 8px; }
   .setup-step-label { display: none; }
   .setup-step.current .setup-step-label { display: inline; }
-  .setup-main { padding: 3vh 18px 50px; }
+  .setup-main { padding: 20px 18px 44px; }
   .setup-echo {
     position: static; border-left: 0; border-top: 1px solid var(--rule);
     padding: 16px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px;
@@ -2235,20 +2289,6 @@ i.swatch.split-margin { background: var(--gain); }
 }
 
 /* ─────────── En-tête du tableau de bord et verdict de côté ─────────── */
-.board-head {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
-  flex-wrap: wrap; margin-bottom: 18px;
-}
-.board-id { min-width: 0; }
-.board-eyebrow {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px;
-}
-.board-title {
-  font-family: var(--display); font-size: clamp(26px, 4vw, 40px); font-weight: 700;
-  letter-spacing: -.035em; line-height: 1.02; margin: 0; color: var(--ink);
-}
-
 /* Le verdict : une pastille, un mot, une ligne. Le raisonnement se déplie. */
 .verdict {
   flex: 0 1 340px; min-width: 250px; align-self: flex-end;
@@ -2300,7 +2340,6 @@ i.swatch.split-margin { background: var(--gain); }
 }
 @media (max-width: 980px) { .board-pair { grid-template-columns: 1fr; } }
 @media (max-width: 720px) {
-  .board-head { align-items: stretch; }
   .verdict { flex: 1 1 100%; }
 }
 
@@ -2501,23 +2540,23 @@ i.swatch.split-margin { background: var(--gain); }
 .part-add > span { font-size: 13px; font-weight: 500; }
 
 /* ─────────── Financement : une grille de sources, pas une pile ─────────── */
+/* Des tuiles bordées, pas un damier : la grille tramée laissait des cases
+   grises là où la dernière ligne n'était pas remplie. */
 .sources {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
-  gap: 1px; background: var(--rule); border-top: 1px solid var(--rule);
+  gap: 8px; background: none;
 }
 .source {
   display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
-  padding: 13px 14px; background: var(--surface); border: 0; cursor: pointer;
+  padding: 12px 13px; background: var(--surface); cursor: pointer;
+  border: 1px solid var(--rule); border-radius: 11px;
   font: inherit; text-align: left; min-width: 0; position: relative;
-  transition: background .12s;
+  transition: background .12s, border-color .12s;
 }
-.source:hover { background: var(--surface-2); }
-.source::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: transparent;
-}
-.source.is-open::after { background: var(--level, var(--ink)); }
+.source:hover { background: var(--surface-2); border-color: var(--ink-5); }
+.source.is-open { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
 .source-glyph { font-size: 13px; color: var(--ink-5); line-height: 1; }
-.source.is-on .source-glyph { color: var(--signal); }
+.source.is-on .source-glyph { color: var(--ink); }
 .source-name { font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
 .source-value { font-size: 17px; font-weight: 650; letter-spacing: -.035em; color: var(--ink-5); margin-top: 2px; }
 .source.is-on .source-value { color: var(--ink); }
@@ -2530,13 +2569,16 @@ i.swatch.split-margin { background: var(--gain); }
 .source-money:focus-within { border-color: var(--signal); }
 .source-input { width: 78px; border: 0; background: none; outline: 0; font-size: 15px; font-weight: 650; color: var(--ink); }
 .source-line { border: 1px solid var(--rule); border-radius: 10px; padding: 12px; background: var(--surface-2); }
-.source-fields {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)) auto;
-  gap: 10px; align-items: end;
-}
+/* En grille, « repeat(auto-fit, …) auto » est une déclaration invalide : une
+   piste intrinsèque ne peut pas voisiner une répétition automatique. Le
+   navigateur jetait la règle entière et empilait les champs sur toute la
+   largeur, un par ligne. En flex, ils tiennent sur une seule ligne. */
+.source-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.source-fields > .field { flex: 1 1 150px; min-width: 132px; }
+.source-fields > .btn { flex: none; }
 @media (max-width: 720px) {
   .sources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .source-fields { grid-template-columns: 1fr 1fr; }
+  .source-fields > .field { flex: 1 1 calc(50% - 5px); }
 }
 
 /* ═══════════════════ Le poste de pilotage du tableau de bord ═══════════════ */
@@ -2716,15 +2758,19 @@ table.data th, table.data td { padding: 9px 12px; }
 /* Une page de saisie n'est plus une pile : ses sujets tiennent sur une ligne,
    et l'on n'affiche que celui qu'on regarde. Le défilement devient l'exception. */
 
+/* Le bandeau de section n'est plus un titre : le module en porte déjà un, et
+   deux titres empilés repoussaient les chiffres d'un demi-écran. Il reste une
+   ligne — ce qu'on regarde, son ordre de grandeur, et l'action pour ajouter. */
 .pagebar {
-  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
-  margin: 0 0 12px;
+  display: flex; align-items: baseline; gap: 10px 16px; flex-wrap: wrap;
+  margin: 0 0 12px; padding-bottom: 9px; border-bottom: 1px solid var(--rule);
 }
+.pagebar-id { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .pagebar-title {
-  font-family: var(--display); font-size: 26px; font-weight: 700;
-  letter-spacing: -.03em; color: var(--ink); margin: 0; line-height: 1.05;
+  font-family: var(--display); font-size: 15px; font-weight: 700;
+  letter-spacing: -.02em; color: var(--ink); margin: 0; line-height: 1.2;
 }
-.pagebar-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
+.pagebar-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 0; }
 
 .hnav {
   display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none;
@@ -3020,6 +3066,24 @@ table.data th, table.data td { padding: 9px 12px; }
 }
 .step-line.todo .step-line-no,
 .step-line .step-line-no:not(.num) { font-family: var(--mono); font-style: italic; }
+
+/* Le rappel « à quoi sert cette partie » n'est pas un panneau : c'est une
+   pastille posée sous le chapô, qu'on ouvre si on en a besoin. Avant, un
+   encadré blanc dans un encadré blanc occupait une bande entière pour une
+   ligne de texte. */
+.step-line {
+  display: block; padding: 0; margin: -12px 0 20px;
+  background: none; border: 0;
+}
+.step-line-head {
+  display: inline-flex; width: auto; gap: 8px; padding: 5px 12px 5px 6px;
+  border-radius: 999px; border-color: var(--rule); color: var(--ink-3);
+}
+.step-line-head .step-line-q { flex: none; font-size: 12.5px; font-weight: 500; color: var(--ink-3); }
+.step-line-head:hover .step-line-q { color: var(--ink); }
+.step-line-no { width: 18px; height: 18px; font-size: 9.5px; border-radius: 999px; }
+.step-line[open] .step-line-head { border-color: var(--ink); }
+.step-guide { padding: 12px 0 0 2px; }
 @media (max-width: 720px) {
   .step-guide { padding-left: 12px; }
 }
@@ -3263,3 +3327,96 @@ body { background: var(--paper); }
   font: inherit; cursor: pointer;
 }
 .live-step:hover { color: var(--ink); }
+.item-act.is-drop:hover { border-color: var(--loss); color: var(--loss); }
+
+/* ─── L'en-tête d'un module ─── */
+.module { margin-bottom: 22px; }
+.module-row { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.module-title {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(32px, 4vw, 46px); line-height: .96; letter-spacing: -.04em;
+  color: var(--ink); margin: 0 0 10px; max-width: 18ch; text-wrap: balance;
+}
+.module-actions { margin-left: auto; margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-end; }
+/* Le verdict logé dans la ligne de titre garde sa largeur, jamais moins. */
+.module-actions .verdict { flex: 0 0 340px; }
+@media (max-width: 1080px) {
+  .module-actions { margin-left: 0; width: 100%; }
+  .module-actions .verdict { flex: 1 1 auto; }
+}
+/* Sur téléphone, l'action passe après le chapô : intercalée entre le titre et
+   sa phrase, elle coupait la lecture en deux. `display: contents` remet le
+   titre et l'action au niveau du conteneur, seul endroit où `order` agit. */
+@media (max-width: 720px) {
+  .module { display: flex; flex-direction: column; }
+  .module-tag { order: 1; }
+  .module-row { display: contents; }
+  .module-title { order: 2; }
+  .module-lede { order: 3; }
+  .module-actions { order: 4; margin-top: 14px; margin-bottom: 0; }
+}
+.module-lede { font-size: 13.5px; line-height: 1.6; color: var(--ink-3); max-width: 70ch; margin: 0; }
+
+/* ─── Le chiffre à retenir ─── */
+.keystone {
+  position: relative; overflow: hidden;
+  background: var(--ink); color: #fff; border-radius: 14px;
+  padding: 22px 24px; margin: 16px 0;
+}
+/* Un quart de cercle, pas une pastille : le disque est ancré dans l'angle et
+   n'en laisse voir qu'un quartier. */
+.keystone-arc {
+  position: absolute; right: -96px; bottom: -96px; width: 250px; height: 250px;
+  border-radius: 50%; background: var(--accent); pointer-events: none;
+}
+.keystone-tag {
+  position: relative; font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent);
+}
+.keystone-value {
+  position: relative; font-family: var(--display); font-weight: 800;
+  font-size: clamp(28px, 3.4vw, 38px); letter-spacing: -.04em; line-height: 1.05; margin-top: 6px;
+}
+.keystone-note {
+  position: relative; margin: 8px 0 0; font-size: 12.5px; line-height: 1.6;
+  color: #B7BAAE; max-width: 58ch;
+}
+
+/* ─── Deux colonnes de cartes, quand elles se lisent ensemble ─── */
+.slab-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.slab-pair > .slab { margin-bottom: 0; }
+
+/* Chaque source de financement s'ajoute et se retire depuis sa tuile. */
+.source { position: relative; padding-bottom: 34px; }
+.source-acts { position: absolute; left: 12px; bottom: 9px; display: flex; gap: 5px; }
+.source-act {
+  width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-4); cursor: pointer;
+  font-size: 13px; line-height: 1; display: grid; place-items: center;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.source-act:hover { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
+.source-act:first-child:hover { border-color: var(--loss); color: var(--loss); }
+.source-cash { padding-bottom: 14px; }
+
+/* ─── Ce qui reste à affiner ─── */
+.affine {
+  border: 1px solid var(--rule); border-radius: 14px; background: var(--surface);
+  padding: 18px 20px; margin-top: 16px;
+}
+.affine-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.affine-title { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; color: var(--ink); }
+.affine-sub { font-size: 12px; color: var(--ink-4); margin-top: 3px; }
+.affine-count {
+  margin-left: auto; flex: none; font-family: var(--mono); font-size: 11px;
+  background: var(--accent); color: var(--ink); border-radius: 999px; padding: 3px 9px; font-weight: 600;
+}
+.affine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 9px; }
+.affine-item {
+  text-align: left; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+  padding: 11px 13px; cursor: pointer; font: inherit;
+  transition: border-color .12s, background .12s;
+}
+.affine-item:hover { border-color: var(--ink); background: var(--surface-2); }
+.affine-item-label { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
+.affine-item-why { font-size: 11px; color: var(--ink-4); margin-top: 4px; line-height: 1.45; }

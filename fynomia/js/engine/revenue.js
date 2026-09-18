@@ -179,12 +179,17 @@ export function activityRevenue(activity, volumes) {
     oneOff[m] = volumes[m] * unitPrice
     recurring[m] = contracts[m] * recurringPrice
 
-    // Encaissement du ponctuel : acompte à la commande, solde intermédiaire à
-    // mi-livraison, solde à la livraison — chacun décalé du délai de paiement.
+    // Encaissement du ponctuel.
+    //
+    // L'acompte est versé à la commande : c'est sa raison d'être, financer le
+    // début des travaux. Lui appliquer le délai de paiement du client revenait
+    // à le rendre sans effet — il tombait le même mois que le solde, et
+    // demander 50 % d'acompte ne déplaçait pas d'un euro le point bas de
+    // trésorerie. Seul le solde, facturé à la livraison, porte ce délai.
     const amount = volumes[m] * unitPrice
     if (amount) {
-      push(cashOneOff, m + payLag, amount * deposit)
-      push(cashOneOff, m + Math.round(delivery / 2) + payLag, amount * milestone)
+      push(cashOneOff, m, amount * deposit)
+      push(cashOneOff, m + Math.round(delivery / 2), amount * milestone)
       push(cashOneOff, m + delivery + payLag, amount * balance)
     }
     // Encaissement du récurrent : facturé au mois, encaissé au délai de paiement.
@@ -214,7 +219,7 @@ export function activityVariableCosts(activity, volumes) {
     const rec = contracts[m] * recurringCost
     charge[m] = amount + rec
     if (amount) {
-      push(cash, m + payLag, amount * deposit)
+      push(cash, m, amount * deposit)
       push(cash, m + delivery + payLag, amount * balance)
     }
     if (rec) push(cash, m + payLag, rec)

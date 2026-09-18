@@ -60,7 +60,7 @@ export function verdict(result, scenario) {
     return {
       word: 'À consolider', tone: 'watch',
       line: 'La trésorerie tient, la rentabilité non.',
-      body: "Toi ne manquerez pas d'argent, mais aucun exercice n'est bénéficiaire. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.",
+      body: "Tu ne manqueras pas d'argent, mais aucun exercice n'est bénéficiaire. Une entreprise financée qui ne gagne pas d'argent reste une entreprise qui ne gagne pas d'argent.",
       figure: { label: 'EBITDA année 5', value: euro(p.ebitda[4]), tone: 'watch' },
     }
   }

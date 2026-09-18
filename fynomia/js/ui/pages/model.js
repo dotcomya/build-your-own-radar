@@ -6,7 +6,7 @@
  * charges, voici ton résultat. Cette page-ci décide. Elle prend ce qu'il
  * faut couvrir chaque mois, ce que rapporte un client, et en tire le nombre
  * qui gouverne tout le projet — combien de clients il faut, et à quelle date
- * toi les aurez au rythme prévu.
+ * tu les auras au rythme prévu.
  *
  * Trois curseurs suffisent à en faire un instrument : le prix, le coût de
  * revient, ta rémunération. Tout se recalcule pendant le geste.
@@ -40,7 +40,7 @@ export function renderModel(navigate, refresh) {
       stepBanner('modele', journey(s, r), navigate, 'modele'),
       h('div', { class: 'card' }, h('div', { class: 'empty' },
         h('h3', {}, 'Rien à calculer pour l’instant'),
-        h('p', { class: 'muted' }, "Renseigne une offre et un prix : ce tableau toi dira combien de clients il toi faut."),
+        h('p', { class: 'muted' }, "Renseigne une offre et un prix : ce tableau te dira combien de clients il te faut."),
         h('button', { class: 'btn btn-primary mt', onClick: () => navigate('#/offre') }, 'Définir mon offre'),
       )),
     )
@@ -86,9 +86,9 @@ export function renderModel(navigate, refresh) {
 /** La phrase du bandeau : l'état du modèle en une ligne. */
 function headline(r, s, voc) {
   const m = metrics(r, s)
-  if (m.marginPerClient <= 0) return `Chaque ${voc.one} vendu toi coûte plus qu'il ne rapporte : le seuil n'existe pas.`
+  if (m.marginPerClient <= 0) return `Chaque ${voc.one} vendu te coûte plus qu'il ne rapporte : le seuil n'existe pas.`
   if (!Number.isFinite(m.needed)) return 'Renseigne tes charges pour connaître ton seuil.'
-  return `Il toi faut ${num(Math.ceil(m.needed))} ${voc.many} par mois pour couvrir tes charges.`
+  return `Il te faut ${num(Math.ceil(m.needed))} ${voc.many} par mois pour couvrir tes charges.`
 }
 
 /* ─────────────────── Ce qu'il faut couvrir, et avec quoi ────────────────── */
@@ -240,7 +240,7 @@ function sensitivityBoard(r, s, voc) {
 
   return h('div', {},
     h('p', { class: 'view-intro' },
-      `Chaque ligne rejoue le modèle entier avec une seule modification et lit le nouveau seuil. Aujourd’hui il toi faut ${Number.isFinite(base.needed) ? num(Math.ceil(base.needed)) : '—'} ${voc.many} par mois.`),
+      `Chaque ligne rejoue le modèle entier avec une seule modification et lit le nouveau seuil. Aujourd’hui il te faut ${Number.isFinite(base.needed) ? num(Math.ceil(base.needed)) : '—'} ${voc.many} par mois.`),
 
     h('div', { class: 'sens' },
       ...rows.map((row) => h('div', { class: `sens-row ${row.delta === null ? '' : row.delta < 0 ? 'is-good' : row.delta > 0 ? 'is-bad' : ''}` },

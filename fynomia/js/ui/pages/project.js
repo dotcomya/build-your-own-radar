@@ -12,10 +12,11 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, tabs } from '../dom.js'
+import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleHead } from '../dom.js'
 import { SECTORS, sectorsByFamily, getSector, FAMILIES } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { partBanner } from '../tutorial.js'
+import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
@@ -32,13 +33,8 @@ export function renderProject(navigate, refresh) {
     store.update((sc) => Object.assign(sc.meta, patch), { label, ...opts })
 
   return h('div', { class: 'content' },
-    h('div', { class: 'module-tag' },
-      h('span', { class: 'module-bar' }),
-      h('span', {}, 'Module 01 / 09'),
-    ),
-    h('h1', { class: 'module-title' }, 'Pose le cadre. Pas le pitch.'),
-    h('p', { class: 'module-lede' },
-      "Quelques paramètres structurants suffisent à adapter tout le reste : type d’activité, client, calendrier et cadre juridique."),
+    moduleHead('01', 'Mon projet',
+      "Ce qui cadre le mod\u00e8le avant tout chiffrage : le m\u00e9tier, le client, le calendrier, la forme juridique."),
 
     partBanner('projet'),
 
@@ -85,6 +81,25 @@ export function renderProject(navigate, refresh) {
       ),
     ),
 
+    h('div', { class: 'slab-pair' },
+    h('section', { class: 'slab' },
+      h('div', { class: 'slab-head' },
+        h('div', {},
+          h('div', { class: 'slab-title' }, 'Décris ce que tu vends'),
+          h('div', { class: 'slab-sub' }, "Cette phrase alimentera la partie narrative du dossier, pas les calculs."),
+        ),
+        h('div', { class: 'slab-tags' }, h('span', { class: 'slab-tag' }, 'Document')),
+      ),
+      (() => {
+        const ta = h('textarea', { rows: 3, placeholder: 'Ex. Une plateforme qui…' }, s.meta.pitch || '')
+        ta.value = s.meta.pitch || ''
+        ta.addEventListener('input', () => set({ pitch: ta.value }, 'Description', { silent: true }))
+        return h('div', { class: 'control' }, ta)
+      })(),
+      h('div', { class: 'note plain mt' },
+        h('div', { class: 'note-title' }, 'Pas de génération magique'),
+        "Fynomia garde le fond que tu saisis. Une mise en forme viendra ensuite dans le dossier, mais le modèle financier ne dépend d’aucun texte."),
+    ),
     h('section', { class: 'slab' },
       h('div', { class: 'slab-head' },
         h('div', {},
@@ -105,6 +120,7 @@ export function renderProject(navigate, refresh) {
           h('div', { class: 'pick-note' }, c.note),
         )),
       ),
+    ),
     ),
 
     h('section', { class: 'slab' },
@@ -153,24 +169,7 @@ export function renderProject(navigate, refresh) {
       ),
     ),
 
-    h('section', { class: 'slab' },
-      h('div', { class: 'slab-head' },
-        h('div', {},
-          h('div', { class: 'slab-title' }, 'Décris ce que tu vends'),
-          h('div', { class: 'slab-sub' }, "Cette phrase alimentera la partie narrative du dossier, pas les calculs."),
-        ),
-        h('div', { class: 'slab-tags' }, h('span', { class: 'slab-tag' }, 'Document')),
-      ),
-      (() => {
-        const ta = h('textarea', { rows: 3, placeholder: 'Ex. Une plateforme qui…' }, s.meta.pitch || '')
-        ta.value = s.meta.pitch || ''
-        ta.addEventListener('input', () => set({ pitch: ta.value }, 'Description', { silent: true }))
-        return h('div', { class: 'control' }, ta)
-      })(),
-      h('div', { class: 'note plain mt' },
-        h('div', { class: 'note-title' }, 'Pas de génération magique'),
-        "Fynomia garde le fond que tu saisis. Une mise en forme viendra ensuite dans le dossier, mais le modèle financier ne dépend d’aucun texte."),
-    ),
+    todoPanel('projet', store.scenario, () => refresh()),
 
     h('div', { class: 'row mt', style: { justifyContent: 'space-between' } },
       h('span', { class: 'tiny muted' }, 'Toutes les valeurs restent modifiables plus tard.'),

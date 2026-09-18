@@ -7,13 +7,14 @@
  * qu'un salaire se négocie et se compare.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleHead } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, pageBar, unitAmount } from '../dom.js'
 import { journey } from '../../engine/journey.js'
+import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
@@ -50,13 +51,16 @@ export function renderTeam(navigate, refresh) {
   const payrollY = r ? yearly(r.payroll.cost)[0] : 0
 
   return h('div', { class: 'content' },
+
+    moduleHead('04', '\u00c9quipe', "Les postes salari\u00e9s, leur brut annuel et ce qu\u2019ils co\u00fbtent vraiment."),
+
     stepBanner('equipe', journey(store.scenario, store.result), navigate),
 
     pageBar(
       s.team.length > 1 ? `${s.team.length} postes` : 'Équipe',
       r && s.team.length
         ? `${euro(payrollY)} la première année, avantages compris`
-        : 'Toi compris, si toi tu te rémunères',
+        : 'Toi compris, si tu te rémunères',
       view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null,
     ),
 
@@ -76,6 +80,8 @@ export function renderTeam(navigate, refresh) {
     view === 'avantages' ? h('div', { class: 'view' }, benefitsPanel(r, refresh)) : null,
     view === 'masse' && r ? h('div', { class: 'view' }, payrollSummary(r, level)) : null,
     view === 'jei' && r ? h('div', { class: 'view' }, jeiPanel(r)) : null,
+
+    todoPanel('equipe', store.scenario, () => refresh()),
 
     tutorial('equipe', navigate),
   )

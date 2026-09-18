@@ -1,12 +1,13 @@
 /** Charges externes et investissements. */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, pageBar } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, pageBar, moduleHead } from '../dom.js'
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
+import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 
 export function renderCosts(navigate, refresh) {
@@ -46,6 +47,9 @@ export function renderCosts(navigate, refresh) {
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   return h('div', { class: 'content' },
+
+    moduleHead('03', 'Achats et co\u00fbts', "Les charges qui tombent chaque mois, et le mat\u00e9riel amorti sur sa dur\u00e9e d\u2019usage."),
+
     stepBanner('charges', journey(store.scenario, store.result), navigate, 'achats'),
 
     pageBar(
@@ -65,7 +69,7 @@ export function renderCosts(navigate, refresh) {
             h('div', { class: 'empty-icon' }, '▦'),
             h('h3', {}, 'Aucune charge saisie'),
             h('p', { class: 'muted', style: { maxWidth: '54ch', margin: '0 auto 4px' } },
-              "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoute-les d'un clic, puis ajustez les montants."),
+              "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoute-les d'un clic, puis ajuste les montants."),
             h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
           ))
         : h('div', {}, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
@@ -96,6 +100,8 @@ export function renderCosts(navigate, refresh) {
         ),
       ),
     ) : null,
+
+    todoPanel('achats', store.scenario, () => refresh()),
 
     tutorial('charges', navigate),
   )

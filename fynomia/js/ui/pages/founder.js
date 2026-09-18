@@ -57,7 +57,7 @@ export function renderFounder(navigate, refresh) {
     ),
 
     income.settings.liberalBnc && h('div', { class: 'note warn mt' },
-      h('div', { class: 'note-title' }, "Toi exercez en bénéfices non commerciaux"),
+      h('div', { class: 'note-title' }, "Tu exerces en bénéfices non commerciaux"),
       "Fynomia modélise une société soumise à l'impôt sur les sociétés. En exercice libéral classique, il n'y a ni impôt sur les sociétés ni dividendes : le bénéfice du cabinet est imposé directement à ton nom, au barème progressif, et tes prélèvements ne sont que des acomptes sur ce bénéfice. Les montants ci-dessus restent utiles pour dimensionner ton train de vie, mais ton imposition réelle portera sur le résultat du cabinet, pas sur tes prélèvements. En SELARL en revanche, le calcul ci-dessus s'applique tel quel.",
     ),
 
@@ -105,7 +105,7 @@ function payLadder(income, row, r, y) {
       note: `Sur ${euro(row.grossDividends)} distribués, après prélèvements sociaux${row.dividendIncomeTax > 0 ? ' et flat tax' : ''}.`,
     } : null,
     {
-      k: 'Ce qui toi reste, net de tout',
+      k: 'Ce qui te reste, net de tout',
       v: row.disposable,
       note: `Impôt sur le revenu déduit — tranche marginale ${pct(row.marginalRate, 0)}. Soit ${euro(row.monthly)} par mois.`,
       tone: 'final',
@@ -177,7 +177,7 @@ function waterfall(income, r, y) {
     row.costPerEuro && row.costPerEuro > 0 ? h('div', { class: 'panel-body', style: { paddingTop: 0 } },
       h('div', { class: 'note plain' },
         h('div', { class: 'note-title' }, `${num(row.costPerEuro, 2)} € pour un euro dans ton poche`),
-        `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour toi laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
+        `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour te laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
     ) : null,
   )
 }
@@ -205,7 +205,7 @@ function settingsPanel(s, income, set, refresh) {
 
       h('div', { class: 'grid grid-2' },
         numberField({ label: 'Ta part du capital', field: 'rdShare', value: f.equityShare, percent: true,
-          hint: 'Détermine la part des dividendes qui toi revient.', onInput: (v) => set({ equityShare: v }) }),
+          hint: 'Détermine la part des dividendes qui te revient.', onInput: (v) => set({ equityShare: v }) }),
         numberField({ label: 'Part du résultat distribuée', field: 'rdShare', value: f.dividendPayout, percent: true,
           hint: "Le reste alimente les réserves et reste dans l'entreprise.", onInput: (v) => set({ dividendPayout: v }) }),
       ),
@@ -250,7 +250,7 @@ function comparison(income, s) {
       ? "Toi tu te rémunères presque exclusivement en salaire. C'est le choix le plus protecteur — retraite, chômage en SAS, prévoyance — mais aussi le plus coûteux pour l'entreprise. Un peu de dividende peut alléger la facture une fois le résultat installé."
       : salaryShare < 0.25
         ? "Tu vis surtout de dividendes. C'est fiscalement efficace, mais les dividendes n'ouvrent aucun droit à la retraite ni à la prévoyance, et ils supposent un résultat bénéficiaire chaque année. Une rémunération minimale sécurise ton couverture."
-        : "Toi combinez salaire et dividendes. C'est l'équilibre le plus courant : le salaire assure la couverture sociale, le dividende récompense le résultat sans en supporter les cotisations.",
+        : "Tu combines salaire et dividendes. C'est l'équilibre le plus courant : le salaire assure la couverture sociale, le dividende récompense le résultat sans en supporter les cotisations.",
   )
 }
 
@@ -269,7 +269,7 @@ function detailTable(income, r) {
       line('Net avant impôt', (x) => x.netBeforeTax, 'highlight'),
       h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Dividendes')),
       h('tr', {}, h('td', {}, 'Résultat net de la société'), ...r.pnl.netResult.map((v) => h('td', { class: 'num' }, euro(v)))),
-      line('Dividendes bruts qui toi reviennent', (x) => x.grossDividends),
+      line('Dividendes bruts qui te reviennent', (x) => x.grossDividends),
       line('Prélèvements sociaux et cotisations', (x) => -x.dividendSocial, '', true),
       line('Impôt forfaitaire', (x) => -x.dividendIncomeTax, '', true),
       line('Dividendes nets', (x) => x.netDividends, 'highlight'),
@@ -305,7 +305,7 @@ function headline(income, r, y) {
   const row = income.rows[y]
   const sector = getSector(store.scenario.meta.sectorKey)
   if (row.disposable <= 0) {
-    return "Rien ne remonte encore jusqu'à toi. Tant que l'entreprise ne dégage pas de résultat et que toi ne tu verses pas de rémunération, ton revenu est nul — beaucoup de dirigeants passent une à deux années dans cette situation, mais il faut alors savoir de quoi on vit."
+    return "Rien ne remonte encore jusqu'à toi. Tant que l'entreprise ne dégage pas de résultat et que tu ne te verses pas de rémunération, ton revenu est nul — beaucoup de dirigeants passent une à deux années dans cette situation, mais il faut alors savoir de quoi on vit."
   }
   const parts = []
   parts.push(`${euro(row.monthly)} par mois, net de tout : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`)

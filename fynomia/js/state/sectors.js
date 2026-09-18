@@ -37,7 +37,7 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.75, 0.9], payrollRatio: [0.4, 0.65], churn: [0.01, 0.03], ltvCac: [3, 5] },
     metrics: ['recurringShare', 'ltvCac', 'grossMargin', 'runway'],
     traps: [
-      { title: "L'attrition mange la croissance", body: "À 3 % d'attrition mensuelle, tu perds 30 % de ta base chaque année. Il faut donc courir pour rester immobile : avant d'augmenter le budget d'acquisition, mesurez ce que tu retiens." },
+      { title: "L'attrition mange la croissance", body: "À 3 % d'attrition mensuelle, tu perds 30 % de ta base chaque année. Il faut donc courir pour rester immobile : avant d'augmenter le budget d'acquisition, mesure ce que tu retiens." },
       { title: 'Le CIR se mérite', body: "Développer un produit n'est pas faire de la recherche au sens fiscal. Le CIR suppose une incertitude scientifique ou technique levée par des travaux méthodiques. Un rescrit vaut mieux qu'un redressement." },
     ],
     build(s) {
@@ -63,8 +63,8 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.9, 1], billableDays: [180, 220], dailyRate: [400, 750] },
     metrics: ['revenue', 'arpu', 'payrollCost', 'runway'],
     traps: [
-      { title: 'Les jours non facturables', body: "Sur 365 jours, retirez week-ends, congés, jours fériés, prospection, administratif et formation : il reste rarement plus de 200 jours facturables. Un TJM de 500 € ne fait pas 182 500 € de chiffre d'affaires, mais plutôt 100 000 €." },
-      { title: 'La dépendance à un client', body: "Au-delà de 70 % du chiffre d'affaires sur un seul client, l'URSSAF peut requalifier la relation en salariat déguisé, et la fin du contrat toi laisse sans revenu du jour au lendemain." },
+      { title: 'Les jours non facturables', body: "Sur 365 jours, retire week-ends, congés, jours fériés, prospection, administratif et formation : il reste rarement plus de 200 jours facturables. Un TJM de 500 € ne fait pas 182 500 € de chiffre d'affaires, mais plutôt 100 000 €." },
+      { title: 'La dépendance à un client', body: "Au-delà de 70 % du chiffre d'affaires sur un seul client, l'URSSAF peut requalifier la relation en salariat déguisé, et la fin du contrat te laisse sans revenu du jour au lendemain." },
     ],
     build(s) {
       s.activities = [newActivity({ name: 'Développement au forfait jour', unitPrice: 550, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 1, deposit: 0.3, unitCost: 0, vatRateSales: 0.2, volumes: { mode: 'growth', launchMonth: 0, startUnits: 12, monthlyGrowth: 0.03, growthDecay: 0.94, cap: 18, manual: [] } })]
@@ -109,7 +109,7 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.85, 0.95], overheadRatio: [0.25, 0.4], dso: [45, 90] }, ownerIsProfit: true,
     metrics: ['revenue', 'grossMargin', 'cashLow', 'payrollCost'],
     traps: [
-      { title: 'Les cotisations décalées', body: "Les cotisations CNBF et URSSAF de la première année sont calculées sur une base forfaitaire, puis régularisées en année deux sur le revenu réel. Une bonne première année produit un appel de cotisations brutal l'année suivante : provisionnez." },
+      { title: 'Les cotisations décalées', body: "Les cotisations CNBF et URSSAF de la première année sont calculées sur une base forfaitaire, puis régularisées en année deux sur le revenu réel. Une bonne première année produit un appel de cotisations brutal l'année suivante : provisionne." },
       { title: 'Le recouvrement', body: "L'honoraire facturé n'est pas l'honoraire perçu. Une convention d'honoraires écrite, des provisions demandées à l'ouverture du dossier et une facturation régulière valent mieux qu'une relance." },
     ],
     build(s) {
@@ -125,12 +125,12 @@ export const SECTORS = {
     family: 'health', label: 'Cabinet médical', glyph: '✚',
     tagline: "Ton plafond n'est pas commercial : c'est le nombre d'heures de consultation.",
     unit: { one: 'consultation', many: 'consultations', verb: 'réalisées', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Les soins dispensés aux personnes par les membres des professions médicales et paramédicales réglementées sont exonérés de TVA. En contrepartie, la TVA payée sur tes achats, ton matériel et ton loyer n'est pas récupérable : raisonnez toujours en montants toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Les soins dispensés aux personnes par les membres des professions médicales et paramédicales réglementées sont exonérés de TVA. En contrepartie, la TVA payée sur tes achats, ton matériel et ton loyer n'est pas récupérable : raisonne toujours en montants toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARMF)', note: "Le médecin libéral cotise à la CARMF. En secteur 1, l'assurance maladie prend en charge une part des cotisations en contrepartie du respect des tarifs opposables." },
     benchmarks: { grossMargin: [0.95, 1], actsPerDay: [20, 30], overheadRatio: [0.3, 0.45] }, ownerIsProfit: true,
     metrics: ['revenue', 'payrollCost', 'breakEven', 'runway'],
     traps: [
-      { title: 'La TVA non récupérable', body: "Exonéré ne veut pas dire avantagé. Un fauteuil à 12 000 € HT toi coûte 14 400 € : la TVA reste à ton charge. Saisis tes investissements et tes charges toutes taxes comprises." },
+      { title: 'La TVA non récupérable', body: "Exonéré ne veut pas dire avantagé. Un fauteuil à 12 000 € HT te coûte 14 400 € : la TVA reste à ta charge. Saisis tes investissements et tes charges toutes taxes comprises." },
       { title: 'Le taux de charges', body: "Les charges d'un cabinet représentent couramment 35 à 45 % des honoraires : local, secrétariat, cotisations, RCP, matériel. Ce sont les honoraires nets, pas bruts, qui déterminent ton revenu." },
     ],
     build(s) {
@@ -151,13 +151,13 @@ export const SECTORS = {
     family: 'health', label: 'Cabinet de kinésithérapie', glyph: '⟿',
     tagline: "Trente minutes par patient : ton agenda est ton compte de résultat.",
     unit: { one: 'séance', many: 'séances', verb: 'réalisées', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Actes de soins exonérés. La TVA sur tes achats et ton matériel n'est pas récupérable : saisissez tout en montants toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Actes de soins exonérés. La TVA sur tes achats et ton matériel n'est pas récupérable : saisis tout en montants toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARPIMKO)', note: "Le kinésithérapeute cotise à la CARPIMKO. L'exercice en cabinet de groupe via une SCM permet de partager les charges sans partager les honoraires." },
     benchmarks: { grossMargin: [0.95, 1], sessionsPerDay: [18, 26], overheadRatio: [0.3, 0.4] }, ownerIsProfit: true,
     metrics: ['revenue', 'breakEven', 'payrollCost', 'runway'],
     traps: [
       { title: 'Le nombre de séances est borné', body: "À vingt minutes par séance et sept heures de soins par jour, on plafonne autour de vingt séances quotidiennes. Toute projection au-delà suppose un second praticien ou des séances collectives, pas un effort supplémentaire." },
-      { title: 'La rétrocession en collaboration', body: "Un collaborateur libéral reverse en général 20 à 30 % de ses honoraires au titulaire. Ce n'est ni un salaire ni un chiffre d'affaires plein : modélisez-le comme une charge variable." },
+      { title: 'La rétrocession en collaboration', body: "Un collaborateur libéral reverse en général 20 à 30 % de ses honoraires au titulaire. Ce n'est ni un salaire ni un chiffre d'affaires plein : modélise-le comme une charge variable." },
     ],
     build(s) {
       s.activities = [newActivity({ name: 'Séances', unitPrice: 22, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 0.8, vatRateSales: 0, vatRatePurchase: 0, volumes: { mode: 'growth', launchMonth: 0, startUnits: 300, monthlyGrowth: 0.04, growthDecay: 0.93, cap: 420, manual: [] } })]
@@ -174,7 +174,7 @@ export const SECTORS = {
     family: 'health', label: 'Cabinet dentaire', glyph: '⌇',
     tagline: "Fort investissement, forte charge variable : la prothèse décide de la marge.",
     unit: { one: 'acte', many: 'actes', verb: 'réalisés', client: 'patient' },
-    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Soins dentaires et prothèses exonérés. La TVA sur le fauteuil, l'imagerie et les consommables reste à ton charge : comptez tout toutes taxes comprises." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Soins dentaires et prothèses exonérés. La TVA sur le fauteuil, l'imagerie et les consommables reste à ta charge : compte tout toutes taxes comprises." },
     legal: { forms: ['BNC', 'SELARL', 'SCM'], regime: 'TNS (CARCDSF)', note: "Le chirurgien-dentiste cotise à la CARCDSF. L'exercice en SELARL permet d'arbitrer entre rémunération et dividendes, avec la contrainte des cotisations sur les dividendes du gérant majoritaire." },
     benchmarks: { grossMargin: [0.6, 0.75], prostheticCost: [0.2, 0.28], overheadRatio: [0.3, 0.45] }, ownerIsProfit: true,
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
@@ -227,7 +227,7 @@ export const SECTORS = {
 
   ecommerce: {
     family: 'retail', label: 'E-commerce', glyph: '⬒',
-    tagline: "Toi n'achetez pas des ventes, tu achètes des clients.",
+    tagline: "Tu n'achètes pas des ventes, tu achètes des clients.",
     unit: { one: 'commande', many: 'commandes', verb: 'passées', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Taux normal pour la plupart des produits manufacturés. Les ventes à distance vers un autre pays de l'Union basculent au taux du pays de destination au-delà de 10 000 € annuels, via le guichet unique." },
     legal: { forms: ['SASU', 'SAS', 'EURL'], regime: 'Assimilé salarié ou TNS', note: "Mentions légales, conditions générales de vente, droit de rétractation de quatorze jours et registre des traitements sont des obligations, pas des options." },
@@ -258,7 +258,7 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.5, 0.6], shrinkage: [0.08, 0.12], rentRatio: [0.08, 0.12], ticket: [22, 40] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
-      { title: 'La démarque invisible', body: "Huit à douze pour cent des achats finissent à la poubelle. Si toi ne l'intégrez pas au coût de revient, ta marge affichée est fausse d'autant, et tu croiras gagner de l'argent que tu jettes." },
+      { title: 'La démarque invisible', body: "Huit à douze pour cent des achats finissent à la poubelle. Si tu ne l'intègres pas au coût de revient, ta marge affichée est fausse d'autant, et tu croiras gagner de l'argent que tu jettes." },
       { title: 'Les pics de saison', body: "Fête des mères, Saint-Valentin et Toussaint peuvent représenter le quart de l'année. Ces pics exigent une avance de trésorerie sur les achats, quelques jours avant l'encaissement." },
     ],
     build(s) {
@@ -311,7 +311,7 @@ export const SECTORS = {
     benchmarks: { grossMargin: [0.85, 0.92], payrollRatio: [0.42, 0.52], rentRatio: [0.08, 0.13], ticket: [30, 48] },
     metrics: ['revenue', 'payrollRatio', 'breakEven', 'cashLow'],
     traps: [
-      { title: 'Le seuil du fauteuil', body: "Un poste de travail supplémentaire ajoute un salaire chargé fixe. Il ne devient rentable qu'au-delà d'un remplissage minimal : simulez l'embauche avant de la faire, pas après." },
+      { title: 'Le seuil du fauteuil', body: "Un poste de travail supplémentaire ajoute un salaire chargé fixe. Il ne devient rentable qu'au-delà d'un remplissage minimal : simule l'embauche avant de la faire, pas après." },
       { title: 'La revente de produits', body: "Huit à douze pour cent du chiffre d'affaires, à marge élevée et sans temps de travail supplémentaire. C'est souvent la différence entre un salon à l'équilibre et un salon rentable." },
     ],
     build(s) {
@@ -356,7 +356,7 @@ export const SECTORS = {
   // ───────────────────── Formation et intérêt général ────────────────────
   formation: {
     family: 'impact', label: 'Organisme de formation', glyph: '◫',
-    tagline: "Sans certification, tes clients ne peuvent pas toi financer.",
+    tagline: "Sans certification, tes clients ne peuvent pas te financer.",
     unit: { one: 'stagiaire-jour', many: 'stagiaires-jours', verb: 'formés', client: 'stagiaire' },
     vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "La formation professionnelle continue est exonérée de TVA pour les organismes titulaires de l'attestation délivrée par la préfecture. À défaut, le taux normal s'applique. L'exonération prive du droit à déduction sur les achats." },
     legal: { forms: ['SAS', 'SASU', 'SARL', 'Association'], regime: 'Assimilé salarié ou TNS', note: "Un numéro de déclaration d'activité est obligatoire dès la première convention. La certification Qualiopi conditionne l'accès aux financements publics et mutualisés : sans elle, la plupart des entreprises ne peuvent pas faire prendre en charge tes formations." },
@@ -364,7 +364,7 @@ export const SECTORS = {
     metrics: ['revenue', 'grossMargin', 'breakEven', 'runway'],
     traps: [
       { title: 'Le taux de remplissage', body: "Une session à huit places qui en vend quatre coûte le même formateur et la même salle. C'est le remplissage, pas le prix, qui fait la marge d'un organisme de formation." },
-      { title: 'Les délais de paiement des financeurs', body: "Un opérateur de compétences règle après service fait et sur dossier complet : comptez soixante à quatre-vingt-dix jours. Le formateur, lui, est payé à la fin du mois." },
+      { title: 'Les délais de paiement des financeurs', body: "Un opérateur de compétences règle après service fait et sur dossier complet : compte soixante à quatre-vingt-dix jours. Le formateur, lui, est payé à la fin du mois." },
     ],
     build(s) {
       s.activities = [newActivity({ name: 'Sessions de formation', unitPrice: 780, recurringPrice: 0, contractMonths: 0, deliveryLag: 1, paymentLag: 2, deposit: 0.3, unitCost: 210, vatRateSales: 0, vatRatePurchase: 0, volumes: { mode: 'growth', launchMonth: 1, startUnits: 22, monthlyGrowth: 0.05, growthDecay: 0.94, cap: 90, manual: [] } })]

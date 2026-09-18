@@ -234,7 +234,7 @@ class Store {
   canRedo() { return this.future.length > 0 }
 
   // Les niveaux « facile / intermédiaire / expert » ont disparu : personne ne
-  // sait répondre à « êtes-toi débutant ? », et la mauvaise réponse cachait
+  // sait répondre à « es-tu débutant ? », et la mauvaise réponse cachait
   // des réglages utiles à ceux qui en avaient besoin. Le modèle est le même
   // pour tout le monde ; la profondeur se demande là où elle sert, au moyen
   // d'un « affiner ». Ce getter reste, figé, pour que le code qui n'a pas
