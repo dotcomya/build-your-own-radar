@@ -17,11 +17,16 @@ import store from '../../state/store.js'
  * avait réuni. Elles tiennent désormais dans une grille de tuiles — une par
  * source, avec son montant — et le détail s'ouvre sous celle qu'on choisit.
  */
+// Les montants naissent à zéro. Activer « emprunt bancaire » ne doit pas
+// inscrire 50 000 € dans le plan : personne n'a demandé cette somme, et un
+// chiffre qu'on n'a pas choisi finit toujours par être pris pour vrai. Seuls
+// les paramètres de structure — un taux, une durée — gardent une valeur
+// courante, parce qu'ils décrivent la forme du produit, pas son montant.
 const SOURCES = [
   {
     key: 'equityFounders', label: 'Apport des fondateurs', glyph: '\u25c8', level: 'easy',
     hint: "Ce que toi et tes associ\u00e9s mettez au capital. C'est l'apport que toute banque regarde en premier.",
-    make: () => ({ id: uid('eqf'), month: 0, amount: 10000 }),
+    make: () => ({ id: uid('eqf'), month: 0, amount: 0 }),
     fields: [
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
       { k: 'month', label: 'Mois', type: 'month' },
@@ -30,7 +35,7 @@ const SOURCES = [
   {
     key: 'loans', label: 'Emprunt bancaire', glyph: '\u25ce', level: 'easy',
     hint: "Un pr\u00eat finance en g\u00e9n\u00e9ral les investissements durables, rarement le besoin en fonds de roulement.",
-    make: () => ({ id: uid('loan'), label: 'Pr\u00eat bancaire', amount: 50000, month: 0, rate: 0.04, months: 60, graceMonths: 0 }),
+    make: () => ({ id: uid('loan'), label: 'Pr\u00eat bancaire', amount: 0, month: 0, rate: 0.04, months: 60, graceMonths: 0 }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
@@ -43,7 +48,7 @@ const SOURCES = [
   {
     key: 'grants', label: 'Subvention', glyph: '\u25c7', level: 'easy',
     hint: "Une subvention est un produit d'exploitation : elle am\u00e9liore le r\u00e9sultat et vient en d\u00e9duction de l'assiette du cr\u00e9dit d'imp\u00f4t recherche.",
-    make: () => ({ id: uid('grt'), label: 'Subvention', amount: 30000, month: 3, months: 6 }),
+    make: () => ({ id: uid('grt'), label: 'Subvention', amount: 0, month: 0, months: 1 }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
@@ -54,7 +59,7 @@ const SOURCES = [
   {
     key: 'equityInvestors', label: 'Lev\u00e9e de fonds', glyph: '\u25b3', level: 'intermediate',
     hint: "Capital apport\u00e9 par des investisseurs ext\u00e9rieurs, en \u00e9change de parts.",
-    make: () => ({ id: uid('eqi'), month: 6, amount: 250000 }),
+    make: () => ({ id: uid('eqi'), month: 6, amount: 0 }),
     fields: [
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
       { k: 'month', label: 'Mois', type: 'month' },
@@ -63,7 +68,7 @@ const SOURCES = [
   {
     key: 'shareholderLoans', label: "Compte courant d'associ\u00e9", glyph: '\u25a1', level: 'intermediate',
     hint: "De l'argent que tu pr\u00eates \u00e0 ta soci\u00e9t\u00e9 et qui te sera rendu. Ce n'est pas du capital : \u00e7a n'entre pas dans les fonds propres.",
-    make: () => ({ id: uid('cca'), label: 'Compte courant', amount: 20000, month: 0, repayMonth: '' }),
+    make: () => ({ id: uid('cca'), label: 'Compte courant', amount: 0, month: 0, repayMonth: '' }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
@@ -74,7 +79,7 @@ const SOURCES = [
   {
     key: 'advances', label: 'Avance remboursable', glyph: '\u25b7', level: 'advanced',
     hint: "Un pr\u00eat sans int\u00e9r\u00eat \u00e0 rembourser en cas de succ\u00e8s. Elle vient en d\u00e9duction de l'assiette du CIR, puis y est r\u00e9int\u00e9gr\u00e9e au fil des remboursements.",
-    make: () => ({ id: uid('adv'), label: 'Avance remboursable', amount: 50000, month: 3, repayStartMonth: 30, repayMonths: 24 }),
+    make: () => ({ id: uid('adv'), label: 'Avance remboursable', amount: 0, month: 0, repayStartMonth: 24, repayMonths: 24 }),
     fields: [
       { k: 'label', label: 'Intitul\u00e9', type: 'text' },
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },

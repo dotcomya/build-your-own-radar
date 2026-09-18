@@ -73,15 +73,9 @@ export function renderDashboard(navigate, refresh) {
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
       cockpit(j, r, navigate),
-      h('section', { class: 'panel' },
-        h('div', { class: 'card-head' },
-          h('div', {},
-            h('h2', {}, 'Combien de clients pour vivre'),
-            h('div', { class: 'tiny muted' }, "Ce qu'il faut couvrir, ce que rapporte un client, l'\u00e9cart entre les deux"),
-          ),
-        ),
-        h('div', { class: 'panel-body' }, breakEvenBoard(r, s, vocabulary(s))),
-      ),
+      // Le bloc porte son propre titre dans l'opération : l'encadrer d'un
+      // panneau avec un second titre ajoutait une couche pour rien.
+      breakEvenBoard(r, s, vocabulary(s)),
     ) : null,
 
     // L'analyse part de ce qui a été saisi : l'année regardée, les six chiffres
@@ -90,9 +84,10 @@ export function renderDashboard(navigate, refresh) {
     // qu'à celui qui connaissait déjà la réponse.
     view === 'analyse' ? h('div', { class: 'view board-stack' },
       yearBar(y, r, pickYearFn),
+      netEquation(r, y),
       keyFigures(r, s, y, navigate),
-      moneyPanel(r, y),
-      h('section', { class: 'panel story-panel' },
+      refine('board-cascade', 'Voir le détail ligne à ligne', moneyPanel(r, y)),
+      h('section', { class: 'panel story-panel is-key' },
         h('div', { class: 'card-head' },
           h('div', {},
             h('h2', {}, 'Trajectoire sur cinq ans'),
@@ -108,7 +103,7 @@ export function renderDashboard(navigate, refresh) {
       detailDisclosure(persona, r, s, y, sector, navigate, refresh),
     ) : null,
 
-    view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh)) : null,
+    view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh, navigate)) : null,
 
   )
 }
@@ -183,17 +178,64 @@ function cockpit(j, r, navigate) {
 }
 
 /** Les cinq exercices, en puces : l'écran suit celle qu'on choisit. */
+/**
+ * Les cinq exercices, en pleine largeur.
+ *
+ * C'était une rangée de pastilles grises qu'on prenait pour une légende. Ce
+ * sont pourtant cinq boutons : chacun rejoue toute la page sur son année. Ils
+ * portent donc le millésime en clair, le chiffre d'affaires, et le résultat —
+ * de quoi choisir l'année qu'on veut regarder sans avoir à la deviner.
+ */
 function yearBar(y, r, pick) {
-  return h('div', { class: 'yearbar' },
-    h('span', { class: 'yearbar-tag' }, 'Exercice regardé'),
-    ...Array.from({ length: 5 }, (_, i) => h('button', {
-      class: `yearchip ${i === y ? 'active' : ''}`,
-      onClick: () => pick(i),
-      title: `${euro(r.pnl.revenue[i])} de chiffre d'affaires`,
-    },
-      h('span', {}, `A${i + 1}`),
-      h('span', { class: 'yearchip-v num' }, euro(r.pnl.revenue[i], { compact: true })),
-    )),
+  return h('div', { class: 'years' },
+    ...Array.from({ length: 5 }, (_, i) => {
+      const net = r.pnl.netResult[i]
+      return h('button', {
+        class: `year ${i === y ? 'active' : ''}`,
+        onClick: () => pick(i),
+      },
+        h('span', { class: 'year-no' }, `Année ${i + 1}`),
+        h('span', { class: 'year-ca num' }, euro(r.pnl.revenue[i], { compact: true })),
+        h('span', { class: `year-net num ${net >= 0 ? 'pos' : 'neg'}` },
+          `${net >= 0 ? '+' : '−'}${euro(Math.abs(net), { compact: true })} net`),
+      )
+    }),
+  )
+}
+
+/**
+ * Du chiffre d'affaires au résultat, en une soustraction.
+ *
+ * La cascade dit tout, et demande d'être lue. L'opération, elle, se comprend
+ * sans mode d'emploi : ce qui entre, ce qui sort, ce qui reste. Le détail des
+ * dix lignes intermédiaires reste juste en dessous, pour qui veut vérifier.
+ */
+function netEquation(r, y) {
+  const p = r.pnl
+  const revenue = p.revenue[y] || 0
+  const net = p.netResult[y] || 0
+  const charges = revenue - net
+  const marge = revenue > 0 ? net / revenue : 0
+  return h('section', { class: 'eq' },
+    h('div', { class: 'eq-terms' },
+      h('div', { class: 'eq-term' },
+        h('div', { class: 'eq-tag' }, 'Ce que tu encaisses'),
+        h('div', { class: 'eq-value num' }, euro(revenue, { compact: true })),
+        h('div', { class: 'eq-note' }, "Chiffre d'affaires de l'exercice"),
+      ),
+      h('span', { class: 'eq-op' }, '−'),
+      h('div', { class: 'eq-term' },
+        h('div', { class: 'eq-tag' }, 'Ce que ça coûte'),
+        h('div', { class: 'eq-value num' }, euro(charges, { compact: true })),
+        h('div', { class: 'eq-note' }, 'Achats, salaires, charges, impôts, amortissements'),
+      ),
+      h('span', { class: 'eq-op' }, '='),
+      h('div', { class: `eq-term is-result ${net >= 0 ? '' : 'is-loss'}` },
+        h('div', { class: 'eq-tag' }, net >= 0 ? 'Ce qu’il reste' : 'Ce que tu perds'),
+        h('div', { class: 'eq-value num' }, euro(net, { compact: true })),
+        h('div', { class: 'eq-note' }, `${pct(marge, 0)} du chiffre d'affaires`),
+      ),
+    ),
   )
 }
 
@@ -242,24 +284,27 @@ function verdictCard(health, navigate) {
  * un tableau de bord.
  */
 /** Les six nombres, calculés à part pour pouvoir être rejoués à la volée. */
+/**
+ * Les quatre chiffres qui ne sont pas déjà dans l'opération.
+ *
+ * Chiffre d'affaires et résultat net figuraient ici en plus de l'équation
+ * juste au-dessus : le même nombre deux fois, à dix centimètres d'écart, et la
+ * page paraissait deux fois plus chargée qu'elle ne l'est.
+ */
 function figureSet(r, s, y) {
   const k = r.kpis, p = r.pnl
   const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
   return [
-    { label: "Chiffre d'affaires", value: euro(p.revenue[y], { compact: true }), note: yearLabel(y),
-      spark: p.revenue, go: 'offre', help: 'chiffreAffaires' },
-    { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du CA`,
+    { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du chiffre d'affaires`,
       tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda' },
     { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
-      note: reached ? 'atteint' : 'non atteint',
+      note: reached ? 'franchi cette année' : 'pas encore franchi',
       tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort' },
-    { label: 'R\u00e9sultat net', value: euro(p.netResult[y], { compact: true }), note: `${pct(k.netMargin[y], 0)} du CA`,
-      tone: p.netResult[y] >= 0 ? 'pos' : 'neg', spark: p.netResult, go: 'resultats', help: 'resultatNet' },
     { label: 'Tr\u00e9sorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
-      note: monthLabel(k.cashLow.month, r.startDate), tone: k.cashLow.value < 0 ? 'neg' : 'pos',
+      note: `au plus bas en ${monthLabel(k.cashLow.month, r.startDate)}`, tone: k.cashLow.value < 0 ? 'neg' : 'pos',
       spark: r.cash.balance, go: 'financement', help: 'tresorerie' },
     { label: '\u00c0 financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
-      note: k.fundingNeed > 0 ? 'avant ' + monthLabel(k.cashLow.month, r.startDate) : 'caisse couverte',
+      note: k.fundingNeed > 0 ? `\u00e0 r\u00e9unir avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la caisse se suffit',
       tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement' },
   ]
 }

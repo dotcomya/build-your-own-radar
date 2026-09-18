@@ -12,7 +12,7 @@
 
 import { h, svg, euro, num, pct, monthLabel } from './dom.js'
 import { milestones } from '../engine/milestones.js'
-import { STATUS } from './charts.js'
+import { STATUS, hot } from './charts.js'
 
 const KIND_COLOR = {
   danger: STATUS.loss, low: STATUS.warn, win: STATUS.gain,
@@ -153,10 +153,36 @@ export function storyline(result, scenario, { compact = false } = {}) {
     }, e.caption))
   }
 
-  // Zone de survol par mois : la valeur exacte reste accessible.
+  // Se poser sur la courbe.
+  //
+  // L'attribut `title` du navigateur met une seconde à venir, s'affiche là où
+  // il veut et ne dit qu'une ligne. Le repère de l'application, lui, suit le
+  // curseur, trace un trait vertical, marque le point et donne le mois, le
+  // solde, la variation et le jalon le plus proche — les mêmes gestes que sur
+  // les autres graphiques.
+  const guide = svg('line', { x1: 0, x2: 0, y1: pad.t, y2: pad.t + innerH, stroke: '#0B0E10', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 })
+  const marker = svg('circle', { cx: 0, cy: 0, r: 5, fill: '#fff', stroke: STATUS.signal, 'stroke-width': 2.5, opacity: 0 })
+  nodes.push(guide, marker)
+
   cash.forEach((v, m) => {
-    nodes.push(svg('rect', { x: x(m) - innerW / cash.length / 2, y: pad.t, width: innerW / cash.length, height: innerH, fill: 'transparent' },
-      svg('title', {}, `${monthLabel(m, result.startDate)} : ${euro(v)}`)))
+    const band = svg('rect', {
+      x: x(m) - innerW / cash.length / 2, y: pad.t,
+      width: innerW / cash.length, height: innerH, fill: 'transparent', class: 'chart-hot',
+    })
+    const before = m > 0 ? cash[m - 1] : v
+    const near = events.reduce((best, e) => (Math.abs(e.month - m) < Math.abs((best?.month ?? 999) - m) ? e : best), null)
+    hot(band, monthLabel(m, result.startDate),
+      () => [
+        { label: 'Trésorerie', value: euro(v), color: v < 0 ? STATUS.loss : STATUS.gain },
+        { label: 'Sur le mois', value: `${v - before >= 0 ? '+' : '−'}${euro(Math.abs(v - before))}` },
+        ...(near && Math.abs(near.month - m) <= 2 ? [{ label: near.label, value: monthLabel(near.month, result.startDate) }] : []),
+      ],
+      () => {
+        guide.setAttribute('x1', x(m)); guide.setAttribute('x2', x(m)); guide.setAttribute('opacity', '.35')
+        marker.setAttribute('cx', x(m)); marker.setAttribute('cy', y(v)); marker.setAttribute('opacity', '1')
+      },
+      () => { guide.setAttribute('opacity', '0'); marker.setAttribute('opacity', '0') })
+    nodes.push(band)
   })
 
   return h('div', { class: 'story' },

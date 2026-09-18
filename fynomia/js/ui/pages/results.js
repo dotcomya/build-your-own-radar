@@ -124,9 +124,36 @@ function pnlView(r, level) {
     ...values.map((v) => h('td', { class: 'num pct' }, pct(v))),
   )
 
+  // Quatre lignes à l'écran, dix-huit derrière un chevron.
+  //
+  // Le compte de résultat complet est juste, et c'est un mur : dix-huit lignes
+  // sur cinq exercices, quatre-vingt-dix nombres, dont quatre seulement se
+  // retiennent. On montre ces quatre-là, et le reste s'ouvre pour qui vérifie.
+  const essentiel = h('div', { class: 'card mb' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, 'Ce que disent les comptes'),
+        h('div', { class: 'tiny muted' }, 'Hors taxes, sur les cinq exercices'),
+      ),
+    ),
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'data' },
+        h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
+        h('tbody', {},
+          line("Chiffre d'affaires", p.revenue, { cls: 'highlight' }),
+          line('Marge brute', p.grossMargin, { help: 'margeBrute' }),
+          line("EBITDA", p.ebitda, { help: 'ebitda' }),
+          line('Résultat net', p.netResult, { cls: 'total' }),
+          rate('marge nette', k.netMargin),
+        ),
+      ),
+    ),
+  )
+
   return h('div', {},
-    h('div', { class: 'card mb' },
-      h('div', { class: 'card-head' }, h('h2', {}, 'Soldes intermédiaires de gestion'), h('span', { class: 'tiny muted' }, 'Montants hors taxes')),
+    essentiel,
+
+    refine('resultat-sig', 'Voir les dix-huit lignes du compte de résultat',
       h('div', { class: 'table-wrap' },
         h('table', { class: 'data' },
           h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
@@ -155,7 +182,7 @@ function pnlView(r, level) {
       ),
     ),
 
-    h('div', { class: 'grid grid-2' },
+    h('div', { class: 'mt' },
       h('div', { class: 'card' },
         h('div', { class: 'card-head' }, h('h2', {}, 'Du chiffre d\'affaires au résultat')),
         h('div', { class: 'card-body' },
@@ -170,8 +197,10 @@ function pnlView(r, level) {
           }),
         ),
       ),
+    ),
+
+    refine('resultat-seuil', 'Le point mort, année par année',
       h('div', { class: 'card' },
-        h('div', { class: 'card-head' }, h('h2', {}, 'Point mort'), helpButton('pointMort')),
         h('div', { class: 'card-body' },
           h('div', { class: 'table-wrap' },
             h('table', { class: 'data' },

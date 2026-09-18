@@ -136,73 +136,78 @@ function firstMonthAbove(r, needed) {
  * Un nombre énorme, et ce qui le compose de part et d'autre : ce qu'il faut
  * couvrir, ce que rapporte un client. Rien d'autre à l'écran.
  */
+/**
+ * Le seuil de rentabilité, dit comme une division.
+ *
+ * Trois colonnes, une jauge et deux notes disaient la même chose sans jamais
+ * énoncer l'opération. « Il te faut 3 abonnements » sans montrer d'où sort le
+ * 3, c'est un oracle : on ne peut ni le vérifier ni le déplacer.
+ *
+ * On écrit donc le calcul en toutes lettres — ce qu'il faut couvrir, divisé par
+ * ce que rapporte une vente, égale le nombre à atteindre. Chaque terme est un
+ * chiffre qu'on reconnaît, et changer un prix déplace le résultat sous les
+ * yeux. Le décimal est conservé : arrondi à l'unité, une amélioration de
+ * 2,4 à 2,1 ne se voyait pas, et l'outil semblait figé.
+ */
 export function breakEvenBoard(r, s, voc) {
   const m = metrics(r, s)
-  const reachable = Number.isFinite(m.needed)
-  const ratio = reachable && m.needed > 0 ? Math.min(1, m.perMonthNow / m.needed) : 0
-  const ok = m.perMonthNow >= m.needed
+  const reachable = Number.isFinite(m.needed) && m.needed > 0
+  const ratio = reachable ? Math.min(1, m.perMonthNow / m.needed) : 0
+  const ok = reachable && m.perMonthNow >= m.needed
+  const round = (v) => (v >= 10 ? num(Math.round(v)) : num(v, 1))
 
   return h('div', {},
-    h('div', { class: 'seuil' },
-      h('div', { class: 'seuil-side' },
-        h('div', { class: 'seuil-tag' }, 'À couvrir chaque mois'),
-        h('div', { class: 'seuil-amount num' }, euro(m.fixed)),
-        h('p', { class: 'seuil-note' },
-          'Charges externes, salaires et cotisations, impôts et taxes, amortissements. Tout ce qui tombe que tu vendes ou non.'),
-      ),
-
-      h('div', { class: `seuil-core ${ok ? 'is-ok' : ''}` },
-        h('div', { class: 'seuil-tag' }, `${voc.many} par mois`),
-        h('div', { class: 'seuil-big num' }, reachable ? num(Math.ceil(m.needed)) : '—'),
-        h('div', { class: 'seuil-meter' },
-          h('i', { style: { width: `${Math.round(ratio * 100)}%` } }),
+    h('section', { class: `seuil ${ok ? 'is-ok' : ''}` },
+      h('div', { class: 'seuil-eq' },
+        term('À couvrir chaque mois', euro(m.fixed), 'Charges externes, salaires, impôts, amortissements'),
+        h('span', { class: 'seuil-op' }, '÷'),
+        term(`Marge par ${voc.one}`, euro(m.marginPerClient), 'Prix encaissé moins le coût direct de la vente'),
+        h('span', { class: 'seuil-op' }, '='),
+        h('div', { class: 'seuil-term is-result' },
+          h('div', { class: 'seuil-term-tag' }, `${voc.many} par mois`),
+          h('div', { class: 'seuil-term-value num' }, reachable ? round(m.needed) : '—'),
+          h('div', { class: 'seuil-term-note' }, reachable ? 'Le seuil à franchir' : 'Marge nulle ou négative'),
         ),
-        h('div', { class: 'seuil-state' },
-          reachable
-            ? ok
-              ? `Toi en êtes à ${num(Math.round(m.perMonthNow))} : le seuil est franchi.`
-              : `Toi en êtes à ${num(Math.round(m.perMonthNow))}, soit ${pct(ratio, 0)} du chemin.`
-            : 'Ta marge par client est nulle ou négative.'),
       ),
-
-      h('div', { class: 'seuil-side' },
-        h('div', { class: 'seuil-tag' }, `Ce que rapporte un ${voc.one}`),
-        h('div', { class: 'seuil-amount num' }, euro(m.marginPerClient)),
-        h('p', { class: 'seuil-note' },
-          'Prix encaissé moins ce que la vente coûte directement. Ni loyer ni salaires : eux sont déjà de l’autre côté.'),
-      ),
+      reachable ? h('div', { class: 'seuil-where' },
+        h('div', { class: 'seuil-meter' }, h('i', { style: { width: `${Math.round(ratio * 100)}%` } })),
+        h('p', { class: 'seuil-line' },
+          ok
+            ? `Tu en es à ${round(m.perMonthNow)} par mois : le seuil est franchi, chaque vente de plus tombe en résultat.`
+            : `Tu en es à ${round(m.perMonthNow)} par mois, soit ${pct(ratio, 0)} du chemin. Il en manque ${round(Math.max(0, m.needed - m.perMonthNow))}.`),
+      ) : null,
     ),
 
-    m.monthReached !== null
-      ? h('div', { class: 'note ok mt' },
-          h('div', { class: 'note-title' }, `Seuil atteint en ${monthLabel(m.monthReached, r.startDate)}`),
-          `Au rythme de croissance que tu as saisi, tes volumes passent au-dessus du seuil à cette date. Avant elle, chaque mois creuse la trésorerie de ${euro(Math.max(0, m.fixed - m.contribution))} en moyenne.`)
-      : h('div', { class: 'note warn mt' },
-          h('div', { class: 'note-title' }, 'Le seuil n’est jamais atteint sur cinq ans'),
-          reachable
-            ? `Il faudrait ${num(Math.ceil(m.needed))} ${voc.many} par mois et tes volumes plafonnent à ${num(Math.round(Math.max(...r.revenue.units)))}. Trois issues : monter le prix, baisser le coût de revient, ou réduire les charges fixes.`
-            : `Tant qu’un ${voc.one} rapporte moins qu’il ne coûte, aucun volume ne rend le modèle viable.`),
-
-    h('div', { class: 'card mt' },
+    h('section', { class: 'panel mt' },
       h('div', { class: 'card-head' },
         h('div', {},
-          h('h2', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} par mois, face au seuil`),
-          h('div', { class: 'tiny muted' }, 'La ligne pointillée est le nombre à dépasser'),
+          h('h2', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} par mois`),
+          h('div', { class: 'tiny muted' }, reachable ? 'Le trait rouge est le seuil' : 'Le seuil ne peut pas être tracé'),
         ),
       ),
       h('div', { class: 'card-body' },
         areaChart({
           values: r.revenue.units, startDate: r.startDate, height: 190,
           color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
+          threshold: reachable ? { value: m.needed, label: `seuil ${round(m.needed)}` } : null,
         }),
         h('p', { class: 'chart-note' },
-          reachable
-            ? `Seuil : ${num(Math.ceil(m.needed))} ${voc.many} par mois. En dessous, tu perds de l’argent quel que soit ton chiffre d’affaires.`
-            : 'Le seuil ne peut pas être tracé tant que la marge par client est négative.'),
+          m.monthReached !== null
+            ? `Tes volumes passent au-dessus du seuil en ${monthLabel(m.monthReached, r.startDate)}. Avant cette date, chaque mois creuse la trésorerie d'environ ${euro(Math.max(0, m.fixed - m.contribution))}.`
+            : reachable
+              ? `Le seuil n'est jamais franchi sur cinq ans : tes volumes plafonnent à ${round(Math.max(...r.revenue.units))} par mois. Monter le prix, baisser le coût de revient ou alléger les charges fixes le rapproche.`
+              : `Tant qu'un ${voc.one} rapporte moins qu'il ne coûte, aucun volume ne rend le modèle viable.`),
       ),
     ),
   )
 }
+
+/** Un terme de la division : son nom, son chiffre, ce qu'il contient. */
+const term = (tag, value, note) => h('div', { class: 'seuil-term' },
+  h('div', { class: 'seuil-term-tag' }, tag),
+  h('div', { class: 'seuil-term-value num' }, value),
+  h('div', { class: 'seuil-term-note' }, note),
+)
 
 /* ────────────────────────── Ce qui change tout ──────────────────────────── */
 

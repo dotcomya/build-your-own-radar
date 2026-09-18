@@ -53,6 +53,7 @@ const opexTotalField = () => (s) => {
  */
 export const LEVERS = {
   price: {
+    group: 'vendre', page: 'offre',
     label: 'Prix de vente unitaire', unit: '€ HT', field: 'unitPrice',
     target: activityField('unitPrice'), min: 0, max: 5000, step: 1,
     format: (v) => euro(v),
@@ -61,6 +62,7 @@ export const LEVERS = {
     why: "Le levier le plus direct sur la marge : il n'augmente aucun coût.",
   },
   subscription: {
+    group: 'vendre', page: 'offre',
     label: 'Abonnement mensuel', unit: '€ HT/mois', field: 'recurringPrice',
     target: activityField('recurringPrice'), min: 0, max: 2000, step: 1,
     format: (v) => euro(v),
@@ -69,6 +71,7 @@ export const LEVERS = {
     why: "Chaque euro d'abonnement se cumule sur toute la durée du contrat.",
   },
   unitCost: {
+    group: 'couter', page: 'offre',
     label: 'Coût de revient unitaire', unit: '€ HT', field: 'unitPrice',
     target: activityField('unitCost'), min: 0, max: 5000, step: 1,
     format: (v) => euro(v),
@@ -76,6 +79,7 @@ export const LEVERS = {
     why: 'Ce que la vente coûte avant toute charge fixe.',
   },
   churn: {
+    group: 'vendre', page: 'offre',
     label: 'Attrition mensuelle', unit: '%', field: 'churnMonthly',
     target: activityField('churnMonthly'), min: 0, max: 0.15, step: 0.001, percent: true,
     format: (v) => pct(v, 1),
@@ -84,6 +88,7 @@ export const LEVERS = {
     why: 'Ce que tu perds chaque mois par le bas pendant que tu remplis par le haut.',
   },
   growth: {
+    group: 'vendre', page: 'offre',
     label: 'Croissance mensuelle des ventes', unit: '%', field: 'monthlyGrowth',
     target: volumeField('monthlyGrowth'), min: -0.1, max: 0.4, step: 0.005, percent: true,
     format: (v) => pct(v, 1),
@@ -91,6 +96,7 @@ export const LEVERS = {
     why: 'Le pari commercial. Un investisseur le challengera avant tous les autres.',
   },
   startUnits: {
+    group: 'vendre', page: 'offre',
     label: 'Ventes le premier mois', unit: 'unités', field: 'startUnits',
     target: volumeField('startUnits'), min: 0, max: 2000, step: 1,
     format: (v) => num(v),
@@ -98,18 +104,21 @@ export const LEVERS = {
     why: 'Le point de départ de toute la trajectoire.',
   },
   paymentLag: {
+    group: 'caisse', page: 'offre',
     label: 'Délai de paiement client', unit: 'mois', field: 'paymentLag',
     target: activityField('paymentLag'), min: 0, max: 6, step: 1,
     format: (v) => `${num(v)} mois`,
     why: "Sans effet sur le résultat, décisif sur la trésorerie.",
   },
   deposit: {
+    group: 'caisse', page: 'offre',
     label: 'Acompte à la commande', unit: '%', field: 'deposit',
     target: activityField('deposit'), min: 0, max: 1, step: 0.05, percent: true,
     format: (v) => pct(v, 0),
     why: 'Le moyen le plus rapide de réduire le besoin de financement.',
   },
   budget: {
+    group: 'vendre', page: 'offre',
     label: 'Budget marketing mensuel', unit: '€ HT/mois', field: 'monthlyBudget',
     target: campaignField('monthlyBudget'), min: 0, max: 50000, step: 100,
     format: (v) => euro(v),
@@ -118,6 +127,7 @@ export const LEVERS = {
     why: 'Convertit du cash en clients — au taux que tu as saisi.',
   },
   conversion: {
+    group: 'vendre', page: 'offre',
     label: 'Taux de conversion en client', unit: '%', field: 'leadToClient',
     target: campaignField('leadToClient'), min: 0, max: 0.6, step: 0.005, percent: true,
     format: (v) => pct(v, 1),
@@ -126,6 +136,7 @@ export const LEVERS = {
     why: "Améliorer la conversion coûte moins cher qu'augmenter le budget.",
   },
   salary: {
+    group: 'couter', page: 'equipe',
     label: 'Salaire brut du premier poste', unit: '€/mois', field: 'monthlyGross',
     target: teamField('monthlyGross'), min: 0, max: 15000, step: 50,
     format: (v) => euro(v),
@@ -134,6 +145,7 @@ export const LEVERS = {
     why: 'Rappel : le coût réel dépasse le brut de 20 à 45 %.',
   },
   headcount: {
+    group: 'couter', page: 'equipe',
     label: 'Effectif sur ce poste', unit: 'personnes', field: 'count',
     target: teamField('count'), min: 0, max: 50, step: 1,
     format: (v) => `${num(v)}`,
@@ -142,6 +154,7 @@ export const LEVERS = {
     why: 'Chaque recrutement décale le point mort.',
   },
   hireMonth: {
+    group: 'couter', page: 'equipe',
     label: 'Mois de la première embauche', unit: 'M', field: 'month',
     target: teamField('startMonth'), min: 0, max: 36, step: 1,
     format: (v) => `M${num(v) + 1}`,
@@ -150,6 +163,7 @@ export const LEVERS = {
     why: 'Décaler une embauche de trois mois libère souvent tout le besoin de financement.',
   },
   fixedCost: {
+    group: 'couter', page: 'achats',
     label: 'Première charge fixe mensuelle', unit: '€/mois', field: 'monthlyAmount',
     target: opexTotalField(), min: 0, max: 20000, step: 50,
     format: (v) => euro(v),
@@ -158,6 +172,7 @@ export const LEVERS = {
     why: 'Les charges fixes se paient que tu vendes ou non.',
   },
   openingCash: {
+    group: 'caisse', page: 'financement',
     label: 'Trésorerie de départ', unit: '€', field: 'amount',
     target: (s) => ({ object: s.financing, key: 'openingCash' }), min: 0, max: 500000, step: 1000,
     format: (v) => euro(v),
@@ -271,6 +286,27 @@ export const PERSONA_KEYS = Object.keys(PERSONAS)
 export const getPersona = (key) => PERSONAS[key] || PERSONAS.founder
 
 /** Leviers applicables au scénario courant, dans l'ordre du persona. */
+/** Les familles de leviers, dans l'ordre où l'on se pose les questions. */
+export const LEVER_GROUPS = [
+  { key: 'vendre', label: 'Ce que tu vends' },
+  { key: 'couter', label: 'Ce que ça coûte' },
+  { key: 'caisse', label: 'La trésorerie' },
+]
+
+/**
+ * Tous les leviers que ce scénario permet de bouger.
+ *
+ * La liste des personas n'en propose que quatre à six : c'est le bon nombre
+ * pour un tableau de bord, et le mauvais pour un bac à sable, où l'on vient
+ * précisément essayer ce qu'on n'avait pas prévu.
+ */
+export function allLevers(scenario) {
+  return Object.entries(LEVERS)
+    .map(([key, l]) => ({ key, ...l }))
+    .filter((l) => l.target && (!l.applies || l.applies(scenario)))
+    .filter((l) => resolveLever(scenario, l))
+}
+
 export function activeLevers(persona, scenario) {
   return (persona.levers || [])
     .map((key) => ({ key, ...LEVERS[key] }))

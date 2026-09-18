@@ -12,7 +12,7 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleHead } from '../dom.js'
+import { h, euro, num, textField, selectField, switchField, helpButton, refine, fold, moduleHead } from '../dom.js'
 import { SECTORS, sectorsByFamily, getSector, FAMILIES } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { partBanner } from '../tutorial.js'
@@ -181,23 +181,19 @@ export function renderProject(navigate, refresh) {
 
 /* ───────────────────────────── Le métier ───────────────────────────────── */
 
+/**
+ * Le choix du métier, repliable.
+ *
+ * La liste s'ouvrait et ne se refermait plus : il fallait choisir pour en
+ * sortir. Elle vit désormais dans un volet, comme « affiner le calendrier » —
+ * le titre porte le métier retenu, le chevron ouvre et referme, et la grille
+ * ne prend de la place que le temps qu'on en a besoin.
+ */
 function sectorPicks(s, set, refresh) {
-  const open = renderProject.sectorOpen ?? !s.meta.sectorKey
   const current = getSector(s.meta.sectorKey)
   const families = sectorsByFamily()
 
-  if (!open && current) {
-    return h('div', { class: 'picked' },
-      h('div', {},
-        h('div', { class: 'picked-tag' }, "Type d’activité"),
-        h('div', { class: 'picked-name' }, current.glyph, ' ', current.label),
-        h('div', { class: 'picked-note' }, current.tagline),
-      ),
-      h('button', { class: 'btn btn-sm btn-pill', onClick: () => { renderProject.sectorOpen = true; refresh() } }, 'Changer'),
-    )
-  }
-
-  return h('div', {},
+  const grid = h('div', {},
     ...families.map((fam) => h('div', { class: 'sector-family' },
       h('div', { class: 'sector-family-tag' }, FAMILIES[fam.key]?.label || fam.label),
       h('div', { class: 'picks' },
@@ -205,7 +201,6 @@ function sectorPicks(s, set, refresh) {
           class: `pick ${s.meta.sectorKey === sec.key ? 'active' : ''}`,
           onClick: () => {
             set({ sectorKey: sec.key, vatExempt: !!SECTORS[sec.key].vat.exempt }, "Type d’activité")
-            renderProject.sectorOpen = false
             refresh()
           },
         },
@@ -214,6 +209,13 @@ function sectorPicks(s, set, refresh) {
         )),
       ),
     )),
+  )
+
+  return fold(
+    "Type d’activité",
+    current ? `${current.glyph} ${current.label}` : 'À choisir',
+    grid,
+    { id: 'projet-secteur', open: !s.meta.sectorKey },
   )
 }
 

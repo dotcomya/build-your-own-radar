@@ -12,7 +12,9 @@
  * `toggle` continuent de fonctionner.
  */
 
-const EASE = 'cubic-bezier(.2, .8, .2, 1)'
+// Plus lent qu'une micro-interaction : un volet qui s'ouvre déplace la page,
+// et l'œil doit pouvoir suivre ce déplacement plutôt que le subir.
+const EASE = 'cubic-bezier(.22, .61, .36, 1)'
 const reduced = () => {
   try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false }
 }
@@ -41,7 +43,7 @@ function expand(details, body) {
   body.style.overflow = 'hidden'
   const anim = body.animate(
     [{ height: '0px', opacity: 0 }, { height: `${height}px`, opacity: 1 }],
-    { duration: 210, easing: EASE },
+    { duration: 300, easing: EASE },
   )
   anim.onfinish = () => { body.style.overflow = '' }
 }
@@ -51,7 +53,7 @@ function collapse(details, body) {
   body.style.overflow = 'hidden'
   const anim = body.animate(
     [{ height: `${height}px`, opacity: 1 }, { height: '0px', opacity: 0 }],
-    { duration: 180, easing: EASE },
+    { duration: 240, easing: EASE },
   )
   // `open` ne tombe qu'à la fin : sinon le contenu disparaît avant d'avoir
   // commencé à se replier, et l'animation joue dans le vide.

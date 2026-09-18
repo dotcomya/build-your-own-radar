@@ -4,7 +4,7 @@
  * budget publicitaire déplace immédiatement le résultat et la trésorerie.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar, fold } from '../dom.js'
 import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -41,26 +41,21 @@ export function renderAcquisition(navigate, refresh) {
   const totalBudget = (r?.revenue.campaigns || []).reduce((a, c) => a + c.totalSpend, 0)
   const totalClients = (r?.revenue.campaigns || []).reduce((a, c) => a + c.totalClients, 0)
 
-  const views = [
-    { key: 'campagnes', label: 'Campagnes', count: s.marketing.length },
-    r && s.marketing.length > 0 ? { key: 'mix', label: 'Répartition' } : null,
-    r && s.marketing.length > 0 ? { key: 'rentabilité', label: 'Rentabilité' } : null,
-  ]
-  const view = views.some((v) => v && v.key === renderAcquisition.view) ? renderAcquisition.view : 'campagnes'
-  renderAcquisition.view = view
-
+  // L'acquisition est déjà un onglet d'« Offre et revenus » : lui donner à son
+  // tour trois sous-onglets, c'est demander de tenir trois niveaux de
+  // navigation en tête pour lire deux graphiques. Les campagnes restent à
+  // l'écran ; la répartition et la rentabilité descendent dans des volets, qu'on
+  // ouvre quand on veut vérifier.
   return h('div', { class: 'content' },
     pageBar(
       s.marketing.length > 1 ? `${s.marketing.length} campagnes` : 'Acquisition de clients',
       r && totalClients > 0
         ? `${euro(totalBudget, { compact: true })} investis pour ${num(Math.round(totalClients))} clients · ${r.kpis.cac ? euro(r.kpis.cac) : '—'} par client`
         : 'Ce que tu dépenses pour trouver des clients, et ce que ça rapporte',
-      view === 'campagnes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter une campagne') : null,
+      h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter une campagne'),
     ),
 
-    tabs(views, view, (k) => { renderAcquisition.view = k; refresh() }),
-
-    view === 'campagnes' ? h('div', { class: 'view', 'data-gap': 'campagnes' },
+    h('div', { class: 'view', 'data-gap': 'campagnes' },
       r && s.marketing.length > 0 ? h('div', { class: 'grid grid-4 kpis mb' },
         tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),
         tile('Clients acquis', num(Math.round(totalClients)), 'Toutes campagnes'),
@@ -79,11 +74,14 @@ export function renderAcquisition(navigate, refresh) {
             h('button', { class: 'btn btn-primary mt', onClick: add }, 'Créer une campagne'),
           ))
         : h('div', {}, ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh))),
-    ) : null,
 
-    view === 'mix' && r ? h('div', { class: 'view' }, mixPanel(r)) : null,
-    view === 'rentabilité' && r ? h('div', { class: 'view' }, unitEconomicsPanel(r, s)) : null,
-
+      r && s.marketing.length > 0
+        ? fold('Répartition du budget', 'Ce que chaque campagne coûte et rapporte', mixPanel(r), { id: 'acq-mix' })
+        : null,
+      r && s.marketing.length > 0
+        ? fold('Rentabilité d’un client', 'Ce qu’il coûte à acquérir, ce qu’il rapporte ensuite', unitEconomicsPanel(r, s), { id: 'acq-unit' })
+        : null,
+    ),
   )
 }
 

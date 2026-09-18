@@ -72,7 +72,7 @@ function hideTip() {
  * l'infobulle quand on la quitte. Le pointeur reste fin — la zone est
  * transparente, elle ne se voit pas, elle s'utilise.
  */
-function hot(node, title, rows, onEnter, onLeave) {
+export function hot(node, title, rows, onEnter, onLeave) {
   node.addEventListener('mousemove', (e) => { showTip(e, title, rows()); if (onEnter) onEnter() })
   node.addEventListener('mouseleave', () => { hideTip(); if (onLeave) onLeave() })
   node.addEventListener('touchstart', (e) => {
@@ -151,10 +151,13 @@ export function barChart({ series, categories, height = 220, line = null, format
 }
 
 /** Courbe de trésorerie ou de tout flux mensuel, avec zone sous la courbe. */
-export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', label = 'Trésorerie', markZero = true, formatter = (v) => euro(v, { compact: true }) }) {
+export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', label = 'Trésorerie', markZero = true, threshold = null, compare = null, formatter = (v) => euro(v, { compact: true }) }) {
   const width = 720
   const pad = { t: 14, r: 14, b: 28, l: 58 }
-  let max = Math.max(0, ...values), min = Math.min(0, ...values)
+  // Le seuil fait partie de l'échelle : tracé hors cadre, il ne se verrait pas.
+  const all = compare ? [...values, ...compare.values] : values
+  let max = Math.max(0, ...all, threshold ? threshold.value : 0)
+  let min = Math.min(0, ...all)
   const ticks = niceTicks(min, max, 4)
   max = Math.max(max, ...ticks); min = Math.min(min, ...ticks)
   const y = scaleY(min, max, height, pad)
@@ -175,7 +178,32 @@ export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', 
     svg('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': .26 }),
     svg('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': .02 }))))
   nodes.push(svg('polygon', { points: `${x(0)},${y(Math.max(min, 0))} ${line} ${x(values.length - 1)},${y(Math.max(min, 0))}`, fill: `url(#${id})` }))
+
+  // La courbe de référence : le plan tel qu'il est aujourd'hui, en pointillé.
+  // C'est l'écart entre les deux traits qui dit ce que la simulation change —
+  // un nombre seul, même juste, ne se ressent pas.
+  if (compare && compare.values) {
+    const ref = compare.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')
+    nodes.push(svg('polyline', {
+      points: ref, fill: 'none', stroke: compare.color || AXIS,
+      'stroke-width': 1.6, 'stroke-dasharray': '5 4', opacity: .75,
+    }))
+  }
   nodes.push(svg('polyline', { points: line, fill: 'none', stroke: color, 'stroke-width': 2.2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }))
+
+  // Le seuil à dépasser : un trait pointillé nommé. Annoncer une ligne sans la
+  // tracer — ce que faisait le tableau de bord — ne trompe personne longtemps.
+  if (threshold && Number.isFinite(threshold.value)) {
+    const ty = y(threshold.value)
+    nodes.push(svg('line', {
+      x1: pad.l, x2: width - pad.r, y1: ty, y2: ty,
+      stroke: STATUS.loss, 'stroke-width': 1.5, 'stroke-dasharray': '6 4',
+    }))
+    nodes.push(svg('text', {
+      x: width - pad.r, y: ty - 6, 'text-anchor': 'end',
+      fill: STATUS.loss, 'font-size': 10.5, 'font-weight': 600,
+    }, threshold.label || ''))
+  }
 
   // Point bas signalé : c'est le chiffre qui détermine le besoin de financement.
   const lowIndex = values.indexOf(Math.min(...values))
