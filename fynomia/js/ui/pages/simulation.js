@@ -14,6 +14,7 @@
  */
 
 import { h, euro, num, pct, toast, fold } from '../dom.js'
+import { goToGap } from '../spotlight.js'
 import { allLevers, resolveLever, LEVER_GROUPS } from '../personas.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { compute } from '../../engine/engine.js'
@@ -277,7 +278,17 @@ function applyScreen(levers, refresh, navigate) {
   }
   paintEffects()
 
-  const confirm = (thenGo) => {
+  /**
+   * Enregistrer, puis aller voir.
+   *
+   * Un changement validé dans un écran de confirmation reste abstrait tant
+   * qu'on n'a pas vu où il s'est posé. On enregistre donc, on ouvre le module
+   * concerné, et on entoure le champ : le fondateur finit le geste à l'endroit
+   * où la valeur vit désormais, et peut la retoucher tout de suite.
+   *
+   * @param gap  la destination à ouvrir et entourer, ou null pour rester ici
+   */
+  const confirm = (gap) => {
     const keptList = list.filter((c) => kept.has(c.lever.key))
     if (!keptList.length) { toast('Aucun changement retenu.', 'err'); return }
     store.update((sc) => {
@@ -288,7 +299,7 @@ function applyScreen(levers, refresh, navigate) {
     }, { label: `Simulation appliquée (${keptList.length})` })
     resetSandbox()
     toast(`${keptList.length} changement${keptList.length > 1 ? 's' : ''} enregistré${keptList.length > 1 ? 's' : ''}.`, 'ok')
-    if (thenGo && navigate) navigate(`#/${thenGo}`)
+    if (gap && navigate) goToGap(gap, navigate)
     else refresh()
   }
 
@@ -308,13 +319,15 @@ function applyScreen(levers, refresh, navigate) {
 
     ...[...byModule.entries()].map(([key, items]) => {
       const mod = MODULES[key] || MODULES.offre
+      // Le repère du premier changement du groupe : c'est là qu'on emmène.
+      const gap = items.map((c) => c.lever.gap).find(Boolean) || { route: mod.route }
       return h('section', { class: 'apply-mod' },
         h('div', { class: 'apply-mod-head' },
           h('span', { class: 'apply-mod-name' }, mod.label),
           h('button', {
-            class: 'btn btn-sm btn-quiet',
-            onClick: () => confirm(mod.route),
-          }, 'Enregistrer et ouvrir ce module →'),
+            class: 'btn btn-primary',
+            onClick: () => confirm(gap),
+          }, `Enregistrer et voir dans ${mod.label} \u2192`),
         ),
         ...items.map((c) => {
           const box = h('input', { type: 'checkbox', checked: true })
@@ -336,7 +349,13 @@ function applyScreen(levers, refresh, navigate) {
     h('div', { class: 'apply-effects-tag' }, 'Ce que ça change dans les comptes'),
     effects,
     h('div', { class: 'apply-actions' },
-      h('button', { class: 'btn btn-primary btn-lg', onClick: () => confirm(null) }, 'Tout enregistrer'),
+      // L'action par défaut est d'aller voir : enregistrer sans regarder où ça
+      // se pose, c'est ce que faisait l'ancienne version, et on ne savait plus
+      // ensuite d'où venait le chiffre.
+      h('button', {
+        class: 'btn btn-lg btn-quiet',
+        onClick: () => confirm(null),
+      }, 'Enregistrer sans quitter le tableau de bord'),
       h('button', { class: 'btn btn-lg btn-ghost', onClick: () => { sandbox.stage = 'jeu'; refresh() } }, 'Retour à la simulation'),
     ),
   )

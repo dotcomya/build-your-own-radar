@@ -6,6 +6,7 @@ import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
+import { valueForYear } from '../../engine/revenue.js'
 import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
@@ -222,7 +223,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
           : h('button', { class: 'part-add', onClick: () => addPart('recurring') }, '\uFF0B', h('span', {}, 'Un abonnement mensuel'))
       ) : null,
 
-      sec === 'volumes' ? h('div', { class: 'view' },
+      sec === 'volumes' ? h('div', { class: 'view', 'data-gap': 'volumes' },
 
         volumesEditor(a, setVolumes, level, detail)
       ) : null,
@@ -477,18 +478,61 @@ function manualGrid(a, setVolumes) {
   )
 }
 
+/**
+ * Le prix des années suivantes.
+ *
+ * Les quatre cases étaient vides, sans dire ce qui s'appliquait quand même.
+ * On lisait donc « rien » là où le moteur lisait « le prix de l'année
+ * précédente », et rien ne signalait qu'une année avait été forcée.
+ *
+ * Chaque case porte maintenant en gris le prix effectivement retenu : tant
+ * qu'on n'écrit pas, l'année reconduit la précédente et la case le montre.
+ * Dès qu'on écrit, la valeur passe en noir et un « × » permet de revenir à
+ * l'héritage.
+ */
 function priceEvolutionFields(a, set) {
   const years = [1, 2, 3, 4]
+  const hasUnit = (Number(a.unitPrice) || 0) > 0
+  const hasRec = (Number(a.recurringPrice) || 0) > 0
+
+  const row = (title, baseKey, arrKey, suffix) => {
+    const arr = a[arrKey] || []
+    return h('div', { class: 'byyear' },
+      h('div', { class: 'byyear-head' },
+        h('span', { class: 'byyear-title' }, title),
+        h('span', { class: 'byyear-base num' }, `${euro(a[baseKey])} en année 1`),
+      ),
+      h('div', { class: 'byyear-cells' },
+        ...years.map((y) => {
+          const own = arr[y - 1]
+          const forced = own !== undefined && own !== null && own !== ''
+          const inherited = valueForYear(a[baseKey], arr, y)
+          return h('div', { class: `byyear-cell ${forced ? 'is-forced' : ''}` },
+            numberField({
+              label: `Année ${y + 1}`, field: baseKey,
+              value: forced ? own : '', suffix,
+              placeholder: Math.round(inherited),
+              muted: !forced,
+              onInput: (v) => { const next = arr.slice(); next[y - 1] = v; set({ [arrKey]: next }) },
+            }),
+            forced ? h('button', {
+              class: 'byyear-clear', title: 'Revenir au prix de l’année précédente',
+              onClick: () => { const next = arr.slice(); next[y - 1] = ''; set({ [arrKey]: next }) },
+            }, '\u00d7') : null,
+          )
+        }),
+      ),
+    )
+  }
+
   return h('div', {},
     h('p', { class: 'view-intro' },
-      "Par défaut, le prix d'une année reconduit celui de l'année précédente. Renseigne une case pour appliquer une hausse à partir de cette année."),
-    h('div', { class: 'grid grid-4' },
-      ...years.map((y) => numberField({
-        label: `Prix unitaire — année ${y + 1}`, field: 'unitPrice',
-        value: a.priceByYear?.[y - 1] ?? '', suffix: '€ HT',
-        onInput: (v) => { const arr = (a.priceByYear || []).slice(); arr[y - 1] = v; set({ priceByYear: arr }) },
-      })),
-    ),
+      "Une année vide reconduit le prix de la précédente : le montant en gris est celui qui s’applique. Écris dans une case pour forcer une hausse à partir de cette année-là."),
+    hasUnit ? row('Prix unitaire', 'unitPrice', 'priceByYear', '€ HT') : null,
+    hasRec ? row('Abonnement mensuel', 'recurringPrice', 'recurringPriceByYear', '€ HT/mois') : null,
+    !hasUnit && !hasRec
+      ? h('p', { class: 'muted small' }, 'Renseigne d’abord un prix dans l’onglet « Prix et marge ».')
+      : null,
   )
 }
 

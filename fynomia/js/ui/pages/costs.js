@@ -75,7 +75,7 @@ export function renderCosts(navigate, refresh) {
               "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoute-les d'un clic, puis ajuste les montants."),
             h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
           ))
-        : h('div', {}, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
+        : h('div', { 'data-gap': 'charges' }, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
 
       missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
         h('span', { class: 'suggest-tag' }, 'Souvent oublié'),

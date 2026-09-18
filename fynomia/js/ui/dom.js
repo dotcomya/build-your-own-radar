@@ -72,7 +72,7 @@ import { BOUNDS, clampField } from '../state/schema.js'
  * Champ numérique borné. La valeur est ramenée dans les limites du schéma
  * à la sortie du champ : l'utilisateur ne peut pas produire un scénario absurde.
  */
-export function numberField({ label, value, field, suffix, prefix, hint, help, onInput, percent = false, step, min, max, disabled, fieldKey }) {
+export function numberField({ label, value, field, suffix, prefix, hint, help, onInput, percent = false, step, min, max, disabled, fieldKey, placeholder = null, muted = false }) {
   const b = BOUNDS[field] || {}
   const toDisplay = (v) => (v === '' || v === null || v === undefined ? '' : percent ? round(Number(v) * 100, 4) : v)
   const input = h('input', {
@@ -83,9 +83,12 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
     max: max ?? (percent ? (b.max ?? 1) * 100 : b.max),
     inputmode: 'decimal',
     disabled,
+    placeholder: placeholder === null || placeholder === undefined ? null : String(placeholder),
     'data-field-key': fieldKey || null,
   })
-  const control = h('div', { class: 'control' },
+  // `muted` : le champ est vide et hérite d'une valeur. Le gris dit « rien n'a
+  // été saisi ici », le texte fantôme dit ce qui s'applique quand même.
+  const control = h('div', { class: `control ${muted ? 'is-inherited' : ''}` },
     prefix && h('span', { class: 'affix affix-pre' }, prefix),
     input,
     (suffix || percent) && h('span', { class: 'affix' }, suffix || '%'),

@@ -59,8 +59,10 @@
   --impact-h: 62px;
   --space: 22px;
   --ease: cubic-bezier(.2, .8, .2, 1);
-  /* Pour ce qui prend de la place à l'écran : plus long, sans rebond. */
-  --ease-soft: cubic-bezier(.22, .61, .36, 1);
+  /* Pour ce qui prend de la place à l'écran : le mouvement s'amorce doucement,
+     prend de la vitesse, puis se pose. C'est la courbe d'une porte lestée —
+     rien ne jaillit, rien ne claque. */
+  --ease-soft: cubic-bezier(.62, .02, .34, 1);
 }
 
 * { box-sizing: border-box; }
@@ -461,7 +463,7 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .item-title { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: -.015em; }
 .item-meta { font-size: 12px; color: var(--ink-4); }
 .item-body { padding: 4px 14px 16px; border-top: 1px solid var(--rule); }
-.disclose { transition: transform .16s var(--ease); color: var(--ink-4); font-size: 11px; flex: none; }
+.disclose { transition: transform .38s var(--ease-soft); color: var(--ink-4); font-size: 11px; flex: none; }
 .item.open .disclose { transform: rotate(90deg); }
 
 .empty { text-align: center; padding: 44px 20px; color: var(--ink-4); }
@@ -2815,7 +2817,7 @@ table.data th, table.data td { padding: 9px 12px; }
   cursor: pointer; list-style: none; user-select: none;
 }
 .volet-head::-webkit-details-marker { display: none; }
-.volet-chev { color: var(--ink-5); font-size: 13px; transition: transform .16s var(--ease); flex: none; }
+.volet-chev { color: var(--ink-5); font-size: 13px; transition: transform .38s var(--ease-soft); flex: none; }
 .volet[open] .volet-chev { transform: rotate(90deg); }
 .volet-title { font-size: 13px; font-weight: 600; color: var(--ink); }
 .volet-sum { font-size: 11.5px; color: var(--ink-4); margin-left: auto; text-align: right; }
@@ -3015,7 +3017,7 @@ table.data th, table.data td { padding: 9px 12px; }
   font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--gain); flex: none;
 }
-.step-line-chev { color: var(--ink-5); font-size: 13px; flex: none; transition: transform .16s var(--ease); }
+.step-line-chev { color: var(--ink-5); font-size: 13px; flex: none; transition: transform .38s var(--ease-soft); }
 .step-line[open] .step-line-chev { transform: rotate(90deg); }
 .step-line-why {
   margin: 8px 0 0; padding: 0 12px 0 44px; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); max-width: 90ch;
@@ -3565,6 +3567,31 @@ body { background: var(--paper); }
 .board-stack { display: flex; flex-direction: column; gap: 18px; }
 .view > .card + .card, .view > .panel + .panel { margin-top: 14px; }
 
+/* ─── Le prix des années suivantes ─── */
+/* Une case vide n'est pas une case sans valeur : elle reconduit l'année
+   précédente. Le gris le dit, le noir dit qu'on a forcé. */
+.control.is-inherited input { color: var(--ink-5); }
+.control.is-inherited { background: var(--surface-2); }
+.control.is-inherited:focus-within { background: var(--surface); }
+.control.is-inherited:focus-within input { color: var(--ink); }
+
+.byyear { margin-top: 16px; }
+.byyear-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding-bottom: 7px; border-bottom: 1px solid var(--rule); margin-bottom: 12px;
+}
+.byyear-title { font-size: 13px; font-weight: 650; color: var(--ink); }
+.byyear-base { font-size: 12px; color: var(--ink-4); }
+.byyear-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.byyear-cell { position: relative; min-width: 0; }
+.byyear-cell.is-forced .control { border-color: var(--ink); }
+.byyear-clear {
+  position: absolute; top: 0; right: 0; border: 0; background: none; cursor: pointer;
+  font-size: 13px; line-height: 1; color: var(--ink-5); padding: 2px 4px;
+}
+.byyear-clear:hover { color: var(--loss); }
+@media (max-width: 760px) { .byyear-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* ─── Les cinq exercices ─── */
 .years { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .year {
@@ -3722,13 +3749,13 @@ body { background: var(--paper); }
 /* Un changement d'onglet ne doit pas surprendre : le contenu arrive en un
    tiers de seconde, du bas, sans à-coup. Plus rapide, l'œil perd le fil ; plus
    lent, on attend l'interface. */
-.view-switch .view, .view-switch .item-body { animation: view-in .34s var(--ease-soft) both; }
+.view-switch .view, .view-switch .item-body { animation: view-in .44s var(--ease-soft) both; }
 /* Les blocs de la vue entrent l'un après l'autre, très légèrement décalés :
    la page se pose au lieu d'apparaître d'un bloc. */
-.view-switch .view > * { animation: view-in .38s var(--ease-soft) both; }
-.view-switch .view > *:nth-child(2) { animation-delay: .04s; }
-.view-switch .view > *:nth-child(3) { animation-delay: .08s; }
-.view-switch .view > *:nth-child(n+4) { animation-delay: .11s; }
+.view-switch .view > * { animation: view-in .48s var(--ease-soft) both; }
+.view-switch .view > *:nth-child(2) { animation-delay: .06s; }
+.view-switch .view > *:nth-child(3) { animation-delay: .12s; }
+.view-switch .view > *:nth-child(n+4) { animation-delay: .17s; }
 
 /* ─── La ligne qu'on est en train de remplir ─── */
 /* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est
