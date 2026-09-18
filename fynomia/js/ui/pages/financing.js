@@ -6,6 +6,7 @@ import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
+import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 
 /**
@@ -110,6 +111,30 @@ export function renderFinancing(navigate, refresh) {
     store.update((sc) => { sc.financing[key] = sc.financing[key].filter((x) => x.id !== id) }, { label: 'Suppression' })
     refresh()
   }
+
+  /**
+   * Activer ou désactiver une source.
+   *
+   * La tuile est un interrupteur : une source sert, ou elle ne sert pas.
+   * Désactiver ne jette rien — les lignes sont mises de côté dans le scénario
+   * et reviennent telles quelles à la réactivation. Un emprunt qu'on éteint
+   * pour voir l'effet sur la trésorerie ne doit pas coûter sa ressaisie.
+   */
+  const toggle = (src) => {
+    const on = (f[src.key] || []).length > 0
+    store.update((sc) => {
+      const paused = (sc.financing.paused = sc.financing.paused || {})
+      if (on) {
+        paused[src.key] = sc.financing[src.key]
+        sc.financing[src.key] = []
+      } else {
+        sc.financing[src.key] = (paused[src.key] || []).length ? paused[src.key] : [src.make()]
+        delete paused[src.key]
+      }
+    }, { label: on ? `Sans ${src.label.toLowerCase()}` : `Avec ${src.label.toLowerCase()}` })
+    if (!on) renderFinancing.picked = src.key
+    refresh()
+  }
   const setField = (key, id, patch, opts = {}) =>
     store.update((sc) => Object.assign(sc.financing[key].find((x) => x.id === id), patch), { label: 'Financement', ...(opts || {}) })
 
@@ -118,6 +143,8 @@ export function renderFinancing(navigate, refresh) {
     r ? { key: 'tresorerie', label: 'Trésorerie' } : null,
     r ? { key: 'plan', label: 'Plan de financement' } : null,
   ]
+  const want = claim('financement')
+  if (want && want.view) renderFinancing.view = want.view
   const view = views.some((v) => v && v.key === renderFinancing.view) ? renderFinancing.view : 'sources'
   renderFinancing.view = view
 
@@ -132,13 +159,14 @@ export function renderFinancing(navigate, refresh) {
       r && r.kpis.fundingNeed > 0
         ? `${euro(totalRaised, { compact: true })} réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
         : `${euro(totalRaised, { compact: true })} réunis · trésorerie couverte`,
-      view === 'sources' && source ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, `＋ ${source.label}`) : null,
+      view === 'sources' && source && (f[source.key] || []).length
+        ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, `＋ Une ligne de plus`) : null,
     ),
 
     tabs(views, view, (k) => { renderFinancing.view = k; refresh() }),
 
     view === 'sources' ? h('div', { class: 'view' },
-      h('div', { class: 'sources' },
+      h('div', { class: 'sources', 'data-gap': 'sources' },
         h('div', { class: 'source source-cash' },
           h('span', { class: 'source-glyph' }, '●'),
           h('span', { class: 'source-name' }, 'Déjà en caisse'),
@@ -156,30 +184,32 @@ export function renderFinancing(navigate, refresh) {
         ...visible.map((src) => {
           const items = f[src.key] || []
           const total = sum(items)
+          const on = items.length > 0
           return h('div', {
-            class: `source ${picked === src.key ? 'is-open' : ''} ${items.length ? 'is-on' : ''}`,
+            class: `source ${picked === src.key ? 'is-open' : ''} ${on ? 'is-on' : ''}`,
             role: 'button', tabindex: '0',
-            onClick: () => { renderFinancing.picked = src.key; if (!items.length) add(src); else refresh() },
-            onKeydown: (e) => { if (e.key === 'Enter') { renderFinancing.picked = src.key; refresh() } },
+            onClick: () => { if (on) { renderFinancing.picked = src.key; refresh() } else toggle(src) },
+            onKeydown: (e) => { if (e.key === 'Enter') { if (on) { renderFinancing.picked = src.key; refresh() } else toggle(src) } },
           },
             h('span', { class: 'source-glyph' }, src.glyph),
             h('span', { class: 'source-name' }, src.label),
-            h('span', { class: 'source-value num' }, items.length ? euro(total, { compact: true }) : '—'),
+            h('span', { class: 'source-value num' }, on ? euro(total, { compact: true }) : '—'),
             items.length > 1 ? h('span', { class: 'source-count' }, `${items.length} lignes`) : null,
+            // Un seul bouton : « + » quand la source est éteinte, « − » quand
+            // elle sert. Deux boutons demandaient de comprendre la différence
+            // entre « ajouter une ligne » et « utiliser cette source ».
             h('span', { class: 'source-acts' },
-              items.length ? h('button', {
-                class: 'source-act', title: `Retirer une ligne de ${src.label.toLowerCase()}`,
-                onClick: (e) => { e.stopPropagation(); drop(src.key, items[items.length - 1].id) },
-              }, '−') : null,
               h('button', {
-                class: 'source-act', title: `Ajouter ${src.label.toLowerCase()}`,
-                onClick: (e) => { e.stopPropagation(); add(src) },
-              }, '＋'),
+                class: `source-act ${on ? 'is-off' : 'is-on'}`,
+                title: on ? `Ne pas utiliser : ${src.label.toLowerCase()}` : `Utiliser : ${src.label.toLowerCase()}`,
+                'aria-label': on ? `Désactiver ${src.label}` : `Activer ${src.label}`,
+                onClick: (e) => { e.stopPropagation(); toggle(src) },
+              }, on ? '−' : '＋'),
             ),
           )
         }),
       ),
-      source ? sourceDetail(source, f[source.key] || [], r, { add, drop, setField }) : null,
+      source && (f[source.key] || []).length ? sourceDetail(source, f[source.key], r, { add, drop, setField }) : null,
     ) : null,
 
     view === 'tresorerie' && r ? h('div', { class: 'view' },
@@ -209,7 +239,7 @@ export function renderFinancing(navigate, refresh) {
       ),
     ) : null,
 
-    todoPanel('financement', store.scenario, () => refresh()),
+    todoPanel('financement', store.scenario, navigate),
 
     tutorial('financement', navigate),
   )

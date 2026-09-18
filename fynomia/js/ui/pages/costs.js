@@ -8,6 +8,7 @@ import { tutorial, stepBanner } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
+import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 
 export function renderCosts(navigate, refresh) {
@@ -40,6 +41,8 @@ export function renderCosts(navigate, refresh) {
     { key: 'invest', label: 'Investissements', count: s.capex.length },
     r && s.opex.length > 0 ? { key: 'repartition', label: 'Répartition' } : null,
   ]
+  const want = claim('achats')
+  if (want && want.view) renderCosts.view = want.view
   const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
   renderCosts.view = view
 
@@ -74,13 +77,13 @@ export function renderCosts(navigate, refresh) {
           ))
         : h('div', {}, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
 
-      missing.length > 0 ? h('div', { class: 'suggest' },
+      missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
         h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
         ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: () => addFromTemplate(t) }, `＋ ${t.label}`)),
       ) : null,
     ) : null,
 
-    view === 'invest' ? h('div', { class: 'view' }, capexSection(s, r, level, refresh)) : null,
+    view === 'invest' ? h('div', { class: 'view', 'data-gap': 'capex' }, capexSection(s, r, level, refresh)) : null,
 
     view === 'repartition' && r ? h('div', { class: 'view' },
       h('div', { class: 'board-pair' },
@@ -101,7 +104,7 @@ export function renderCosts(navigate, refresh) {
       ),
     ) : null,
 
-    todoPanel('achats', store.scenario, () => refresh()),
+    todoPanel('achats', store.scenario, navigate),
 
     tutorial('charges', navigate),
   )

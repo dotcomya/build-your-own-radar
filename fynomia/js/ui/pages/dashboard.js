@@ -9,11 +9,13 @@
 
 import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleHead } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
-import { getPersona, activeLevers, METRICS } from '../personas.js'
-import { leverPanel, metricBoard } from '../levers.js'
+import { getPersona } from '../personas.js'
+import { metricBoard } from '../levers.js'
+import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
 import { storyline, gauge } from '../story.js'
 import { partBanner } from '../tutorial.js'
+import { renderSimulation } from './simulation.js'
 import { breakEvenBoard } from './model.js'
 import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
@@ -46,10 +48,13 @@ export function renderDashboard(navigate, refresh) {
   renderDashboard.year = y
   const pickYearFn = (next) => { renderDashboard.year = next; refresh() }
 
+  // Trois temps, trois onglets : où j'en suis, ce que disent mes chiffres, et
+  // ce qui se passerait si. Les conseils génériques ont disparu — ils
+  // répétaient ce que les repères de métier disent déjà là où ça compte.
   const views = [
     { key: 'pilotage', label: 'Pilotage' },
     { key: 'analyse', label: 'Analyse' },
-    { key: 'conseils', label: 'Conseils' },
+    { key: 'simulation', label: 'Simulation' },
   ]
   const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'pilotage'
   renderDashboard.view = view
@@ -68,31 +73,25 @@ export function renderDashboard(navigate, refresh) {
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
       cockpit(j, r, navigate),
-      yearBar(y, r, pickYearFn),
-      (() => {
-        const figs = keyFigures(r, s, y, navigate)
-        const flow = moneyPanel(r, y)
-        // Le tableau de bord suit le geste : les six nombres et la cascade se
-        // réécrivent à chaque pixel du curseur, sans redessiner la page.
-        renderDashboard.live = (provisional) => {
-          try { figs.updateWith(provisional); flow.updateWith(provisional) } catch { /* rendu concurrent */ }
-        }
-        return h('div', { class: 'board-stack' },
-          figs,
-          h('section', { class: 'panel' },
-            h('div', { class: 'card-head' },
-              h('div', {},
-                h('h2', {}, 'Combien de clients pour vivre'),
-                h('div', { class: 'tiny muted' }, "Ce qu'il faut couvrir, ce que rapporte un client, l'\u00e9cart entre les deux"),
-              ),
-            ),
-            h('div', { class: 'panel-body' }, breakEvenBoard(r, s, vocabulary(s))),
+      h('section', { class: 'panel' },
+        h('div', { class: 'card-head' },
+          h('div', {},
+            h('h2', {}, 'Combien de clients pour vivre'),
+            h('div', { class: 'tiny muted' }, "Ce qu'il faut couvrir, ce que rapporte un client, l'\u00e9cart entre les deux"),
           ),
-          controlDeck(persona, s, r, refresh), flow)
-      })(),
+        ),
+        h('div', { class: 'panel-body' }, breakEvenBoard(r, s, vocabulary(s))),
+      ),
     ) : null,
 
+    // L'analyse part de ce qui a été saisi : l'année regardée, les six chiffres
+    // qui en découlent, puis les dessins — chacun accompagné d'une phrase qui
+    // dit ce qu'il montre. Un graphique qu'on doit interpréter seul ne sert
+    // qu'à celui qui connaissait déjà la réponse.
     view === 'analyse' ? h('div', { class: 'view board-stack' },
+      yearBar(y, r, pickYearFn),
+      keyFigures(r, s, y, navigate),
+      moneyPanel(r, y),
       h('section', { class: 'panel story-panel' },
         h('div', { class: 'card-head' },
           h('div', {},
@@ -102,15 +101,15 @@ export function renderDashboard(navigate, refresh) {
           h('span', { class: 'spacer' }),
           h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
         ),
-        // La frise se dessine dans un cadre adapté à la largeur disponible :
-        // rétrécir un dessin de bureau rendrait ses annotations illisibles.
         storyline(r, s, { compact: narrow() }),
+        h('p', { class: 'chart-note' }, trajectorySentence(r)),
       ),
       ...boardCharts(r, s, y, level, sector, navigate),
       detailDisclosure(persona, r, s, y, sector, navigate, refresh),
     ) : null,
 
-    view === 'conseils' ? h('div', { class: 'view' }, adviceTabs(r, s, sector, y, navigate, refresh)) : null,
+    view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh)) : null,
+
   )
 }
 
@@ -197,37 +196,6 @@ function yearBar(y, r, pick) {
     )),
   )
 }
-
-/**
- * Les manettes.
- *
- * Elles étaient dans un pli, sous « voir les chiffres » : personne ne tire un
- * curseur qu'il ne voit pas. Sur le tableau de bord, elles font du plan un
- * objet qu'on manipule — on bouge un prix, tout se recalcule pendant le geste.
- */
-function controlDeck(persona, s, r, refresh) {
-  const levers = activeLevers(persona, s)
-  if (!levers.length) return null
-  const board = metricBoard(persona, r, { glossary: false })
-  return h('section', { class: 'deck' },
-    h('div', { class: 'deck-head' },
-      h('h2', {}, 'Simulation'),
-      h('span', { class: 'spacer' }),
-      h('span', { class: 'tiny muted' }, 'Tire un curseur : tout se recalcule pendant le geste'),
-    ),
-    h('div', { class: 'deck-body' },
-      h('div', { class: 'deck-levers' }, leverPanel(levers, {
-        onLive: (provisional) => {
-          board.updateWith(provisional)
-          if (renderDashboard.live) renderDashboard.live(provisional)
-        },
-        onDone: refresh,
-      })),
-      h('div', { class: 'deck-metrics' }, board),
-    ),
-  )
-}
-
 
 /* ────────────────────────── En-tête et verdict ────────────────────────── */
 
@@ -371,7 +339,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
       line: k.breakEven.some((v) => v)
         ? { label: 'Point mort', values: k.breakEven.map((v) => v || 0), color: STATUS.loss, dashed: true }
         : null,
-    }))
+    }), chartNote(revenueSentence(r)))
 
   const costs = panel('Structure des charges', 'Par exercice',
     stackedBar({
@@ -383,7 +351,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
         { label: 'Impôts et taxes', values: p.duties, color: PALETTE[4] },
         { label: 'Amortissements', values: p.amortisation, color: PALETTE[2] },
       ],
-    }))
+    }), chartNote(costsSentence(r, y)))
   out.push(pair(trajectory, costs))
 
   const activities = r.revenue.perActivity
@@ -392,7 +360,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
   // Un camembert à une part ne dit rien : il ne s'affiche qu'à partir de deux
   // sources de revenus.
   const mix = activities.length > 1
-    ? panel('Répartition du chiffre d\'affaires', 'Cumul sur cinq ans', donut({ items: activities }))
+    ? panel('Répartition du chiffre d\'affaires', 'Cumul sur cinq ans', donut({ items: activities }), chartNote(mixSentence(activities)))
     : null
 
   const payrollY = yearly(r.payroll.gross)
@@ -407,7 +375,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
               ? [{ label: 'Avantages', values: yearly(r.payroll.benefits), color: PALETTE[4] }]
               : []),
           ],
-        }))
+        }), chartNote(payrollSentence(r, y)))
     : null
 
   if (mix || team) out.push(pair(mix, team))
@@ -415,10 +383,12 @@ function boardCharts(r, s, y, level, sector, navigate) {
   {
     const bfr = panel('Besoin en fonds de roulement',
       k.peakBfr > 0 ? "L'argent avancé aux clients et immobilisé dans les stocks" : 'Le cycle dégage de la ressource',
-      areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }))
+      areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }),
+      chartNote(bfrSentence(r)))
     const cashPanel = panel('Trésorerie',
       Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
-      areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }))
+      areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }),
+      chartNote(cashSentence(r)))
     out.push(refine('board-cycle', 'Affiner : besoin en fonds de roulement et courbe de trésorerie', pair(bfr, cashPanel)))
   }
 
@@ -506,47 +476,6 @@ function moneyFlowSentence(r, y) {
   if (biggest.v <= 0) return `Sur 100 € facturés, il t’en reste ${Math.round(kept * 100)} € après impôt.`
   return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il t’en reste ${Math.round(kept * 100)} € après impôt.`
 }
-
-/**
- * Les conseils, en onglets.
- *
- * Trois panneaux de texte empilés — les repères du métier, les actions
- * chiffrées, les alertes — ajoutaient mille pixels de défilement pour du
- * contenu qu'on consulte un à la fois. Ils partagent désormais une surface.
- */
-function adviceTabs(r, s, sector, y, navigate, refresh) {
-  const panels = [
-    { key: 'actions', label: 'Leviers', node: () => actionsPanel(r, s, navigate, refresh) },
-    { key: 'reperes', label: 'Repères métier', node: () => (sector ? gaugePanel(r, s, sector, y) : null) },
-    {
-      key: 'alertes', label: 'Alertes', node: () => nudgesSection(s, r, navigate),
-      count: () => nudges(s, r).length + store.issues.filter((i) => i.level === 'error').length,
-    },
-  ].map((t) => ({ ...t, built: t.node() })).filter((t) => t.built)
-
-  if (panels.length === 0) return null
-  const picked = panels.some((t) => t.key === adviceTabs.picked) ? adviceTabs.picked : panels[0].key
-  adviceTabs.picked = picked
-
-  const host = h('div', { class: 'advice-body' }, panels.find((t) => t.key === picked).built)
-  const strip = h('div', { class: 'advice-tabs' })
-  for (const t of panels) {
-    const n = t.count ? t.count() : 0
-    const btn = h('button', { class: `advice-tab ${t.key === picked ? 'active' : ''}` },
-      t.label,
-      n > 0 ? h('span', { class: 'advice-count' }, String(n)) : null,
-    )
-    btn.addEventListener('click', () => {
-      adviceTabs.picked = t.key
-      host.replaceChildren(t.built)
-      for (const b of strip.children) b.classList.remove('active')
-      btn.classList.add('active')
-    })
-    strip.appendChild(btn)
-  }
-  return h('section', { class: 'advice' }, strip, host)
-}
-
 
 /* ──────────────────────── Actions déjà chiffrées ──────────────────────── */
 
@@ -699,6 +628,9 @@ function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
   details.addEventListener('toggle', () => { detailDisclosure.open = details.open })
   return details
 }
+
+/** La phrase qui dit ce que le dessin montre. */
+const chartNote = (text) => (text ? h('p', { class: 'chart-note' }, text) : null)
 
 function panel(title, subtitle, ...body) {
   return h('section', { class: 'panel' },

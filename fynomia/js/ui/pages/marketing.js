@@ -24,7 +24,7 @@ export function renderAcquisition(navigate, refresh) {
   const s = store.scenario
   const r = store.result
   const level = store.level
-  const open = renderMarketing.open || (renderMarketing.open = new Set())
+  const open = renderAcquisition.open || (renderAcquisition.open = new Set())
   if (open.size === 0 && s.marketing[0]) open.add(s.marketing[0].id)
 
   // En mode simple, l'acquisition tient en deux nombres : ce que coûte un
@@ -46,8 +46,8 @@ export function renderAcquisition(navigate, refresh) {
     r && s.marketing.length > 0 ? { key: 'mix', label: 'Répartition' } : null,
     r && s.marketing.length > 0 ? { key: 'rentabilité', label: 'Rentabilité' } : null,
   ]
-  const view = views.some((v) => v && v.key === renderMarketing.view) ? renderMarketing.view : 'campagnes'
-  renderMarketing.view = view
+  const view = views.some((v) => v && v.key === renderAcquisition.view) ? renderAcquisition.view : 'campagnes'
+  renderAcquisition.view = view
 
   return h('div', { class: 'content' },
     pageBar(
@@ -58,9 +58,9 @@ export function renderAcquisition(navigate, refresh) {
       view === 'campagnes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter une campagne') : null,
     ),
 
-    tabs(views, view, (k) => { renderMarketing.view = k; refresh() }),
+    tabs(views, view, (k) => { renderAcquisition.view = k; refresh() }),
 
-    view === 'campagnes' ? h('div', { class: 'view' },
+    view === 'campagnes' ? h('div', { class: 'view', 'data-gap': 'campagnes' },
       r && s.marketing.length > 0 ? h('div', { class: 'grid grid-4 kpis mb' },
         tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),
         tile('Clients acquis', num(Math.round(totalClients)), 'Toutes campagnes'),

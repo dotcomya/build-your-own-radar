@@ -68,6 +68,7 @@ export function renderProject(navigate, refresh) {
 
       h('div', { class: 'mt' }, sectorPicks(s, set, refresh)),
 
+      h('div', { 'data-gap': 'calendrier' },
       refine('projet-cloture', 'Affiner le calendrier',
         h('div', { class: 'grid grid-2' },
           selectField({
@@ -78,11 +79,11 @@ export function renderProject(navigate, refresh) {
             onInput: (v) => set({ fiscalYearEnd: Number(v) }, 'Clôture'),
           }),
         ),
-      ),
+      )),
     ),
 
     h('div', { class: 'slab-pair' },
-    h('section', { class: 'slab' },
+    h('section', { class: 'slab', 'data-gap': 'pitch' },
       h('div', { class: 'slab-head' },
         h('div', {},
           h('div', { class: 'slab-title' }, 'Décris ce que tu vends'),
@@ -100,7 +101,7 @@ export function renderProject(navigate, refresh) {
         h('div', { class: 'note-title' }, 'Pas de génération magique'),
         "Fynomia garde le fond que tu saisis. Une mise en forme viendra ensuite dans le dossier, mais le modèle financier ne dépend d’aucun texte."),
     ),
-    h('section', { class: 'slab' },
+    h('section', { class: 'slab', 'data-gap': 'client' },
       h('div', { class: 'slab-head' },
         h('div', {},
           h('div', { class: 'slab-title' }, 'Le client'),
@@ -169,7 +170,7 @@ export function renderProject(navigate, refresh) {
       ),
     ),
 
-    todoPanel('projet', store.scenario, () => refresh()),
+    todoPanel('projet', store.scenario, navigate),
 
     h('div', { class: 'row mt', style: { justifyContent: 'space-between' } },
       h('span', { class: 'tiny muted' }, 'Toutes les valeurs restent modifiables plus tard.'),

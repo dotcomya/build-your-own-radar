@@ -5,6 +5,9 @@ import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } fro
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
 import { partBanner } from '../tutorial.js'
+import { founderIncome } from '../../engine/founder.js'
+import { bfrSentence } from '../explain.js'
+import { refine } from '../dom.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -34,6 +37,11 @@ export function renderResults(navigate, refresh) {
 
     partBanner('resultats'),
 
+    // Avant les tableaux : le seul chiffre que le fondateur cherche vraiment.
+    // Les états financiers disent comment l'argent circule ; celui-ci dit ce
+    // qu'il en reste pour lui.
+    netSummary(r, refresh),
+
     tabs(views, view, (k) => { renderResults.tab = k; refresh() }),
 
     h('div', { class: 'view' },
@@ -46,6 +54,64 @@ export function renderResults(navigate, refresh) {
     ),
   )
 }
+
+/**
+ * Ce qu'il te reste, net de tout.
+ *
+ * Un compte de résultat ne répond pas à la question que se pose le fondateur :
+ * combien j'en vis. Ce bandeau la traite en premier, en séparant les deux
+ * canaux — le salaire, qui coûte des cotisations mais ouvre des droits, et le
+ * dividende, qui n'en ouvre aucun mais supporte moins de prélèvements. Le
+ * détail complet, exercice par exercice, reste à un clic.
+ */
+function netSummary(r, refresh) {
+  const s = store.scenario
+  let income = null
+  try { income = founderIncome(s, r) } catch { return null }
+  if (!income || !income.rows.length) return null
+
+  // On regarde le premier exercice où quelque chose remonte : montrer zéro en
+  // année 1 quand le fondateur se paie à partir de l'année 2 serait faux.
+  const y = Math.max(0, income.rows.findIndex((x) => x.disposable > 0))
+  const row = income.rows[y]
+  if (!row || row.disposable <= 0) {
+    return h('section', { class: 'netsum is-empty' },
+      h('div', { class: 'netsum-tag' }, 'Ce qu’il te reste, net de tout'),
+      h('div', { class: 'netsum-value' }, '—'),
+      h('p', { class: 'netsum-note' },
+        'Aucune rémunération ni dividende sur cinq ans. Renseigne ta rémunération dans le module Équipe : un plan où le fondateur ne se paie pas n’est pas prudent, il est faux.'),
+    )
+  }
+
+  const salaire = row.netBeforeTax || 0
+  const dividendes = row.netDividends || 0
+  const impot = row.incomeTax || 0
+  const part = (v) => (salaire + dividendes > 0 ? pct(v / (salaire + dividendes), 0) : '—')
+
+  return h('section', { class: 'netsum' },
+    h('span', { class: 'netsum-arc', 'aria-hidden': 'true' }),
+    h('div', { class: 'netsum-main' },
+      h('div', { class: 'netsum-tag' }, `Ce qu’il te reste, net de tout — ${yearLabel(y).toLowerCase()}`),
+      h('div', { class: 'netsum-value num' }, euro(row.disposable, { compact: true })),
+      h('div', { class: 'netsum-month num' }, `${euro(row.monthly)} par mois`),
+    ),
+    h('div', { class: 'netsum-split' },
+      splitCell('Salaire net', salaire, salaire > 0 ? `${part(salaire)} de ce que tu encaisses, avant impôt sur le revenu` : 'Tu ne te verses pas de salaire'),
+      splitCell('Dividendes nets', dividendes, dividendes > 0 ? `${part(dividendes)} de ce que tu encaisses, après prélèvements sociaux` : 'Aucun dividende distribué'),
+      splitCell('Impôt sur le revenu', -impot, `Tranche marginale ${pct(row.marginalRate, 0)}`),
+    ),
+    h('button', {
+      class: 'netsum-more',
+      onClick: () => { renderResults.tab = 'revenu'; refresh() },
+    }, 'Voir le détail, exercice par exercice \u2192'),
+  )
+}
+
+const splitCell = (label, value, note) => h('div', { class: `netsum-cell ${value < 0 ? 'is-out' : ''}` },
+  h('div', { class: 'netsum-cell-label' }, label),
+  h('div', { class: 'netsum-cell-value num' }, euro(value)),
+  h('div', { class: 'netsum-cell-note' }, note),
+)
 
 function pnlView(r, level) {
   const p = r.pnl, k = r.kpis
@@ -259,9 +325,10 @@ function bfrView(r) {
       h('div', { class: 'card-head' }, h('h2', {}, 'Besoin en fonds de roulement'), helpButton('bfr')),
       h('div', { class: 'card-body' },
         areaChart({ values: r.bfr.total, startDate: r.startDate, color: PALETTE[2], markZero: false }),
+        h('p', { class: 'chart-note' }, bfrSentence(r)),
         h('div', { class: 'note mt' },
-          h('div', { class: 'note-title' }, `Pic de besoin : ${euro(r.kpis.peakBfr)}`),
-          "C'est l'argent immobilisé en permanence dans le cycle d'exploitation. Il doit être financé par du capital ou du crédit — jamais par le découvert. Négocier un acompte client plus élevé ou un délai fournisseur plus long le réduit sans rien changer à ta rentabilité."),
+          h('div', { class: 'note-title' }, 'Pourquoi la courbe a cette forme'),
+          bfrShape(r)),
       ),
     ),
     h('div', { class: 'card' },
@@ -291,6 +358,35 @@ function bfrView(r) {
       ),
     ),
   )
+}
+
+/**
+ * La forme de la courbe, expliquée.
+ *
+ * « Pic de besoin : 31 000 € » ne dit pas pourquoi la courbe monte, descend, ou
+ * reste collée à zéro. Or c'est la forme qui compte : elle vient des délais de
+ * paiement et du rythme des ventes, deux réglages que le fondateur peut changer.
+ */
+function bfrShape(r) {
+  const t = r.bfr.total
+  const peak = Math.max(...t)
+  const trough = Math.min(...t)
+  const first = t.slice(0, 12).reduce((a, b) => a + b, 0) / 12
+  const last = t.slice(48).reduce((a, b) => a + b, 0) / 12
+  const creances = r.bfr.receivables[11] || 0
+  const dettes = r.bfr.payables[11] || 0
+
+  if (peak <= 0) {
+    return `La courbe reste sous zéro : à la clôture de l'année 1, tu dois ${euro(dettes)} à tes fournisseurs `
+      + `et tes clients ne te doivent que ${euro(creances)}. Tu es donc financé par ton cycle d'exploitation. `
+      + `Cet avantage se retourne le jour où tu accordes des délais de paiement : c'est ce qui arrive à presque toutes `
+      + `les entreprises qui passent du particulier au professionnel.`
+  }
+  const sens = last > first * 1.15 ? 'monte avec le chiffre d’affaires' : last < first * 0.85 ? 'redescend à mesure que les encaissements rattrapent les ventes' : 'reste stable'
+  return `La courbe ${sens}. Elle est faite de ce que tes clients te doivent (${euro(creances)} fin d'année 1) et de tes stocks, `
+    + `moins ce que tu dois à tes fournisseurs (${euro(dettes)}). Elle descend quand tu encaisses, remonte quand tu factures : `
+    + `le creux à ${euro(trough)} et le pic à ${euro(peak)} sont les deux extrêmes de ce balancement. `
+    + `Un acompte à la commande écrase le pic ; un délai client allongé le creuse.`
 }
 
 function taxView(r) {

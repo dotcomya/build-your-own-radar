@@ -45,6 +45,15 @@ export function resetSetup() { flow.index = 0; flow.touched = new Set() }
 
 const pad = (n) => String(n).padStart(2, '0')
 
+/**
+ * Une étape a-t-elle reçu une réponse ?
+ *
+ * On ne se fie pas à la valeur présente dans le scénario : un modèle de métier
+ * en pose déjà quelques-unes, et « Continuer » s'ouvrait alors sur des réponses
+ * que le fondateur n'avait jamais données. Seule sa frappe ou son clic comptent.
+ */
+const answered = (key) => flow.touched.has(key)
+
 /* ──────────────────────────────── Les écrans ────────────────────────────── */
 
 const STEPS = [
@@ -64,14 +73,16 @@ const STEPS = [
       value: (s) => s.meta.company || '',
       apply: (s, v) => { s.meta.company = v; if (v.trim()) s.meta.name = v.trim() },
     }),
-    ready: () => true,
+    ready: (s) => !!(s?.meta?.company || '').trim(),
   },
   {
     key: 'forme', short: 'La forme juridique',
     question: 'Sous quelle forme ?',
     help: "Elle fixe ton statut social, donc le coût de ta rémunération. Modifiable ensuite.",
     render: legalScreen,
-    ready: (s) => !!s?.meta?.legalForm,
+    // Une forme est posée par défaut dans tout scénario pour que le moteur
+    // tourne. Elle n'est pas un choix : il faut que le fondateur en désigne une.
+    ready: (s) => answered('forme') || s?.meta?.legalFormChosen === true,
   },
   {
     key: 'depart', short: 'La mise de départ',
@@ -79,7 +90,7 @@ const STEPS = [
     help: "L'argent déjà disponible : ton apport et celui de tes associés.",
     optional: true,
     render: cashScreen,
-    ready: () => true,
+    ready: () => answered('depart'),
   },
   {
     key: 'offre', short: 'Ce que tu vends',
@@ -90,7 +101,10 @@ const STEPS = [
       value: (s) => (s.activities[0]?.name === 'À définir' ? '' : s.activities[0]?.name || ''),
       apply: (s, v) => { if (s.activities[0]) s.activities[0].name = v.trim() || 'Mon offre' },
     }),
-    ready: () => true,
+    ready: (s) => {
+      const n = (s?.activities?.[0]?.name || '').trim()
+      return !!n && n !== 'À définir'
+    },
   },
   {
     key: 'prix', short: 'Le prix',
@@ -105,7 +119,7 @@ const STEPS = [
     help: "Un plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Fynomia calcule ce que ça coûte à l'entreprise.",
     optional: true,
     render: salaryScreen,
-    ready: () => true,
+    ready: () => answered('salaire'),
   },
   {
     key: 'frais', short: 'Tes frais fixes',
@@ -113,7 +127,7 @@ const STEPS = [
     help: 'Coche ce qui te concerne. Ces frais fixent le nombre de clients qu\'il te faut.',
     optional: true,
     render: costsScreen,
-    ready: () => true,
+    ready: () => answered('frais'),
   },
   {
     key: 'clients', short: 'Tes premiers clients',
@@ -132,7 +146,7 @@ const STEPS = [
     help: "Uniquement ce qui augmente quand tu vends une unité de plus. Pas le loyer ni le comptable : tu viens de les saisir.",
     optional: true,
     render: costScreen,
-    ready: () => true,
+    ready: () => answered('cout'),
   },
   {
     key: 'croissance', short: 'La croissance',
@@ -140,7 +154,7 @@ const STEPS = [
     help: 'Aucune croissance ne tient cinq ans au même rythme : Fynomia freine la courbe dans la durée.',
     optional: true,
     render: growthScreen,
-    ready: () => true,
+    ready: () => answered('croissance'),
   },
   {
     key: 'fin', short: 'Le résultat',
@@ -214,10 +228,20 @@ export function renderSetup(navigate, refresh) {
           h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question),
           step.help ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
           body,
-          !step.last ? h('div', { class: 'setup-actions' },
-            flow.index > 0 ? h('button', { class: 'btn btn-lg btn-ghost', onClick: () => go(-1) }, 'Retour') : null,
-            nextBtn,
-            step.optional ? h('button', { class: 'setup-later', onClick: () => go(1) }, 'Plus tard') : null,
+          !step.last ? h('div', {},
+            h('div', { class: 'setup-actions' },
+              flow.index > 0 ? h('button', { class: 'btn btn-lg btn-ghost', onClick: () => go(-1) }, 'Retour') : null,
+              nextBtn,
+              step.optional ? h('button', { class: 'setup-later', onClick: () => go(1) }, 'Plus tard') : null,
+            ),
+            // Le blocage de « Continuer » n'a de sens que si l'on sait qu'aucune
+            // réponse n'est définitive : sans cette ligne, il se lit comme un
+            // examen.
+            h('p', { class: 'setup-reassure' },
+              h('span', { class: 'setup-reassure-mark' }, '\u21BA'),
+              step.optional
+                ? 'Réponds, ou passe : tout reste modifiable ensuite, dans le logiciel.'
+                : 'Tout reste modifiable ensuite, dans le logiciel.'),
           ) : null,
         ),
       ),
@@ -332,7 +356,7 @@ function choice(ctx, options) {
   const host = h('div', { class: 'setup-choices' })
   const draw = () => host.replaceChildren(...options.map((o) => h('button', {
     class: `setup-choice ${o.active() ? 'active' : ''}`,
-    onClick: () => { o.pick(); draw(); ctx.tick(); ctx.onChoice?.() },
+    onClick: () => { flow.touched.add(ctx.step.key); o.pick(); draw(); ctx.tick(); ctx.onChoice?.() },
   },
     h('span', { class: 'setup-choice-label' }, o.label),
     o.note ? h('span', { class: 'setup-choice-note' }, o.note) : null,
@@ -394,6 +418,9 @@ function legalScreen(ctx) {
   const allowed = [...suggested, ...['SASU', 'SAS', 'EURL', 'SARL', 'EI', 'BNC', 'Association']
     .filter((f) => !suggested.includes(f))]
   const current = () => store.scenario.meta.legalForm
+  // Tant que rien n'a été choisi, aucune carte n'est allumée : une forme
+  // présélectionnée se lit comme une réponse déjà donnée.
+  const chosen = () => flow.touched.has('forme') || store.scenario.meta.legalFormChosen === true
 
   const FORMS = {
     SASU: { label: 'SASU', note: "Toi seul. Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.", contract: 'dirigeant' },
@@ -411,9 +438,10 @@ function legalScreen(ctx) {
     choice(ctx, allowed.filter((f) => FORMS[f]).map((f) => ({
       label: FORMS[f].label,
       note: FORMS[f].note,
-      active: () => current() === f,
+      active: () => chosen() && current() === f,
       pick: () => store.update((sc) => {
         sc.meta.legalForm = f
+        sc.meta.legalFormChosen = true
         sc.founder.majorityManager = ['SARL', 'EURL', 'SELARL'].includes(f)
         // Le statut du dirigeant suit la forme : c'est elle qui le détermine,
         // pas un choix séparé qu'on oublierait de mettre à jour.
@@ -640,6 +668,7 @@ function costScreen(ctx) {
         h('button', {
           class: 'setup-cost-toggle',
           onClick: () => {
+            flow.touched.add(ctx.step.key)
             store.update((sc) => {
               sc.meta.costParts = sc.meta.costParts || {}
               if (on) delete sc.meta.costParts[part.label]
@@ -826,6 +855,7 @@ function costsScreen(ctx) {
     const toggle = h('button', {
       class: 'setup-cost-toggle',
       onClick: () => {
+        flow.touched.add(ctx.step.key)
         store.update((sc) => {
           const i = (sc.opex || []).findIndex((o) => o.label === sug.label)
           if (i >= 0) sc.opex.splice(i, 1)

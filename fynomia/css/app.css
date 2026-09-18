@@ -375,12 +375,13 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .lever-range::-moz-range-track { height: 3px; background: var(--rule); }
 .lever-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 16px; height: 16px; background: var(--signal); border: 0; margin-top: -6.5px;
-  transition: transform .1s;
+  width: 16px; height: 16px; background: var(--ink); border: 0; margin-top: -6.5px;
+  border-radius: 50%; box-shadow: 0 0 0 3px var(--accent-wash);
+  transition: transform .1s, box-shadow .12s;
 }
-.lever-range::-moz-range-thumb { width: 16px; height: 16px; background: var(--signal); border: 0; border-radius: 0; }
+.lever-range::-moz-range-thumb { width: 16px; height: 16px; background: var(--ink); border: 0; border-radius: 50%; }
 .lever-range:hover::-webkit-slider-thumb { transform: scale(1.15); }
-.lever-range:active::-webkit-slider-thumb { transform: scale(1.3); }
+.lever-range:active::-webkit-slider-thumb { transform: scale(1.3); box-shadow: 0 0 0 5px var(--accent); }
 
 /* Chaîne de causalité : ce qu'un champ déplace, et dans quel ordre */
 .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
@@ -1683,6 +1684,11 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 52ch; }
 
 .setup-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.setup-reassure {
+  display: flex; align-items: baseline; gap: 7px; margin: 12px 0 0;
+  font-size: 12px; color: var(--ink-5);
+}
+.setup-reassure-mark { font-family: var(--mono); color: var(--ink-4); }
 .setup-hint { font-size: 12px; color: var(--ink-5); }
 
 /* Le champ : grand, seul, déjà au focus. */
@@ -3395,8 +3401,9 @@ body { background: var(--paper); }
   font-size: 13px; line-height: 1; display: grid; place-items: center;
   transition: border-color .12s, color .12s, background .12s;
 }
-.source-act:hover { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
-.source-act:first-child:hover { border-color: var(--loss); color: var(--loss); }
+.source-act.is-on { border-color: var(--ink); color: var(--ink); }
+.source-act.is-on:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.source-act.is-off:hover { border-color: var(--loss); color: var(--loss); background: var(--loss-wash); }
 .source-cash { padding-bottom: 14px; }
 
 /* ─── Ce qui reste à affiner ─── */
@@ -3420,3 +3427,186 @@ body { background: var(--paper); }
 .affine-item:hover { border-color: var(--ink); background: var(--surface-2); }
 .affine-item-label { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
 .affine-item-why { font-size: 11px; color: var(--ink-4); margin-top: 4px; line-height: 1.45; }
+.affine-item-go {
+  display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4);
+}
+.affine-item:hover .affine-item-go { color: var(--ink); }
+
+/* ─── L'anneau qui dit « c'est ici » ─── */
+/* Trois secondes, deux respirations, aucune secousse : l'attention se conduit,
+   elle ne s'arrache pas. La couleur d'accent dit « ici » partout ailleurs dans
+   l'interface ; elle le dit aussi ici. */
+@keyframes spotlit-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(214, 240, 52, 0); }
+  12%  { box-shadow: 0 0 0 5px rgba(214, 240, 52, .55); }
+  46%  { box-shadow: 0 0 0 2px rgba(214, 240, 52, .28); }
+  62%  { box-shadow: 0 0 0 5px rgba(214, 240, 52, .48); }
+  100% { box-shadow: 0 0 0 0 rgba(214, 240, 52, 0); }
+}
+.spotlit {
+  animation: spotlit-ring 3.2s var(--ease) 1;
+  border-radius: 12px; scroll-margin-top: 90px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlit { animation: none; box-shadow: 0 0 0 3px rgba(214, 240, 52, .5); }
+}
+
+/* ─── Ce qu'il te reste, net de tout ─── */
+.netsum {
+  position: relative; overflow: hidden; background: var(--ink); color: #fff;
+  border-radius: 14px; padding: 22px 24px; margin-bottom: 18px;
+  display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 24px; align-items: center;
+}
+/* Le quartier d'accent reste dans l'angle : plus large, il passait sous les
+   chiffres de droite et les rendait illisibles. */
+.netsum-arc {
+  position: absolute; right: -150px; top: -150px; width: 260px; height: 260px;
+  border-radius: 50%; background: var(--accent); pointer-events: none;
+}
+.netsum-main { position: relative; min-width: 0; }
+.netsum-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent);
+}
+.netsum-value {
+  font-family: var(--display); font-weight: 800; font-size: clamp(30px, 3.6vw, 44px);
+  letter-spacing: -.045em; line-height: 1.02; margin-top: 6px;
+}
+.netsum-month { font-size: 12.5px; color: #B7BAAE; margin-top: 4px; }
+.netsum-split {
+  position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0; border-left: 1px solid #2A3228;
+}
+.netsum-cell { padding: 2px 16px; border-right: 1px solid #2A3228; min-width: 0; }
+.netsum-cell:last-child { border-right: 0; }
+.netsum-cell-label {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: #8A8D82;
+}
+.netsum-cell-value { font-size: 19px; font-weight: 650; letter-spacing: -.03em; margin-top: 5px; color: #fff; }
+.netsum-cell.is-out .netsum-cell-value { color: #FF8A9B; }
+.netsum-cell-note { font-size: 11px; color: #8A8D82; margin-top: 4px; line-height: 1.4; }
+.netsum-more {
+  position: relative; grid-column: 1 / -1; justify-self: start;
+  border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 12.5px; color: var(--accent); padding: 0; margin-top: 4px;
+  border-bottom: 1px solid transparent;
+}
+.netsum-more:hover { border-bottom-color: var(--accent); }
+.netsum.is-empty { grid-template-columns: 1fr; }
+.netsum-note { position: relative; margin: 8px 0 0; font-size: 12.5px; color: #B7BAAE; max-width: 70ch; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .netsum { grid-template-columns: 1fr; gap: 16px; }
+  .netsum-split { border-left: 0; border-top: 1px solid #2A3228; padding-top: 14px; grid-template-columns: 1fr; gap: 12px; }
+  .netsum-cell { border-right: 0; padding: 0; }
+}
+
+/* ─── Le bac à sable ─── */
+.sandbox { display: flex; flex-direction: column; gap: 16px; }
+.sandbox-flag {
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1px dashed var(--ink-5); border-radius: 12px; background: var(--surface-2);
+  padding: 12px 15px; font-size: 13px; color: var(--ink-3); line-height: 1.5;
+}
+.sandbox-flag strong { color: var(--ink); }
+.sandbox-flag-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+  flex: none; margin-top: 5px; box-shadow: 0 0 0 3px var(--accent-wash);
+}
+.sandbox-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 16px; align-items: start; }
+.sandbox-levers {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
+}
+.sandbox-levers .lever { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.sandbox-levers .lever:last-child { border-bottom: 0; }
+.sandbox-metrics {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 14px 16px;
+  position: sticky; top: calc(var(--header-h) + 14px);
+}
+.sandbox-metrics-tag, .sandbox-diff-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 10px;
+}
+.sandbox-diff-tag { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.sandbox-change {
+  display: flex; flex-direction: column; gap: 2px; padding: 7px 0;
+  border-bottom: 1px solid var(--rule); font-size: 12.5px;
+}
+.sandbox-change:last-child { border-bottom: 0; }
+.sandbox-change-label { color: var(--ink-3); }
+.sandbox-change-vals { font-size: 12.5px; color: var(--ink-5); }
+.sandbox-change-vals strong { color: var(--ink); }
+.sandbox-empty { font-size: 12.5px; color: var(--ink-5); }
+.sandbox-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sandbox-foot-note { font-size: 12px; color: var(--ink-4); }
+
+/* ─── L'écran de validation ─── */
+.apply { max-width: 720px; }
+.apply-head h2 { font-size: 24px; letter-spacing: -.03em; }
+.apply-head p { margin: 6px 0 20px; color: var(--ink-3); font-size: 13.5px; }
+.apply-list { border-top: 1px solid var(--rule); margin-bottom: 22px; }
+.apply-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--rule);
+  cursor: pointer; font-size: 13.5px;
+}
+.apply-row:hover { background: var(--surface-2); }
+.apply-row-label { color: var(--ink-2); }
+.apply-row-before { color: var(--ink-5); text-decoration: line-through; }
+.apply-row-arrow, .apply-effect-arrow { color: var(--ink-5); }
+.apply-row-after { font-weight: 650; color: var(--ink); }
+.apply-effects-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 8px;
+}
+.apply-effects {
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); margin-bottom: 22px;
+}
+.apply-effect {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: baseline; gap: 12px; padding: 11px 15px; border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+.apply-effect:last-child { border-bottom: 0; }
+.apply-effect-label { color: var(--ink-3); }
+.apply-effect-before { color: var(--ink-5); }
+.apply-effect-after { font-weight: 650; color: var(--ink); }
+.apply-effect-after.pos { color: var(--gain); }
+.apply-effect-after.neg { color: var(--loss); }
+.apply-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  .sandbox-body { grid-template-columns: 1fr; }
+  .sandbox-metrics { position: static; }
+  .apply-row { grid-template-columns: auto minmax(0, 1fr); }
+  .apply-row-before, .apply-row-arrow, .apply-row-after { grid-column: 2; }
+}
+
+/* ─── Le changement d'onglet ─── */
+/* La vue ne glisse que lorsqu'on vient de cliquer un onglet : la même animation
+   posée sans condition rejouerait à chaque frappe, puisque la page se
+   reconstruit à chaque touche. */
+@keyframes view-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.view-switch .view, .view-switch .item-body { animation: view-in .22s var(--ease) both; }
+
+/* ─── La ligne qu'on est en train de remplir ─── */
+/* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est
+   le curseur. La ligne s'éclaire, son filet gauche s'épaissit, et tout revient
+   en place dès qu'on la quitte. */
+.cost-row, .source-line, .item, .part, .setup-cost, .affine-item, .slab {
+  transition: background .16s var(--ease), border-color .16s var(--ease), box-shadow .16s var(--ease);
+}
+.cost-row:focus-within, .source-line:focus-within, .part:focus-within {
+  background: var(--accent-wash); border-color: var(--ink);
+}
+.item:focus-within, .slab:focus-within {
+  border-color: var(--ink); box-shadow: -3px 0 0 0 var(--accent);
+}
+.setup-cost:focus-within { background: var(--accent-wash); }
+/* Le champ actif lui-même : un trait d'accent sous le contrôle, rien de plus. */
+.control:focus-within { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }

@@ -8,6 +8,7 @@ import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
+import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 
 export function renderOffer(navigate, refresh) {
@@ -46,6 +47,14 @@ export function renderOffer(navigate, refresh) {
     { key: 'acquisition', label: 'Acquisition', count: s.marketing.length },
     s.activities.length > 1 && r ? { key: 'compare', label: 'Comparaison' } : null,
   ]
+  // Une intention posée par le panneau « à affiner » ouvre l'onglet, la carte
+  // et la section où se trouve le champ manquant.
+  const want = claim('offre')
+  if (want) {
+    if (want.view) renderOffer.view = want.view
+    if (want.sec) activityCard.sec = want.sec
+    if (want.openAll) s.activities.forEach((a) => open.add(a.id))
+  }
   const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
   renderOffer.view = view
 
@@ -69,7 +78,7 @@ export function renderOffer(navigate, refresh) {
         ? h('div', { class: 'view' }, renderAcquisition(navigate, refresh))
         : h('div', { class: 'view' }, comparisonCard(r)),
 
-    todoPanel('offre', store.scenario, () => refresh()),
+    todoPanel('offre', store.scenario, navigate),
 
     tutorial('clients', navigate),
   )
@@ -148,7 +157,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
     isOpen && h('div', { class: 'item-body' },
       tabs(secs, sec, (k) => { activityCard.sec = k; refresh() }),
 
-      sec === 'offre' ? h('div', { class: 'view' },
+      sec === 'offre' ? h('div', { class: 'view', 'data-gap': 'abonnement' },
 
         h('div', { class: 'grid grid-2' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
@@ -167,7 +176,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         )
       ) : null,
 
-      sec === 'prix' ? h('div', { class: 'view' },
+      sec === 'prix' ? h('div', { class: 'view', 'data-gap': 'prix' },
 
         // Vente à l'unité et abonnement ne s'excluent pas : une offre peut
         // être l'une, l'autre, ou les deux. Chaque part apparaît dès qu'elle
@@ -218,7 +227,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         volumesEditor(a, setVolumes, level, detail)
       ) : null,
 
-      sec === 'paiement' ? h('div', { class: 'view' },
+      sec === 'paiement' ? h('div', { class: 'view', 'data-gap': 'paiement' },
 
         h('div', { class: 'grid grid-2' },
           numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),

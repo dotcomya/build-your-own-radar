@@ -1,5 +1,7 @@
 /** Fabrique d'éléments : un hyperscript minimal, sans dépendance. */
 
+import { markViewChange } from './motion.js'
+
 export function h(tag, props = {}, ...children) {
   const el = document.createElement(tag)
   for (const [k, v] of Object.entries(props || {})) {
@@ -197,7 +199,7 @@ export function tabs(items, active, onPick) {
     ...list.map((it) => h('button', {
       class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
-      onClick: () => onPick(it.key),
+      onClick: () => { markViewChange(); onPick(it.key) },
     },
       h('span', {}, it.label),
       it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,

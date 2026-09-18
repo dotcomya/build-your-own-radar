@@ -15,6 +15,7 @@ import { tutorial, stepBanner } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, pageBar, unitAmount } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
+import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
@@ -45,6 +46,8 @@ export function renderTeam(navigate, refresh) {
     r && s.team.length > 0 ? { key: 'masse', label: 'Masse salariale' } : null,
     s.team.length > 0 ? { key: 'jei', label: 'Recherche et JEI' } : null,
   ]
+  const want = claim('equipe')
+  if (want && want.view) renderTeam.view = want.view
   const view = views.some((v) => v && v.key === renderTeam.view) ? renderTeam.view : 'postes'
   renderTeam.view = view
 
@@ -66,7 +69,7 @@ export function renderTeam(navigate, refresh) {
 
     tabs(views, view, (k) => { renderTeam.view = k; refresh() }),
 
-    view === 'postes' ? h('div', { class: 'view' },
+    view === 'postes' ? h('div', { class: 'view', 'data-gap': 'equipe' },
       s.team.length === 0
         ? h('div', { class: 'card' }, h('div', { class: 'empty' },
             h('div', { class: 'empty-icon' }, '◷'),
@@ -77,11 +80,11 @@ export function renderTeam(navigate, refresh) {
         : h('div', {}, ...s.team.map((m, i) => memberCard(m, i, r, level, refresh, jeiActive))),
     ) : null,
 
-    view === 'avantages' ? h('div', { class: 'view' }, benefitsPanel(r, refresh)) : null,
+    view === 'avantages' ? h('div', { class: 'view', 'data-gap': 'avantages' }, benefitsPanel(r, refresh)) : null,
     view === 'masse' && r ? h('div', { class: 'view' }, payrollSummary(r, level)) : null,
     view === 'jei' && r ? h('div', { class: 'view' }, jeiPanel(r)) : null,
 
-    todoPanel('equipe', store.scenario, () => refresh()),
+    todoPanel('equipe', store.scenario, navigate),
 
     tutorial('equipe', navigate),
   )

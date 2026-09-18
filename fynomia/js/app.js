@@ -13,6 +13,8 @@ import { PERSONAS, getPersona } from './ui/personas.js'
 import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
+import { settle } from './ui/spotlight.js'
+import { installMotion } from './ui/motion.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -143,6 +145,9 @@ function render({ preserveScroll = false } = {}) {
   } else {
     window.scrollTo(0, 0)
   }
+  // Une intention posée par le panneau « à affiner » attend ici : la page vient
+  // d'être construite, le repère existe, on peut l'entourer.
+  settle()
 }
 
 
@@ -367,6 +372,7 @@ store.subscribe((_, reason) => {
 })
 
 markJourney()
+installMotion()
 if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/creer'
 render()
 
