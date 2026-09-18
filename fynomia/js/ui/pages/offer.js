@@ -189,11 +189,14 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
                 h('span', { class: 'spacer' }),
                 h('button', { class: 'part-drop', title: 'Retirer cette part', onClick: () => dropPart('unit') }, '\u00d7'),
               ),
-              unitEconomics(`Une vente \u00e0 l'unit\u00e9`, a.unitPrice, a.unitCost),
+              // On saisit, puis on voit ce que ça donne. L'inverse — le dessin
+              // au-dessus des champs qui le produisent — demandait de lire un
+              // résultat avant d'avoir posé la question.
               h('div', { class: 'grid grid-2' },
                 numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT', onInput: (v) => set({ unitPrice: v }) }),
                 numberField({ label: `Co\u00fbt de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '\u20ac HT', hint: 'Achats, sous-traitance, consommables. Ni loyer ni salaires.', onInput: (v) => set({ unitCost: v }) }),
               ),
+              unitEconomics(`Une vente \u00e0 l'unit\u00e9`, a.unitPrice, a.unitCost),
               margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
                 h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
                 marginAdvice(margin)),
@@ -207,11 +210,11 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
                 h('span', { class: 'spacer' }),
                 h('button', { class: 'part-drop', title: 'Retirer cette part', onClick: () => dropPart('recurring') }, '\u00d7'),
               ),
-              unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
               h('div', { class: 'grid grid-2' },
                 numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '\u20ac HT', onInput: (v) => set({ recurringPrice: v }) }),
                 numberField({ label: 'Co\u00fbt mensuel r\u00e9current', field: 'recurringPrice', value: a.recurringCost, suffix: '\u20ac HT', hint: 'H\u00e9bergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
               ),
+              unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
               refine(`${a.id}-abo`, 'Affiner : dur\u00e9e de contrat, attrition, valeur vie client',
                 h('div', { class: 'grid grid-2' },
                 numberField({ label: 'Dur\u00e9e du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),

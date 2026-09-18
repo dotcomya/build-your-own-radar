@@ -63,13 +63,23 @@ function collapse(details, body) {
 /**
  * Le changement d'onglet.
  *
- * La vue est reconstruite à chaque rendu, y compris pendant la frappe : une
- * animation posée sur la classe jouerait à chaque touche. On marque donc la
- * racine le temps d'un rendu, et seule la vue née de ce clic est animée.
+ * La vue est reconstruite à chaque rendu, y compris pendant la frappe. Marquer
+ * la racine pendant une seconde rejouait donc l'entrée de tous les blocs au
+ * moindre clic dans ce laps de temps — un sursaut sans raison, juste après
+ * qu'on ait cliqué ailleurs.
+ *
+ * Le signal est désormais à usage unique : le clic l'arme, le rendu suivant le
+ * consomme en marquant les nœuds qu'il vient de créer. Un rendu ultérieur
+ * fabrique d'autres nœuds, sans la classe : rien ne rejoue.
  */
-export function markViewChange() {
-  const root = document.documentElement
-  root.classList.add('view-switch')
-  clearTimeout(markViewChange.t)
-  markViewChange.t = setTimeout(() => root.classList.remove('view-switch'), 760)
+let armed = false
+
+export function markViewChange() { armed = true }
+
+/** Appelé après chaque rendu : n'anime que la vue née du dernier clic. */
+export function consumeViewChange(root = document) {
+  if (!armed) return
+  armed = false
+  if (reduced()) return
+  for (const view of root.querySelectorAll('.view, .item-body')) view.classList.add('just-in')
 }

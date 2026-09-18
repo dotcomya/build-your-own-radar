@@ -218,13 +218,19 @@ export function tabs(items, active, onPick) {
  * déjà l'essentiel : on n'ouvre que pour vérifier.
  */
 export function fold(title, summary, body, { open = false, id = null, tone = '' } = {}) {
-  const el = h('details', { class: `volet ${tone}`, open: open || null },
-    h('summary', { class: 'volet-head' },
-      h('span', { class: 'volet-chev', 'aria-hidden': 'true' }, '\u203a'),
-      h('span', { class: 'volet-title' }, title),
-      summary ? h('span', { class: 'volet-sum' }, summary) : null,
+  // Un seul geste d'ouverture dans toute l'application.
+  //
+  // Il y avait deux affordances : un chevron gris pour les volets, un « + »
+  // pour « affiner ». Deux formes pour la même action, sur la même page, et
+  // l'œil devait apprendre les deux. C'est celle du « + » qui reste : elle dit
+  // qu'on ajoute du détail, là où le chevron ne disait qu'un sens.
+  const el = h('details', { class: `refine refine-block ${tone}`, open: open || null },
+    h('summary', { class: 'refine-head' },
+      h('span', { class: 'refine-sign', 'aria-hidden': 'true' }, '+'),
+      h('span', { class: 'refine-label' }, title),
+      summary ? h('span', { class: 'refine-sum' }, summary) : null,
     ),
-    h('div', { class: 'volet-body' }, body),
+    h('div', { class: 'refine-body' }, body),
   )
   if (id) {
     const memory = fold.open || (fold.open = new Set())

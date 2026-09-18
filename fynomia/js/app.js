@@ -14,7 +14,7 @@ import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { settle } from './ui/spotlight.js'
-import { installMotion } from './ui/motion.js'
+import { installMotion, consumeViewChange } from './ui/motion.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -28,7 +28,6 @@ import { renderProject } from './ui/pages/project.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { journey, points } from './engine/journey.js'
 import { buildState } from './engine/build.js'
-import { liveRail } from './ui/live.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
 import { renderAccount } from './ui/pages/account.js'
 
@@ -132,7 +131,11 @@ function render({ preserveScroll = false } = {}) {
   const refresh = (opts) => render({ preserveScroll: true, ...(opts || {}) })
   const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, refresh))
   clear(root).appendChild(h('div', { class: 'shell' },
-    rail(key), main, liveRail(navigate), tabbar(key), impactRail(refresh)))
+    // Le bandeau de droite est parti : sur un écran d'ordinateur portable, il
+    // volait deux cent cinquante pixels à la page pour répéter ce que la barre
+    // de progression en haut et les pastilles du rail disent déjà. La page
+    // respire, et c'est elle qu'on est venu lire.
+    rail(key), main, tabbar(key), impactRail(refresh)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)
@@ -148,6 +151,7 @@ function render({ preserveScroll = false } = {}) {
   // Une intention posée par le panneau « à affiner » attend ici : la page vient
   // d'être construite, le repère existe, on peut l'entourer.
   settle()
+  consumeViewChange(root)
 }
 
 

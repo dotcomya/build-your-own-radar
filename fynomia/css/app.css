@@ -128,9 +128,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ───────────────────────────── Charpente ─────────────────────────────── */
 #app { min-height: 100dvh; }
-/* Trois colonnes : la navigation, la page, et la barre de guidage — cette
-   dernière large de 0 quand elle n'est pas rendue. */
-.shell { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr) auto; min-height: 100dvh; }
+/* Deux colonnes : la navigation, et la page. */
+.shell { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: 100dvh; }
 
 .rail {
   background: var(--ink);
@@ -3231,13 +3230,7 @@ body { background: var(--paper); }
 .btn-go:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--accent-ink); }
 .btn-pill { border-radius: 999px; }
 
-/* ─── Le bandeau de droite : le modèle, en direct ─── */
-/* La colonne de droite n'existe qu'au-dessus du seuil où le rail est visible :
-   déclarée sans garde, cette règle écraserait la grille mobile définie plus haut
-   et réduirait le contenu à une colonne de quarante pixels. */
-@media (min-width: 861px) {
-  .shell { grid-template-columns: var(--rail-w) minmax(0, 1fr) auto; }
-}
+/* ─── Le bandeau de droite a été retiré : ses styles restent pour l'export. ─── */
 .live {
   width: var(--live-w); flex: none; padding: 26px 18px 26px 0;
   display: flex; flex-direction: column; gap: 14px;
@@ -3326,6 +3319,13 @@ body { background: var(--paper); }
 .refine-body { padding-top: 14px; animation: refine-in .24s var(--ease); }
 @keyframes refine-in { from { opacity: 0; transform: translateY(-4px); } }
 .refine-body > .grid + .grid { margin-top: 12px; }
+/* Le résumé, aligné à droite : ce que le volet contient sans l'ouvrir. */
+.refine-sum { margin-left: auto; padding-left: 16px; font-size: 12px; color: var(--ink-4); }
+.refine-head:has(.refine-sum) { display: flex; width: 100%; }
+/* Un volet qui porte une section entière, et non trois champs de réglage,
+   garde un peu plus d'air autour de lui. */
+.refine-block { margin-top: 18px; }
+.refine-block > .refine-body { padding-top: 16px; }
 @media (prefers-reduced-motion: reduce) { .refine-body { animation: none; } }
 
 /* Le métier une fois choisi : un état, pas une grille de seize cartes. */
@@ -3567,6 +3567,23 @@ body { background: var(--paper); }
 .board-stack { display: flex; flex-direction: column; gap: 18px; }
 .view > .card + .card, .view > .panel + .panel { margin-top: 14px; }
 
+/* ═══════════════════════════ L'air entre les blocs ═════════════════════════
+   Sur un écran d'ordinateur portable, tout se touchait. Les marges sont
+   reprises en une seule échelle : 14 px entre deux blocs d'un même sujet,
+   34 px quand le sujet change. Le bandeau de droite retiré, la page a la
+   largeur qu'il faut pour que cet air se voie.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.content { padding: 30px 34px calc(var(--impact-h) + 34px); max-width: 1180px; }
+.slab + .slab, .slab-pair + .slab, .slab + .slab-pair { margin-top: 18px; }
+.slab-apart { margin-top: 34px !important; }
+.slab-pair { gap: 18px; }
+.view > .card, .view > .panel { margin-bottom: 14px; }
+.module { margin-bottom: 26px; }
+
+@media (max-width: 1080px) {
+  .content { padding: 24px 22px calc(var(--impact-h) + 30px); }
+}
+
 /* ─── Le prix des années suivantes ─── */
 /* Une case vide n'est pas une case sans valeur : elle reconduit l'année
    précédente. Le gris le dit, le noir dit qu'on a forcé. */
@@ -3652,7 +3669,7 @@ body { background: var(--paper); }
 }
 .sim-body { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .sim-knobs { display: flex; flex-direction: column; gap: 8px; position: sticky; top: calc(var(--header-h) + 14px); }
-.sim-knobs .volet { margin-top: 0; }
+.sim-knobs .refine { margin-top: 0; }
 .sim-levers { display: flex; flex-direction: column; }
 .knob { padding: 12px 0; border-bottom: 1px solid var(--rule); }
 .knob:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -3749,13 +3766,13 @@ body { background: var(--paper); }
 /* Un changement d'onglet ne doit pas surprendre : le contenu arrive en un
    tiers de seconde, du bas, sans à-coup. Plus rapide, l'œil perd le fil ; plus
    lent, on attend l'interface. */
-.view-switch .view, .view-switch .item-body { animation: view-in .44s var(--ease-soft) both; }
+.view.just-in, .item-body.just-in { animation: view-in .44s var(--ease-soft) both; }
 /* Les blocs de la vue entrent l'un après l'autre, très légèrement décalés :
    la page se pose au lieu d'apparaître d'un bloc. */
-.view-switch .view > * { animation: view-in .48s var(--ease-soft) both; }
-.view-switch .view > *:nth-child(2) { animation-delay: .06s; }
-.view-switch .view > *:nth-child(3) { animation-delay: .12s; }
-.view-switch .view > *:nth-child(n+4) { animation-delay: .17s; }
+.view.just-in > * { animation: view-in .48s var(--ease-soft) both; }
+.view.just-in > *:nth-child(2) { animation-delay: .06s; }
+.view.just-in > *:nth-child(3) { animation-delay: .12s; }
+.view.just-in > *:nth-child(n+4) { animation-delay: .17s; }
 
 /* ─── La ligne qu'on est en train de remplir ─── */
 /* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est

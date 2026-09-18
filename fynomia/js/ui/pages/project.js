@@ -124,7 +124,10 @@ export function renderProject(navigate, refresh) {
     ),
     ),
 
-    h('section', { class: 'slab' },
+    // Le cadre juridique change de sujet : il ne parle plus du marché mais de
+    // la structure. Il lui faut donc l'espace qui sépare deux chapitres, pas
+    // celui qui sépare deux paragraphes.
+    h('section', { class: 'slab slab-apart' },
       h('div', { class: 'slab-head' },
         h('div', {},
           h('div', { class: 'slab-title' }, 'Le cadre juridique et fiscal'),

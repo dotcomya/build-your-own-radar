@@ -310,9 +310,24 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
     value: initial === '' || initial === null || initial === undefined ? '' : String(initial),
     placeholder: typeof placeholder === 'function' ? placeholder(ctx.scenario) : placeholder,
     onInput: (e) => {
+      // Une question chiffrée n'accepte que des chiffres. Taper « abc » dans
+      // « tu démarres avec combien ? » laissait le champ plein de lettres, la
+      // valeur à zéro, et l'étape franchissable : on croyait avoir répondu.
+      if (type === 'number') {
+        const cleaned = e.target.value.replace(/[^0-9 .,-]/g, '')
+        if (cleaned !== e.target.value) {
+          const at = Math.max(0, e.target.selectionStart - (e.target.value.length - cleaned.length))
+          e.target.value = cleaned
+          try { e.target.setSelectionRange(at, at) } catch { /* champ sans sélection */ }
+        }
+      }
       const raw = e.target.value
       const v = type === 'number' ? (parseFloat(raw.replace(/\s/g, '').replace(',', '.')) || 0) : raw
-      flow.touched.add(ctx.step.key)
+      // Une réponse compte quand elle est lisible : un champ vide, ou qui ne
+      // contient qu'un séparateur, n'en est pas une.
+      const answered = type === 'number' ? /[0-9]/.test(raw) : raw.trim() !== ''
+      if (answered) flow.touched.add(ctx.step.key)
+      else flow.touched.delete(ctx.step.key)
       store.update((sc) => apply(sc, v), { label: ctx.step.question, silent: true })
       ctx.tick()
     },
