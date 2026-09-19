@@ -219,6 +219,20 @@ export function renderSetup(navigate, refresh) {
       stepList(s, jump, navigate),
 
       h('div', { class: 'setup-main' },
+        // Le bandeau rassurant.
+        //
+        // En test, les gens s'arrêtaient sur chaque question comme s'ils
+        // signaient : « et si je me trompe ? ». Ils ne se trompent pas, ils
+        // commencent. Le dire une fois, en haut, à demeure, vaut mieux que de
+        // le répéter sous chaque bouton.
+        !step.last ? h('div', { class: 'setup-banner' },
+          h('span', { class: 'setup-banner-mark' }, '\u21BA'),
+          h('div', {},
+            h('strong', {}, 'Rien n’est définitif.'),
+            h('span', {}, ' Ces questions servent à poser un premier chiffrage. Tout se modifie ensuite, champ par champ, dans le logiciel.'),
+          ),
+        ) : null,
+
         h('div', { class: `setup-card ${step.last ? 'is-last' : ''}` },
           h('div', { class: 'setup-tag' },
             h('span', { class: 'setup-tag-bar' }),
@@ -234,14 +248,9 @@ export function renderSetup(navigate, refresh) {
               nextBtn,
               step.optional ? h('button', { class: 'setup-later', onClick: () => go(1) }, 'Plus tard') : null,
             ),
-            // Le blocage de « Continuer » n'a de sens que si l'on sait qu'aucune
-            // réponse n'est définitive : sans cette ligne, il se lit comme un
-            // examen.
-            h('p', { class: 'setup-reassure' },
-              h('span', { class: 'setup-reassure-mark' }, '\u21BA'),
-              step.optional
-                ? 'Réponds, ou passe : tout reste modifiable ensuite, dans le logiciel.'
-                : 'Tout reste modifiable ensuite, dans le logiciel.'),
+            step.optional
+              ? h('p', { class: 'setup-reassure' }, 'Tu peux passer cette question et y revenir plus tard.')
+              : null,
           ) : null,
         ),
       ),

@@ -2,6 +2,7 @@
 
 import { h, toast } from '../dom.js'
 import { resetSetup } from './setup.js'
+import { resetChat } from './chat.js'
 import store from '../../state/store.js'
 
 /**
@@ -40,6 +41,13 @@ export function renderOnboarding(navigate) {
           class: 'btn btn-primary btn-lg landing-go',
           onClick: () => { resetSetup(); navigate('#/creer') },
         }, 'Créer mon business plan'),
+        // Deux manières de répondre aux mêmes questions. Certains remplissent
+        // un formulaire sans hésiter, d'autres se figent devant un champ vide
+        // et répondraient volontiers à quelqu'un qui leur pose la question.
+        h('button', {
+          class: 'btn btn-lg landing-talk',
+          onClick: () => { resetChat(); navigate('#/discuter') },
+        }, 'ou répondre en discutant'),
         h('button', {
           class: 'landing-example',
           onClick: () => {

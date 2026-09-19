@@ -13,8 +13,10 @@ import { PERSONAS, getPersona } from './ui/personas.js'
 import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
+import { renderChat } from './ui/pages/chat.js'
 import { settle } from './ui/spotlight.js'
 import { installMotion, consumeViewChange } from './ui/motion.js'
+import { coach, setCoachHost } from './ui/coach.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -110,6 +112,14 @@ function render({ preserveScroll = false } = {}) {
     return
   }
 
+  // La conversation vit hors de la charpente, comme le parcours : une question,
+  // une réponse, rien d'autre à l'écran.
+  if (key === 'discuter') {
+    clear(root).appendChild(renderChat(navigate, () => render()))
+    document.title = 'Fynomia — Ton business plan'
+    return
+  }
+
   if (!store.scenario || key === 'demarrer' || key === '') {
     // Sans plan, l'accueil est la première question : une page de garde qui ne
     // fait qu'annoncer l'étape suivante n'apporte rien.
@@ -135,7 +145,7 @@ function render({ preserveScroll = false } = {}) {
     // volait deux cent cinquante pixels à la page pour répéter ce que la barre
     // de progression en haut et les pastilles du rail disent déjà. La page
     // respire, et c'est elle qu'on est venu lire.
-    rail(key), main, tabbar(key), impactRail(refresh)))
+    rail(key), main, tabbar(key), impactRail(refresh), coach(navigate)))
   document.title = `${page.label} — ${store.scenario.meta.name}`
   if (preserveScroll) {
     window.scrollTo(0, scrollY)
@@ -377,6 +387,8 @@ store.subscribe((_, reason) => {
 
 markJourney()
 installMotion()
+// Le guide se redessine tout seul quand on le masque ou le rouvre.
+setCoachHost(() => render({ preserveScroll: true }))
 if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/creer'
 render()
 

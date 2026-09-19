@@ -168,7 +168,8 @@ function opexRow(o, r, level, refresh) {
             ...[
               { value: 'fixed', label: 'montant fixe' },
               { value: 'perEmployee', label: '+ par salarié' },
-              { value: 'pctRevenue', label: "+ % du CA" },
+              { value: 'pctRevenue', label: '+ % des ventes' },
+              { value: 'perUnit', label: '+ par unité vendue' },
             ].map((opt) => h('option', { value: opt.value, selected: o.mode === opt.value || null }, opt.label)),
           )
           sel.addEventListener('change', () => { set({ mode: sel.value }); refresh() })
@@ -186,11 +187,36 @@ function opexRow(o, r, level, refresh) {
 
       o.mode === 'pctRevenue' ? h('div', { class: 'cost-extra' },
         h('input', {
-          class: 'num', inputmode: 'decimal', value: String(Math.round((Number(o.pctRevenue) || 0) * 1000) / 10), 'aria-label': 'Part du chiffre d\'affaires',
+          class: 'num', inputmode: 'decimal', value: String(Math.round((Number(o.pctRevenue) || 0) * 1000) / 10), 'aria-label': 'Part des ventes',
           onInput: (e) => set({ pctRevenue: (Number(e.target.value.replace(',', '.')) || 0) / 100 }, { silent: true }),
         }),
-        h('span', {}, '% du CA'),
+        h('span', {}, '%'),
       ) : null,
+
+      o.mode === 'perUnit' ? h('div', { class: 'cost-extra' },
+        h('input', {
+          class: 'num', inputmode: 'decimal', value: String(o.perUnit ?? ''), 'aria-label': 'Montant par unité vendue',
+          onInput: (e) => set({ perUnit: Number(e.target.value.replace(',', '.')) || 0 }, { silent: true }),
+        }),
+        h('span', {}, '€/unité'),
+      ) : null,
+
+      // Sur quelle offre ? Une commission de 1 % ne porte pas forcément sur
+      // tout ce qu'on vend : elle porte sur la glace, pas sur le café servi au
+      // comptoir. Le sélecteur n'apparaît que pour les charges indexées.
+      ['pctRevenue', 'perUnit'].includes(o.mode) && store.scenario.activities.length
+        ? h('div', { class: 'cost-scope' },
+            (() => {
+              const sel = h('select', { 'aria-label': 'Offre concernée' },
+                h('option', { value: '', selected: !o.activityId || null }, 'toutes les offres'),
+                ...store.scenario.activities.map((a) =>
+                  h('option', { value: a.id, selected: o.activityId === a.id || null }, a.name || 'Sans nom')),
+              )
+              sel.addEventListener('change', () => { set({ activityId: sel.value || null }); refresh() })
+              return sel
+            })(),
+          )
+        : null,
 
       detail ? h('span', { class: 'cost-year num' }, `${euro(detail.yearly[0], { compact: true })}/an`) : null,
 

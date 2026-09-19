@@ -157,7 +157,7 @@ export function newCampaign(overrides = {}) {
 }
 
 export function newOpex(overrides = {}) {
-  return { id: uid('opx'), label: 'Nouvelle charge', mode: 'fixed', monthlyAmount: 200, perEmployee: 0, pctRevenue: 0, startMonth: 0, endMonth: '', enabled: true, rdApproved: false, ...overrides }
+  return { id: uid('opx'), label: 'Nouvelle charge', mode: 'fixed', monthlyAmount: 200, perEmployee: 0, pctRevenue: 0, perUnit: 0, activityId: null, startMonth: 0, endMonth: '', enabled: true, rdApproved: false, ...overrides }
 }
 
 export function newCapex(overrides = {}) {

@@ -9,6 +9,7 @@ cd fynomia/verification
 node 01-identites-comptables.mjs
 node 02-fiscalite-et-paie.mjs
 node 03-bilan-et-dirigeant.mjs
+node 04-charges-indexees.mjs
 ```
 
 Chaque ligne affiche `✓` ou `✗`. Une seule croix doit suffire à arrêter une
@@ -60,3 +61,16 @@ Rejouées sur cinq métiers (logiciel, conseil, e-commerce, restaurant, coiffeur
   en bénéfices non commerciaux ;
 - trésorerie finale = cumul des flux ; capitaux propres = capital + résultats
   cumulés.
+
+## 04 — Charges indexées sur les ventes
+
+Une commission de 1 % sur une glace à 8 € n'est ni une charge fixe, ni un coût
+de revient : c'est un pourcentage de cette vente-là. Ce volet vérifie que le
+lien tient :
+
+- un pourcentage appliqué à une seule offre ne porte que sur son chiffre
+  d'affaires, pas sur celui des autres ;
+- le même pourcentage sans offre désignée porte sur l'ensemble ;
+- un montant par unité vendue suit les volumes d'une offre, ou de toutes ;
+- doubler les volumes double la charge indexée ;
+- un montant fixe, lui, ne bouge pas avec les ventes.

@@ -31,7 +31,7 @@ export function compute(scenario) {
   const payroll0 = payrollSeries(team, { fiscal, benefits: scenario.hr?.benefits })
 
   // ─── 3. Charges externes ───────────────────────────────────────────────
-  const opex = opexSeries(scenario.opex || [], { revenue: revenueMonthly, headcount: payroll0.headcount })
+  const opex = opexSeries(scenario.opex || [], { revenue: revenueMonthly, headcount: payroll0.headcount, perActivity: rev.perActivity })
 
   // ─── 4. Investissements et amortissements ──────────────────────────────
   const capex = capexSeries(scenario.capex || [])
@@ -163,22 +163,61 @@ export const OPEX_TEMPLATES = [
   { key: 'supplies', label: 'Fournitures', mode: 'perEmployee', perEmployee: 17, monthlyAmount: 42 },
   { key: 'software', label: 'Logiciels et informatique', mode: 'perEmployee', perEmployee: 40, monthlyAmount: 83 },
   { key: 'banking', label: 'Frais bancaires', mode: 'pctRevenue', pctRevenue: 0.005, monthlyAmount: 42 },
+  // Une commission de paiement se calcule sur ce qui passe, pas sur un
+  // forfait : c'est le cas d'école de la charge indexée.
+  { key: 'payment', label: 'Commission de paiement', mode: 'pctRevenue', pctRevenue: 0.015, monthlyAmount: 0 },
+  { key: 'packaging', label: 'Emballage par unité vendue', mode: 'perUnit', perUnit: 0.15, monthlyAmount: 0 },
 ]
 
-export function opexSeries(items, { revenue, headcount }) {
+/**
+ * Charges de fonctionnement.
+ *
+ * Quatre manières de chiffrer une charge, parce que les charges ne se
+ * comportent pas toutes pareil :
+ *
+ *  — `fixed`       un montant qui tombe, qu'on vende ou non : le loyer ;
+ *  — `perEmployee` un montant par personne : le poste de travail, la mutuelle ;
+ *  — `pctRevenue`  une part du chiffre d'affaires : une commission ;
+ *  — `perUnit`     un montant par unité vendue : l'emballage, la redevance.
+ *
+ * Les deux derniers acceptent une offre précise (`activityId`) plutôt que
+ * l'ensemble. C'est ce qui manquait : une commission de 1 % sur une glace à
+ * 8 € n'est ni une charge fixe, ni un coût de revient qu'on saisirait à la
+ * main — c'est un pourcentage de cette vente-là, et de celle-là seulement.
+ * Sans ce lien, il fallait recalculer soi-même un montant mensuel à chaque
+ * fois qu'on touchait au prix ou au volume, et on oubliait de le faire.
+ *
+ * @param perActivity  les séries par offre (id, total, volumes), pour indexer
+ */
+export function opexSeries(items, { revenue, headcount, perActivity = [] }) {
   const total = zeros()
   const rdSubcontracting = zeros()
   const perItem = []
+
+  /** La série de référence d'une charge indexée : une offre, ou toutes. */
+  const scopeOf = (item, kind) => {
+    const all = kind === 'units'
+      ? perActivity.reduce((acc, a) => acc.map((v, m) => v + (a.volumes[m] || 0)), zeros())
+      : revenue
+    if (!item.activityId) return all
+    const found = perActivity.find((a) => a.id === item.activityId)
+    if (!found) return all
+    return kind === 'units' ? found.volumes : found.total
+  }
 
   for (const item of items) {
     if (item.enabled === false) continue
     const series = zeros()
     const start = Math.max(0, Number(item.startMonth) || 0)
     const end = item.endMonth === null || item.endMonth === undefined || item.endMonth === '' ? MONTHS - 1 : Number(item.endMonth)
+    const base = item.mode === 'perUnit' ? scopeOf(item, 'units')
+      : item.mode === 'pctRevenue' ? scopeOf(item, 'revenue')
+        : null
     for (let m = start; m <= Math.min(end, MONTHS - 1); m++) {
       let v = Number(item.monthlyAmount) || 0
       if (item.mode === 'perEmployee') v += (Number(item.perEmployee) || 0) * (headcount[m] || 0)
-      if (item.mode === 'pctRevenue') v += (Number(item.pctRevenue) || 0) * (revenue[m] || 0)
+      if (item.mode === 'pctRevenue') v += (Number(item.pctRevenue) || 0) * (base[m] || 0)
+      if (item.mode === 'perUnit') v += (Number(item.perUnit) || 0) * (base[m] || 0)
       series[m] = v
       total[m] += v
       if (item.rdApproved) rdSubcontracting[m] += v

@@ -1687,11 +1687,16 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 52ch; }
 
 .setup-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.setup-reassure {
-  display: flex; align-items: baseline; gap: 7px; margin: 12px 0 0;
-  font-size: 12px; color: var(--ink-5);
+.setup-reassure { margin: 12px 0 0; font-size: 12px; color: var(--ink-5); }
+/* Le bandeau qui désamorce : lu une fois, il reste là sans se faire remarquer. */
+.setup-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  max-width: 660px; margin-bottom: 26px; padding: 12px 15px;
+  border: 1px dashed var(--rule); border-radius: 12px; background: var(--surface-2);
+  font-size: 12.5px; line-height: 1.55; color: var(--ink-3);
 }
-.setup-reassure-mark { font-family: var(--mono); color: var(--ink-4); }
+.setup-banner strong { color: var(--ink); font-weight: 650; }
+.setup-banner-mark { font-family: var(--mono); color: var(--accent-dim); font-size: 14px; flex: none; margin-top: 1px; }
 .setup-hint { font-size: 12px; color: var(--ink-5); }
 
 /* Le champ : grand, seul, déjà au focus. */
@@ -2110,6 +2115,14 @@ i.swatch.split-margin { background: var(--gain); }
 }
 .cost-extra input:focus { border-color: var(--signal); }
 .cost-extra > span { font-family: var(--mono); font-size: 10px; color: var(--ink-5); }
+/* L'offre sur laquelle la charge est indexée. */
+.cost-scope { flex: none; min-width: 0; }
+.cost-scope select {
+  border: 1px solid var(--rule); border-radius: 7px; background: var(--surface-2);
+  padding: 5px 7px; font-size: 11.5px; color: var(--ink-3); max-width: 150px;
+  cursor: pointer; transition: border-color .14s var(--ease-soft), color .14s;
+}
+.cost-scope select:hover { border-color: var(--ink-5); color: var(--ink); }
 .cost-drop:hover { border-color: var(--loss); color: var(--loss); }
 .cost-year {
   flex: none; width: 80px; text-align: right; font-size: 11.5px; color: var(--ink-4);
@@ -3566,6 +3579,141 @@ body { background: var(--paper); }
    contenu. */
 .board-stack { display: flex; flex-direction: column; gap: 18px; }
 .view > .card + .card, .view > .panel + .panel { margin-top: 14px; }
+
+/* ══════════════════════════════ La conversation ════════════════════════════
+   Les mêmes questions que le parcours, posées autrement. Une colonne étroite,
+   des bulles, et une seule chose à faire en bas de l'écran.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.chat {
+  min-height: 100dvh; background: var(--paper);
+  max-width: 660px; margin: 0 auto; padding: 26px 22px 40px;
+  display: flex; flex-direction: column;
+}
+.chat-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--rule); margin-bottom: 22px;
+}
+.chat-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.chat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.chat-exit {
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 12.5px;
+  color: var(--ink-4); text-decoration: underline; text-underline-offset: 3px;
+}
+.chat-exit:hover { color: var(--ink); }
+
+.chat-thread { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.chat-line { display: flex; animation: chat-in .42s var(--ease-soft) both; }
+@keyframes chat-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.chat-line.is-me { justify-content: flex-end; }
+.chat-bubble {
+  max-width: 86%; padding: 12px 15px; border-radius: 16px;
+  font-size: 14.5px; line-height: 1.55; background: var(--surface);
+  border: 1px solid var(--rule); color: var(--ink-2);
+}
+.chat-line.is-me .chat-bubble {
+  background: var(--ink); border-color: var(--ink); color: #fff; border-bottom-right-radius: 5px;
+}
+.chat-line.is-app .chat-bubble { border-bottom-left-radius: 5px; }
+
+.chat-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.chat-choice {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
+  padding: 10px 14px; cursor: pointer; font: inherit; text-align: left;
+  transition: border-color .2s var(--ease-soft), background .2s var(--ease-soft), transform .2s var(--ease-soft);
+}
+.chat-choice:hover { border-color: var(--ink); transform: translateY(-1px); }
+.chat-choice-label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.chat-choice-note { font-size: 11.5px; color: var(--ink-4); line-height: 1.4; }
+
+.chat-composer { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.chat-field {
+  display: flex; align-items: baseline; gap: 10px; flex: 1 1 240px; min-width: 0;
+  border: 1px solid var(--ink); border-radius: 14px; background: var(--surface); padding: 10px 15px;
+  transition: box-shadow .2s var(--ease-soft);
+}
+.chat-field:focus-within { box-shadow: 0 0 0 3px var(--accent-wash); }
+.chat-input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 16px; color: var(--ink); }
+.chat-suffix { font-family: var(--mono); font-size: 12px; color: var(--ink-4); flex: none; }
+.chat-send { flex: none; border-radius: 999px; }
+.chat-skip {
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 12.5px;
+  color: var(--ink-4); text-decoration: underline; text-underline-offset: 3px;
+}
+.chat-skip:hover { color: var(--ink); }
+.chat-end { margin-top: 10px; }
+.chat-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.chat-foot { margin: 26px 0 0; font-size: 11.5px; color: var(--ink-5); line-height: 1.5; }
+.landing-talk { width: 100%; justify-content: center; margin-top: 10px; }
+
+/* ═════════════════════════════════ Le guide ════════════════════════════════
+   Une seule chose à faire, posée en bas à droite, à demeure. Pas une fenêtre
+   qu'on ferme pour continuer : un repère qu'on regarde quand on ne sait plus.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.nextstep {
+  position: fixed; right: 22px; bottom: calc(var(--impact-h) + 18px); z-index: 60;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--ink); color: #fff; border-radius: 16px;
+  padding: 13px 15px 13px 13px; max-width: min(430px, calc(100vw - 32px));
+  box-shadow: 0 2px 6px rgba(11, 14, 16, .12), 0 18px 46px -18px rgba(11, 14, 16, .5);
+  animation: nextstep-in .52s var(--ease-soft) both;
+}
+@keyframes nextstep-in {
+  from { opacity: 0; transform: translateY(14px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+/* L'anneau : la part posée, sans chiffre à lire si on n'en veut pas. */
+.nextstep-ring {
+  position: relative; width: 42px; height: 42px; flex: none;
+  border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--accent) calc(var(--part, 0) * 360deg), #2A3228 0);
+}
+.nextstep-ring-fill { position: absolute; inset: 4px; border-radius: 50%; background: var(--ink); }
+.nextstep-ring-num {
+  position: relative; font-family: var(--mono); font-size: 10.5px; color: #fff; letter-spacing: -.02em;
+}
+.nextstep-body { min-width: 0; flex: 1; }
+.nextstep-tag {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent);
+}
+.nextstep-do { font-size: 13.5px; font-weight: 600; color: #fff; line-height: 1.35; margin-top: 3px; }
+.nextstep-unlock { font-size: 11.5px; color: #8A8D82; margin-top: 3px; line-height: 1.4; }
+.nextstep-go { flex: none; border-radius: 999px; padding: 8px 16px; }
+.nextstep-close {
+  position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer;
+  color: #6D7268; font-size: 15px; line-height: 1; padding: 2px 4px;
+  transition: color .16s var(--ease-soft);
+}
+.nextstep-close:hover { color: #fff; }
+/* Refermé : une pastille discrète, qu'on rouvre d'un clic. */
+.nextstep-tab {
+  position: fixed; right: 22px; bottom: calc(var(--impact-h) + 18px); z-index: 60;
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
+  border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px;
+  box-shadow: var(--lift); transition: border-color .18s var(--ease-soft), color .18s;
+  animation: nextstep-in .4s var(--ease-soft) both;
+}
+.nextstep-tab:hover { border-color: var(--ink); color: var(--ink); }
+.nextstep-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+
+@media (max-width: 860px) {
+  .nextstep, .nextstep-tab { right: 12px; left: 12px; bottom: calc(var(--impact-h) + 66px); }
+  .nextstep { max-width: none; }
+  .nextstep-tab { left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nextstep, .nextstep-tab { animation: none; }
+}
 
 /* ═══════════════════════════ L'air entre les blocs ═════════════════════════
    Sur un écran d'ordinateur portable, tout se touchait. Les marges sont
