@@ -277,3 +277,32 @@ déficiences de vision des couleurs, et contraste sur le fond clair.
 
 Le modèle financier d'origine, FISY, est diffusé gratuitement par son auteur.
 Cette implémentation en reprend la logique et l'actualise.
+
+## Les icônes, et ce qu'il faudrait pour du vrai 3D
+
+Les icônes de familles de métiers (`js/ui/icons.js`) sont dessinées à la main
+en SVG, dans un registre isométrique volumique : une plaque au sol, une face
+claire, une face d'ombre, et une lumière constante venue d'en haut à gauche.
+Un kilo-octet chacune, nettes à toutes les tailles, et elles prennent les
+couleurs de la charte — il n'y a rien à reprendre si la charte bouge.
+
+Ce ne sont pas des rendus 3D. Le registre auquel on pense en disant « comme
+Airbnb » — 3dicons, Iconscout, les illustrations de Craftwork — est produit
+dans un moteur de rendu et livré en image. Pour l'avoir ici, il faudrait :
+
+1. **Un jeu d'images sous licence.** 3dicons.co est en CC0 (utilisable sans
+   contrepartie) ; Iconscout et Craftwork sont payants, entre cent et trois
+   cents euros pour un pack complet. Il faut choisir la famille stylistique
+   avant d'acheter : ces jeux ne se mélangent pas.
+2. **Les fichiers déposés dans `assets/icons/`**, en WebP à deux densités
+   (1× et 2×). Compter 8 à 20 ko par icône, donc 200 à 400 ko pour les douze
+   familles — à comparer aux 12 ko de l'ensemble actuel.
+3. **Un choix sur le paquet d'un seul fichier.** `build.mjs` produit un HTML
+   autonome ; des images externes le rendraient dépendant d'un serveur, sauf à
+   les encoder en base64 — ce qui gonfle le fichier d'un tiers environ.
+4. **Une adaptation au thème.** Une image ne change pas de couleur avec la
+   charte. Il faudrait soit des rendus figés, soit deux jeux, soit accepter que
+   les icônes restent dans leur palette d'origine.
+
+Tant que ces quatre points ne sont pas tranchés, le SVG dessiné est le meilleur
+compromis : moderne, cohérent, gratuit, et sans dépendance.

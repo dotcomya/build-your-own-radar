@@ -21,7 +21,7 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
   const open = memory.open
   const hidden = c.groups.reduce((a, g) => a + (g.items.length - visible(g, false).length), 0)
 
-  return h('section', { class: `refinery ${compact ? 'is-compact' : ''}` },
+  return h('section', { class: `refinery ${compact ? 'is-compact' : ''} ${memory.shut ? 'is-shut' : ''}` },
     h('header', { class: 'refinery-head' },
       h('div', { class: 'refinery-id' },
         h('div', { class: 'refinery-tag' }, 'Affiner mon dossier'),
@@ -43,9 +43,20 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
       h('div', { class: 'refinery-score' },
         h('span', { class: 'refinery-pct num' }, `${pct} %`),
         h('span', { class: 'refinery-count num' }, `${c.done}/${c.total}`),
+        // Le panneau se referme : sur un plan bien avancé, trente lignes en
+        // tête de tableau de bord repoussent tout le reste sous l'écran.
+        h('button', {
+          class: 'refinery-toggle', title: memory.shut ? 'Rouvrir la liste' : 'Replier la liste',
+          'aria-expanded': String(!memory.shut),
+          onClick: (e) => {
+            memory.shut = !memory.shut
+            e.target.closest('.refinery')?.classList.toggle('is-shut', memory.shut)
+          },
+        }, '⌄'),
       ),
     ),
 
+    h('div', { class: 'refinery-fold' },
     h('div', { class: 'refinery-bar' },
       ...c.groups.map((g) => h('span', {
         class: `refinery-bar-seg is-${g.key}`,
@@ -84,7 +95,8 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
     hidden > 0 ? h('button', {
       class: 'refinery-more',
       onClick: () => { memory.open = !memory.open; refresh() },
-    }, open ? 'Replier la liste' : `Voir les ${hidden} autres lignes`) : null,
+    }, open ? 'Tout replier' : `Voir les ${hidden} autres lignes`) : null,
+    ),
   )
 }
 
@@ -98,7 +110,7 @@ function visible(group, open) {
 }
 
 /** Replié ou déplié — le choix survit aux redessins de la page. */
-const memory = { open: false }
+const memory = { open: false, shut: false }
 
 /**
  * Pourquoi cet ordre-là.

@@ -10,15 +10,15 @@ import { h, clear, setDrawerHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
 import { PERSONAS, getPersona } from './ui/personas.js'
-import { impactRail, resetLiveNumbers } from './ui/impact.js'
+import { resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
-import { installMotion, consumeViewChange, travel } from './ui/motion.js'
+import { installMotion, consumeViewChange, travel, takeTravel } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
 import { checklist } from './ui/checklist.js'
-import { goToGap, settle, takeTravel } from './ui/spotlight.js'
+import { goToGap, settle } from './ui/spotlight.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -158,7 +158,11 @@ function render({ preserveScroll = false } = {}) {
     // volait deux cent cinquante pixels à la page pour répéter ce que la barre
     // de progression en haut et les pastilles du rail disent déjà. La page
     // respire, et c'est elle qu'on est venu lire.
-    rail(key), main, tabbar(key), impactRail(refresh), coach(navigate))
+    // Le bandeau « depuis le repère » a disparu : il annonçait des écarts
+    // par rapport à un instant que personne n'avait posé, avec un bouton
+    // « nouveau repère » dont l'objet ne se devinait pas. Un tableau de bord
+    // dit où l'on est ; il n'a pas à commenter le chemin sans qu'on demande.
+    rail(key), main, tabbar(key), coach(navigate))
   // Le projecteur lit le DOM d'arrivée : il doit donc passer après le
   // remplacement, y compris quand celui-ci est différé par la transition.
   const swap = () => {
@@ -175,7 +179,8 @@ function render({ preserveScroll = false } = {}) {
     settle()
     consumeViewChange(root)
   }
-  if (takeTravel()) travel(swap); else swap()
+  const mode = takeTravel()
+  if (mode) travel(swap, mode); else swap()
   document.title = `${page.label} — ${store.scenario.meta.name}`
 }
 

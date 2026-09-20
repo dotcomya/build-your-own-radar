@@ -40,7 +40,7 @@ export function renderCosts(navigate, refresh) {
   const views = [
     { key: 'charges', label: 'Charges', count: s.opex.length },
     { key: 'invest', label: 'Investissements', count: s.capex.length },
-    r && s.opex.length > 0 ? { key: 'repartition', label: 'Répartition' } : null,
+    r && s.opex.length > 0 ? { key: 'repartition', read: true, label: 'Répartition' } : null,
   ]
   const want = claim('achats')
   if (want && want.view) renderCosts.view = want.view
@@ -75,7 +75,14 @@ export function renderCosts(navigate, refresh) {
               "Fynomia propose une liste de charges courantes calibrée sur des jeunes entreprises françaises. Ajoute-les d'un clic, puis ajuste les montants."),
             h('button', { class: 'btn btn-primary mt', onClick: addAllSuggested }, `Ajouter les ${OPEX_TEMPLATES.length} charges courantes`),
           ))
-        : h('div', { 'data-gap': 'charges' }, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
+        : h('div', { 'data-gap': 'charges' },
+            // Deux natures de charges, et les mélanger fait perdre le fil.
+            //
+            // Le loyer tombe qu'on vende ou non ; la commission d'une plateforme
+            // n'existe que s'il y a une vente. La première fixe le nombre de
+            // clients qu'il te faut, la seconde rogne la marge de chacun — ce
+            // ne sont pas les mêmes questions, et on les range à part.
+            ...costBlocks(s, r, level, refresh)),
 
       // Le métier passe devant le générique : « cornets et pots, 0,18 € par
       // glace vendue » vaut mieux que « fournitures ». Les pastilles neutres
@@ -318,4 +325,30 @@ function capexRow(c, r, level, refresh) {
         `Soit ${euro((Number(c.amount) || 0) / (Number(c.amortYears) * 12))} de charge par mois pendant ${c.amortYears} an${c.amortYears > 1 ? 's' : ''}, alors que la trésorerie sort intégralement au mois ${(Number(c.month) || 0) + 1}.`),
     ),
   )
+}
+
+/**
+ * Les charges en deux blocs : ce qui tombe, et ce qui suit les ventes.
+ *
+ * Un fondateur qui a déjà saisi un coût de revient dans son offre le remet
+ * souvent ici, en charge. Le bloc « par vente » porte donc l'avertissement à
+ * l'endroit exact où l'erreur se commet.
+ */
+function costBlocks(s, r, level, refresh) {
+  const fixed = s.opex.filter((o) => !o.mode || o.mode === 'fixed' || o.mode === 'perEmployee')
+  const variable = s.opex.filter((o) => ['perUnit', 'pctRevenue'].includes(o.mode))
+  const block = (title, note, rows, tone = '') => rows.length
+    ? h('section', { class: `costblock ${tone}` },
+        h('header', { class: 'costblock-head' },
+          h('div', { class: 'costblock-title' }, title),
+          h('div', { class: 'costblock-note' }, note),
+          h('span', { class: 'costblock-count num' }, `${rows.length}`),
+        ),
+        ...rows.map((o) => opexRow(o, r, level, refresh)),
+      )
+    : null
+  return [
+    block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed),
+    block('Charges par vente', 'Elles n’existent que s’il y a une vente : commissions, emballage, matière. Si tu as déjà saisi un coût de revient sur ton offre, ne le remets pas ici — il serait compté deux fois.', variable, 'is-variable'),
+  ].filter(Boolean)
 }

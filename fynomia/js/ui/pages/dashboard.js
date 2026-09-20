@@ -53,8 +53,8 @@ export function renderDashboard(navigate, refresh) {
   // ce qui se passerait si. Les conseils génériques ont disparu — ils
   // répétaient ce que les repères de métier disent déjà là où ça compte.
   const views = [
-    { key: 'pilotage', label: 'Pilotage' },
-    { key: 'analyse', label: 'Analyse' },
+    { key: 'pilotage', read: true, label: 'Pilotage' },
+    { key: 'analyse', read: true, label: 'Analyse' },
     { key: 'simulation', label: 'Simulation' },
   ]
   const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'pilotage'

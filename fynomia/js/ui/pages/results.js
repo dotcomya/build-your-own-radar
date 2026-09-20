@@ -25,7 +25,8 @@ export function renderResults(navigate, refresh) {
   const current = available.some(([k]) => k === renderResults.tab) ? renderResults.tab : 'resultat'
 
   const views = [
-    ...available.map(([k, label]) => ({ key: k, label })),
+    // Les états financiers se lisent : rien ne s'y saisit, tout y est calculé.
+    ...available.map(([k, label]) => ({ key: k, label, read: true })),
     { key: 'revenu', label: 'Ce que tu touches' },
   ]
   const view = views.some((v) => v.key === renderResults.tab) ? renderResults.tab : 'resultat'

@@ -96,17 +96,36 @@ export function consumeViewChange(root = document) {
  * Là où l'API manque, ou quand le mouvement est refusé, la mutation se fait
  * sèchement : c'est le comportement d'avant, pas une dégradation.
  */
-export function travel(mutate) {
+/**
+ * Trois façons de changer d'écran, trois durées.
+ *
+ *   'page'   on quitte un module pour un autre — le geste franchit une
+ *            distance, et l'animation la montre ;
+ *   'view'   on passe d'un onglet au suivant à l'intérieur d'un module — on
+ *            ne bouge pas de place, le contenu coulisse ;
+ *   'quiet'  un interrupteur, une case cochée — rien ne doit se voir bouger,
+ *            mais tout doit changer sans clignoter. C'est le fondu le plus
+ *            court possible, dont le seul rôle est de supprimer le saut.
+ */
+let pending = null
+
+/** Armer la prochaine mutation. Le rendu qui suit la consommera. */
+export function armTravel(mode = 'page') { pending = mode }
+
+/** Le mode du rendu en cours, une seule fois. */
+export function takeTravel() { const t = pending; pending = null; return t }
+
+export function travel(mutate, mode = 'page') {
   if (reduced() || typeof document.startViewTransition !== 'function') { mutate(); return }
   const root = document.documentElement
-  const done = () => root.classList.remove('is-travelling')
-  root.classList.add('is-travelling')
+  const cls = `is-travelling is-move-${mode}`
+  const done = () => root.classList.remove('is-travelling', `is-move-${mode}`)
+  root.classList.add(...cls.split(' '))
   try {
     const vt = document.startViewTransition(mutate)
     // On relâche dès que le DOM est en place, pas à la fin de l'animation :
-    // l'écran est déjà celui d'arrivée, et rien ne justifie de garder la page
-    // en attente pendant le fondu. Un filet de sécurité couvre le cas où la
-    // promesse ne se résout jamais — une classe oubliée bloquerait l'outil.
+    // l'écran est déjà celui d'arrivée. Un filet de sécurité couvre le cas où
+    // la promesse ne se résout jamais — une classe oubliée bloquerait l'outil.
     vt.updateCallbackDone.catch(() => {}).finally(done)
     setTimeout(done, 1200)
   } catch {

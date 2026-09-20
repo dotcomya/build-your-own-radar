@@ -89,6 +89,9 @@ export function renderOffer(navigate, refresh) {
   )
 }
 
+/** Les offres dont on a demandé le coût de revient, le temps de la session. */
+const costOpen = new Set()
+
 function activityCard(a, index, r, level, open, refresh, duplicate) {
   // Quelles parts de prix sont à l'écran : celles qui portent déjà un chiffre,
   // plus celles que l'utilisateur vient d'ouvrir. Retirer une part remet son
@@ -196,10 +199,29 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
               // On saisit, puis on voit ce que ça donne. L'inverse — le dessin
               // au-dessus des champs qui le produisent — demandait de lire un
               // résultat avant d'avoir posé la question.
-              h('div', { class: 'grid grid-2' },
+              h('div', { class: `grid ${a.unitCost > 0 ? 'grid-2' : ''}` },
                 numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT', onInput: (v) => set({ unitPrice: v }) }),
-                numberField({ label: `Co\u00fbt de revient par ${voc.one}`, field: 'unitPrice', value: a.unitCost, suffix: '\u20ac HT', hint: 'Achats, sous-traitance, consommables. Ni loyer ni salaires.', onInput: (v) => set({ unitCost: v }) }),
+                // Le coût de revient ne s'impose plus : il se demande.
+                //
+                // Compté ici ET dans les charges, il double — et c'est l'erreur
+                // la plus fréquente d'un prévisionnel de création. Le champ
+                // n'apparaît donc que si on le réclame, avec la phrase qui
+                // évite la double saisie.
+                a.unitCost > 0 || costOpen.has(a.id)
+                  ? numberField({
+                      label: `Coût de revient par ${voc.one}`, field: 'unitCost', value: a.unitCost, suffix: '€ HT',
+                      hint: 'Ce que coûte une vente et rien d’autre : matière, marchandise, sous-traitance.',
+                      onInput: (v) => set({ unitCost: v }),
+                    })
+                  : null,
               ),
+              a.unitCost > 0 || costOpen.has(a.id)
+                ? h('p', { class: 'cost-warn' },
+                    'À ne pas recompter dans « Achats et coûts » : ce montant y est déjà, par vente. Les charges de ce module sont celles qui tombent même sans vendre — loyer, assurances, salaires.')
+                : h('button', {
+                    class: 'part-add is-slim',
+                    onClick: (e) => { costOpen.add(a.id); e.target.closest('.view')?.dispatchEvent(new CustomEvent('x', { bubbles: true })); refresh() },
+                  }, '＋', h('span', {}, `Compter un coût de revient par ${voc.one}`)),
               unitEconomics(`Une vente \u00e0 l'unit\u00e9`, a.unitPrice, a.unitCost),
               margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
                 h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),

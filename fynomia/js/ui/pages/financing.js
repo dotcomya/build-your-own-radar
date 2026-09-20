@@ -145,8 +145,8 @@ export function renderFinancing(navigate, refresh) {
 
   const views = [
     { key: 'sources', label: 'Sources', count: SOURCES.reduce((a, src) => a + ((f[src.key] || []).length), 0) },
-    r ? { key: 'tresorerie', label: 'Trésorerie' } : null,
-    r ? { key: 'plan', label: 'Plan de financement' } : null,
+    r ? { key: 'tresorerie', label: 'Trésorerie', read: true } : null,
+    r ? { key: 'plan', label: 'Plan de financement', read: true } : null,
   ]
   const want = claim('financement')
   if (want && want.view) renderFinancing.view = want.view

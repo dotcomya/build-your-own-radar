@@ -43,8 +43,8 @@ export function renderTeam(navigate, refresh) {
   const views = [
     { key: 'postes', label: 'Équipe', count: s.team.length },
     { key: 'avantages', label: 'Avantages', count: perks },
-    r && s.team.length > 0 ? { key: 'masse', label: 'Masse salariale' } : null,
-    s.team.length > 0 ? { key: 'jei', label: 'Recherche et JEI' } : null,
+    r && s.team.length > 0 ? { key: 'masse', read: true, label: 'Masse salariale' } : null,
+    s.team.length > 0 ? { key: 'jei', read: true, label: 'Recherche et JEI' } : null,
   ]
   const want = claim('equipe')
   if (want && want.view) renderTeam.view = want.view

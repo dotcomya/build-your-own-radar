@@ -20,6 +20,7 @@ import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
 import { resetSetup } from './setup.js'
+import { familyIcon } from '../icons.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
 const CLIENTS = [
@@ -238,7 +239,10 @@ function sectorPicks(s, set, refresh) {
       const acts = activitiesOf(fam.key)
       const here = acts.some((a) => a.key === s.meta.activityKey)
       return fold(
-        `${fam.glyph}  ${fam.label}`,
+        h('span', { class: 'famfold-id' },
+          h('span', { class: 'famfold-icon', html: familyIcon(fam.key) }),
+          h('span', {}, fam.label),
+        ),
         here ? chosen?.label : `${acts.length} métiers`,
         h('div', { class: 'picks' },
           ...acts.map((act) => h('button', {

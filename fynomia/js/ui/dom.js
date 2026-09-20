@@ -1,6 +1,6 @@
 /** Fabrique d'éléments : un hyperscript minimal, sans dépendance. */
 
-import { markViewChange } from './motion.js'
+import { markViewChange, armTravel } from './motion.js'
 
 export function h(tag, props = {}, ...children) {
   const el = document.createElement(tag)
@@ -223,7 +223,10 @@ export function enableToggle(on, onChange) {
       if (row) row.classList.toggle('is-off', !next)
       if (reducedMotion()) { onChange(next); return }
       btn.classList.add('is-switching')
-      setTimeout(() => onChange(next), 340)
+      // Le rendu qui suit reconstruit toute la liste : sans fondu, la page
+      // saute d'une image à l'autre. Celui-ci ne se voit pas — il ne sert
+      // qu'à ce que rien ne se voie.
+      setTimeout(() => { armTravel('quiet'); onChange(next) }, 340)
     },
   }, h('i'))
   return btn
@@ -248,10 +251,19 @@ export function tabs(items, active, onPick) {
     ...list.map((it) => h('button', {
       class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
-      onClick: () => { markViewChange(); onPick(it.key) },
+      onClick: () => { armTravel('view'); markViewChange(); onPick(it.key) },
     },
       h('span', {}, it.label),
       it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,
+      // Deux natures d'onglets, et rien ne les distinguait : on cliquait sur
+      // « Masse salariale » en croyant y saisir quelque chose, on n'y trouvait
+      // qu'un tableau, et on repartait. Le point plein dit qu'on écrit ici ;
+      // le cercle creux dit qu'on y lit ce que le modèle a calculé.
+      h('span', {
+        class: `hnav-kind ${it.read ? 'is-read' : 'is-write'}`,
+        title: it.read ? 'Rien à saisir ici : c’est le calcul' : 'Des champs à remplir',
+        'aria-hidden': 'true',
+      }),
     )),
   )
 }

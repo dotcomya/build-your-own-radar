@@ -29,6 +29,7 @@ import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
+import { familyIcon } from '../icons.js'
 
 /** Le poste du fondateur dans l'équipe, quel que soit le mot employé. */
 const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
@@ -457,10 +458,14 @@ function sectorPicker(ctx) {
     ctx.refresh()
   }
 
-  const card = (glyph, name, note, active, onClick) => h('button', {
+  // Un glyphe de police disait le sérieux d'un formulaire administratif. Les
+  // icônes sont dessinées : même lumière, même volume, même jeu.
+  const card = (glyph, name, note, active, onClick, famKey = null) => h('button', {
     class: `setup-sector ${active ? 'active' : ''}`, onClick,
   },
-    h('span', { class: 'setup-sector-glyph' }, glyph),
+    famKey
+      ? h('span', { class: 'setup-sector-icon', html: familyIcon(famKey) })
+      : h('span', { class: 'setup-sector-glyph' }, glyph),
     h('span', { class: 'setup-sector-name' }, name),
     note ? h('span', { class: 'setup-sector-note' }, note) : null,
   )
@@ -483,8 +488,8 @@ function sectorPicker(ctx) {
     if (q.length >= 2) {
       const hits = searchActivities(q)
       grid.replaceChildren(
-        ...hits.map((a) => card(familyOf(a.in[0])?.glyph || '▸', a.label,
-          familyOf(a.in[0])?.label, current === a.key, () => choose(a))),
+        ...hits.map((a) => card('▸', a.label,
+          familyOf(a.in[0])?.label, current === a.key, () => choose(a), a.in[0])),
         card('＋', 'Autre chose', 'Un modèle vierge, à toi de le remplir', false, () => choose(null)),
       )
       if (!hits.length) {
@@ -498,14 +503,14 @@ function sectorPicker(ctx) {
     if (!pick.family) {
       grid.replaceChildren(...FAMILIES.map((f) => card(f.glyph, f.label,
         `${activitiesOf(f.key).length} métiers`, false,
-        () => { pick.family = f.key; draw() })))
+        () => { pick.family = f.key; draw() }, f.key)))
       return
     }
 
     // ─── Second temps : les métiers de la famille ───
     const fam = familyOf(pick.family)
     grid.replaceChildren(
-      ...activitiesOf(pick.family).map((a) => card(fam.glyph, a.label, null, current === a.key, () => choose(a))),
+      ...activitiesOf(pick.family).map((a) => card(fam.glyph, a.label, null, current === a.key, () => choose(a), pick.family)),
       card('＋', 'Autre chose', null, false, () => choose(null)),
     )
   }
@@ -534,26 +539,16 @@ function sectorPicker(ctx) {
  * seule chose à comprendre pour oser commencer.
  */
 function welcomeScreen(ctx) {
-  const promises = [
-    { k: '12', t: 'Douze questions', d: 'Dix minutes, pas une soirée. Tu peux t’arrêter à tout moment et reprendre où tu en étais.' },
-    { k: '≈', t: 'Des réponses approximatives', d: 'Un ordre de grandeur suffit. Un chiffre faux qu’on corrige vaut mieux qu’une case vide.' },
-    { k: '↺', t: 'Tout se modifie après', d: 'Chaque réponse devient un champ du logiciel. Rien n’est verrouillé, jamais.' },
-    { k: '⌂', t: 'Rien ne sort de chez toi', d: 'Ton plan reste dans ce navigateur. Aucun compte à créer pour commencer.' },
-  ]
   return h('div', { class: 'welcome' },
-    h('p', { class: 'welcome-lede' },
-      "On va poser ton business plan ensemble. Tu n’as pas besoin de connaître tes chiffres : c’est justement ce qu’on cherche."),
-    h('div', { class: 'welcome-grid' },
-      ...promises.map((p) => h('div', { class: 'welcome-card' },
-        h('span', { class: 'welcome-key', 'aria-hidden': 'true' }, p.k),
-        h('div', { class: 'welcome-title' }, p.t),
-        h('p', { class: 'welcome-note' }, p.d),
-      )),
+    h('p', { class: 'welcome-big' },
+      'Tu vas écrire des chiffres que tu ne connais pas encore.',
+      h('b', {}, ' C’est normal, et ça se corrige à tout moment.'),
     ),
+    h('p', { class: 'welcome-sub' }, 'Douze questions. Dix minutes.'),
     h('button', {
       class: 'btn btn-primary btn-lg welcome-go',
       onClick: () => ctx.go(1),
-    }, 'Commencer →'),
+    }, 'Commencer'),
   )
 }
 
