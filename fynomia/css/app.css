@@ -4677,12 +4677,20 @@ body { background: var(--paper); }
   list-style: none; margin: 0; padding: 20px 0 0; border-top: 1px solid var(--rule);
   display: grid; gap: 20px 26px; grid-template-columns: repeat(3, 1fr);
 }
-@media (max-width: 960px) { .welcome-points { grid-template-columns: 1fr; gap: 16px; } }
+@media (max-width: 960px) {
+  .welcome-points { grid-template-columns: 1fr; gap: 18px; }
+  /* L'icône reste au-dessus, en une colonne comme en trois : c'est la même
+     lecture partout, et on ne redessine pas la page en tournant le téléphone. */
+  .welcome-point-ico { width: 32px; height: 32px; }
+}
+/* L'icône au-dessus du titre, pas à côté : posée à gauche, elle poussait le
+   titre à la ligne et la colonne se lisait en escalier. Au-dessus, chaque
+   réponse tient en un bloc — un objet, une affirmation, une explication. */
 .welcome-point {
-  display: flex; align-items: flex-start; gap: 12px; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-width: 0;
   animation: welcome-rise .7s var(--d, .3s) var(--ease-soft) both;
 }
-.welcome-point-ico { width: 34px; height: 34px; flex: none; line-height: 0; }
+.welcome-point-ico { width: 38px; height: 38px; flex: none; line-height: 0; }
 .welcome-point b {
   display: block; font-family: var(--display); font-size: 14px; font-weight: 700;
   letter-spacing: -.015em; color: var(--ink); margin-bottom: 2px;
