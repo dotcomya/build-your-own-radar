@@ -66,7 +66,7 @@ export function renderProject(navigate, refresh) {
         })(),
       ),
 
-      h('div', { class: 'mt' }, sectorPicks(s, set, refresh)),
+      h('div', { class: 'mt', 'data-gap': 'secteur' }, sectorPicks(s, set, refresh)),
 
       h('div', { 'data-gap': 'calendrier' },
       refine('projet-cloture', 'Affiner le calendrier',
@@ -127,7 +127,7 @@ export function renderProject(navigate, refresh) {
     // Le cadre juridique change de sujet : il ne parle plus du marché mais de
     // la structure. Il lui faut donc l'espace qui sépare deux chapitres, pas
     // celui qui sépare deux paragraphes.
-    h('section', { class: 'slab slab-apart' },
+    h('section', { class: 'slab slab-apart', 'data-gap': 'juridique' },
       h('div', { class: 'slab-head' },
         h('div', {},
           h('div', { class: 'slab-title' }, 'Le cadre juridique et fiscal'),

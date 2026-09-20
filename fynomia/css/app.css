@@ -3580,6 +3580,216 @@ body { background: var(--paper); }
 .board-stack { display: flex; flex-direction: column; gap: 18px; }
 .view > .card + .card, .view > .panel + .panel { margin-top: 14px; }
 
+/* ═══════════════════════════════ La présentation ═══════════════════════════
+   Quinze écrans plein cadre. Une idée par écran, un chiffre par idée, et rien
+   autour : ni rail, ni fil d'Ariane, ni bouton qu'on n'utilisera pas pendant
+   qu'on parle. Le fond d'encre marque les quatre moments qui décident.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.deck {
+  position: fixed; inset: 0; z-index: 70; background: var(--paper);
+  display: flex; flex-direction: column; outline: 0;
+}
+.deck-bar {
+  display: flex; align-items: center; gap: 20px; flex: none;
+  padding: 14px 24px; border-bottom: 1px solid var(--rule);
+}
+.deck-exit {
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 13px;
+  color: var(--ink-4); padding: 4px 2px; transition: color .2s var(--ease-soft);
+}
+.deck-exit:hover { color: var(--ink); }
+.deck-dots { display: flex; gap: 5px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.deck-dot {
+  width: 22px; height: 4px; border: 0; border-radius: 3px; padding: 0;
+  background: var(--rule); cursor: pointer;
+  transition: background .3s var(--ease-soft), transform .3s var(--ease-soft);
+}
+.deck-dot.seen { background: var(--ink-5); }
+.deck-dot.active { background: var(--ink); transform: scaleY(1.8); }
+.deck-dot:hover { background: var(--ink-4); }
+.deck-count { font-size: 12px; color: var(--ink-4); flex: none; }
+
+.deck-stage { flex: 1; display: grid; place-items: center; padding: 3vh 5vw; overflow-y: auto; min-height: 0; }
+
+.slide {
+  width: 100%; max-width: 1000px;
+  animation: slide-in .5s var(--ease-soft) both;
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.slide-inner {
+  border: 1px solid var(--rule); border-radius: 22px; background: var(--surface);
+  padding: clamp(26px, 4vw, 52px);
+}
+.slide.is-dark .slide-inner { background: var(--ink); border-color: var(--ink); color: #fff; }
+.slide-kicker {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 14px;
+}
+.slide.is-dark .slide-kicker { color: var(--accent); }
+.slide-title {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(28px, 4.4vw, 52px); line-height: .98; letter-spacing: -.045em;
+  color: var(--ink); margin: 0; max-width: 20ch; text-wrap: balance;
+}
+.slide.is-dark .slide-title { color: #fff; }
+.slide-lead {
+  font-size: clamp(15px, 1.6vw, 19px); line-height: 1.5; color: var(--ink-3);
+  margin: 16px 0 0; max-width: 62ch;
+}
+.slide.is-dark .slide-lead { color: #B7BAAE; }
+.slide-body { margin-top: 28px; }
+.slide-foot {
+  margin: 24px 0 0; padding-top: 16px; border-top: 1px solid var(--rule);
+  font-size: 13px; line-height: 1.6; color: var(--ink-4); max-width: 76ch;
+}
+.slide.is-dark .slide-foot { border-top-color: #2A3228; color: #8A8D82; }
+
+.slide-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 22px; }
+.slide-fact-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.slide.is-dark .slide-fact-tag { color: #8A8D82; }
+.slide-fact-value {
+  font-size: clamp(22px, 2.6vw, 32px); font-weight: 650; letter-spacing: -.04em;
+  color: var(--ink); margin-top: 8px; line-height: 1.1;
+}
+.slide.is-dark .slide-fact-value { color: #fff; }
+.slide-fact-note { font-size: 12px; color: var(--ink-4); margin-top: 5px; line-height: 1.45; }
+.slide.is-dark .slide-fact-note { color: #8A8D82; }
+
+.slide-headline { margin-bottom: 24px; }
+.slide-headline-value {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(40px, 7vw, 86px); line-height: .94; letter-spacing: -.05em; color: var(--ink);
+}
+.slide.is-dark .slide-headline-value { color: var(--accent); }
+.slide-headline-note {
+  margin: 12px 0 0; font-size: clamp(14px, 1.5vw, 17px); color: var(--ink-3);
+  line-height: 1.5; max-width: 54ch;
+}
+.slide.is-dark .slide-headline-note { color: #B7BAAE; }
+
+/* La barre prix / coût / marge, en une ligne. */
+.slide-bar {
+  display: flex; height: 26px; border-radius: 8px; overflow: hidden;
+  background: var(--gain); margin-bottom: 26px;
+}
+.slide-bar-cost { background: var(--ink); }
+.slide-bar-margin { flex: 1; }
+
+.slide-table { overflow-x: auto; }
+.slide-table table.data { font-size: 14px; }
+.slide-table table.data td, .slide-table table.data th { padding: 11px 14px; }
+
+.deck-nav {
+  position: fixed; right: 24px; bottom: 26px; display: flex; gap: 8px; z-index: 72;
+}
+.deck-arrow {
+  width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink); cursor: pointer; font-size: 17px;
+  box-shadow: var(--lift); transition: background .24s var(--ease-soft), transform .24s var(--ease-soft), opacity .2s;
+}
+.deck-arrow:hover { background: var(--ink); color: #fff; transform: translateY(-2px); }
+.deck-arrow:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.deck-progress { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; background: var(--rule); z-index: 72; }
+.deck-progress > i { display: block; height: 100%; background: var(--accent); transition: width .5s var(--ease-soft); }
+
+@media (max-width: 760px) {
+  .deck-bar { padding: 10px 14px; gap: 12px; }
+  .deck-dots { display: none; }
+  .deck-stage { padding: 2vh 14px 70px; }
+  .slide-inner { padding: 22px 18px; border-radius: 16px; }
+  .deck-nav { right: 14px; bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .slide { animation: none; } }
+
+/* ════════════════════════ Affiner : ce qu'il reste à poser ══════════════════
+   Dix-neuf lignes rangées par ce qu'elles apportent, pas par l'ordre des
+   menus. La barre est pondérée : cocher « mutuelle » ne vaut pas cocher
+   « prix de vente », et l'afficher autrement serait mentir sur l'avancement.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.refinery {
+  border: 1px solid var(--rule); border-radius: 16px; background: var(--surface);
+  padding: 20px 22px;
+}
+.refinery-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 18px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.refinery-tag {
+  font-family: var(--display); font-weight: 700; font-size: 17px;
+  letter-spacing: -.022em; color: var(--ink);
+}
+.refinery-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
+.refinery-score { display: flex; align-items: baseline; gap: 10px; flex: none; }
+.refinery-pct { font-size: 28px; font-weight: 650; letter-spacing: -.04em; color: var(--ink); }
+.refinery-count { font-size: 12px; color: var(--ink-5); }
+
+/* La barre, en trois segments proportionnels au poids de chaque palier. */
+.refinery-bar { display: flex; gap: 4px; margin-bottom: 20px; }
+.refinery-bar-seg {
+  height: 7px; border-radius: 4px; background: var(--rule); overflow: hidden; min-width: 0;
+}
+.refinery-bar-seg > i {
+  display: block; height: 100%; border-radius: 4px;
+  transition: width .6s var(--ease-soft);
+}
+.refinery-bar-seg.is-fondation > i { background: var(--ink); }
+.refinery-bar-seg.is-credibilite > i { background: var(--accent-dim); }
+.refinery-bar-seg.is-finition > i { background: var(--ink-5); }
+
+.refinery-groups { display: flex; flex-direction: column; gap: 18px; }
+.refinery-group-head {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 8px; border-bottom: 1px solid var(--rule); margin-bottom: 4px;
+}
+.refinery-chip {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; flex: none;
+}
+.refinery-chip.is-fondation { background: var(--ink); color: var(--accent); }
+.refinery-chip.is-credibilite { background: var(--accent); color: var(--accent-ink); }
+.refinery-chip.is-finition { background: var(--surface-2); color: var(--ink-4); border: 1px solid var(--rule); }
+.refinery-group-note { font-size: 11.5px; color: var(--ink-4); flex: 1; min-width: 0; }
+.refinery-group-count { font-size: 11.5px; color: var(--ink-4); flex: none; }
+.refinery-group.is-full .refinery-group-note { color: var(--ink-5); }
+
+.refinery-items { display: flex; flex-direction: column; }
+.refinery-item {
+  display: flex; align-items: flex-start; gap: 11px; width: 100%;
+  border: 0; border-bottom: 1px solid var(--rule); background: none;
+  padding: 11px 4px; cursor: pointer; font: inherit; text-align: left;
+  transition: background .2s var(--ease-soft), padding-left .2s var(--ease-soft);
+}
+.refinery-item:last-child { border-bottom: 0; }
+.refinery-item:hover { background: var(--surface-2); padding-left: 9px; }
+.refinery-mark {
+  width: 18px; height: 18px; flex: none; margin-top: 1px; border-radius: 50%;
+  border: 1.5px solid var(--rule); display: grid; place-items: center;
+  font-size: 10px; color: #fff; transition: background .24s var(--ease-soft), border-color .24s;
+}
+.refinery-item.is-done .refinery-mark { background: var(--ink); border-color: var(--ink); }
+.refinery-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.refinery-label { font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+.refinery-item.is-done .refinery-label { font-weight: 450; color: var(--ink-4); }
+.refinery-why { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; }
+.refinery-go {
+  flex: none; color: var(--ink-5); font-size: 14px; align-self: center;
+  transition: transform .24s var(--ease-soft), color .2s;
+}
+.refinery-item:hover .refinery-go { transform: translateX(4px); color: var(--ink); }
+/* Ce qui est fait se tasse : on n'a pas besoin de relire ce qu'on a posé. */
+.refinery-item.is-done { padding: 7px 4px; }
+
+@media (max-width: 700px) {
+  .refinery { padding: 16px 15px; }
+  .refinery-group-note { display: none; }
+}
+
 /* ══════════════════════════════ La conversation ════════════════════════════
    Les mêmes questions que le parcours, posées autrement. Une colonne étroite,
    des bulles, et une seule chose à faire en bas de l'écran.

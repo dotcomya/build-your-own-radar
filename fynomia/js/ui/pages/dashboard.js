@@ -16,6 +16,7 @@ import { referenceYear } from '../impact.js'
 import { storyline, gauge } from '../story.js'
 import { partBanner } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
+import { refinePanel } from '../refine-panel.js'
 import { breakEvenBoard } from './model.js'
 import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
@@ -73,6 +74,9 @@ export function renderDashboard(navigate, refresh) {
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
       cockpit(j, r, navigate),
+      // C'est ici qu'on arrive en sortant du parcours : la première chose à
+      // voir n'est pas un graphique, c'est ce qu'il reste à poser.
+      refinePanel(navigate),
       // Le bloc porte son propre titre dans l'opération : l'encadrer d'un
       // panneau avec un second titre ajoutait une couche pour rien.
       breakEvenBoard(r, s, vocabulary(s)),

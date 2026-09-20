@@ -246,7 +246,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         )
       ) : null,
 
-      sec === 'evolution' ? h('div', { class: 'view' }, priceEvolutionFields(a, set)) : null,
+      sec === 'evolution' ? h('div', { class: 'view', 'data-gap': 'evolution' }, priceEvolutionFields(a, set)) : null,
 
       h('div', { class: 'view-foot' },
         h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Supprimer cette offre')),

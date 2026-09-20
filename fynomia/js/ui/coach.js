@@ -14,19 +14,9 @@
  */
 
 import { h } from './dom.js'
-import { buildState } from '../engine/build.js'
+import { checklist } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
-
-/** L'endroit exact où chaque brique se pose. */
-const WHERE = {
-  projet: { route: 'projet', anchor: 'pitch', do: 'Nomme ton projet et choisis ta forme juridique' },
-  prix: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix', do: 'Donne un prix à ce que tu vends' },
-  clients: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes', do: 'Dis combien tu en vends par mois' },
-  couts: { route: 'achats', view: 'charges', anchor: 'oublis', do: 'Coche les charges qui tombent chaque mois' },
-  equipe: { route: 'equipe', view: 'postes', anchor: 'equipe', do: 'Donne-toi une rémunération' },
-  financement: { route: 'financement', view: 'sources', anchor: 'sources', do: 'Indique ce que tu mets sur la table' },
-}
 
 const memory = { closed: false }
 
@@ -34,33 +24,34 @@ export function coach(navigate) {
   const s = store.scenario
   if (!s) return null
 
-  const b = buildState(s)
-  const next = b.bricks.find((x) => !x.done)
-  const where = next && WHERE[next.key]
-
+  // Le guide et la liste « affiner » disent la même chose au même moment : ils
+  // lisent donc la même source, classée par ce que chaque ligne apporte au
+  // dossier. Le guide n'en montre qu'une — la plus utile encore ouverte.
+  const c = checklist(s)
   // Plus rien à poser : le guide n'a pas à occuper l'écran pour dire bravo.
-  if (!next || !where) return null
+  if (!c.next) return null
+  const pct = Math.round(c.ratio * 100)
 
   if (memory.closed) {
     return h('button', {
       class: 'nextstep-tab', title: 'Reprendre le guide',
       onClick: () => { memory.closed = false; render() },
-    }, h('span', { class: 'nextstep-tab-dot' }), `${b.done}/${b.total}`)
+    }, h('span', { class: 'nextstep-tab-dot' }), `${pct} %`)
   }
 
   const el = h('aside', { class: 'nextstep', role: 'complementary' },
     h('div', { class: 'nextstep-ring', 'aria-hidden': 'true' },
-      h('span', { class: 'nextstep-ring-fill', style: { '--part': String(b.done / b.total) } }),
-      h('span', { class: 'nextstep-ring-num' }, `${b.done}/${b.total}`),
+      h('span', { class: 'nextstep-ring-fill', style: { '--part': String(c.ratio) } }),
+      h('span', { class: 'nextstep-ring-num' }, `${pct}%`),
     ),
     h('div', { class: 'nextstep-body' },
-      h('div', { class: 'nextstep-tag' }, 'Prochaine étape'),
-      h('div', { class: 'nextstep-do' }, where.do),
-      b.upcoming ? h('div', { class: 'nextstep-unlock' }, `Ensuite : ${b.upcoming.label}`) : null,
+      h('div', { class: 'nextstep-tag' }, 'À poser maintenant'),
+      h('div', { class: 'nextstep-do' }, c.next.label),
+      h('div', { class: 'nextstep-unlock' }, c.next.why),
     ),
     h('button', {
       class: 'btn btn-primary nextstep-go',
-      onClick: () => goToGap(where, navigate),
+      onClick: () => goToGap(c.next.go, navigate),
     }, 'Y aller'),
     h('button', {
       class: 'nextstep-close', title: 'Masquer le guide',

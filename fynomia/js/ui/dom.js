@@ -93,6 +93,13 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
     input,
     (suffix || percent) && h('span', { class: 'affix' }, suffix || '%'),
   )
+  // Quitter un champ sans l'avoir modifié ne doit rien écrire.
+  //
+  // Le contraire coûtait un clic : sortir du champ pour appuyer sur un bouton
+  // déclenchait un enregistrement, donc un redessin complet, et le bouton
+  // visé disparaissait entre l'appui et le relâchement. Le clic était perdu,
+  // et il fallait recommencer sans comprendre pourquoi.
+  let last = toDisplay(value)
   const commit = () => {
     let raw = input.value === '' ? '' : Number(input.value)
     if (raw !== '') {
@@ -101,6 +108,8 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
       input.value = toDisplay(raw)
     }
     control.classList.remove('invalid')
+    if (String(input.value) === String(last)) return
+    last = input.value
     onInput(raw)
   }
   input.addEventListener('change', commit)
@@ -122,9 +131,17 @@ export function textField({ label, value, placeholder, onInput, hint, help, fiel
   const input = h('input', { type: 'text', value: value ?? '', placeholder: placeholder || '', 'data-field-key': fieldKey || null })
   // Pendant la frappe on enregistre sans redessiner ; la synchronisation
   // complète de l'interface a lieu à la sortie du champ.
-  input.addEventListener('input', () => onInput(input.value, { silent: true }))
-  input.addEventListener('change', () => onInput(input.value))
-  input.addEventListener('blur', () => onInput(input.value))
+  // Même règle que pour les nombres : une sortie de champ sans modification
+  // n'enregistre rien, et ne fait donc pas disparaître le bouton qu'on visait.
+  let last = value ?? ''
+  const commit = () => {
+    if (String(input.value) === String(last)) return
+    last = input.value
+    onInput(input.value)
+  }
+  input.addEventListener('input', () => { last = input.value; onInput(input.value, { silent: true }) })
+  input.addEventListener('change', commit)
+  input.addEventListener('blur', commit)
   return h('div', { class: 'field' },
     label && h('label', {}, label, help && helpButton(help)),
     h('div', { class: 'control' }, input),

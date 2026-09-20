@@ -14,6 +14,7 @@ import { impactRail, resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
+import { renderDeck, resetDeck } from './ui/pages/deck.js'
 import { settle } from './ui/spotlight.js'
 import { installMotion, consumeViewChange } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
@@ -109,6 +110,14 @@ function render({ preserveScroll = false } = {}) {
   if (key === 'creer') {
     clear(root).appendChild(renderSetup(navigate, render))
     document.title = 'Fynomia — Ton business plan'
+    return
+  }
+
+  // La présentation occupe tout l'écran : on ne défend pas un plan avec un
+  // rail de navigation et un fil d'Ariane à côté.
+  if (key === 'presentation' && store.scenario) {
+    clear(root).appendChild(renderDeck(navigate, () => render()))
+    document.title = `${store.scenario.meta.name} — Présentation`
     return
   }
 
