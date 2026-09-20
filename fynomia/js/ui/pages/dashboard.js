@@ -76,7 +76,7 @@ export function renderDashboard(navigate, refresh) {
       cockpit(j, r, navigate),
       // C'est ici qu'on arrive en sortant du parcours : la première chose à
       // voir n'est pas un graphique, c'est ce qu'il reste à poser.
-      refinePanel(navigate),
+      refinePanel(navigate, { refresh }),
       // Le bloc porte son propre titre dans l'opération : l'encadrer d'un
       // panneau avec un second titre ajoutait une couche pour rien.
       breakEvenBoard(r, s, vocabulary(s)),

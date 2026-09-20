@@ -102,6 +102,31 @@ const ITEMS = [
     go: { route: 'financement', view: 'sources', anchor: 'sources' } },
 ]
 
+/* ─────────────────────── Ce qu'on a remis à plus tard ─────────────────────
+   Le fondateur a le droit de ne pas vouloir poser sa rémunération un mardi
+   matin. Ce qu'il n'a pas le droit de faire, c'est de la perdre : « plus
+   tard » range la ligne en fin de file, il ne la supprime pas.
+
+   La file est ordonnée — la plus anciennement reportée en tête. Quand tout
+   ce qui reste a été reporté, on repropose celle qui attend depuis le plus
+   longtemps, en le disant. Reporter de nouveau la renvoie en queue : le tour
+   tourne, rien ne disparaît. */
+const later = []
+
+/** Remettre une ligne à plus tard — ou la renvoyer en queue si elle y était. */
+export function defer(key) {
+  const at = later.indexOf(key)
+  if (at >= 0) later.splice(at, 1)
+  later.push(key)
+  return later.length
+}
+
+/** Tout reprendre maintenant : la file est vidée. */
+export function resumeAll() { later.length = 0 }
+
+/** Combien de lignes attendent leur tour. */
+export function deferredCount() { return later.length }
+
 /**
  * L'état de la liste : chaque ligne, son palier, et l'avancement pondéré.
  */
@@ -122,14 +147,30 @@ export function checklist(scenario) {
 
   const max = items.reduce((a, i) => a + i.weight, 0)
   const got = items.filter((i) => i.done).reduce((a, i) => a + i.weight, 0)
+
+  // Une ligne posée n'a plus à attendre son tour : on la sort de la file.
+  const open = items.filter((i) => !i.done)
+  for (let k = later.length - 1; k >= 0; k--) {
+    if (!open.some((o) => o.key === later[k])) later.splice(k, 1)
+  }
+  for (const it of items) it.later = later.includes(it.key)
+
   // La prochaine chose à faire est la plus lourde encore ouverte, dans l'ordre
   // des paliers : on ne propose pas la mutuelle à qui n'a pas encore de prix.
-  const next = items.find((i) => !i.done) || null
+  // Sauf celles qu'on a reportées — jusqu'à ce qu'il ne reste qu'elles.
+  let next = open.find((i) => !i.later) || null
+  let again = false
+  if (!next && later.length) {
+    next = open.find((i) => i.key === later[0]) || null
+    again = !!next
+  }
 
   return {
-    items, groups, next,
+    items, groups, next, again,
     done: items.filter((i) => i.done).length,
     total: items.length,
+    open: open.length,
+    later: later.length,
     ratio: max > 0 ? got / max : 0,
   }
 }

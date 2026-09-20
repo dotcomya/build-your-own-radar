@@ -1178,22 +1178,79 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .win-detail { font-size: 11.5px; color: var(--signal-ink); margin-top: 2px; }
 .win-gain { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 12px; }
 
-/* ─── La pastille d'avancement, en tête de chaque page ─── */
-.progress-pill {
-  display: inline-flex; align-items: center; gap: 9px; padding: 5px 11px 5px 9px;
-  border: 1px solid var(--rule); background: var(--surface); cursor: pointer;
-  font: inherit; color: var(--ink-2); transition: border-color .13s, background .13s;
+/* ════════════════ L'avancement, au tout premier pixel de l'écran ═══════════
+   Deux choses, au même endroit et à demeure : un trait qui court sur l'arête
+   haute de la fenêtre, et dix-neuf encoches qui disent lesquelles des lignes
+   du dossier sont posées. Une barre lisse aurait dit « 42 % » sans jamais
+   dire de quoi ; les encoches montrent le chemin fait et celui qui reste,
+   et chacune emmène au champ d'un clic.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.topline {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--rule); overflow: hidden; pointer-events: none;
 }
-.progress-pill:hover { border-color: var(--ink); background: var(--surface-2); }
-.progress-pill-bar { width: 42px; height: 4px; background: var(--rule); flex: none; overflow: hidden; }
-.progress-pill-bar > i { display: block; height: 100%; background: var(--signal); transition: width .5s var(--ease); }
-.progress-pill-value { font-size: 12px; font-weight: 600; letter-spacing: -.02em; }
-.progress-pill-label {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--ink-4); white-space: nowrap;
+.topline > i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--ink) 0%, var(--accent-dim) 62%, var(--accent) 100%);
+  transition: width .7s var(--ease-soft);
 }
-.progress-pill.complete .progress-pill-bar > i { background: var(--gain); }
-.progress-pill.complete .progress-pill-value { color: var(--gain); }
+
+.topprog { display: flex; align-items: center; gap: 12px; flex: none; min-width: 0; }
+
+/* Les encoches : un palier par groupe, un cran par ligne. */
+.topprog-steps { display: flex; align-items: center; gap: 7px; }
+.topprog-tier { display: flex; align-items: center; gap: 3px; }
+.topprog-step {
+  width: 5px; height: 15px; padding: 0; border: 0; border-radius: 2px;
+  background: var(--rule); cursor: pointer; flex: none;
+  transition: background .3s var(--ease-soft), transform .2s var(--ease-soft), height .2s var(--ease-soft);
+}
+.topprog-step:hover { transform: scaleY(1.24); background: var(--ink-4); }
+.topprog-step:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.topprog-tier.is-fondation .topprog-step.is-done { background: var(--ink); }
+.topprog-tier.is-credibilite .topprog-step.is-done { background: var(--accent-dim); }
+.topprog-tier.is-finition .topprog-step.is-done { background: var(--ink-5); }
+/* Reporté : le cran reste, en creux. Il n'a pas disparu, il attend son tour. */
+.topprog-step.is-later {
+  background: repeating-linear-gradient(180deg, var(--ink-5) 0 2px, transparent 2px 4px);
+  opacity: .75;
+}
+
+.topprog-score {
+  display: inline-flex; align-items: baseline; gap: 3px; padding: 3px 9px;
+  border: 1px solid var(--rule); border-radius: 999px; background: var(--surface);
+  font: inherit; color: var(--ink-2); cursor: pointer; white-space: nowrap;
+  transition: border-color .16s var(--ease-soft), background .16s;
+}
+.topprog-score:hover { border-color: var(--ink); background: var(--surface-2); }
+.topprog-done { font-size: 13px; font-weight: 650; letter-spacing: -.03em; color: var(--ink); }
+.topprog-of { font-size: 11px; color: var(--ink-5); }
+.topprog-pct {
+  font-family: var(--mono); font-size: 10px; color: var(--ink-4);
+  padding-left: 7px; margin-left: 4px; border-left: 1px solid var(--rule);
+}
+.topprog.is-full .topprog-done { color: var(--gain); }
+.topprog.is-full .topprog-score { border-color: var(--gain); }
+
+@media (max-width: 1080px) {
+  .topprog-steps { gap: 5px; }
+  .topprog-step { width: 4px; }
+}
+@media (max-width: 860px) {
+  .topprog { gap: 8px; }
+  .topprog-pct { display: none; }
+}
+/* Sur un téléphone, le fil d'ariane a déjà disparu : la place libérée revient
+   aux encoches, qui sont justement ce qu'on vient chercher. */
+@media (max-width: 520px) {
+  .topprog-steps { gap: 5px; }
+  .topprog-tier { gap: 2px; }
+  .topprog-step { width: 4px; height: 14px; }
+  .topprog-score { padding: 3px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topline > i, .topprog-step { transition: none; }
+}
 
 /* ═══════════════════ Bandeau d'étape et micro-tutos ═══════════════════════ */
 
@@ -1349,8 +1406,6 @@ i.swatch.split-margin { background: var(--gain); }
   .win { grid-template-columns: 1fr; gap: 8px; }
   .win-gain { text-align: left; flex-direction: row; gap: 14px; }
   .trophy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .progress-pill { padding: 4px 8px; }
-  .progress-pill-bar { width: 30px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2374,8 +2429,6 @@ i.swatch.split-margin { background: var(--gain); }
 .levels { border-color: var(--level); }
 .level-btn.active { background: var(--level); color: #fff; }
 .rail-link.active { border-left-color: var(--level); }
-.progress-pill-bar > i { background: var(--level); }
-.progress-pill.complete .progress-pill-bar > i { background: var(--gain); }
 
 /* Un bloc débloqué par la profondeur choisie. */
 .lv {
@@ -3784,6 +3837,19 @@ body { background: var(--paper); }
 .refinery-item:hover .refinery-go { transform: translateX(4px); color: var(--ink); }
 /* Ce qui est fait se tasse : on n'a pas besoin de relire ce qu'on a posé. */
 .refinery-item.is-done { padding: 7px 4px; }
+/* Reporté depuis le guide : la ligne reste à sa place, marquée. */
+.refinery-item.is-later .refinery-label { color: var(--ink-3); }
+.refinery-latertag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-4); font-weight: 600;
+}
+.refinery-resume {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 8px;
+  border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
+  font-size: 11.5px; color: var(--ink-4); transition: color .18s var(--ease-soft);
+}
+.refinery-resume:hover { color: var(--ink); }
+.refinery-resume > span { text-decoration: underline; text-underline-offset: 2px; color: var(--signal-ink); }
 
 @media (max-width: 700px) {
   .refinery { padding: 16px 15px; }
@@ -3869,7 +3935,7 @@ body { background: var(--paper); }
    ═══════════════════════════════════════════════════════════════════════════ */
 .nextstep {
   position: fixed; right: 22px; bottom: calc(var(--impact-h) + 18px); z-index: 60;
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: flex-start; gap: 14px;
   background: var(--ink); color: #fff; border-radius: 16px;
   padding: 13px 15px 13px 13px; max-width: min(430px, calc(100vw - 32px));
   box-shadow: 0 2px 6px rgba(11, 14, 16, .12), 0 18px 46px -18px rgba(11, 14, 16, .5);
@@ -3881,7 +3947,7 @@ body { background: var(--paper); }
 }
 /* L'anneau : la part posée, sans chiffre à lire si on n'en veut pas. */
 .nextstep-ring {
-  position: relative; width: 42px; height: 42px; flex: none;
+  position: relative; width: 42px; height: 42px; flex: none; margin-top: 2px;
   border-radius: 50%; display: grid; place-items: center;
   background: conic-gradient(var(--accent) calc(var(--part, 0) * 360deg), #2A3228 0);
 }
@@ -3896,7 +3962,27 @@ body { background: var(--paper); }
 }
 .nextstep-do { font-size: 13.5px; font-weight: 600; color: #fff; line-height: 1.35; margin-top: 3px; }
 .nextstep-unlock { font-size: 11.5px; color: #8A8D82; margin-top: 3px; line-height: 1.4; }
-.nextstep-go { flex: none; border-radius: 999px; padding: 8px 16px; }
+.nextstep-actions { display: flex; align-items: center; gap: 6px; margin-top: 11px; }
+.nextstep-go { flex: none; border-radius: 999px; padding: 8px 17px; }
+/* « Plus tard » ne se déguise pas en bouton principal : c'est une porte de
+   sortie, pas une proposition concurrente. */
+.nextstep-later {
+  border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 12.5px; color: #8A8D82; padding: 8px 11px; border-radius: 999px;
+  transition: color .18s var(--ease-soft), background .18s var(--ease-soft);
+}
+.nextstep-later:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+/* Le rappel de ce qui attend : il ne culpabilise pas, il propose de reprendre. */
+.nextstep-back {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin-top: 10px; padding: 7px 0 0; border: 0; border-top: 1px solid #2A3228;
+  background: none; cursor: pointer; font: inherit;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: #6D7268; transition: color .18s var(--ease-soft);
+}
+.nextstep-back:hover { color: var(--accent); }
+.nextstep-back-do { margin-left: auto; color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.nextstep-tag.is-again { color: #8A8D82; }
 .nextstep-close {
   position: absolute; top: 6px; right: 8px; border: 0; background: none; cursor: pointer;
   color: #6D7268; font-size: 15px; line-height: 1; padding: 2px 4px;

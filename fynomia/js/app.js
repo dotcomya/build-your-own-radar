@@ -15,9 +15,10 @@ import { impactRail, resetLiveNumbers } from './ui/impact.js'
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
-import { settle } from './ui/spotlight.js'
 import { installMotion, consumeViewChange } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
+import { checklist } from './ui/checklist.js'
+import { goToGap, settle } from './ui/spotlight.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -221,7 +222,12 @@ function rail(active) {
 
 function topbar(page, key) {
   const canUndo = store.canUndo(), canRedo = store.canRedo()
+  const c = checklist(store.scenario)
   return h('header', { class: 'topbar' },
+    // Le tout premier pixel de l'\u00e9cran : le trait d'avancement. Il ne demande
+    // rien, il ne se ferme pas, il est simplement l\u00e0 \u00e0 chaque page.
+    h('div', { class: 'topline', 'aria-hidden': 'true' },
+      h('i', { style: { width: `${Math.round(c.ratio * 100)}%` } })),
     h('button', {
       class: 'btn btn-sm btn-ghost mobile-only', 'aria-label': 'Menu',
       onClick: () => document.getElementById('rail')?.classList.toggle('open'),
@@ -229,7 +235,7 @@ function topbar(page, key) {
     h('div', { class: 'crumb' },
       `${store.scenario.meta.company || store.scenario.meta.name} / ${page.label}`),
     h('span', { class: 'spacer' }),
-    progressPill(),
+    progressTop(c),
     h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canUndo, title: 'Annuler', onClick: () => { store.undo(); render() } }, '\u21b6'),
     h('button', { class: 'btn btn-sm btn-ghost desktop-only', disabled: !canRedo, title: 'R\u00e9tablir', onClick: () => { store.redo(); render() } }, '\u21b7'),
     key !== 'tableau-de-bord' ? h('button', {
@@ -239,26 +245,44 @@ function topbar(page, key) {
 }
 
 /**
- * L'avancement, dit par ce qu'il débloque.
+ * L'avancement, tout en haut, et pas en résumé.
  *
- * « Étape 4 sur 12 » mesure le remplissage d'un formulaire. Ce qui donne envie
- * de continuer, c'est de savoir ce qu'on vient de rendre possible : d'abord le
- * chiffre d'affaires, puis la marge, puis la rentabilité, puis le besoin de
- * financement. La barre suit les briques posées ; le mot dit la capacité
- * atteinte.
+ * « Étape 4 sur 12 » mesure le remplissage d'un formulaire, et une barre lisse
+ * ne dit rien de ce qu'il reste à faire. Ici, une encoche par ligne du dossier :
+ * dix-neuf, groupées en trois paliers. Pleines, ce qui est posé ; creuses, ce
+ * qui attend ; en pointillé, ce qu'on a remis à plus tard. Le fondateur voit
+ * d'un coup d'œil le chemin parcouru et celui qui reste, sans rien ouvrir.
+ *
+ * Chaque encoche est un bouton : elle emmène au champ exact. Le compte, lui,
+ * ouvre la liste complète sur le tableau de bord.
  */
-function progressPill() {
-  const b = buildState(store.scenario)
-  const label = b.latest ? b.latest.label.replace(/^Ton |^Ta /, '').replace(/ est calculable\.$/, '') : 'Mod\u00e8le \u00e0 poser'
-  const done = !!b.latest && b.latest.key === 'dossier'
-  return h('button', {
-    class: `progress-pill ${done ? 'complete' : ''}`,
-    title: b.upcoming ? `Ensuite : ${b.upcoming.label}` : 'Ton business plan est prêt.',
-    onClick: () => navigate(b.next ? `#/${b.next.page}` : '#/tableau-de-bord'),
-  },
-    h('span', { class: 'progress-pill-bar' }, h('i', { style: { width: `${Math.round(b.ratio * 100)}%` } })),
-    h('span', { class: 'progress-pill-value' }, done ? 'Dossier pr\u00eat' : label),
-    h('span', { class: 'progress-pill-label' }, `${b.done}/${b.total}`),
+function progressTop(c) {
+  const pct = Math.round(c.ratio * 100)
+  const left = c.total - c.done
+  return h('div', { class: `topprog ${left === 0 ? 'is-full' : ''}` },
+    h('div', { class: 'topprog-steps', role: 'group', 'aria-label': 'Avancement du dossier' },
+      ...c.groups.map((g) => h('div', { class: `topprog-tier is-${g.key}` },
+        ...g.items.map((it) => h('button', {
+          class: `topprog-step ${it.done ? 'is-done' : ''} ${it.later ? 'is-later' : ''}`,
+          'aria-label': it.label,
+          title: it.done ? `${it.label} \u2014 pos\u00e9`
+            : it.later ? `${it.label} \u2014 remis \u00e0 plus tard. ${it.why}`
+              : `${it.label} \u2014 ${it.why}`,
+          onClick: () => goToGap(it.go, navigate),
+        })),
+      )),
+    ),
+    h('button', {
+      class: 'topprog-score',
+      title: left > 0
+        ? `${left} ligne${left > 1 ? 's' : ''} encore \u00e0 poser sur ${c.total}. Voir la liste.`
+        : 'Dossier complet.',
+      onClick: () => navigate('#/tableau-de-bord'),
+    },
+      h('span', { class: 'topprog-done num' }, `${c.done}`),
+      h('span', { class: 'topprog-of num' }, `/${c.total}`),
+      h('span', { class: 'topprog-pct num' }, `${pct} %`),
+    ),
   )
 }
 

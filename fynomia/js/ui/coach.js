@@ -11,10 +11,16 @@
  * annonce la prochaine chose à poser et ce qu'elle débloque, et emmène au champ
  * exact quand on le lui demande. Quand il n'y a plus rien à poser, il se tait.
  * On le referme ; il revient sous forme d'une pastille qu'on rouvre d'un clic.
+ *
+ * Et il accepte qu'on lui dise non. « Plus tard » range la ligne en fin de file
+ * et en propose une autre — on remplit ce qui intéresse, dans l'ordre qu'on
+ * veut. La ligne reportée n'est pas perdue : elle revient quand le reste est
+ * posé, et le guide dit alors qu'il y revient. Un compteur en pied de carte
+ * rappelle combien attendent, et les reprend toutes d'un clic.
  */
 
 import { h } from './dom.js'
-import { checklist } from './checklist.js'
+import { checklist, defer, resumeAll } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
 
@@ -40,19 +46,42 @@ export function coach(navigate) {
   }
 
   const el = h('aside', { class: 'nextstep', role: 'complementary' },
-    h('div', { class: 'nextstep-ring', 'aria-hidden': 'true' },
-      h('span', { class: 'nextstep-ring-fill', style: { '--part': String(c.ratio) } }),
+    // La part posée se dessine sur l'anneau lui-même : c'est lui qui porte le
+    // dégradé conique. Posée sur le disque intérieur, la variable ne remontait
+    // pas, et l'anneau restait désespérément vide.
+    h('div', { class: 'nextstep-ring', 'aria-hidden': 'true', style: { '--part': String(c.ratio) } },
+      h('span', { class: 'nextstep-ring-fill' }),
       h('span', { class: 'nextstep-ring-num' }, `${pct}%`),
     ),
     h('div', { class: 'nextstep-body' },
-      h('div', { class: 'nextstep-tag' }, 'À poser maintenant'),
+      // Reproposer une ligne reportée sans le dire donnerait l'impression que
+      // le guide n'écoute pas. Il le dit.
+      h('div', { class: `nextstep-tag ${c.again ? 'is-again' : ''}` },
+        c.again ? 'Tu l’avais remis à plus tard' : 'À poser maintenant'),
       h('div', { class: 'nextstep-do' }, c.next.label),
       h('div', { class: 'nextstep-unlock' }, c.next.why),
+      h('div', { class: 'nextstep-actions' },
+        h('button', {
+          class: 'btn btn-primary nextstep-go',
+          onClick: () => goToGap(c.next.go, navigate),
+        }, 'Y aller'),
+        // Une ligne de moins à poser ne doit jamais coûter un renoncement :
+        // on la reporte, on passe à la suivante, elle reviendra.
+        h('button', {
+          class: 'nextstep-later',
+          title: 'Passer à la suivante. Celle-ci reviendra.',
+          onClick: () => { defer(c.next.key); render() },
+        }, 'Plus tard'),
+      ),
+      c.later > 0 ? h('button', {
+        class: 'nextstep-back',
+        title: 'Remettre en tête de file tout ce qui a été reporté',
+        onClick: () => { resumeAll(); render() },
+      },
+        `${c.later} en attente`,
+        h('span', { class: 'nextstep-back-do' }, 'Les reprendre'),
+      ) : null,
     ),
-    h('button', {
-      class: 'btn btn-primary nextstep-go',
-      onClick: () => goToGap(c.next.go, navigate),
-    }, 'Y aller'),
     h('button', {
       class: 'nextstep-close', title: 'Masquer le guide',
       onClick: () => { memory.closed = true; render() },
