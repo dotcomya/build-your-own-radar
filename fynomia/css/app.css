@@ -3514,7 +3514,15 @@ body { background: var(--paper); }
 
 /* ─── Deux colonnes de cartes, quand elles se lisent ensemble ─── */
 .slab-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+/* Deux blocs côte à côte partent du même trait.
+   La règle qui espace deux blocs empilés — « .slab + .slab » — s'appliquait
+   aussi au second d'une paire, bien qu'il ne soit pas dessous mais à côté :
+   il descendait de dix-huit pixels, et la grille, qui étire ses cases sur
+   toute la hauteur, lui reprenait ces dix-huit pixels en bas. Les deux
+   boîtes commençaient donc à des hauteurs différentes pour finir ensemble.
+   Dans une paire, l'écart est celui de la grille, et rien d'autre. */
 .slab-pair > .slab { margin-bottom: 0; }
+.slab-pair > .slab + .slab { margin-top: 0; }
 
 /* Chaque source de financement s'ajoute et se retire depuis sa tuile. */
 .source { position: relative; padding-bottom: 34px; }
