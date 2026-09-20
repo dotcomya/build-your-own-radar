@@ -7,7 +7,7 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleShell } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleShell, foldSign } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
@@ -18,6 +18,7 @@ import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
 import { refinePanel } from '../refine-panel.js'
 import { plainBoard } from '../plain.js'
+import { deckBoard } from './deck.js'
 import { breakEvenBoard } from './model.js'
 import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
@@ -31,6 +32,16 @@ import store from '../../state/store.js'
 // Le jugement vient du moteur : l'écran et le PowerPoint exporté disent la
 // même chose parce qu'ils lisent la même fonction.
 export const assess = (r, s) => verdict(r, s)
+
+/**
+ * Ouvrir le tableau de bord sur la synthèse.
+ *
+ * L'onglet retenu survit d'une visite à l'autre, ce qui est juste : on revient
+ * où l'on était. Sauf au sortir du parcours — là, ce qu'on veut voir est ce
+ * que les douze questions ont produit, pas l'onglet qu'on regardait la fois
+ * d'avant.
+ */
+export function openSynthesis() { renderDashboard.view = 'synthese' }
 
 export function renderDashboard(navigate, refresh) {
   const r = store.result
@@ -121,6 +132,10 @@ export function renderDashboard(navigate, refresh) {
         h('p', { class: 'chart-note' }, trajectorySentence(r)),
       ),
       ...boardCharts(r, s, y, level, sector, navigate),
+      // La présentation est la même lecture, faite pour être montrée : elle
+      // vivait derrière un bouton, dans un autre module, et personne ne la
+      // trouvait. Elle se lit ici, un écran à la fois.
+      deckBoard(navigate, refresh),
       detailDisclosure(persona, r, s, y, sector, navigate, refresh),
     ) : null,
 
@@ -681,7 +696,8 @@ function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
   const open = detailDisclosure.open ?? false
 
   const details = h('details', { class: 'detail-block', open: open || null },
-    h('summary', { class: 'detail-summary' },
+    h('summary', { class: 'detail-summary refine-head' },
+      foldSign(),
       h('span', { class: 'detail-title' }, 'Indicateurs détaillés'),
       h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs détaillés et les pièges du métier`),
     ),

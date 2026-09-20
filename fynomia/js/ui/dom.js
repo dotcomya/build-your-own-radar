@@ -1,6 +1,6 @@
 /** Fabrique d'éléments : un hyperscript minimal, sans dépendance. */
 
-import { markViewChange, armTravel } from './motion.js'
+import { markViewChange } from './motion.js'
 
 export function h(tag, props = {}, ...children) {
   const el = document.createElement(tag)
@@ -223,10 +223,12 @@ export function enableToggle(on, onChange) {
       if (row) row.classList.toggle('is-off', !next)
       if (reducedMotion()) { onChange(next); return }
       btn.classList.add('is-switching')
-      // Le rendu qui suit reconstruit toute la liste : sans fondu, la page
-      // saute d'une image à l'autre. Celui-ci ne se voit pas — il ne sert
-      // qu'à ce que rien ne se voie.
-      setTimeout(() => { armTravel('quiet'); onChange(next) }, 340)
+      // On attendait la fin du mouvement, puis on fondait toute la page pour
+      // masquer le rendu. Le fondu était pire que ce qu'il cachait : tout
+      // l'écran clignotait pour une case cochée. Le rendu ne se voit plus
+      // parce qu'il ne produit plus d'animation du tout — il refabrique les
+      // mêmes nœuds avec les mêmes styles, et seuls les chiffres changent.
+      setTimeout(() => onChange(next), 340)
     },
   }, h('i'))
   return btn
@@ -247,23 +249,62 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 export function tabs(items, active, onPick) {
   const list = items.filter(Boolean)
   if (list.length <= 1) return null
-  return h('div', { class: 'hnav', role: 'tablist' },
-    ...list.map((it) => h('button', {
+
+  // Le trait actif glisse d'un onglet à l'autre.
+  //
+  // Chaque rendu fabrique une barre neuve : le trait réapparaissait sous
+  // l'onglet d'arrivée sans jamais avoir traversé, et le changement se lisait
+  // comme un saut. On retient donc où il était — par la signature de la barre,
+  // qui ne dépend pas des nœuds —, on le repose là, et on le déplace à l'image
+  // suivante : c'est le même geste qu'un doigt sur un onglet.
+  const sig = list.map((it) => it.key).join('|')
+  const ink = h('i', { class: 'hnav-ink', 'aria-hidden': 'true' })
+  const nav = h('div', { class: 'hnav', role: 'tablist' })
+
+  // Deux natures d'onglets, séparées par un filet.
+  //
+  // « Équipe » se remplit, « Masse salariale » se lit. Un simple mot sous le
+  // libellé ne suffisait pas : on cliquait sur le second en cherchant un champ.
+  // Un filet les range en deux groupes, et la coupure se voit avant même qu'on
+  // ait lu quoi que ce soit.
+  const firstRead = list.findIndex((it) => it.read)
+  const mixed = firstRead > 0 && list.slice(0, firstRead).every((it) => !it.read)
+
+  list.forEach((it, i) => {
+    if (mixed && i === firstRead) nav.appendChild(h('span', { class: 'hnav-split', 'aria-hidden': 'true' }))
+    const btn = h('button', {
       class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.read ? 'is-read' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
-      onClick: () => { armTravel('view'); markViewChange(); onPick(it.key) },
+      onClick: () => { markViewChange(); onPick(it.key) },
     },
-      h('span', {}, it.label),
+      h('span', { class: 'hnav-label' }, it.label),
       it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,
-      // Deux natures d'onglets, et rien ne les distinguait : on cliquait sur
-      // « Masse salariale » en croyant y saisir quelque chose, on n'y trouvait
-      // qu'un tableau, et on repartait. Le point plein dit qu'on écrit ici ;
-      // le cercle creux dit qu'on y lit ce que le modèle a calculé.
-      // Le mot dit ce qu'on trouve derrière l'onglet. Pas d'infobulle à
-      // survoler : on doit pouvoir choisir sans rien tenter.
       it.read ? h('span', { class: 'hnav-read' }, 'lecture') : null,
-    )),
-  )
+    )
+    nav.appendChild(btn)
+  })
+  nav.appendChild(ink)
+
+  requestAnimationFrame(() => {
+    const on = nav.querySelector('.hnav-tab.active')
+    if (!on || !nav.isConnected) return
+    const to = { x: on.offsetLeft, w: on.offsetWidth }
+    const from = tabs.ink?.[sig] || to
+    const place = (p) => { ink.style.transform = `translateX(${p.x}px)`; ink.style.width = `${p.w}px` }
+    // On pose d'abord le trait où il était, sans transition — sinon il partirait
+    // d'une largeur nulle à chaque rendu, et on le verrait grandir depuis la
+    // gauche au moindre recalcul. Le déplacement ne se joue qu'à l'image
+    // suivante, et seulement s'il y a vraiment quelque chose à parcourir.
+    ink.classList.add('is-jumping')
+    place(from)
+    requestAnimationFrame(() => {
+      ink.classList.remove('is-jumping')
+      place(to)
+    })
+    ;(tabs.ink || (tabs.ink = {}))[sig] = to
+  })
+
+  return nav
 }
 
 /**
@@ -285,19 +326,23 @@ export const COPY = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.6" y
 
 export const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
+/**
+ * Le signe d'un volet : un chevron, dans un rond, qui se retourne.
+ *
+ * Il y a eu trois affordances en circulation — un chevron gris, un « + » qui
+ * devenait une croix, un bouton portant le mot « Déplier » — et selon la page
+ * on tombait sur l'une ou sur l'autre. Deux défauts à la fois : il fallait
+ * apprendre trois signes pour un seul geste, et la croix, qui veut dire
+ * « annuler » partout ailleurs, laissait croire qu'on allait perdre quelque
+ * chose. Le chevron, lui, ne dit qu'un sens : ce qui est dessous s'ouvre, ce
+ * qui est ouvert se referme. C'est celui-là, partout, et un seul.
+ */
+export const foldSign = () => h('span', { class: 'foldsign', 'aria-hidden': 'true', html: CHEVRON })
+
 export function fold(title, summary, body, { open = false, id = null, tone = '' } = {}) {
-  // Un seul geste d'ouverture dans toute l'application.
-  //
-  // Il y avait deux affordances : un chevron gris pour les volets, un « + »
-  // pour « affiner ». Deux formes pour la même action, sur la même page, et
-  // l'œil devait apprendre les deux. C'est celle du « + » qui reste : elle dit
-  // qu'on ajoute du détail, là où le chevron ne disait qu'un sens.
   const el = h('details', { class: `refine refine-block ${tone}`, open: open || null },
     h('summary', { class: 'refine-head' },
-      // Un « + » typographique ne se centre pas : sa boîte dépend de la
-      // police, et il flotte toujours d'un pixel ou deux. Deux traits dessinés
-      // sont centrés par construction, à toutes les tailles.
-      h('span', { class: 'refine-sign', 'aria-hidden': 'true', html: PLUS }),
+      foldSign(),
       h('span', { class: 'refine-label' }, title),
       summary ? h('span', { class: 'refine-sum' }, summary) : null,
     ),
@@ -381,7 +426,7 @@ export function refine(id, label, ...children) {
   const memory = refine.open || (refine.open = new Set())
   const el = h('details', { class: 'refine', open: memory.has(id) || null },
     h('summary', { class: 'refine-head' },
-      h('span', { class: 'refine-sign' }, '+'),
+      foldSign(),
       h('span', { class: 'refine-label' }, label),
     ),
     h('div', { class: 'refine-body' }, ...body),

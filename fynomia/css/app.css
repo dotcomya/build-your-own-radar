@@ -872,11 +872,9 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   list-style: none; user-select: none;
 }
 .detail-summary::-webkit-details-marker { display: none; }
-.detail-summary::before {
-  content: '+'; font-family: var(--mono); font-size: 15px; color: var(--signal);
-  width: 14px; flex: none; line-height: 1;
-}
-.detail-block[open] .detail-summary::before { content: '−'; }
+/* Le même chevron que partout : ce bloc portait encore un « + » typographique
+   qui devenait un « − », seul de son espèce dans l'application. */
+.detail-summary { align-items: center; }
 .detail-block[open] .detail-summary { border-bottom: 1px solid var(--rule); }
 .detail-title { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: -.017em; }
 .detail-hint { font-size: 12px; color: var(--ink-4); }
@@ -2906,8 +2904,11 @@ table.data th, table.data td { padding: 9px 12px; }
 }
 .hnav-tab.active .hnav-count { background: var(--level, var(--ink)); color: #fff; }
 
-/* Le panneau affiché arrive, il n'apparaît pas d'un coup. */
-.view { animation: view-in .22s var(--ease); }
+/* Le panneau n'est plus animé à chaque rendu.
+   Cette règle rejouait un fondu à chaque reconstruction de la vue — y compris
+   quand on cochait une simple case : tout le bloc des charges clignotait pour
+   un interrupteur. L'entrée appartient à un changement d'onglet délibéré,
+   pas à un recalcul ; elle est portée par « .just-in », plus bas. */
 .view-intro {
   display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
   margin: 0 0 12px; font-size: 12.5px; color: var(--ink-4); line-height: 1.55; max-width: 84ch;
@@ -3412,13 +3413,22 @@ body { background: var(--paper); }
 }
 .refine-head::-webkit-details-marker { display: none; }
 .refine-head:hover { color: var(--ink); }
-.refine-sign {
-  width: 17px; height: 17px; border-radius: 5px; display: grid; place-items: center;
-  border: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; line-height: 1;
-  color: var(--ink-3); flex: none; transition: background .14s var(--ease), color .14s, border-color .14s, transform .18s var(--ease);
+/* Un seul signe de pli dans toute l'application : un chevron dans un rond,
+   qui se retourne. Il y en avait trois — un chevron, un « + » devenant croix,
+   un bouton portant le mot « Déplier » — et la croix, qui veut dire
+   « annuler » partout ailleurs, faisait craindre de perdre quelque chose. */
+.foldsign, .refine-sign {
+  width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
+  flex: none; line-height: 0; padding: 0;
+  transition: transform .42s var(--ease-soft), background .2s var(--ease), color .2s, border-color .2s;
 }
-.refine-head:hover .refine-sign { border-color: var(--ink); color: var(--ink); }
-.refine[open] .refine-sign { background: var(--ink); border-color: var(--ink); color: var(--accent); transform: rotate(45deg); }
+.foldsign svg, .refine-sign svg { width: 13px; height: 13px; display: block; }
+.refine-head:hover .foldsign, .refine-head:hover .refine-sign { border-color: var(--ink); color: var(--ink); }
+details[open] > .refine-head .foldsign,
+details[open] > .refine-head .refine-sign {
+  transform: rotate(180deg); border-color: var(--ink); color: var(--ink);
+}
 .refine-label { font-weight: 500; }
 .refine[open] .refine-label { color: var(--ink); font-weight: 600; }
 .refine-body { padding-top: 14px; animation: refine-in .24s var(--ease); }
@@ -3991,8 +4001,11 @@ body { background: var(--paper); }
   background: var(--ink); color: #fff; border-radius: 16px;
   padding: 13px 15px 13px 13px; max-width: min(430px, calc(100vw - 32px));
   box-shadow: 0 2px 6px rgba(11, 14, 16, .12), 0 18px 46px -18px rgba(11, 14, 16, .5);
-  animation: nextstep-in .52s var(--ease-soft) both;
 }
+/* L'entrée n'appartient qu'à une nouvelle ligne à poser. Sans cette condition,
+   le guide remontait et se refondait à chaque rendu — donc à chaque case
+   cochée — pour dire exactement la même chose. */
+.nextstep.is-fresh { animation: nextstep-in .52s var(--ease-soft) both; }
 @keyframes nextstep-in {
   from { opacity: 0; transform: translateY(14px) scale(.98); }
   to   { opacity: 1; transform: none; }
@@ -4255,20 +4268,22 @@ body { background: var(--paper); }
 /* La vue ne glisse que lorsqu'on vient de cliquer un onglet : la même animation
    posée sans condition rejouerait à chaque frappe, puisque la page se
    reconstruit à chaque touche. */
+/* Changer d'onglet : le contenu se découvre, il ne se fond pas.
+   Le fondu était doublé d'un fondu de toute la page, et les deux se
+   superposaient : rien n'avait de contour, tout tremblait un peu — c'est ce
+   qui donnait la nausée. Un seul mouvement le remplace, et sans opacité : un
+   masque descend sur chaque bloc, qui monte de huit pixels en arrivant. Le
+   bord est net, la direction est lisible, et ça dure un tiers de seconde. */
 @keyframes view-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from { clip-path: inset(0 0 100% 0); transform: translateY(9px); }
+  to   { clip-path: inset(0 0 0 0);    transform: none; }
 }
-/* Un changement d'onglet ne doit pas surprendre : le contenu arrive en un
-   tiers de seconde, du bas, sans à-coup. Plus rapide, l'œil perd le fil ; plus
-   lent, on attend l'interface. */
-.view.just-in, .item-body.just-in { animation: view-in .44s var(--ease-soft) both; }
-/* Les blocs de la vue entrent l'un après l'autre, très légèrement décalés :
-   la page se pose au lieu d'apparaître d'un bloc. */
-.view.just-in > * { animation: view-in .48s var(--ease-soft) both; }
-.view.just-in > *:nth-child(2) { animation-delay: .06s; }
-.view.just-in > *:nth-child(3) { animation-delay: .12s; }
-.view.just-in > *:nth-child(n+4) { animation-delay: .17s; }
+.view.just-in > *, .item-body.just-in > * {
+  animation: view-in .40s var(--ease-soft) both;
+}
+.view.just-in > *:nth-child(2), .item-body.just-in > *:nth-child(2) { animation-delay: .055s; }
+.view.just-in > *:nth-child(3), .item-body.just-in > *:nth-child(3) { animation-delay: .105s; }
+.view.just-in > *:nth-child(n+4), .item-body.just-in > *:nth-child(n+4) { animation-delay: .145s; }
 
 /* ─── La ligne qu'on est en train de remplir ─── */
 /* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est
@@ -4477,15 +4492,19 @@ body { background: var(--paper); }
    qu'il avait changé, et on se demandait si le clic avait pris. La sortie
    s'éloigne et se floute, l'arrivée revient de plus loin et prend son temps :
    c'est la durée qui fait le voyage, pas l'effet. */
-.is-move-page::view-transition-old(root) { animation: page-out .52s cubic-bezier(.4, 0, 1, 1) both; }
-.is-move-page::view-transition-new(root) { animation: page-in .86s var(--ease-soft) both; }
+.is-move-page::view-transition-old(root) { animation: page-out .58s cubic-bezier(.5, 0, .9, .3) both; }
+.is-move-page::view-transition-new(root) { animation: page-in 1.05s var(--ease-soft) both; }
+/* Ce qu'on quitte s'éloigne : il recule, monte un peu et perd sa netteté. */
 @keyframes page-out {
   from { opacity: 1; transform: none; filter: blur(0); }
-  to   { opacity: 0; transform: translateY(-3%) scale(.94); filter: blur(10px); }
+  to   { opacity: 0; transform: translateY(-5%) scale(.88); filter: blur(16px); }
 }
+/* Ce qu'on rejoint vient de plus loin, et met une seconde à se poser : c'est
+   la durée qui fait le voyage. En dessous d'une demi-seconde on ne voit rien
+   passer et on doute d'avoir cliqué. */
 @keyframes page-in {
-  0%   { opacity: 0; transform: translateY(5%) scale(.965); filter: blur(9px); }
-  45%  { opacity: .9; }
+  0%   { opacity: 0; transform: translateY(8%) scale(.93); filter: blur(14px); }
+  35%  { opacity: 1; }
   100% { opacity: 1; transform: none; filter: blur(0); }
 }
 
@@ -4772,14 +4791,6 @@ body { background: var(--paper); }
 .hnav-tab.active .hnav-kind.is-read { border-color: var(--ink-4); opacity: 1; }
 
 
-/* ─── Le « + » devient une croix quand le volet s'ouvre ─── */
-/* Un quart de tour : le même signe dit « j'ajoute du détail » puis « je
-   referme ». Rien à réapprendre, et le mouvement dit lequel des deux. */
-.refine-sign {
-  display: inline-block; transition: transform .42s var(--ease-soft), color .3s var(--ease-soft);
-}
-.refine[open] > .refine-head .refine-sign,
-details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: var(--ink); }
 
 /* Le corps d'un volet coule au lieu d'apparaître. */
 .refine-body { animation: refine-flow .42s var(--ease-soft) both; }
@@ -4789,25 +4800,22 @@ details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: va
 }
 
 /* ─── « Affiner mon dossier » se referme ─── */
+/* Le même rond que partout ailleurs, et rien d'écrit dedans : un bouton qui
+   dit « Déplier » explique ce qu'un chevron montre déjà. */
 .refinery-toggle {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none;
-  height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
-  font: inherit; font-size: 12px; font-weight: 500; line-height: 1;
-  transition: border-color .2s, color .2s, background .2s;
+  width: 30px; height: 30px; border-radius: 50%; flex: none; cursor: pointer;
+  display: inline-grid; place-items: center; padding: 0; line-height: 0;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
+  transition: transform .42s var(--ease-soft), border-color .2s, color .2s, background .2s;
 }
 .refinery-toggle:hover { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
-.refinery-toggle-sign {
-  display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none;
-  transition: transform .42s var(--ease-soft);
-}
-.refinery-toggle-sign svg { width: 14px; height: 14px; display: block; }
-.refinery.is-shut .refinery-toggle-sign { transform: rotate(-90deg); }
+.refinery-toggle svg { width: 15px; height: 15px; display: block; }
+.refinery.is-shut .refinery-toggle { transform: rotate(-90deg); }
 .refinery-fold { overflow: hidden; transition: max-height .52s var(--ease-soft), opacity .34s var(--ease-soft); max-height: 4000px; opacity: 1; }
 .refinery.is-shut .refinery-fold { max-height: 0; opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .refine-sign, .refine-body, .refinery-toggle, .refinery-toggle-sign, .refinery-fold { transition: none; animation: none; }
+  .foldsign, .refine-sign, .refine-body, .refinery-toggle, .refinery-fold { transition: none; animation: none; }
 }
 
 /* ─── Le coût de revient : demandé, et jamais compté deux fois ─── */
@@ -5050,3 +5058,182 @@ details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: va
 .hnav-tab:not(.is-read) { font-weight: 600; }
 /* La pastille qui disait la même chose en plus discret n'a plus d'emploi. */
 .hnav-kind { display: none; }
+
+/* ════════════ Le seuil et la courbe, dans un seul cadre ═══════════════════
+   Séparés, on lisait « il t'en faut 294 par mois », puis, après une
+   respiration, un graphique intitulé « Glaces par mois » qu'on prenait pour
+   un autre sujet. C'est la même phrase, en deux temps : le nombre, puis où
+   l'on en est. Un filet les sépare, pas un blanc. */
+.seuil-chart { border-top: 1px solid var(--rule); padding: 18px 22px 20px; }
+.seuil-chart-head { margin-bottom: 14px; }
+.seuil-chart-head h2 {
+  margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
+}
+.seuil-chart .chart-note { margin-bottom: 0; }
+@media (max-width: 860px) { .seuil-chart { padding: 16px 16px 18px; } }
+
+/* ════════════ Le tableau de bord parle d'une seule voix ═══════════════════
+   Un verdict en dix-neuf, un titre de bloc en dix-sept, un autre en seize :
+   on lisait trois niveaux de hiérarchie là où il n'y a qu'une seule sorte de
+   chose — une section du tableau de bord. Une taille, une graisse, une
+   sous-ligne. */
+.board-stack .refinery-tag,
+.board-stack .panel h2,
+.board-stack .card-head h2,
+.board-stack .seuil-chart-head h2 {
+  font-family: var(--display); font-weight: 700; font-size: 19px;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
+}
+.board-stack .refinery-sub,
+.board-stack .card-head .tiny.muted,
+.board-stack .seuil-chart-head .tiny.muted {
+  font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5;
+}
+
+/* ─── Ce que coûte une vente : un lien, pas un avertissement ───
+   Un pavé ambre de quatre lignes expliquait, en plein milieu de l'écran du
+   prix, que le coût de revient n'y était plus. Une ligne cliquable dit la
+   même chose et y emmène. */
+.costlink {
+  display: flex; align-items: center; gap: 16px; width: 100%; margin-top: 12px;
+  padding: 12px 14px; cursor: pointer; font: inherit; text-align: left;
+  background: var(--surface-2); border: 1px solid var(--rule); border-radius: 12px;
+  transition: border-color .18s, background .18s;
+}
+.costlink:hover { border-color: var(--ink); background: var(--surface); }
+.costlink-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.costlink-text b { font-size: 13px; font-weight: 600; color: var(--ink); }
+.costlink-text span { font-size: 12px; color: var(--ink-4); line-height: 1.45; }
+.costlink-go {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--signal-ink); flex: none;
+}
+/* Un filet entre l'identité de l'offre et la façon dont elle rapporte. */
+.offer-sep { height: 1px; background: var(--rule); margin: 18px 0; }
+
+/* ═══════════ Les familles de métiers, en grille ═══════════════════════════
+   Douze volets empilés faisaient une colonne de trois écrans qu'on parcourait
+   au pouce pour trouver la sienne. En grille elles tiennent toutes à l'œil ;
+   on en ouvre une, et les métiers prennent la place. */
+.famgrid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+}
+.famcard {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  padding: 13px 14px; cursor: pointer; font: inherit; text-align: left; min-width: 0;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+  transition: border-color .18s, transform .22s var(--ease-soft), box-shadow .22s var(--ease-soft);
+}
+.famcard:hover { border-color: var(--ink); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(11, 14, 16, .07); }
+.famcard.is-here { border-color: var(--ink); border-width: 2px; padding: 12px 13px; }
+.famcard-icon { width: 32px; height: 32px; flex: none; line-height: 0; }
+.famcard-name {
+  font-family: var(--display); font-size: 13.5px; font-weight: 700;
+  letter-spacing: -.015em; color: var(--ink); line-height: 1.25;
+}
+.famcard-note { font-size: 11.5px; color: var(--ink-4); }
+
+/* Une famille ouverte : son nom en tête, ses métiers dessous. L'icône ne se
+   répète pas sur chaque ligne — douze fois le même objet ne distingue rien. */
+.famopen { display: flex; flex-direction: column; gap: 12px; }
+.famopen-back {
+  align-self: flex-start; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 12px; color: var(--ink-4); padding: 0;
+  border-bottom: 1px solid transparent; transition: color .14s, border-color .14s;
+}
+.famopen-back:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.famopen-head {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display); font-size: 15px; font-weight: 700;
+  letter-spacing: -.018em; color: var(--ink);
+}
+.famopen-icon { width: 30px; height: 30px; flex: none; line-height: 0; }
+
+/* Une carte sans icône : dans une famille ouverte, le même objet répété seize
+   fois ne distingue rien — il prend seulement la place du nom. */
+.setup-sector.is-bare { grid-template-columns: minmax(0, 1fr); }
+.setup-sector.is-bare .setup-sector-name,
+.setup-sector.is-bare .setup-sector-note { grid-column: 1; }
+
+/* ═══════════ La barre d'onglets : un trait qui glisse, deux groupes ═══════
+   Le trait actif renaissait sous l'onglet d'arrivée sans l'avoir traversé :
+   le changement se lisait comme un saut. Il se déplace maintenant, et c'est
+   lui seul qui bouge — plus de soulignement par onglet. */
+.hnav { position: relative; }
+.hnav-tab.active { border-bottom-color: transparent; }
+.hnav-ink {
+  position: absolute; left: 0; bottom: -1px; height: 2px; width: 0;
+  background: var(--ink); border-radius: 2px; pointer-events: none;
+  transition: transform .34s var(--ease-soft), width .34s var(--ease-soft), background .2s;
+}
+.hnav-tab.is-read.active ~ .hnav-ink { background: var(--ink-5); }
+/* Repositionné sans transition le temps d'une image : c'est ce qui permet de
+   partir d'où il était avant que la barre ne soit refabriquée. */
+.hnav-ink.is-jumping { transition: none; }
+
+/* Ce qui se remplit, et ce qui se lit : deux groupes, un filet entre eux.
+   Un mot sous le libellé ne suffisait pas — on cliquait sur « Masse
+   salariale » en cherchant un champ. La coupure se voit avant la lecture. */
+.hnav-split {
+  width: 1px; align-self: center; height: 18px; margin: 0 10px;
+  background: var(--rule); flex: none;
+}
+.hnav-label { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hnav-ink { transition: none; }
+  .view.just-in > *, .item-body.just-in > * { animation: none; }
+}
+
+/* ═══════════ La présentation, dans le tableau de bord ═════════════════════
+   Elle vivait derrière un bouton, en plein écran, dans un autre module :
+   la plupart ne savaient pas qu'elle existait. C'est pourtant la même
+   lecture que l'analyse, faite pour être montrée à quelqu'un d'autre. */
+.deckin {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule-strong); min-width: 0;
+}
+.deckin-head {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 13px 16px; border-bottom: 1px solid var(--rule);
+}
+.deckin-head h2 { margin: 0; }
+.deckin-count { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
+.deckin-stage {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 10px; padding: 18px 14px;
+}
+.deckin-slide { min-width: 0; }
+/* Le même écran que le plein écran, en plus sobre : pas de rebond à l'entrée
+   ni de marge de scène, il est déjà dans un cadre. */
+.deckin-slide .slide { max-width: none; animation: deckin-slide .34s var(--ease-soft) both; }
+.deckin-slide .slide-inner { border-radius: 16px; padding: clamp(20px, 3vw, 34px); }
+@keyframes deckin-slide {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.deckin-arrow {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; cursor: pointer;
+  display: inline-grid; place-items: center; padding: 0; line-height: 0;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
+  transition: border-color .18s, color .18s, background .18s, opacity .18s;
+}
+.deckin-arrow svg { width: 17px; height: 17px; display: block; }
+.deckin-arrow.is-prev { transform: rotate(90deg); }
+.deckin-arrow.is-next { transform: rotate(-90deg); }
+.deckin-arrow:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); background: var(--accent); }
+.deckin-arrow:disabled { opacity: .3; cursor: default; }
+.deckin-dots {
+  display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
+  padding: 0 16px 16px;
+}
+@media (max-width: 760px) {
+  .deckin-stage { grid-template-columns: 1fr; gap: 14px; }
+  .deckin-arrow { justify-self: center; }
+  .deckin-arrow.is-prev { order: 2; }
+  .deckin-slide { order: 1; }
+  .deckin-arrow.is-next { order: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .deckin-slide .slide { animation: none; } }

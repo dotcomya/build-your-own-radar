@@ -45,7 +45,15 @@ export function coach(navigate) {
     }, h('span', { class: 'nextstep-tab-dot' }), `${pct} %`)
   }
 
-  const el = h('aside', { class: 'nextstep', role: 'complementary' },
+  // Le guide ne rejoue son entrée que lorsqu'il change de ligne.
+  //
+  // Il est refabriqué à chaque rendu, donc à chaque case cochée : il remontait
+  // et se refondait pour dire exactement la même chose, et ce clignotement au
+  // coin de l'écran était ce qu'on voyait le plus en saisissant ses charges.
+  const fresh = memory.shown !== c.next.key
+  memory.shown = c.next.key
+
+  const el = h('aside', { class: `nextstep ${fresh ? 'is-fresh' : ''}`, role: 'complementary' },
     // La part posée se dessine sur l'anneau lui-même : c'est lui qui porte le
     // dégradé conique. Posée sur le disque intérieur, la variable ne remontait
     // pas, et l'anneau restait désespérément vide.

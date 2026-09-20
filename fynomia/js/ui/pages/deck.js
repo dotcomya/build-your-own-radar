@@ -15,7 +15,7 @@
  * besoin de financement, la demande.
  */
 
-import { h, euro, pct, num, monthLabel, yearLabel } from '../dom.js'
+import { h, euro, pct, num, monthLabel, yearLabel, CHEVRON } from '../dom.js'
 import { barChart, areaChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getSector, vocabulary } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
@@ -316,6 +316,57 @@ const totalRaised = (s) => {
 }
 
 /* ────────────────────────────── La navigation ────────────────────────────── */
+
+/**
+ * La présentation, dans le tableau de bord.
+ *
+ * Elle vivait derrière un bouton, en plein écran, dans un autre module : on
+ * ne la trouvait qu'en la cherchant, et la plupart ne savaient pas qu'elle
+ * existait. C'est pourtant la même lecture que l'analyse, faite pour être
+ * montrée à quelqu'un d'autre. Elle s'ouvre donc là où on lit ses chiffres,
+ * un écran à la fois, avec deux chevrons pour avancer — et le plein écran
+ * reste à un clic pour le jour de la soutenance.
+ */
+export function deckBoard(navigate, refresh) {
+  const s = store.scenario
+  const r = store.result
+  if (!r) return null
+
+  const slides = build(s, r)
+  at.i = Math.max(0, Math.min(at.i, slides.length - 1))
+  const go = (d) => { at.i = Math.max(0, Math.min(at.i + d, slides.length - 1)); refresh() }
+
+  const arrow = (dir, label, disabled) => h('button', {
+    class: `deckin-arrow is-${dir}`, disabled: disabled || null,
+    'aria-label': label, title: label,
+    onClick: () => go(dir === 'prev' ? -1 : 1),
+    html: CHEVRON,
+  })
+
+  return h('section', { class: 'deckin' },
+    h('header', { class: 'deckin-head' },
+      h('div', {},
+        h('h2', {}, 'La présenter en quinze écrans'),
+        h('div', { class: 'tiny muted' }, 'Le même modèle, dit à quelqu’un qui ne le connaît pas'),
+      ),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'deckin-count num' }, `${at.i + 1} / ${slides.length}`),
+      h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/presentation') }, 'Plein écran'),
+    ),
+    h('div', { class: 'deckin-stage' },
+      arrow('prev', 'Écran précédent', at.i === 0),
+      h('div', { class: 'deckin-slide' }, slides[at.i]),
+      arrow('next', 'Écran suivant', at.i === slides.length - 1),
+    ),
+    h('div', { class: 'deckin-dots' },
+      ...slides.map((_, i) => h('button', {
+        class: `deck-dot ${i === at.i ? 'active' : ''} ${i < at.i ? 'seen' : ''}`,
+        title: `Écran ${i + 1}`, 'aria-label': `Écran ${i + 1}`,
+        onClick: () => { at.i = i; refresh() },
+      })),
+    ),
+  )
+}
 
 export function renderDeck(navigate, refresh) {
   const s = store.scenario

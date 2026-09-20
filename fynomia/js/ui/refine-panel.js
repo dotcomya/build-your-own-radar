@@ -53,13 +53,11 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
             const host = e.currentTarget.closest('.refinery')
             host?.classList.toggle('is-shut', memory.shut)
             e.currentTarget.setAttribute('aria-expanded', String(!memory.shut))
-            const word = e.currentTarget.querySelector('.refinery-toggle-word')
-            if (word) word.textContent = memory.shut ? 'Déplier' : 'Replier'
+            e.currentTarget.setAttribute('aria-label', memory.shut ? 'Déplier la liste' : 'Replier la liste')
           },
-        },
-          h('span', { class: 'refinery-toggle-word' }, memory.shut ? 'Déplier' : 'Replier'),
-          h('span', { class: 'refinery-toggle-sign', 'aria-hidden': 'true', html: CHEVRON }),
-        ),
+          'aria-label': memory.shut ? 'Déplier la liste' : 'Replier la liste',
+          html: CHEVRON,
+        }),
       ),
     ),
 

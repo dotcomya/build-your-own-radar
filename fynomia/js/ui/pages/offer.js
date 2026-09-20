@@ -73,7 +73,7 @@ export function renderOffer(navigate, refresh) {
 
     view === 'offres'
       ? h('div', { class: 'view' },
-          ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)),
+          ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate, navigate)),
           // Un restaurateur qui n'a saisi que ses couverts a oublié les
           // boissons — son poste le plus rentable. On le lui dit ici, avec le
           // mot qu'il emploie, pas dans un guide générique.
@@ -108,21 +108,28 @@ const MODES = [
 ]
 
 /**
- * Le coût de revient hérité d'avant.
+ * Le coût de revient ne se saisit pas ici.
  *
- * Il ne se saisit plus ici — il vit dans les charges, où on le voit à côté
- * des autres. Mais un plan commencé avant ce déménagement en porte encore un,
- * et le moteur le compte toujours : le taire reviendrait à laisser un euro
- * sortir deux fois du résultat sans que personne ne puisse le voir.
+ * C'était un pavé ambre de quatre lignes qui expliquait où il était passé,
+ * pourquoi, et ce qu'il ne fallait surtout pas faire — posé en plein milieu
+ * de l'écran du prix, pour dire qu'il n'y était plus. Un lien suffit : ce que
+ * coûte une vente vit dans les charges, on y va d'un clic, et le chiffre en
+ * cours s'affiche dessus pour qu'on sache de quoi on parle.
  */
-function legacyCost(a, voc, set) {
-  if (!(n(a.unitCost) > 0)) return null
-  return h('p', { class: 'cost-warn' },
-    `Cette offre a un coût de revient de ${euro(a.unitCost)} par ${voc.one}. Il ne se saisit plus ici — il se règle en charge par vente, dans « Achats et coûts », où on le voit à côté des autres. Il reste compté : vérifie qu'il n'y figure pas aussi, sinon le même euro sort deux fois du résultat.`,
-    h('button', {
-      class: 'btn btn-quiet btn-sm', style: { marginLeft: '10px' },
-      onClick: () => set({ unitCost: 0 }, 'Retrait du coût de revient'),
-    }, 'L’enlever d’ici'))
+function costLink(a, voc, navigate) {
+  const has = n(a.unitCost) > 0
+  return h('button', {
+    class: 'costlink',
+    onClick: () => goToGap({ route: 'achats', view: 'charges', anchor: 'charges' }, navigate),
+  },
+    h('span', { class: 'costlink-text' },
+      h('b', {}, has ? `Co\u00fbt de revient : ${euro(a.unitCost)} par ${voc.one}` : `Ce que te co\u00fbte un ${voc.one}`),
+      h('span', {}, has
+        ? 'Il est compt\u00e9 dans le r\u00e9sultat. Se modifie dans les charges par vente.'
+        : 'Se saisit en charge par vente, avec les autres co\u00fbts.'),
+    ),
+    h('span', { class: 'costlink-go' }, 'Achats et co\u00fbts \u2192'),
+  )
 }
 
 /**
@@ -153,7 +160,7 @@ function commissionRead(a, voc) {
   )
 }
 
-function activityCard(a, index, r, level, open, refresh, duplicate) {
+function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
   const voc = vocabulary(store.scenario)
   const isOpen = open.has(a.id)
   const detail = r?.revenue.perActivity.find((x) => x.id === a.id)
@@ -174,9 +181,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
 
   const margin = (Number(a.unitPrice) || 0) > 0 ? 1 - (Number(a.unitCost) || 0) / (Number(a.unitPrice) || 1) : null
 
+  // « L'offre » et « Prix et marge » étaient deux onglets pour une seule
+  // question : ce que tu vends, et combien. On saisissait un nom d'un côté,
+  // son prix de l'autre, et il fallait faire l'aller-retour pour vérifier
+  // qu'on parlait bien de la même chose. Ils n'en font plus qu'un.
   const secs = [
-    { key: 'offre', label: "L'offre" },
-    { key: 'prix', label: 'Prix et marge' },
+    { key: 'offre', label: "L'offre et son prix" },
     { key: 'volumes', label: 'Volumes' },
     { key: 'paiement', label: 'Paiement' },
     { key: 'evolution', label: 'Prix par ann\u00e9e' },
@@ -266,9 +276,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
     isOpen && h('div', { class: 'item-body' },
       tabs(secs, sec, (k) => { activityCard.sec = k; refresh() }),
 
-      sec === 'offre' ? h('div', { class: 'view', 'data-gap': 'abonnement' },
+      sec === 'offre' ? h('div', { class: 'view', 'data-gap': 'prix' },
 
-        h('div', { class: 'grid grid-2' },
+        // L'identité de l'offre tient sur une ligne : son nom, sa TVA. Le
+        // reste de l'écran est consacré à la seule chose qui compte ensuite,
+        // la façon dont elle rapporte.
+        h('div', { class: 'grid grid-2', 'data-gap': 'abonnement' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
           selectField({
             label: 'Taux de TVA', value: a.vatRateSales,
@@ -282,10 +295,10 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
             help: 'tva',
             onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
           }),
-        )
-      ) : null,
+        ),
 
-      sec === 'prix' ? h('div', { class: 'view', 'data-gap': 'prix' },
+        h('div', { class: 'offer-sep' }),
+
 
         // Le mode d'abord, le prix ensuite. Dans cet ordre, parce qu'un prix
         // ne veut rien dire tant qu'on ne sait pas s'il est encaissé une fois,
@@ -313,7 +326,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
           // recompté dans « Achats et coûts » neuf fois sur dix — le même euro
           // sorti deux fois du résultat. Il vit désormais à un seul endroit,
           // en charge par vente, où on le voit à côté des autres coûts.
-          legacyCost(a, voc, set),
+          costLink(a, voc, navigate),
           margin !== null && n(a.unitCost) > 0
             ? h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
                 h('div', { class: 'note-title' }, `Marge unitaire : ${euro(n(a.unitPrice) - n(a.unitCost))} par vente, soit ${pct(margin, 0)}`),
@@ -361,7 +374,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
             }),
           ),
           commissionRead(a, voc),
-          legacyCost(a, voc, set),
+          costLink(a, voc, navigate),
         ) : null,
       ) : null,
 

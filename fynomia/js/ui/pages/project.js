@@ -232,41 +232,65 @@ function sectorPicks(s, set, refresh) {
     refresh()
   }
 
-  // Cent cinquante métiers déroulés d'un coup font une page de trois mètres.
-  // Chaque famille se replie ; celle du métier retenu s'ouvre seule.
-  const grid = h('div', { class: 'famfolds' },
+  // Douze volets empilés font une colonne de trois écrans qu'on parcourt au
+  // pouce pour trouver sa famille. En grille, elles tiennent toutes à l'œil :
+  // on en ouvre une, et les métiers prennent la place — le même geste que dans
+  // le parcours, où il ne fait pas défaut.
+  const here = ACTIVITY_FAMILIES.find((f) => activitiesOf(f.key).some((a) => a.key === s.meta.activityKey))
+  if (sectorPicks.fam === undefined) sectorPicks.fam = null
+  const open = sectorPicks.fam
+
+  const famGrid = h('div', { class: 'famgrid' },
     ...ACTIVITY_FAMILIES.map((fam) => {
       const acts = activitiesOf(fam.key)
-      const here = acts.some((a) => a.key === s.meta.activityKey)
-      return fold(
-        h('span', { class: 'famfold-id' },
-          h('span', { class: 'famfold-icon', html: familyIcon(fam.key) }),
-          h('span', {}, fam.label),
-        ),
-        here ? chosen?.label : `${acts.length} métiers`,
-        h('div', { class: 'picks' },
-          ...acts.map((act) => h('button', {
-            class: `pick ${s.meta.activityKey === act.key ? 'active' : ''}`,
-            onClick: () => pick(act),
-          },
-            h('div', { class: 'pick-name' }, act.label),
-            SECTORS[act.sector].label !== act.label
-              ? h('div', { class: 'pick-note' }, `Modèle ${SECTORS[act.sector].label.toLowerCase()}`)
-              : null,
-          )),
-        ),
-        { id: `fam-${fam.key}`, open: here, tone: here ? 'is-here' : '' },
+      const mine = here?.key === fam.key
+      return h('button', {
+        class: `famcard ${mine ? 'is-here' : ''}`,
+        onClick: () => { sectorPicks.fam = fam.key; refresh() },
+      },
+        h('span', { class: 'famcard-icon', html: familyIcon(fam.key) }),
+        h('span', { class: 'famcard-name' }, fam.label),
+        h('span', { class: 'famcard-note' }, mine ? chosen?.label || sector?.label : `${acts.length} m\u00e9tiers`),
       )
     }),
+  )
+
+  const famOpen = open ? (() => {
+    const fam = ACTIVITY_FAMILIES.find((f) => f.key === open)
+    // Une fois dans la famille, son icône ne se répète pas à chaque ligne :
+    // elle est déjà en tête, et douze fois le même objet ne distingue rien.
+    return h('div', { class: 'famopen' },
+      h('button', { class: 'famopen-back', onClick: () => { sectorPicks.fam = null; refresh() } },
+        '\u2190 Toutes les familles'),
+      h('div', { class: 'famopen-head' },
+        h('span', { class: 'famopen-icon', html: familyIcon(fam.key) }),
+        h('span', {}, fam.label),
+      ),
+      h('div', { class: 'picks' },
+        ...activitiesOf(fam.key).map((act) => h('button', {
+          class: `pick ${s.meta.activityKey === act.key ? 'active' : ''}`,
+          onClick: () => pick(act),
+        },
+          h('div', { class: 'pick-name' }, act.label),
+          SECTORS[act.sector].label !== act.label
+            ? h('div', { class: 'pick-note' }, `Mod\u00e8le ${SECTORS[act.sector].label.toLowerCase()}`)
+            : null,
+        )),
+      ),
+    )
+  })() : null
+
+  const grid = h('div', {},
+    famOpen || famGrid,
     h('button', {
       class: 'btn btn-quiet btn-block mt',
       onClick: () => { resetSetup(); navigateToNew() },
-    }, 'Plutôt repartir d’un plan neuf →'),
+    }, 'Plut\u00f4t repartir d\u2019un plan neuf \u2192'),
   )
 
-  const title = chosen ? chosen.label : sector ? sector.label : 'À choisir'
+  const title = chosen ? chosen.label : sector ? sector.label : '\u00c0 choisir'
   return fold(
-    "Type d’activité",
+    "Type d\u2019activit\u00e9",
     sector ? `${sector.glyph} ${title}` : title,
     grid,
     { id: 'projet-secteur', open: !s.meta.sectorKey },

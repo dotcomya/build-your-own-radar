@@ -156,48 +156,48 @@ export function breakEvenBoard(r, s, voc) {
   const ok = reachable && m.perMonthNow >= m.needed
   const round = (v) => (v >= 10 ? num(Math.round(v)) : num(v, 1))
 
-  return h('div', {},
-    h('section', { class: `seuil ${ok ? 'is-ok' : ''}` },
-      h('div', { class: 'seuil-eq' },
-        term('À couvrir chaque mois', euro(m.fixed), 'Charges externes, salaires, impôts, amortissements'),
-        h('span', { class: 'seuil-op' }, '÷'),
-        term(`Marge par ${voc.one}`, euro(m.marginPerClient), 'Prix encaissé moins le coût direct de la vente'),
-        h('span', { class: 'seuil-op' }, '='),
-        h('div', { class: 'seuil-term is-result' },
-          h('div', { class: 'seuil-term-tag' }, `${voc.many} par mois`),
-          h('div', { class: 'seuil-term-value num' }, reachable ? round(m.needed) : '—'),
-          h('div', { class: 'seuil-term-note' }, reachable ? 'Le seuil à franchir' : 'Marge nulle ou négative'),
-        ),
+  // Le seuil et la courbe ne font qu'un bloc.
+  //
+  // Séparés, on lisait « il t'en faut 294 par mois », puis, après une
+  // respiration, un graphique intitulé « Glaces par mois » qu'on prenait pour
+  // un autre sujet. C'est la même phrase : voici le nombre, et voici où tu en
+  // es. Ils tiennent donc dans le même cadre, sans coupure entre les deux.
+  return h('section', { class: `seuil ${ok ? 'is-ok' : ''}` },
+    h('div', { class: 'seuil-eq' },
+      term('Frais fixes du mois', euro(m.fixed), 'Charges, salaires, imp\u00f4ts et amortissements : ils tombent sans vente'),
+      h('span', { class: 'seuil-op' }, '\u00f7'),
+      term(`Marge par ${voc.one}`, euro(m.marginPerClient), 'Prix encaiss\u00e9 moins le co\u00fbt direct de la vente'),
+      h('span', { class: 'seuil-op' }, '='),
+      h('div', { class: 'seuil-term is-result' },
+        h('div', { class: 'seuil-term-tag' }, `${voc.many} par mois`),
+        h('div', { class: 'seuil-term-value num' }, reachable ? round(m.needed) : '\u2014'),
+        h('div', { class: 'seuil-term-note' }, reachable ? 'Le seuil \u00e0 franchir' : 'Marge nulle ou n\u00e9gative'),
       ),
-      reachable ? h('div', { class: 'seuil-where' },
-        h('div', { class: 'seuil-meter' }, h('i', { style: { width: `${Math.round(ratio * 100)}%` } })),
-        h('p', { class: 'seuil-line' },
-          ok
-            ? `Tu en es à ${round(m.perMonthNow)} par mois : le seuil est franchi, chaque vente de plus tombe en résultat.`
-            : `Tu en es à ${round(m.perMonthNow)} par mois, soit ${pct(ratio, 0)} du chemin. Il en manque ${round(Math.max(0, m.needed - m.perMonthNow))}.`),
-      ) : null,
     ),
+    reachable ? h('div', { class: 'seuil-where' },
+      h('div', { class: 'seuil-meter' }, h('i', { style: { width: `${Math.round(ratio * 100)}%` } })),
+      h('p', { class: 'seuil-line' },
+        ok
+          ? `Tu en es \u00e0 ${round(m.perMonthNow)} par mois : le seuil est franchi, chaque vente de plus tombe en r\u00e9sultat.`
+          : `Tu en es \u00e0 ${round(m.perMonthNow)} par mois, soit ${pct(ratio, 0)} du chemin. Il en manque ${round(Math.max(0, m.needed - m.perMonthNow))}.`),
+    ) : null,
 
-    h('section', { class: 'panel mt' },
-      h('div', { class: 'card-head' },
-        h('div', {},
-          h('h2', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} par mois`),
-          h('div', { class: 'tiny muted' }, reachable ? 'Le trait rouge est le seuil' : 'Le seuil ne peut pas être tracé'),
-        ),
+    h('div', { class: 'seuil-chart' },
+      h('div', { class: 'seuil-chart-head' },
+        h('h2', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} par mois`),
+        h('div', { class: 'tiny muted' }, reachable ? 'Le trait rouge est le seuil' : 'Le seuil ne peut pas \u00eatre trac\u00e9'),
       ),
-      h('div', { class: 'card-body' },
-        areaChart({
-          values: r.revenue.units, startDate: r.startDate, height: 190,
-          color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
-          threshold: reachable ? { value: m.needed, label: `seuil ${round(m.needed)}` } : null,
-        }),
-        h('p', { class: 'chart-note' },
-          m.monthReached !== null
-            ? `Tes volumes passent au-dessus du seuil en ${monthLabel(m.monthReached, r.startDate)}. Avant cette date, chaque mois creuse la trésorerie d'environ ${euro(Math.max(0, m.fixed - m.contribution))}.`
-            : reachable
-              ? `Le seuil n'est jamais franchi sur cinq ans : tes volumes plafonnent à ${round(Math.max(...r.revenue.units))} par mois. Monter le prix, baisser le coût de revient ou alléger les charges fixes le rapproche.`
-              : `Tant qu'un ${voc.one} rapporte moins qu'il ne coûte, aucun volume ne rend le modèle viable.`),
-      ),
+      areaChart({
+        values: r.revenue.units, startDate: r.startDate, height: 190,
+        color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
+        threshold: reachable ? { value: m.needed, label: `seuil ${round(m.needed)}` } : null,
+      }),
+      h('p', { class: 'chart-note' },
+        m.monthReached !== null
+          ? `Tes volumes passent au-dessus du seuil en ${monthLabel(m.monthReached, r.startDate)}. Avant cette date, chaque mois creuse la tr\u00e9sorerie d'environ ${euro(Math.max(0, m.fixed - m.contribution))}.`
+          : reachable
+            ? `Le seuil n'est jamais franchi sur cinq ans : tes volumes plafonnent \u00e0 ${round(Math.max(...r.revenue.units))} par mois. Monter le prix, baisser le co\u00fbt de revient ou all\u00e9ger les charges fixes le rapproche.`
+            : `Tant qu'un ${voc.one} rapporte moins qu'il ne co\u00fbte, aucun volume ne rend le mod\u00e8le viable.`),
     ),
   )
 }

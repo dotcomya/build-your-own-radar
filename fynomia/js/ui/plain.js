@@ -3,23 +3,29 @@
  *
  * L'analyse existe déjà — six chiffres, quatre courbes, un compte de résultat.
  * Elle répond à un lecteur qui sait quoi y chercher. Le fondateur pressé, lui,
- * pose trois questions et une seule à la fois :
+ * veut trois réponses, et une seule à la fois :
  *
- *   1. Est-ce que je gagne de l'argent, et quand ?
- *   2. Est-ce que je tiens jusque-là ?
- *   3. Combien il m'en reste, à moi ?
+ *   1. Rentabilité   — le modèle dégage-t-il un résultat, et à partir de quand ;
+ *   2. Trésorerie    — le compte tient-il jusque-là, et sinon de combien ;
+ *   3. Rémunération  — ce qui revient au fondateur, une fois tout payé.
  *
  * Cette page ne calcule rien de neuf. Elle prend ce que le moteur a produit et
- * l'écrit en phrases, avec un seul chiffre par phrase et une image qui le
- * montre. Trois cartes, trois réponses — et la suite en un clic quand on veut
- * savoir d'où ça sort.
+ * l'écrit en phrases : un titre qui est déjà la réponse, trois lignes pour la
+ * justifier, un seul chiffre, une image qui le confirme. Le titre ne pose pas
+ * la question — il y répond ; c'est la différence entre un sommaire et une
+ * synthèse.
  */
 
 import { h, svg, euro, monthLabel } from './dom.js'
 import { goToGap } from './spotlight.js'
 import { icon } from './icons.js'
+import { checklist } from './checklist.js'
+import store from '../state/store.js'
 
 const n = (v) => Number(v) || 0
+
+/** Combien de lignes du dossier restent à poser. */
+const left = () => { try { const c = checklist(store.scenario); return c.total - c.done } catch { return 0 } }
 const YEARS = ['année 1', 'année 2', 'année 3', 'année 4', 'année 5']
 
 /** La synthèse complète. `r` est le résultat du moteur, `s` le scénario. */
@@ -36,14 +42,18 @@ export function plainBoard(s, r, navigate, goRefine) {
 
   return h('div', { class: 'plain' },
     h('p', { class: 'plain-lede' },
-      'Ce que ton plan raconte, sans vocabulaire comptable. Trois questions, trois réponses.'),
+      'Ton plan en trois phrases : ce que le modèle dégage, ce que le compte encaisse, ce qui te revient.'),
     h('div', { class: 'plain-cards' }, money, cash, mine),
     h('div', { class: 'plain-foot' },
       h('p', {},
-        'Ces trois phrases sortent des mêmes chiffres que l’onglet Analyse. Si l’une d’elles te surprend, c’est là qu’il faut regarder — ou dans ce qu’il te reste à poser.'),
+        'Mêmes chiffres que l’onglet Analyse, sans le vocabulaire. Si l’une des trois te surprend, la réponse est là-bas — ou dans ce qu’il te reste à poser.'),
       h('div', { class: 'plain-foot-go' },
+        // Une synthèse qui se lit au sortir du parcours doit dire la suite :
+        // il reste des lignes à poser, et chacune resserre ces trois phrases.
         goRefine
-          ? h('button', { class: 'btn btn-sm', onClick: goRefine }, 'Ce qu’il me reste à poser')
+          ? h('button', { class: 'btn btn-primary btn-sm', onClick: goRefine }, left() > 0
+              ? `Affiner : ${left()} ligne${left() > 1 ? 's' : ''} à poser`
+              : 'Ce qu’il me reste à poser')
           : null,
         h('button', {
           class: 'btn btn-quiet btn-sm',
@@ -76,63 +86,63 @@ function emptyBoard(goRefine) {
   )
 }
 
-/* ─────────────────── 1. Est-ce que je gagne de l'argent ? ────────────────── */
+/* ────────────────────────────── 1. Rentabilité ───────────────────────────── */
 
 function profitCard(r) {
   const net = r.pnl.netResult
   const first = net.findIndex((v) => v > 0)
   const y1 = n(net[0])
 
-  let tone = 'bad', title = 'Tu ne gagnes pas d’argent', body
+  let tone = 'bad', title = 'Aucun bénéfice sur cinq ans', body
   if (first === 0) {
     tone = 'good'
-    title = 'Tu gagnes de l’argent dès la première année'
-    body = `Ton activité dégage ${euro(y1)} de résultat net la première année. C’est rare, et c’est bon signe — vérifie surtout que tes charges sont bien toutes saisies.`
+    title = 'Rentable dès la première année'
+    body = `L'exercice se referme sur ${euro(y1)} de résultat net. C'est rare dès la première année : vérifie surtout qu'aucune charge ne manque à l'appel.`
   } else if (first > 0) {
     tone = 'watch'
-    title = `Tu deviens rentable en ${YEARS[first]}`
-    body = `Les ${first === 1 ? 'douze premiers mois' : `${first} premières années`} coûtent plus qu’ils ne rapportent : ${euro(Math.abs(y1))} de perte la première année. À partir de ${YEARS[first]}, le résultat passe au vert avec ${euro(n(net[first]))}.`
+    title = `Rentable à partir de l'année ${first + 1}`
+    body = `${first === 1 ? 'Le premier exercice coûte' : `Les ${first} premiers exercices coûtent`} plus qu'${first === 1 ? 'il ne rapporte' : 'ils ne rapportent'} — ${euro(Math.abs(y1))} de perte la première année. Le résultat passe au vert en année ${first + 1}, à ${euro(n(net[first]))}.`
   } else {
-    body = `Sur cinq ans, aucune année ne dégage de bénéfice. La perte de la première année est de ${euro(Math.abs(y1))}. Ce n’est pas une fatalité : c’est un prix trop bas, un coût trop haut, ou des volumes trop prudents.`
+    body = `Aucun des cinq exercices ne dégage de bénéfice ; la première année perd ${euro(Math.abs(y1))}. Trois leviers, dans cet ordre : le prix, le coût de revient, les volumes.`
   }
 
   return card({
-    tone, kicker: 'Est-ce que je gagne de l’argent ?', title, body,
+    tone, kicker: 'Rentabilité', title, body,
     ico: 'argent',
     bars: net.slice(0, 5).map((v, i) => ({ label: `A${i + 1}`, value: n(v) })),
-    figure: { label: 'Résultat net, année 1', value: euro(y1), good: y1 >= 0 },
+    figure: { label: 'Résultat net — année 1', value: euro(y1), good: y1 >= 0 },
   })
 }
 
-/* ──────────────────── 2. Est-ce que je tiens jusque-là ? ─────────────────── */
+/* ────────────────────────────── 2. Trésorerie ───────────────────────────── */
 
 function cashCard(r) {
   const low = r.kpis.cashLow
   const need = n(r.kpis.fundingNeed)
   const when = low && low.month != null ? monthLabel(low.month, r.startDate) : null
 
-  let tone = 'good', title = 'Ta trésorerie tient', body
+  let tone = 'good', title = 'La trésorerie tient', body
   if (need > 0) {
     tone = 'bad'
     title = `Il te manque ${euro(need)}`
-    body = `Ton compte descend au plus bas en ${when} : ${euro(n(low.value))}. Il faut réunir ${euro(need)} avant cette date — apport, emprunt, ou moins de dépenses au démarrage. C’est la seule question qui compte pour l’instant.`
+    body = `Le compte touche son point bas en ${when}, à ${euro(n(low.value))}. Il faut avoir réuni ${euro(need)} avant cette date : apport, emprunt, ou moins de dépenses au démarrage. Tant que ce trou n'est pas comblé, le reste du plan reste théorique.`
   } else if (n(low?.value) < 5000) {
     tone = 'watch'
-    title = 'Ta trésorerie passe juste'
-    body = `Le point bas est de ${euro(n(low.value))} en ${when}. Ça tient, mais sans marge : un client qui paie en retard et tu es à découvert.`
+    title = 'Ça passe, sans marge'
+    body = `Le point bas s'établit à ${euro(n(low.value))} en ${when}. C'est positif, mais un client qui paie avec un mois de retard suffit à te mettre à découvert.`
   } else {
-    body = `Le point bas de ton compte est de ${euro(n(low?.value))}${when ? `, en ${when}` : ''}. Tu passes l’année sans avoir à chercher d’argent.`
+    body = `Le point bas s'établit à ${euro(n(low?.value))}${when ? `, en ${when}` : ''}. Tu traverses les cinq ans sans avoir à chercher d'argent.`
   }
 
   return card({
-    tone, kicker: 'Est-ce que je tiens jusque-là ?', title, body,
+    tone, kicker: 'Trésorerie', title, body,
     ico: 'cible',
     line: (r.cash?.balance || []).slice(0, 36).map((v) => n(v)),
-    figure: { label: 'Point bas de trésorerie', value: euro(n(low?.value)), good: n(low?.value) >= 0 },
+    figure: { label: 'Point bas du compte', value: euro(n(low?.value)), good: n(low?.value) >= 0 },
   })
 }
 
-/* ──────────────────── 3. Combien il m'en reste, à moi ? ──────────────────── */
+/* ─────────────────────────── 3. Ta rémunération ───────────────────────── */
 
 function takeCard(s, r) {
   const team = s.team || []
@@ -145,10 +155,10 @@ function takeCard(s, r) {
 
   if (!gross) {
     return card({
-      tone: 'watch', kicker: 'Combien il m’en reste, à moi ?',
+      tone: 'watch', kicker: 'Ta rémunération',
       title: 'Tu ne te verses rien', ico: 'commerce',
-      body: 'Aucune rémunération n’est saisie pour toi. Un plan où le fondateur ne se paie pas n’est pas prudent : il est incomplet, et un financeur le lit comme tel. Pose ce que tu comptes te verser, même modeste.',
-      figure: { label: 'Ta rémunération annuelle', value: '—', good: false },
+      body: "Aucune rémunération n'est saisie à ton nom. Un plan où le fondateur ne se paie pas n'est pas prudent : il est incomplet, et un financeur le lit comme tel. Pose ce que tu comptes prendre, même modeste.",
+      figure: { label: 'Brut annuel', value: '—', good: false },
     })
   }
 
@@ -156,12 +166,12 @@ function takeCard(s, r) {
   const marge = n(r.pnl.netResult[0])
   return card({
     tone: marge >= 0 ? 'good' : 'watch',
-    kicker: 'Combien il m’en reste, à moi ?',
-    title: `Tu te verses ${euro(yearly)} par an`,
+    kicker: 'Ta rémunération',
+    title: `${euro(yearly)} brut par an`,
     ico: 'commerce',
     body: marge >= 0
-      ? `Ta rémunération est déjà comptée dans le résultat : l’entreprise dégage ${euro(marge)} en plus de ce que tu touches. Ce surplus peut rester en réserve ou se distribuer en dividendes.`
-      : `Ta rémunération est déjà comptée dans le résultat. L’entreprise perd ${euro(Math.abs(marge))} la première année en te payant : c’est fréquent au démarrage, mais il faut de quoi financer cette perte.`,
+      ? `Elle est déjà déduite du résultat : l'entreprise dégage ${euro(marge)} au-delà de ce que tu prends. Ce surplus reste en réserve ou se distribue en dividendes.`
+      : `Elle est déjà déduite du résultat : l'entreprise perd ${euro(Math.abs(marge))} la première année en te payant. C'est courant au démarrage, à condition d'avoir de quoi financer cette perte.`,
     figure: { label: 'Brut annuel', value: euro(yearly), good: true },
   })
 }

@@ -123,11 +123,21 @@ export function travel(mutate, mode = 'page') {
   root.classList.add(...cls.split(' '))
   try {
     const vt = document.startViewTransition(mutate)
-    // On relâche dès que le DOM est en place, pas à la fin de l'animation :
-    // l'écran est déjà celui d'arrivée. Un filet de sécurité couvre le cas où
-    // la promesse ne se résout jamais — une classe oubliée bloquerait l'outil.
-    vt.updateCallbackDone.catch(() => {}).finally(done)
-    setTimeout(done, 1200)
+    // La classe doit tenir jusqu'à la fin de l'animation, pas jusqu'à la fin
+    // de la mutation.
+    //
+    // C'est elle qui sélectionne les images : « .is-move-page::view-transition-
+    // new(root) ». En la retirant dès que le DOM était en place — c'est-à-dire
+    // avant que la moindre image n'ait été jouée — on annulait les règles
+    // écrites pour ce voyage, et le navigateur retombait sur son fondu par
+    // défaut : un quart de seconde, sans direction. On avait beau allonger les
+    // durées dans la feuille de style, rien ne changeait à l'écran.
+    //
+    // On relâche donc à « finished ». Le filet de sécurité reste — une classe
+    // oubliée bloquerait l'outil — mais il est plus long que la plus longue
+    // des animations.
+    vt.finished.catch(() => {}).finally(done)
+    setTimeout(done, 2600)
   } catch {
     done()
     mutate()

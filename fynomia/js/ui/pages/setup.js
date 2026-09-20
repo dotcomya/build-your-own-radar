@@ -28,6 +28,7 @@ import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
+import { openSynthesis } from './dashboard.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
 import { familyIcon, icon } from '../icons.js'
 
@@ -457,16 +458,34 @@ function sectorPicker(ctx) {
     onClick: () => { pick.query = ''; input.value = ''; input.focus(); draw() },
   }, '✕')
 
-  const choose = (activity) => {
+  /**
+   * Retenir le métier — celui de la liste, ou celui qu'on a tapé.
+   *
+   * Les cent cinquante métiers de la liste ne couvrent pas tout, et « Autre
+   * chose » effaçait ce que le fondateur venait d'écrire : il repartait avec
+   * un plan sans nom de métier, et l'outil ne savait plus de quoi il parlait.
+   * Le texte saisi est désormais gardé tel quel. Il ne débloque aucun modèle
+   * — pas de charges suggérées, pas de repères de marge, il n'y en a pas pour
+   * un métier qu'on ne connaît pas — mais tout le reste du parcours l'affiche
+   * et le dossier le porte.
+   */
+  const choose = (activity, typed = '') => {
     // Le stade du projet parle du fondateur, pas du commerce : passer de
     // glacier à salon de coiffure ne le fait pas revenir à l'idée.
     const stage = store.scenario?.meta?.stage || ''
     const level = store.scenario?.meta?.level || 'easy'
-    store.create({ template: activity ? activity.sector : null, level, name: activity ? activity.label : 'Mon projet', sample: false })
+    const own = !activity && typed.trim()
+    store.create({
+      template: activity ? activity.sector : null, level,
+      name: activity ? activity.label : (own || 'Mon projet'), sample: false,
+    })
     store.update((d) => {
       if (stage) d.meta.stage = stage
       d.meta.activityKey = activity ? activity.key : ''
-      d.meta.activityLabel = activity ? activity.label : ''
+      d.meta.activityLabel = activity ? activity.label : (own || '')
+      // Un métier écrit à la main : le parcours reste le même, mais rien ne
+      // sera pré-rempli à sa place — et c'est à dire, pas à taire.
+      d.meta.customActivity = !!own
       // Le mot du métier quand il diffère de celui du modèle : une auto-école
       // vend des heures de conduite, pas des sessions de formation.
       d.meta.unit = activity?.unit || null
@@ -478,11 +497,11 @@ function sectorPicker(ctx) {
   // Un glyphe de police disait le sérieux d'un formulaire administratif. Les
   // icônes sont dessinées : même lumière, même volume, même jeu.
   const card = (glyph, name, note, active, onClick, famKey = null) => h('button', {
-    class: `setup-sector ${active ? 'active' : ''}`, onClick,
+    class: `setup-sector ${active ? 'active' : ''} ${!famKey && !glyph ? 'is-bare' : ''}`, onClick,
   },
     famKey
       ? h('span', { class: 'setup-sector-icon', html: familyIcon(famKey) })
-      : h('span', { class: 'setup-sector-glyph' }, glyph),
+      : glyph ? h('span', { class: 'setup-sector-glyph' }, glyph) : null,
     h('span', { class: 'setup-sector-name' }, name),
     note ? h('span', { class: 'setup-sector-note' }, note) : null,
   )
@@ -507,11 +526,14 @@ function sectorPicker(ctx) {
       grid.replaceChildren(
         ...hits.map((a) => card('▸', a.label,
           familyOf(a.in[0])?.label, current === a.key, () => choose(a), a.in[0])),
-        card('＋', 'Autre chose', 'Un modèle vierge, à toi de le remplir', false, () => choose(null)),
+        // Ce qu'il a tapé est une réponse, pas un échec de recherche : on le
+        // lui propose tel quel, avec son nom dans le bouton.
+        card('＋', `Garder « ${q} »`,
+          'Ton métier, sans modèle pré-rempli', false, () => choose(null, q)),
       )
       if (!hits.length) {
         grid.prepend(h('p', { class: 'setup-search-none' },
-          `Rien ne correspond à « ${q} ». Choisis « Autre chose » : le modèle part vierge et rien ne t’empêche d’avancer.`))
+          `Aucun métier de la liste ne correspond à « ${q} » — garde le tien : le parcours est le même, simplement rien ne sera pré-rempli à ta place.`))
       }
       return
     }
@@ -525,10 +547,12 @@ function sectorPicker(ctx) {
     }
 
     // ─── Second temps : les métiers de la famille ───
-    const fam = familyOf(pick.family)
+    // L'icône de la famille ne se répète pas sur chacun de ses métiers : elle
+    // est déjà dans le fil de retour, et seize fois le même objet ne distingue
+    // rien — il occupe seulement la place du nom.
     grid.replaceChildren(
-      ...activitiesOf(pick.family).map((a) => card(fam.glyph, a.label, null, current === a.key, () => choose(a), pick.family)),
-      card('＋', 'Autre chose', null, false, () => choose(null)),
+      ...activitiesOf(pick.family).map((a) => card(null, a.label, null, current === a.key, () => choose(a))),
+      card(null, 'Autre chose', 'Tu l’écriras toi-même', false, () => choose(null)),
     )
   }
 
@@ -1258,10 +1282,18 @@ function doneScreen(ctx) {
     ),
 
     h('div', { class: 'setup-actions' },
+      // On arrive sur la synthèse, pas sur une liste de tâches.
+      //
+      // Au bout de douze questions, ce qu'on veut voir est ce qu'elles ont
+      // produit — est-ce que ça gagne de l'argent, est-ce que ça tient, ce
+      // qu'il m'en reste. La liste de ce qu'il reste à poser est à un clic,
+      // annoncée depuis cette page même : c'est une invitation, pas la
+      // première chose qu'on met sous les yeux de quelqu'un qui vient de
+      // finir.
       h('button', {
         class: 'btn btn-primary btn-lg',
-        onClick: () => { resetSetup(); ctx.navigate('#/parcours') },
-      }, 'Voir mon business plan →'),
+        onClick: () => { resetSetup(); openSynthesis(); ctx.navigate('#/tableau-de-bord') },
+      }, 'Voir ma synthèse →'),
       h('button', {
         class: 'btn btn-lg',
         onClick: () => { resetSetup(); ctx.navigate('#/business-case') },
