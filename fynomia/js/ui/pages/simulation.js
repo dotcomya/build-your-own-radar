@@ -15,7 +15,7 @@
 
 import { h, euro, num, pct, toast, fold } from '../dom.js'
 import { goToGap } from '../spotlight.js'
-import { allLevers, resolveLever, LEVER_GROUPS } from '../personas.js'
+import { simLevers, SIM_GROUPS } from '../sim-levers.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
@@ -33,11 +33,8 @@ function changes(levers) {
   if (!sandbox.draft) return []
   const out = []
   for (const lever of levers) {
-    const a = resolveLever(store.scenario, lever)
-    const b = resolveLever(sandbox.draft, lever)
-    if (!a || !b) continue
-    const before = Number(a.current) || 0
-    const after = Number(b.current) || 0
+    const before = Number(lever.read(store.scenario)) || 0
+    const after = Number(lever.read(sandbox.draft)) || 0
     if (Math.abs(after - before) > 1e-9) out.push({ lever, before, after })
   }
   return out
@@ -50,7 +47,7 @@ export function renderSimulation(persona, refresh, navigate) {
   if (sandbox.forId !== s.meta.id) resetSandbox()
   if (!sandbox.draft) { sandbox.draft = clone(s); sandbox.forId = s.meta.id }
 
-  const levers = allLevers(sandbox.draft)
+  const levers = simLevers(store.scenario)
   if (!levers.length) {
     return h('div', { class: 'card' }, h('div', { class: 'empty' },
       h('div', { class: 'empty-icon' }, '◇'),
@@ -79,7 +76,7 @@ export function renderSimulation(persona, refresh, navigate) {
       }, 'Tout remettre comme avant') : null,
       h('span', { class: 'sim-pending-note' },
         list.length
-          ? list.map((c) => `${c.lever.label} ${c.lever.format(c.before)} → ${c.lever.format(c.after)}`).join(' · ')
+          ? list.map((c) => `${c.lever.line} · ${c.lever.label} ${c.lever.fmt(c.before)} → ${c.lever.fmt(c.after)}`).join(' · ')
           : 'Rien n’est enregistré tant que tu n’as pas validé.'),
     )
   }
@@ -103,49 +100,76 @@ export function renderSimulation(persona, refresh, navigate) {
 
 /* ──────────────────────────── Les curseurs ──────────────────────────────── */
 
-/** Les leviers, par famille : la première ouverte, les autres à portée. */
+/**
+ * Les curseurs, groupés par module puis par ligne du plan.
+ *
+ * Un fondateur qui a trois offres et onze charges ne cherche pas « le prix » :
+ * il cherche le prix du menu du midi. Chaque ligne de son plan a donc son
+ * propre bloc, avec son nom à lui.
+ */
 function leverGroups(levers, onLive) {
-  return LEVER_GROUPS.map((g, i) => {
-    const mine = levers.filter((l) => (l.group || 'vendre') === g.key)
+  return SIM_GROUPS.map((g, i) => {
+    const mine = levers.filter((l) => l.group === g.key)
     if (!mine.length) return null
-    const body = h('div', { class: 'sim-levers' }, ...mine.map((l) => knob(l, onLive)))
-    return fold(g.label, `${mine.length} levier${mine.length > 1 ? 's' : ''}`, body,
-      { id: `sim-${g.key}`, open: i === 0 })
+    // Les leviers d'une même ligne se suivent : on regroupe sans trier, pour
+    // garder l'ordre du plan.
+    const byLine = []
+    for (const l of mine) {
+      const last = byLine[byLine.length - 1]
+      if (last && last.line === l.line) last.items.push(l)
+      else byLine.push({ line: l.line, items: [l] })
+    }
+    const body = h('div', { class: 'sim-lines' },
+      ...byLine.map((b) => h('div', { class: 'sim-line' },
+        h('div', { class: 'sim-line-name' }, b.line),
+        h('div', { class: 'sim-levers' }, ...b.items.map((l) => knob(l, onLive))),
+      )),
+    )
+    return fold(g.label, g.note, body, { id: `sim-${g.key}`, open: i === 0 })
   }).filter(Boolean)
 }
 
-/** Un curseur qui n'écrit que dans la copie. */
+/**
+ * Un curseur qui n'écrit que dans la copie.
+ *
+ * La valeur du plan reste écrite en gris à côté de la valeur simulée : on voit
+ * d'où l'on part et de combien on s'écarte, sans avoir à s'en souvenir. Un
+ * clic sur cette valeur grise remet le curseur à sa place.
+ */
 function knob(lever, onLive) {
-  const resolved = resolveLever(sandbox.draft, lever)
-  if (!resolved) return null
-  const reference = resolveLever(store.scenario, lever)
-  const base = Number(reference?.current) || 0
-  const initial = Number(resolved.current) || 0
+  const base = Number(lever.read(store.scenario)) || 0
+  const initial = Number(lever.read(sandbox.draft)) || 0
 
-  const value = h('output', { class: 'knob-value num' }, lever.format(initial))
+  const value = h('output', { class: 'knob-value num' }, lever.fmt(initial))
   const shift = h('span', { class: 'knob-shift num' }, '')
   const min = Math.min(lever.min, base)
   const max = Math.max(lever.max, base * 1.6 || lever.max)
   const input = h('input', {
     type: 'range', min, max, step: lever.step, value: initial,
-    'aria-label': lever.label, class: 'lever-range',
+    'aria-label': `${lever.line} — ${lever.label}`, class: 'lever-range',
   })
 
   const paint = (raw) => {
-    value.textContent = lever.format(raw)
+    value.textContent = lever.fmt(raw)
     const delta = raw - base
-    shift.textContent = delta === 0 ? '' : `${delta > 0 ? '+' : '−'}${lever.format(Math.abs(delta)).replace('−', '')}`
-    shift.className = `knob-shift num ${delta === 0 ? '' : delta > 0 ? 'up' : 'down'}`
+    const same = Math.abs(delta) < (lever.step || 1) / 2
+    shift.textContent = same ? '' : `${delta > 0 ? '+' : '−'}${lever.fmt(Math.abs(delta))}`
+    shift.className = `knob-shift num ${same ? '' : delta > 0 ? 'up' : 'down'}`
+    value.classList.toggle('is-moved', !same)
   }
   paint(initial)
 
   input.addEventListener('input', () => {
     const raw = Number(input.value)
-    const target = resolveLever(sandbox.draft, lever)
-    if (target) target.object[target.key] = raw
+    lever.write(sandbox.draft, raw)
     paint(raw)
     onLive()
   })
+
+  const reset = h('button', {
+    class: 'knob-base', title: 'Revenir à la valeur de ton plan',
+    onClick: () => { input.value = base; lever.write(sandbox.draft, base); paint(base); onLive() },
+  }, lever.fmt(base))
 
   return h('div', { class: 'knob' },
     h('div', { class: 'knob-top' },
@@ -153,7 +177,11 @@ function knob(lever, onLive) {
       h('div', { class: 'knob-readout' }, value, shift),
     ),
     input,
-    h('div', { class: 'knob-why' }, lever.why || ''),
+    h('div', { class: 'knob-foot' },
+      h('span', { class: 'knob-basetag' }, 'ton plan'),
+      reset,
+      lever.hint ? h('span', { class: 'knob-why' }, lever.hint) : null,
+    ),
   )
 }
 
@@ -240,15 +268,14 @@ function applyScreen(levers, refresh, navigate) {
   const list = changes(levers)
   if (!list.length) { sandbox.stage = 'jeu'; return renderSimulation(null, refresh, navigate) }
 
-  const kept = new Set(list.map((c) => c.lever.key))
+  const kept = new Set(list.map((c) => c.lever.id))
   const effects = h('div', { class: 'apply-effects' })
 
   const projected = () => {
     const next = clone(store.scenario)
     for (const c of list) {
-      if (!kept.has(c.lever.key)) continue
-      const t = resolveLever(next, c.lever)
-      if (t) t.object[t.key] = c.after
+      if (!kept.has(c.lever.id)) continue
+      c.lever.write(next, c.after)
     }
     return next
   }
@@ -289,13 +316,10 @@ function applyScreen(levers, refresh, navigate) {
    * @param gap  la destination à ouvrir et entourer, ou null pour rester ici
    */
   const confirm = (gap) => {
-    const keptList = list.filter((c) => kept.has(c.lever.key))
+    const keptList = list.filter((c) => kept.has(c.lever.id))
     if (!keptList.length) { toast('Aucun changement retenu.', 'err'); return }
     store.update((sc) => {
-      for (const c of keptList) {
-        const t = resolveLever(sc, c.lever)
-        if (t) t.object[t.key] = c.after
-      }
+      for (const c of keptList) c.lever.write(sc, c.after)
     }, { label: `Simulation appliquée (${keptList.length})` })
     resetSandbox()
     toast(`${keptList.length} changement${keptList.length > 1 ? 's' : ''} enregistré${keptList.length > 1 ? 's' : ''}.`, 'ok')
@@ -306,7 +330,8 @@ function applyScreen(levers, refresh, navigate) {
   // Les changements, rangés par module de destination.
   const byModule = new Map()
   for (const c of list) {
-    const key = c.lever.page || 'offre'
+    // Le groupe du levier est déjà celui du module qui l'accueillera.
+    const key = { offre: 'offre', charge: 'achats', equipe: 'equipe', financement: 'financement' }[c.lever.group] || 'offre'
     if (!byModule.has(key)) byModule.set(key, [])
     byModule.get(key).push(c)
   }
@@ -320,7 +345,7 @@ function applyScreen(levers, refresh, navigate) {
     ...[...byModule.entries()].map(([key, items]) => {
       const mod = MODULES[key] || MODULES.offre
       // Le repère du premier changement du groupe : c'est là qu'on emmène.
-      const gap = items.map((c) => c.lever.gap).find(Boolean) || { route: mod.route }
+      const gap = { route: mod.route }
       return h('section', { class: 'apply-mod' },
         h('div', { class: 'apply-mod-head' },
           h('span', { class: 'apply-mod-name' }, mod.label),
@@ -332,15 +357,15 @@ function applyScreen(levers, refresh, navigate) {
         ...items.map((c) => {
           const box = h('input', { type: 'checkbox', checked: true })
           box.addEventListener('change', () => {
-            box.checked ? kept.add(c.lever.key) : kept.delete(c.lever.key)
+            box.checked ? kept.add(c.lever.id) : kept.delete(c.lever.id)
             paintEffects()
           })
           return h('label', { class: 'apply-row' },
             box,
-            h('span', { class: 'apply-row-label' }, c.lever.label),
-            h('span', { class: 'apply-row-before num' }, c.lever.format(c.before)),
+            h('span', { class: 'apply-row-label' }, `${c.lever.line} · ${c.lever.label}`),
+            h('span', { class: 'apply-row-before num' }, c.lever.fmt(c.before)),
             h('span', { class: 'apply-row-arrow' }, '→'),
-            h('span', { class: 'apply-row-after num' }, c.lever.format(c.after)),
+            h('span', { class: 'apply-row-after num' }, c.lever.fmt(c.after)),
           )
         }),
       )

@@ -1,10 +1,10 @@
 /** États financiers : résultat, trésorerie, bilan, BFR, fiscalité. */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, moduleHead } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, moduleShell } from '../dom.js'
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
-import { partBanner } from '../tutorial.js'
+import { stepGuide } from '../tutorial.js'
 import { founderIncome } from '../../engine/founder.js'
 import { bfrSentence } from '../explain.js'
 import { refine } from '../dom.js'
@@ -32,17 +32,17 @@ export function renderResults(navigate, refresh) {
   renderResults.tab = view
 
   return h('div', { class: 'content' },
-    moduleHead('07', '\u00c9tats financiers',
-      "Le format que comprennent un comptable, une banque et un investisseur. Tout est calcul\u00e9 \u00e0 partir de ce que tu as saisi : aucune ligne n'est \u00e0 remplir ici."),
-
-    partBanner('resultats'),
+    moduleShell({
+      no: '07', title: 'États financiers',
+      lede: "Le format que comprennent un comptable, une banque et un investisseur. Tout est calculé à partir de ce que tu as saisi : aucune ligne n’est à remplir ici.",
+      guide: stepGuide(null, null, 'resultats'),
+      views, view, onPick: (k) => { renderResults.tab = k; refresh() },
+    }),
 
     // Avant les tableaux : le seul chiffre que le fondateur cherche vraiment.
     // Les états financiers disent comment l'argent circule ; celui-ci dit ce
     // qu'il en reste pour lui.
     netSummary(r, refresh),
-
-    tabs(views, view, (k) => { renderResults.tab = k; refresh() }),
 
     h('div', { class: 'view' },
       view === 'resultat' ? pnlView(r, level)

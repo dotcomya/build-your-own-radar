@@ -169,6 +169,21 @@ export const ACTIVITIES = [
   { key: 'videaste', label: 'Vidéaste / Montage vidéo', in: ['digital'], sector: 'developpeur' },
   { key: 'drone', label: 'Pilote de drone', in: ['digital'], sector: 'developpeur' },
 
+  { key: 'appcontenu', label: 'Application de contenu', in: ['digital'], sector: 'logiciel', say: 'media app abonnement' },
+  { key: 'infoproduit', label: 'Infoproduit / Cours en ligne', in: ['digital', 'savoir'], sector: 'formation', say: 'formation video' },
+  { key: 'newsletter', label: 'Média / Newsletter', in: ['digital'], sector: 'logiciel', say: 'blog abonnement presse' },
+  { key: 'saasb2b', label: 'Éditeur de logiciel B2B', in: ['digital'], sector: 'logiciel', say: 'saas entreprise licence' },
+  { key: 'plugin', label: 'Extension / Plugin', in: ['digital'], sector: 'logiciel', say: 'module app store' },
+  { key: 'nocode', label: 'Agence no-code / Automatisation', in: ['digital'], sector: 'conseil', say: 'make zapier airtable' },
+  { key: 'dataia', label: 'Data / Intelligence artificielle', in: ['digital'], sector: 'conseil', say: 'ia machine learning' },
+  { key: 'cyber', label: 'Cybersécurité', in: ['digital', 'entreprises'], sector: 'conseil', say: 'securite audit' },
+  { key: 'infogerance', label: 'Infogérance / Support IT', in: ['digital', 'entreprises'], sector: 'developpeur', say: 'maintenance informatique msp' },
+  { key: 'jeuvideo', label: 'Studio de jeu vidéo', in: ['digital'], sector: 'logiciel', say: 'gaming game' },
+  { key: 'dropshipping', label: 'Dropshipping', in: ['digital', 'commerce'], sector: 'ecommerce' },
+  { key: 'abonnementbox', label: 'Box par abonnement', in: ['digital', 'commerce'], sector: 'ecommerce', say: 'box mensuelle' },
+  { key: 'reventeligne', label: 'Revente en ligne / Vinted', in: ['digital', 'commerce'], sector: 'ecommerce', say: 'seconde main en ligne' },
+  { key: 'affiliation', label: 'Affiliation / Créateur de contenu', in: ['digital'], sector: 'developpeur', say: 'influenceur youtube' },
+
   // ── Services aux entreprises ─────────────────────────────────────────────
   { key: 'conseil', label: 'Cabinet de conseil', in: ['entreprises'], sector: 'conseil', say: 'consultant' },
   { key: 'comptable', label: 'Expert-comptable', in: ['entreprises'], sector: 'conseil' },

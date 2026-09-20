@@ -74,9 +74,21 @@ const ITEMS = [
   { key: 'equipe', tier: 'credibilite', label: 'Les postes à recruter', why: 'Une croissance sans embauche se remarque.',
     done: (s) => (s.team || []).length > 1,
     go: { route: 'equipe', view: 'postes', anchor: 'equipe' } },
-  { key: 'acquisition', tier: 'credibilite', label: 'Comment tu trouves tes clients', why: 'Relie une dépense marketing à des clients gagnés.',
-    done: (s) => has(s.marketing),
-    go: { route: 'offre', view: 'acquisition', anchor: 'campagnes' } },
+
+
+  { key: 'capacite', tier: 'credibilite', label: 'Ton plafond de capacité', why: 'Personne ne sert mille couverts dans vingt places.',
+    done: (s) => any(s.activities, (a) => n(a.volumes?.cap) > 0 || a.volumes?.mode === 'manual'),
+    go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
+  { key: 'demarrage', tier: 'credibilite', label: 'Ta date de démarrage', why: 'Un plan qui commence en janvier par défaut se voit.',
+    done: (s) => !!s.meta?.startDate && s.meta.startDate !== '2026-01-01',
+    go: { route: 'projet', anchor: 'calendrier' } },
+  { key: 'tresorerie', tier: 'credibilite', label: 'Ta trésorerie de départ',
+    why: 'Ce qu’il y a sur le compte le premier jour, avant la première vente.',
+    done: (s) => n(s.financing?.openingCash) > 0 || has(s.financing?.equityFounders),
+    go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+  { key: 'stock', tier: 'credibilite', label: 'Ton stock', why: 'Du stock, c’est de la trésorerie immobilisée, pas une charge.',
+    done: (s) => n(s.assumptions?.stockDays) > 0 || !needsStock(s),
+    go: { route: 'achats', view: 'invest', anchor: 'capex' } },
 
   // ── Finition ─────────────────────────────────────────────────────────────
   { key: 'pitch', tier: 'finition', label: 'La description de l’activité', why: 'Alimente la partie narrative du dossier.',
@@ -101,7 +113,43 @@ const ITEMS = [
   { key: 'emprunt', tier: 'finition', label: 'Un emprunt ou une subvention', why: 'Rarement absent d’un plan de création.',
     done: (s) => has(s.financing?.loans) || has(s.financing?.grants),
     go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+  { key: 'acquisition', tier: 'finition', label: 'Comment tu trouves tes clients', why: 'Relie une dépense marketing à des clients gagnés.',
+    done: (s) => has(s.marketing),
+    go: { route: 'offre', view: 'acquisition', anchor: 'campagnes' } },
+  { key: 'secondeoffre', tier: 'finition', label: 'Une deuxième source de revenu',
+    why: 'Une seule offre, c’est un seul point de rupture.',
+    done: (s) => (s.activities || []).filter((a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0).length > 1,
+    go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' } },
+  { key: 'croissance', tier: 'finition', label: 'Le rythme de croissance',
+    why: 'Huit pour cent par mois, c’est un doublement chaque année : à assumer.',
+    done: (s) => any(s.activities, (a) => n(a.volumes?.monthlyGrowth) !== 0.08 || a.volumes?.mode === 'manual'),
+    go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
+  { key: 'saison', tier: 'finition', label: 'Ta saisonnalité',
+    why: 'Un mois creux ne se voit pas dans une moyenne annuelle.',
+    done: (s) => any(s.activities, (a) => a.volumes?.mode === 'manual' || !!a.volumes?.seasonality),
+    go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
+  { key: 'coutannee', tier: 'finition', label: 'L’évolution de tes coûts',
+    why: 'Les achats montent aussi, pas seulement les prix de vente.',
+    done: (s) => any(s.activities, (a) => (a.unitCostByYear || []).some((v) => v !== '' && v !== null && v !== undefined)),
+    go: { route: 'offre', view: 'offres', sec: 'evolution', openAll: true, anchor: 'evolution' } },
+  { key: 'paiefournisseur', tier: 'finition', label: 'Tes délais fournisseurs',
+    why: 'Payer à trente jours finance ton exploitation gratuitement.',
+    done: (s) => any(s.activities, (a) => n(a.costPaymentLag) > 0),
+    go: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' } },
+  { key: 'dividendes', tier: 'finition', label: 'Ce que tu te distribues',
+    why: 'Le salaire n’est pas le seul chemin vers ta poche.',
+    done: (s) => n(s.founder?.dividendPayout) > 0,
+    go: { route: 'resultats', view: 'revenu', anchor: 'dividendes' } },
+  { key: 'tva', tier: 'finition', label: 'Ton régime de TVA',
+    why: 'La franchise en base change ta trésorerie et tes prix affichés.',
+    done: (s) => s.meta?.vatChecked === true || s.meta?.vatExempt === true,
+    go: { route: 'projet', anchor: 'juridique' } },
 ]
+
+/** Un métier sans marchandise n'a pas de stock à déclarer. */
+function needsStock(s) {
+  return any(s.activities, (a) => n(a.unitCost) > 0)
+}
 
 /* ─────────────────────── Ce qu'on a remis à plus tard ─────────────────────
    Le fondateur a le droit de ne pas vouloir poser sa rémunération un mardi

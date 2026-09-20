@@ -1,15 +1,15 @@
 /** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, pageBar, refine, moduleHead } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { valueForYear } from '../../engine/revenue.js'
 import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
-import { claim } from '../spotlight.js'
+import { claim, goToGap } from '../spotlight.js'
 import store from '../../state/store.js'
 import { tradeSuggest } from '../trade-suggest.js'
 
@@ -62,17 +62,14 @@ export function renderOffer(navigate, refresh) {
 
   return h('div', { class: 'content' },
 
-    moduleHead('02', 'Offre et revenus', "Tes offres : leur prix, leurs volumes et leurs conditions de paiement."),
-
-    stepBanner('clients', journey(store.scenario, store.result), navigate, 'offre'),
-
-    pageBar(
-      s.activities.length > 1 ? `${s.activities.length} offres` : 'Ton offre',
-      total > 0 ? `${euro(total, { compact: true })} de chiffre d'affaires cumulé sur cinq ans` : 'Ce que tu vends, à quel prix, à combien de clients',
-      view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null,
-    ),
-
-    tabs(views, view, (k) => { renderOffer.view = k; refresh() }),
+    moduleShell({
+      no: '02', title: 'Offre et revenus',
+      lede: "Tes offres : leur prix, leurs volumes et leurs conditions de paiement.",
+      figure: revenueFigure(s, r),
+      guide: stepGuide('clients', journey(store.scenario, store.result), 'offre'),
+      views, view, onPick: (k) => { renderOffer.view = k; refresh() },
+      actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
+    }),
 
     view === 'offres'
       ? h('div', { class: 'view' },
@@ -235,7 +232,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
 
       sec === 'volumes' ? h('div', { class: 'view', 'data-gap': 'volumes' },
 
-        volumesEditor(a, setVolumes, level, detail)
+        volumesEditor(a, setVolumes, level, detail, refresh)
       ) : null,
 
       sec === 'paiement' ? h('div', { class: 'view', 'data-gap': 'paiement' },
@@ -388,7 +385,7 @@ function paymentTimeline(a) {
   )
 }
 
-function volumesEditor(a, setVolumes, level, detail) {
+function volumesEditor(a, setVolumes, level, detail, refresh = () => {}) {
   const v = a.volumes || {}
   const voc = vocabulary(store.scenario)
   const isManual = v.mode === 'manual'
@@ -408,12 +405,27 @@ function volumesEditor(a, setVolumes, level, detail) {
             numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
             numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que tu ne peux physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
-          level === 'advanced' && h('div', { class: 'grid grid-2 mt' },
+          h('div', { class: 'grid grid-2 mt' },
             numberField({
-              label: 'Décélération de la croissance', field: 'growthDecay', value: v.growthDecay ?? 0.96,
-              step: 0.01, hint: "Aucune croissance ne se maintient cinq ans au même rythme. À 0,96, le taux perd 4 % de sa valeur chaque mois, produisant une courbe en S. Mets 1 pour une exponentielle pure.",
-              onInput: (x) => setVolumes({ growthDecay: x }),
+              label: 'Décélération de la croissance', field: 'growthDecay',
+              // Le champ dit un freinage — 0 % veut dire « le taux que j'ai
+              // saisi tient ». Le modèle, lui, garde un coefficient : 4 % de
+              // freinage, c'est 0,96 par mois.
+              value: Math.round((1 - (v.growthDecay ?? 1)) * 100) / 100, percent: true,
+              hint: "0 % : le taux saisi s’applique tous les mois, cinq ans durant. Au-delà, il perd cette part de sa valeur chaque mois et la courbe s’aplatit en S.",
+              onInput: (x) => setVolumes({ growthDecay: Math.min(1, Math.max(0, 1 - (Number(x) || 0))) }),
             }),
+            // Freiner la croissance est une manière de dire qu'on perd des
+            // clients. Mieux vaut le dire à l'endroit prévu pour ça.
+            h('div', { class: 'note plain' },
+              h('div', { class: 'note-title' }, 'Ou bien c’est de l’attrition'),
+              h('p', { style: { margin: '0 0 8px' } },
+                "Si ta croissance ralentit, c’est souvent que des clients partent. L’attrition le dit mieux qu’un freinage : elle enlève des clients tous les mois, et le modèle recalcule ce qu’il faut en gagner rien que pour rester au même niveau."),
+              h('button', {
+                class: 'btn btn-quiet btn-sm',
+                onClick: () => goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' }, () => refresh()),
+              }, 'Poser mon attrition →'),
+            ),
           ),
           detail && volumeVisual(detail, voc),
         ),
@@ -588,4 +600,11 @@ function buildManual(a) {
   let level = Number(v.startUnits) || 0
   for (let m = Number(v.launchMonth) || 0; m < 60; m++) { out[m] = Math.round(level); level *= 1 + (Number(v.monthlyGrowth) || 0) }
   return out
+}
+
+/** Le chiffre du module : ce que les offres saisies rapportent la première année. */
+function revenueFigure(s, r) {
+  if (!r || !s.activities.length) return null
+  const y1 = (r.revenue?.total || []).slice(0, 12).reduce((a, v) => a + v, 0)
+  return y1 > 0 ? { value: euro(y1), note: 'de chiffre d’affaires la première année' } : null
 }

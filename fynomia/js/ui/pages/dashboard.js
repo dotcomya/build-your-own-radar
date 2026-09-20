@@ -7,14 +7,14 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleHead } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleShell } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
 import { storyline, gauge } from '../story.js'
-import { partBanner } from '../tutorial.js'
+import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
 import { refinePanel } from '../refine-panel.js'
 import { breakEvenBoard } from './model.js'
@@ -63,17 +63,27 @@ export function renderDashboard(navigate, refresh) {
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
 
-    // Le verdict tient dans la ligne de titre : posé en dessous, il laissait une
-    // bande vide sur toute la largeur pour une carte de 340 pixels.
-    moduleHead('06', 'Tableau de bord', "La synth\u00e8se de tout ce que tu as saisi. Rien ne s\u2019\u00e9crit ici.",
-      verdictCard(health, navigate)),
-
-    partBanner('tableau-de-bord'),
-
-    tabs(views, view, (k) => { renderDashboard.view = k; refresh() }),
+    moduleShell({
+      no: '06', title: 'Tableau de bord',
+      lede: "La synthèse de tout ce que tu as saisi. Rien ne s’écrit ici.",
+      guide: stepGuide(null, null, 'tableau-de-bord'),
+      views, view, onPick: (k) => { renderDashboard.view = k; refresh() },
+    }),
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
-      cockpit(j, r, navigate),
+      // Le verdict, sur toute la largeur et en tête.
+      //
+      // Il vivait dans un coin de la ligne de titre : une carte de trois cent
+      // quarante pixels, posée à droite d'un titre, qui laissait un vide énorme
+      // au milieu de l'écran et qu'on lisait sans savoir d'où elle sortait.
+      // C'est pourtant la seule phrase qui compte sur cette page — elle prend
+      // donc la première ligne, en entier.
+      //
+      // Le tableau de bord de bord qui la précédait — « présentable à une
+      // banque », sept pastilles d'état et un « prochain jalon » — disait en
+      // cinquante mots ce que la barre du haut dit en dix-neuf encoches et ce
+      // que « Affiner mon dossier » dit en lignes cliquables. Il est parti.
+      verdictCard(health, navigate),
       // C'est ici qu'on arrive en sortant du parcours : la première chose à
       // voir n'est pas un graphique, c'est ce qu'il reste à poser.
       refinePanel(navigate, { refresh }),

@@ -15,10 +15,10 @@ import { impactRail, resetLiveNumbers } from './ui/impact.js'
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
-import { installMotion, consumeViewChange } from './ui/motion.js'
+import { installMotion, consumeViewChange, travel } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
 import { checklist } from './ui/checklist.js'
-import { goToGap, settle } from './ui/spotlight.js'
+import { goToGap, settle, takeTravel } from './ui/spotlight.js'
 import { renderDashboard } from './ui/pages/dashboard.js'
 import { renderOffer } from './ui/pages/offer.js'
 import { renderTeam } from './ui/pages/team.js'
@@ -150,28 +150,33 @@ function render({ preserveScroll = false } = {}) {
   // remet l'écran à zéro.
   const refresh = (opts) => render({ preserveScroll: true, ...(opts || {}) })
   const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, refresh))
-  clear(root).appendChild(h('div', { class: 'shell' },
+  // Construire d'abord, remplacer ensuite : la transition de vue photographie
+  // l'écran actuel, et tout ce qui se calcule pendant qu'elle est ouverte
+  // allonge le figement.
+  const shell = h('div', { class: 'shell' },
     // Le bandeau de droite est parti : sur un écran d'ordinateur portable, il
     // volait deux cent cinquante pixels à la page pour répéter ce que la barre
     // de progression en haut et les pastilles du rail disent déjà. La page
     // respire, et c'est elle qu'on est venu lire.
-    rail(key), main, tabbar(key), impactRail(refresh), coach(navigate)))
-  document.title = `${page.label} — ${store.scenario.meta.name}`
-  if (preserveScroll) {
-    window.scrollTo(0, scrollY)
-    // Rendre la main au champ que l'utilisateur venait de quitter, s'il existe
-    // encore : le recalcul ne doit pas casser la navigation au clavier.
-    if (activeId) {
-      const next = document.querySelector(`[data-field-key="${CSS.escape(activeId)}"]`)
-      if (next) next.focus()
+    rail(key), main, tabbar(key), impactRail(refresh), coach(navigate))
+  // Le projecteur lit le DOM d'arrivée : il doit donc passer après le
+  // remplacement, y compris quand celui-ci est différé par la transition.
+  const swap = () => {
+    clear(root).appendChild(shell)
+    if (preserveScroll) {
+      window.scrollTo(0, scrollY)
+      if (activeId) {
+        const next = document.querySelector(`[data-field-key="${CSS.escape(activeId)}"]`)
+        if (next) next.focus()
+      }
+    } else {
+      window.scrollTo(0, 0)
     }
-  } else {
-    window.scrollTo(0, 0)
+    settle()
+    consumeViewChange(root)
   }
-  // Une intention posée par le panneau « à affiner » attend ici : la page vient
-  // d'être construite, le repère existe, on peut l'entourer.
-  settle()
-  consumeViewChange(root)
+  if (takeTravel()) travel(swap); else swap()
+  document.title = `${page.label} — ${store.scenario.meta.name}`
 }
 
 
@@ -265,6 +270,9 @@ function progressTop(c) {
         ...g.items.map((it) => h('button', {
           class: `topprog-step ${it.done ? 'is-done' : ''} ${it.later ? 'is-later' : ''}`,
           'aria-label': it.label,
+          // Le libellé se lit au survol sans infobulle système : une étiquette
+          // posée sous la barre, qui apparaît et disparaît doucement.
+          'data-label': it.done ? `${it.label} · posé` : it.later ? `${it.label} · plus tard` : it.label,
           title: it.done ? `${it.label} \u2014 pos\u00e9`
             : it.later ? `${it.label} \u2014 remis \u00e0 plus tard. ${it.why}`
               : `${it.label} \u2014 ${it.why}`,

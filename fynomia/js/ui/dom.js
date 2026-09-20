@@ -206,10 +206,30 @@ export function enableToggle(on, onChange) {
     class: `onoff ${on ? 'on' : ''}`,
     role: 'switch', 'aria-checked': String(!!on),
     title: on ? 'Mettre en pause — la ligne reste, elle cesse de compter' : 'Réactiver cette ligne',
-    onClick: (e) => { e.stopPropagation(); onChange(!on) },
+    onClick: (e) => {
+      e.stopPropagation()
+      // Basculer l'état recalcule le modèle et reconstruit la page : la ligne
+      // disparaissait et revenait dans la même image, ce qui se lit comme un
+      // défaut plutôt que comme une action.
+      //
+      // On bascule donc l'apparence tout de suite — l'interrupteur glisse, la
+      // ligne s'éteint — et on ne commet la valeur qu'une fois le mouvement
+      // terminé. Le rendu qui suit produit exactement ce qui est déjà à
+      // l'écran : il ne se voit pas.
+      const next = !on
+      btn.classList.toggle('on', next)
+      btn.setAttribute('aria-checked', String(next))
+      const row = btn.closest('.item, .card, .opex-line, li, tr')
+      if (row) row.classList.toggle('is-off', !next)
+      if (reducedMotion()) { onChange(next); return }
+      btn.classList.add('is-switching')
+      setTimeout(() => onChange(next), 340)
+    },
   }, h('i'))
   return btn
 }
+
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /**
  * Navigation horizontale.
@@ -363,6 +383,63 @@ export function moduleHead(no, title, lede, ...actions) {
       actions.filter(Boolean).length ? h('div', { class: 'module-actions' }, ...actions.filter(Boolean)) : null,
     ),
     lede ? h('p', { class: 'module-lede' }, lede) : null,
+  )
+}
+
+/**
+ * La tête d'un module — une seule, au lieu de quatre.
+ *
+ * Il y avait le titre, puis une question repliée, puis une barre qui répétait
+ * le sujet avec un chiffre, puis les onglets, puis le bouton d'ajout. Cinq
+ * bandeaux avant la première donnée, et deux cents pixels de hauteur pour dire
+ * trois choses. Sur un portable, la page commençait sous la ligne de flottaison.
+ *
+ * Tout tient désormais en trois lignes :
+ *
+ *   MODULE 04 / 09
+ *   Équipe
+ *   + Les postes salariés, leur brut annuel…        1 656 € la première année
+ *   ─────────────────────────────────────────────────────────────────────
+ *   Équipe ① · Avantages ① · Masse salariale          [+ Ajouter un poste]
+ *
+ * Le « + » du lede ouvre ce qui était le bandeau d'étape : la question du
+ * parcours et le mode d'emploi de la partie. On ne le lit qu'une fois ; il n'a
+ * pas à occuper l'écran les cinquante fois suivantes.
+ */
+export function moduleShell({ no, title, lede, figure, guide, views, view, onPick, actions = [] }) {
+  const acts = (actions || []).filter(Boolean)
+  const nav = views ? tabs(views, view, onPick) : null
+  return h('header', { class: 'module' },
+    h('div', { class: 'module-tag' },
+      h('span', { class: 'module-bar' }),
+      h('span', {}, `Module ${no} / 09`),
+    ),
+    h('h1', { class: 'module-title' }, title),
+
+    // Le lede et le chiffre du module sur la même ligne : la phrase dit de
+    // quoi on parle, le nombre dit où on en est.
+    h('div', { class: 'module-line' },
+      guide
+        ? h('details', { class: 'module-lede-fold' },
+            h('summary', { class: 'module-lede-head' },
+              h('span', { class: 'module-lede-sign', 'aria-hidden': 'true' }, '+'),
+              h('span', { class: 'module-lede' }, lede),
+            ),
+            h('div', { class: 'module-guide' }, guide),
+          )
+        : h('p', { class: 'module-lede is-plain' }, lede),
+      figure ? h('div', { class: 'module-figure' },
+        h('span', { class: 'module-figure-value num' }, figure.value),
+        figure.note ? h('span', { class: 'module-figure-note' }, figure.note) : null,
+      ) : null,
+    ),
+
+    // Une seule barre pour naviguer dans le module et pour y ajouter quelque
+    // chose : l'action appartient à l'onglet ouvert, pas à un bandeau séparé.
+    nav || acts.length ? h('div', { class: 'module-nav' },
+      nav || h('span', { class: 'spacer' }),
+      acts.length ? h('div', { class: 'module-acts' }, ...acts) : null,
+    ) : null,
   )
 }
 

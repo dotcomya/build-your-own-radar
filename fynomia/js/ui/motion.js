@@ -83,3 +83,34 @@ export function consumeViewChange(root = document) {
   if (reduced()) return
   for (const view of root.querySelectorAll('.view, .item-body')) view.classList.add('just-in')
 }
+
+/**
+ * Un changement d'écran qui se regarde.
+ *
+ * L'API des transitions de vue prend une photo de l'état actuel, laisse muter
+ * le DOM, puis fond l'ancienne image dans la nouvelle. C'est le seul moyen
+ * d'obtenir un fondu propre quand on remplace toute la page d'un coup — une
+ * transition CSS ordinaire n'a rien à quoi s'accrocher, puisque les anciens
+ * nœuds n'existent plus.
+ *
+ * Là où l'API manque, ou quand le mouvement est refusé, la mutation se fait
+ * sèchement : c'est le comportement d'avant, pas une dégradation.
+ */
+export function travel(mutate) {
+  if (reduced() || typeof document.startViewTransition !== 'function') { mutate(); return }
+  const root = document.documentElement
+  const done = () => root.classList.remove('is-travelling')
+  root.classList.add('is-travelling')
+  try {
+    const vt = document.startViewTransition(mutate)
+    // On relâche dès que le DOM est en place, pas à la fin de l'animation :
+    // l'écran est déjà celui d'arrivée, et rien ne justifie de garder la page
+    // en attente pendant le fondu. Un filet de sécurité couvre le cas où la
+    // promesse ne se résout jamais — une classe oubliée bloquerait l'outil.
+    vt.updateCallbackDone.catch(() => {}).finally(done)
+    setTimeout(done, 1200)
+  } catch {
+    done()
+    mutate()
+  }
+}

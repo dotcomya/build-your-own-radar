@@ -3,12 +3,12 @@
  * C'est la page qu'on montre à un banquier ou à un jury.
  */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField, moduleHead } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField, moduleShell } from '../dom.js'
 import { resetDeck } from './deck.js'
 import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'
 import { download } from '../../export/zip.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 import { pickYear } from './dashboard.js'
@@ -49,15 +49,19 @@ export function renderBusinessCase(navigate, refresh) {
   }
 
   return h('div', { class: 'content' },
-    moduleHead('08', 'Business case', "Le dossier pr\u00eat \u00e0 envoyer, relu par trois lecteurs.",
-      // La présentation se lance d'ici : c'est la page du dossier, et présenter
-      // est ce qu'on fait d'un dossier une fois qu'il tient.
-      h('button', {
-        class: 'btn btn-primary btn-pill',
-        onClick: () => { resetDeck(); navigate('#/presentation') },
-      }, 'Présenter en 15 slides \u2192')),
-
-    stepBanner('dossier', journey(store.scenario, store.result), navigate, 'business-case'),
+    moduleShell({
+      no: '08', title: 'Business case',
+      lede: "Le dossier prêt à envoyer, relu par trois lecteurs.",
+      guide: stepGuide('dossier', journey(store.scenario, store.result), 'business-case'),
+      actions: [
+        // La présentation se lance d'ici : c'est la page du dossier, et
+        // présenter est ce qu'on fait d'un dossier une fois qu'il tient.
+        h('button', {
+          class: 'btn btn-primary btn-pill',
+          onClick: () => { resetDeck(); navigate('#/presentation') },
+        }, 'Présenter en 15 slides →'),
+      ],
+    }),
 
     readiness(s, r, y),
 

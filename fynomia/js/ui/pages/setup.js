@@ -26,7 +26,7 @@ import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
-import { pfuTotal } from '../../engine/fiscal-fr-2026.js'
+import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
 
@@ -63,6 +63,13 @@ const answered = (key) => flow.touched.has(key)
 /* ──────────────────────────────── Les écrans ────────────────────────────── */
 
 const STEPS = [
+  {
+    key: 'bienvenue', short: 'Avant de commencer',
+    question: 'Rien de ce que tu vas écrire n’est définitif.',
+    render: welcomeScreen,
+    ready: () => true,
+    bare: true,
+  },
   {
     key: 'metier', short: 'Ton métier',
     question: 'Tu fais quoi ?',
@@ -513,6 +520,43 @@ function sectorPicker(ctx) {
   )
 }
 
+/* ─────────────────────────── Écran : l'accueil ──────────────────────────── */
+
+/**
+ * La page qu'on lit avant la première question.
+ *
+ * Un fondateur qui ouvre un prévisionnel a peur de se tromper. Il hésite sur
+ * son prix, il ne connaît pas ses charges, il ne sait pas s'il se paiera — et
+ * cette hésitation le fait reporter l'exercice de semaine en semaine.
+ *
+ * Cette page ne demande rien. Elle enlève l'enjeu : douze questions, des
+ * réponses approximatives acceptées, et tout modifiable ensuite. C'est la
+ * seule chose à comprendre pour oser commencer.
+ */
+function welcomeScreen(ctx) {
+  const promises = [
+    { k: '12', t: 'Douze questions', d: 'Dix minutes, pas une soirée. Tu peux t’arrêter à tout moment et reprendre où tu en étais.' },
+    { k: '≈', t: 'Des réponses approximatives', d: 'Un ordre de grandeur suffit. Un chiffre faux qu’on corrige vaut mieux qu’une case vide.' },
+    { k: '↺', t: 'Tout se modifie après', d: 'Chaque réponse devient un champ du logiciel. Rien n’est verrouillé, jamais.' },
+    { k: '⌂', t: 'Rien ne sort de chez toi', d: 'Ton plan reste dans ce navigateur. Aucun compte à créer pour commencer.' },
+  ]
+  return h('div', { class: 'welcome' },
+    h('p', { class: 'welcome-lede' },
+      "On va poser ton business plan ensemble. Tu n’as pas besoin de connaître tes chiffres : c’est justement ce qu’on cherche."),
+    h('div', { class: 'welcome-grid' },
+      ...promises.map((p) => h('div', { class: 'welcome-card' },
+        h('span', { class: 'welcome-key', 'aria-hidden': 'true' }, p.k),
+        h('div', { class: 'welcome-title' }, p.t),
+        h('p', { class: 'welcome-note' }, p.d),
+      )),
+    ),
+    h('button', {
+      class: 'btn btn-primary btn-lg welcome-go',
+      onClick: () => ctx.go(1),
+    }, 'Commencer →'),
+  )
+}
+
 /* ───────────────────────────── Écran : le stade ─────────────────────────── */
 
 /**
@@ -923,23 +967,50 @@ function salaryScreen(ctx) {
       ),
       h('p', { class: 'setup-note' },
         `Statut ${label()}. Pour te laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que tu peux te verser.`),
+      taxNote(tns ? gross : c.net),
     )
   }
 
+  // Un salaire se dit à l'année : c'est l'unité des offres d'emploi, des
+  // conventions collectives et de toutes les conversations. Le modèle, lui,
+  // raisonne au mois ; la conversion se fait ici, une fois.
   const f = field(ctx, {
-    type: 'number', placeholder: '2500',
-    suffix: type() === 'tns' ? '\u20AC par mois' : '\u20AC brut par mois',
+    type: 'number', placeholder: '30000',
+    suffix: type() === 'tns' ? '\u20AC par an' : '\u20AC brut par an',
     value: (sc) => {
       const m = sc.team?.find((x) => ME.test(x.role || ''))
-      return m && Number(m.monthlyGross) > 0 ? m.monthlyGross : ''
+      return m && Number(m.monthlyGross) > 0 ? Math.round(m.monthlyGross * 12) : ''
     },
     apply: (sc, v) => {
       let m = sc.team?.find((x) => ME.test(x.role || ''))
-      if (!m) { m = newTeamMember({ role: 'Moi', contractType: type(), status: 'cadre', monthlyGross: v }); sc.team.push(m) }
-      m.monthlyGross = v
+      const monthly = (Number(v) || 0) / 12
+      if (!m) { m = newTeamMember({ role: 'Moi', contractType: type(), status: 'cadre', monthlyGross: monthly }); sc.team.push(m) }
+      m.monthlyGross = monthly
       m.contractType = type()
     },
   })
+
+  /**
+   * Ne rien se verser est un choix, pas un oubli.
+   *
+   * Beaucoup de fondateurs démarrent sans salaire la première année, et le
+   * leur interdire produirait un plan faux. Mais un prévisionnel où personne
+   * ne se paie n'est pas prudent : il est incomplet, et un financeur le lit
+   * comme tel. On enregistre donc le choix, et la ligne « ta rémunération »
+   * reste ouverte dans ce qu'il reste à poser — elle reviendra.
+   */
+  const skip = h('button', {
+    class: 'setup-skip',
+    onClick: () => {
+      store.update((sc) => {
+        const m = sc.team?.find((x) => ME.test(x.role || ''))
+        if (m) m.monthlyGross = 0
+        sc.meta.noSalaryChosen = true
+      }, { label: 'Pas de rémunération' })
+      flow.touched.add(ctx.step.key)
+      ctx.go(1)
+    },
+  }, 'Je ne me verse rien la première année')
 
   // L'échelle se redessine à la frappe ; le champ, lui, reste en place.
   const tick = ctx.tick
@@ -952,7 +1023,48 @@ function salaryScreen(ctx) {
       h('span', { class: 'setup-status-value' }, label()),
       h('span', { class: 'setup-status-why' }, `découle de la forme ${store.scenario.meta.legalForm}`),
     ),
-    f, host,
+    f, host, skip,
+  )
+}
+
+/**
+ * L'impôt sur le revenu, pour un foyer d'une part et sans autre revenu.
+ *
+ * C'est l'hypothèse la plus simple et la plus fausse de toutes — un conjoint,
+ * un enfant, un revenu foncier la déplacent. Elle a pourtant sa place ici :
+ * entre « je me verse 30 000 € » et « il m'en reste tant », il y a un impôt
+ * que personne ne calcule au moment de choisir, et dont l'ordre de grandeur
+ * change la décision. On le dit, et on dit sous quelle hypothèse.
+ */
+function incomeTaxOn(net) {
+  const brackets = PARAMS.incomeTaxBrackets.value
+  const ab = PARAMS.salaryAllowance.value
+  const base = Math.max(0, net - Math.min(ab.max, Math.max(Math.min(net, ab.min), net * ab.rate)))
+  let tax = 0, floor = 0
+  for (const b of brackets) {
+    if (base <= floor) break
+    tax += (Math.min(base, b.upTo) - floor) * b.rate
+    floor = b.upTo
+  }
+  return Math.round(tax)
+}
+
+/** Ce que l'impôt prendra, et sous quelle hypothèse. */
+function taxNote(monthlyNet) {
+  const yearly = Math.round(monthlyNet * 12)
+  if (yearly <= 0) return null
+  const tax = incomeTaxOn(yearly)
+  return h('div', { class: 'setup-tax' },
+    h('div', { class: 'setup-tax-row' },
+      h('span', {}, 'Impôt sur le revenu estimé'),
+      h('span', { class: 'num' }, `− ${euro(tax)} par an`),
+    ),
+    h('div', { class: 'setup-tax-row is-final' },
+      h('span', {}, 'Ce qu’il te reste vraiment'),
+      h('span', { class: 'num' }, `${euro(yearly - tax)} par an`),
+    ),
+    h('p', { class: 'setup-tax-note' },
+      "Une part fiscale, aucun autre revenu, barème 2026. Un conjoint, un enfant ou un loyer perçu déplacent ce montant : c’est un ordre de grandeur, pas ta feuille d’impôt."),
   )
 }
 

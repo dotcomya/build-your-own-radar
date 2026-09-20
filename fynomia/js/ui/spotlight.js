@@ -14,8 +14,23 @@
 const EMPTY = { route: null, view: null, sec: null, openAll: false, anchor: null }
 const intent = { ...EMPTY }
 
+/**
+ * Y aller, et que ça se voie.
+ *
+ * Cliquer « Y aller » depuis le guide, la liste ou une encoche fait franchir
+ * une vraie distance : on quitte une page pour arriver sur un champ précis
+ * d'une autre. Sans transition, l'écran se remplace en une image et le geste
+ * ressemble à un défaut d'affichage. Le drapeau posé ici dit à la charpente
+ * d'animer ce passage.
+ */
+let travelling = false
+
+/** Le rendu suivant est-il un voyage ? La question se pose une seule fois. */
+export function takeTravel() { const t = travelling; travelling = false; return t }
+
 /** Poser l'intention, puis y aller. */
 export function goToGap(target, navigate) {
+  travelling = true
   Object.assign(intent, EMPTY, target)
   navigate(`#/${target.route}`)
 }

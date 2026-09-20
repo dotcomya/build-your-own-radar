@@ -1,10 +1,10 @@
 /** Charges externes et investissements. */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, pageBar, moduleHead } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, moduleShell } from '../dom.js'
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { tutorial, stepGuide } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
@@ -52,20 +52,19 @@ export function renderCosts(navigate, refresh) {
 
   return h('div', { class: 'content' },
 
-    moduleHead('03', 'Achats et co\u00fbts', "Les charges qui tombent chaque mois, et le mat\u00e9riel amorti sur sa dur\u00e9e d\u2019usage."),
-
-    stepBanner('charges', journey(store.scenario, store.result), navigate, 'achats'),
-
-    pageBar(
-      view === 'invest' ? 'Investissements' : 'Charges de fonctionnement',
-      view === 'invest'
-        ? "Le matériel durable n'est pas une charge de l'année : son coût s'étale sur sa durée d'usage."
-        : `${euro(monthlyTotal)} par mois, soit ${euro(monthlyTotal * 12)} par an`,
-      view === 'charges' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCustom }, '＋ Ajouter une charge') : null,
-      view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
-    ),
-
-    tabs(views, view, (k) => { renderCosts.view = k; refresh() }),
+    moduleShell({
+      no: '03', title: 'Achats et coûts',
+      lede: "Les charges qui tombent chaque mois, et le matériel amorti sur sa durée d’usage.",
+      figure: monthlyTotal > 0
+        ? { value: `${euro(monthlyTotal)}/mois`, note: `soit ${euro(monthlyTotal * 12)} par an` }
+        : null,
+      guide: stepGuide('charges', journey(store.scenario, store.result), 'achats'),
+      views, view, onPick: (k) => { renderCosts.view = k; refresh() },
+      actions: [
+        view === 'charges' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCustom }, '＋ Ajouter une charge') : null,
+        view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
+      ],
+    }),
 
     view === 'charges' ? h('div', { class: 'view' },
       s.opex.length === 0

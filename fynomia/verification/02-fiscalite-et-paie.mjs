@@ -21,17 +21,32 @@ ok('TVA payée ≈ TVA due sur 5 ans', near(paid, Math.max(0,due), Math.max(200,
    `payée ${Math.round(paid)} vs due ${Math.round(due)}`)
 
 // ── BFR : un délai client allongé doit creuser la trésorerie ──
-const a = JSON.parse(JSON.stringify(s)); a.activities[0].paymentLag = 3
+// Le point de départ est posé ici, pas hérité du schéma : depuis que tout est
+// payé à la commande par défaut, un délai sans acompte nul n'a aucun effet —
+// et un contrôle qui dépend d'un défaut ne vérifie plus le moteur, il vérifie
+// le défaut.
+const sansAcompte = JSON.parse(JSON.stringify(s))
+sansAcompte.activities[0].deposit = 0
+sansAcompte.activities[0].paymentLag = 0
+const r0 = compute(sansAcompte)
+
+const a = JSON.parse(JSON.stringify(sansAcompte)); a.activities[0].paymentLag = 3
 const rb = compute(a)
 ok('un délai client de 3 mois dégrade le point bas',
-   rb.kpis.cashLow.value < r.kpis.cashLow.value,
-   `${Math.round(r.kpis.cashLow.value)} → ${Math.round(rb.kpis.cashLow.value)}`)
+   rb.kpis.cashLow.value < r0.kpis.cashLow.value,
+   `${Math.round(r0.kpis.cashLow.value)} → ${Math.round(rb.kpis.cashLow.value)}`)
 
 // ── Acompte : il doit améliorer la trésorerie ──
 const c = JSON.parse(JSON.stringify(a)); c.activities[0].deposit = 0.5
 const rc = compute(c)
 ok('un acompte de 50 % améliore le point bas', rc.kpis.cashLow.value > rb.kpis.cashLow.value,
    `${Math.round(rb.kpis.cashLow.value)} → ${Math.round(rc.kpis.cashLow.value)}`)
+
+// Et tout payé à la commande neutralise le délai : c'est le nouveau défaut.
+const plein = JSON.parse(JSON.stringify(a)); plein.activities[0].deposit = 1
+ok('un acompte de 100 % rend le délai client sans effet',
+   Math.abs(compute(plein).kpis.cashLow.value - r0.kpis.cashLow.value) < 1,
+   `${Math.round(compute(plein).kpis.cashLow.value)} vs ${Math.round(r0.kpis.cashLow.value)}`)
 
 // ── Réduction générale : dégressive, nulle au-delà de 3 SMIC ──
 const smic = 11.88*151.67

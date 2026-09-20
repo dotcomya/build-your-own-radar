@@ -12,13 +12,14 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, fold, moduleHead } from '../dom.js'
+import { h, euro, num, textField, selectField, switchField, helpButton, refine, fold, moduleShell, confirmDialog } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
-import { partBanner } from '../tutorial.js'
+import { stepGuide } from '../tutorial.js'
 import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
+import { resetSetup } from './setup.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
 const CLIENTS = [
@@ -34,10 +35,11 @@ export function renderProject(navigate, refresh) {
     store.update((sc) => Object.assign(sc.meta, patch), { label, ...opts })
 
   return h('div', { class: 'content' },
-    moduleHead('01', 'Mon projet',
-      "Ce qui cadre le mod\u00e8le avant tout chiffrage : le m\u00e9tier, le client, le calendrier, la forme juridique."),
-
-    partBanner('projet'),
+    moduleShell({
+      no: '01', title: 'Mon projet',
+      lede: "Ce qui cadre le modèle avant tout chiffrage : le métier, le client, le calendrier, la forme juridique.",
+      guide: stepGuide(null, null, 'projet'),
+    }),
 
     h('section', { class: 'slab' },
       h('div', { class: 'slab-head' },
@@ -197,35 +199,65 @@ function sectorPicks(s, set, refresh) {
   const chosen = getActivity(s.meta.activityKey)
   const sector = getSector(s.meta.sectorKey)
 
-  const grid = h('div', {},
-    ...ACTIVITY_FAMILIES.map((fam) => h('div', { class: 'sector-family' },
-      h('div', { class: 'sector-family-tag' }, `${fam.glyph}  ${fam.label}`),
-      h('div', { class: 'picks' },
-        ...activitiesOf(fam.key).map((act) => h('button', {
-          class: `pick ${s.meta.activityKey === act.key ? 'active' : ''}`,
-          onClick: () => {
-            // Corriger son métier ici ne repart pas d'un plan neuf : le
-            // fondateur a déjà saisi des choses, et les perdre pour une
-            // requalification serait une punition. Seul le cadre bouge.
-            set({
-              sectorKey: act.sector,
-              activityKey: act.key,
-              activityLabel: act.label,
-              unit: act.unit || null,
-              vatExempt: !!SECTORS[act.sector].vat.exempt,
-            }, "Type d’activité")
-            refresh()
+  /**
+   * Changer de métier n'est pas anodin.
+   *
+   * Les charges suggérées, les repères de marge, le taux de TVA et le
+   * vocabulaire viennent tous du métier. Basculer de glacier à plombier laisse
+   * en place des cornets et une turbine à glace, et compare une marge de
+   * bâtiment à une fourchette de glacier. Rien ne casse — mais le dossier ment
+   * jusqu'à ce que le fondateur reprenne ses lignes une à une.
+   *
+   * On le dit donc avant, pas après, et on propose la sortie propre : repartir
+   * d'un plan neuf, qui arrive avec les bonnes hypothèses.
+   */
+  const pick = async (act) => {
+    const changing = s.meta.sectorKey && s.meta.sectorKey !== act.sector
+    if (changing) {
+      const go = await confirmDialog({
+        title: `Passer de ${sector?.label.toLowerCase() || 'ton métier'} à ${act.label.toLowerCase()} ?`,
+        message: "Tes charges, tes investissements et tes prix restent tels quels — ils viennent de ton métier actuel et ne correspondront plus. Les repères de marge et le taux de TVA, eux, changent tout de suite. Reprends tes lignes après le changement, ou repars d’un plan neuf : il arrivera avec les hypothèses du nouveau métier.",
+        confirmLabel: 'Changer quand même',
+      })
+      if (!go) return
+    }
+    set({
+      sectorKey: act.sector,
+      activityKey: act.key,
+      activityLabel: act.label,
+      unit: act.unit || null,
+      vatExempt: !!SECTORS[act.sector].vat.exempt,
+    }, "Type d’activité")
+    refresh()
+  }
+
+  // Cent cinquante métiers déroulés d'un coup font une page de trois mètres.
+  // Chaque famille se replie ; celle du métier retenu s'ouvre seule.
+  const grid = h('div', { class: 'famfolds' },
+    ...ACTIVITY_FAMILIES.map((fam) => {
+      const acts = activitiesOf(fam.key)
+      const here = acts.some((a) => a.key === s.meta.activityKey)
+      return fold(
+        `${fam.glyph}  ${fam.label}`,
+        here ? chosen?.label : `${acts.length} métiers`,
+        h('div', { class: 'picks' },
+          ...acts.map((act) => h('button', {
+            class: `pick ${s.meta.activityKey === act.key ? 'active' : ''}`,
+            onClick: () => pick(act),
           },
-        },
-          h('div', { class: 'pick-name' }, act.label),
-          // Le modèle qui tourne derrière n'est dit que s'il porte un autre
-          // nom : répéter « Pizzeria — Restaurant » n'apprend rien.
-          SECTORS[act.sector].label !== act.label
-            ? h('div', { class: 'pick-note' }, `Modèle ${SECTORS[act.sector].label.toLowerCase()}`)
-            : null,
-        )),
-      ),
-    )),
+            h('div', { class: 'pick-name' }, act.label),
+            SECTORS[act.sector].label !== act.label
+              ? h('div', { class: 'pick-note' }, `Modèle ${SECTORS[act.sector].label.toLowerCase()}`)
+              : null,
+          )),
+        ),
+        { id: `fam-${fam.key}`, open: here, tone: here ? 'is-here' : '' },
+      )
+    }),
+    h('button', {
+      class: 'btn btn-quiet btn-block mt',
+      onClick: () => { resetSetup(); navigateToNew() },
+    }, 'Plutôt repartir d’un plan neuf →'),
   )
 
   const title = chosen ? chosen.label : sector ? sector.label : 'À choisir'
@@ -236,6 +268,9 @@ function sectorPicks(s, set, refresh) {
     { id: 'projet-secteur', open: !s.meta.sectorKey },
   )
 }
+
+/** Repartir d'un plan neuf, depuis le module Projet. */
+function navigateToNew() { location.hash = '#/creer' }
 
 /* ─────────────────────────── La forme juridique ────────────────────────── */
 

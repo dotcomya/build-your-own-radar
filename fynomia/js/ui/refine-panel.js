@@ -18,6 +18,8 @@ import { stageOf } from './stages.js'
 export function refinePanel(navigate, { compact = false, refresh = () => {} } = {}) {
   const c = checklist(store.scenario)
   const pct = Math.round(c.ratio * 100)
+  const open = memory.open
+  const hidden = c.groups.reduce((a, g) => a + (g.items.length - visible(g, false).length), 0)
 
   return h('section', { class: `refinery ${compact ? 'is-compact' : ''}` },
     h('header', { class: 'refinery-head' },
@@ -59,7 +61,7 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
           h('span', { class: 'refinery-group-count num' }, `${g.done}/${g.total}`),
         ),
         h('div', { class: 'refinery-items' },
-          ...g.items.map((it) => h('button', {
+          ...visible(g, open).map((it) => h('button', {
             class: `refinery-item ${it.done ? 'is-done' : ''} ${it.later ? 'is-later' : ''}`,
             title: it.done ? 'Revoir' : it.later ? 'Remis à plus tard. Renseigner maintenant.' : 'Renseigner',
             onClick: () => goToGap(it.go, navigate),
@@ -75,8 +77,28 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
         ),
       )),
     ),
+
+    // Trente lignes d'un coup, c'est un mur. On montre ce qui compte
+    // maintenant — les premières de chaque palier — et le reste attend d'être
+    // demandé. Le compte dit exactement ce qu'on cache.
+    hidden > 0 ? h('button', {
+      class: 'refinery-more',
+      onClick: () => { memory.open = !memory.open; refresh() },
+    }, open ? 'Replier la liste' : `Voir les ${hidden} autres lignes`) : null,
   )
 }
+
+/** Ce qu'on montre d'un palier : tout s'il est déplié, l'essentiel sinon. */
+const SHOWN = 3
+function visible(group, open) {
+  if (open) return group.items
+  const todo = group.items.filter((i) => !i.done)
+  const done = group.items.filter((i) => i.done)
+  return [...done, ...todo.slice(0, SHOWN)]
+}
+
+/** Replié ou déplié — le choix survit aux redessins de la page. */
+const memory = { open: false }
 
 /**
  * Pourquoi cet ordre-là.

@@ -1,9 +1,9 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, pageBar, moduleHead } from '../dom.js'
+import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
@@ -155,20 +155,20 @@ export function renderFinancing(navigate, refresh) {
 
   return h('div', { class: 'content' },
 
-    moduleHead('05', 'Financement', "Ce que tu r\u00e9unis, et ce qu\u2019il manque au point bas de tr\u00e9sorerie."),
-
-    stepBanner('financement', journey(store.scenario, store.result), navigate, 'financement'),
-
-    pageBar(
-      'Financement',
-      r && r.kpis.fundingNeed > 0
-        ? `${euro(totalRaised, { compact: true })} réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
-        : `${euro(totalRaised, { compact: true })} réunis · trésorerie couverte`,
-      view === 'sources' && source && (f[source.key] || []).length
-        ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, `＋ Une ligne de plus`) : null,
-    ),
-
-    tabs(views, view, (k) => { renderFinancing.view = k; refresh() }),
+    moduleShell({
+      no: '05', title: 'Financement',
+      lede: "Ce que tu réunis, et ce qu’il manque au point bas de trésorerie.",
+      figure: {
+        value: euro(totalRaised, { compact: true }),
+        note: r && r.kpis.fundingNeed > 0
+          ? `réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
+          : 'réunis · trésorerie couverte',
+      },
+      guide: stepGuide('financement', journey(store.scenario, store.result), 'financement'),
+      views, view, onPick: (k) => { renderFinancing.view = k; refresh() },
+      actions: [view === 'sources' && source && (f[source.key] || []).length
+        ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],
+    }),
 
     view === 'sources' ? h('div', { class: 'view' },
       h('div', { class: 'sources', 'data-gap': 'sources' },

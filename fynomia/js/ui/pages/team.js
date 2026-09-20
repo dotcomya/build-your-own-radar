@@ -7,12 +7,12 @@
  * qu'un salaire se négocie et se compare.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleHead } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial, stepBanner } from '../tutorial.js'
-import { enableToggle, svg, tabs, fold, pageBar, unitAmount } from '../dom.js'
+import { tutorial, stepGuide } from '../tutorial.js'
+import { enableToggle, svg, tabs, fold, unitAmount } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
@@ -55,19 +55,16 @@ export function renderTeam(navigate, refresh) {
 
   return h('div', { class: 'content' },
 
-    moduleHead('04', '\u00c9quipe', "Les postes salari\u00e9s, leur brut annuel et ce qu\u2019ils co\u00fbtent vraiment."),
-
-    stepBanner('equipe', journey(store.scenario, store.result), navigate),
-
-    pageBar(
-      s.team.length > 1 ? `${s.team.length} postes` : 'Équipe',
-      r && s.team.length
-        ? `${euro(payrollY)} la première année, avantages compris`
-        : 'Toi compris, si tu te rémunères',
-      view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null,
-    ),
-
-    tabs(views, view, (k) => { renderTeam.view = k; refresh() }),
+    moduleShell({
+      no: '04', title: 'Équipe',
+      lede: "Les postes salariés, leur brut annuel et ce qu’ils coûtent vraiment.",
+      figure: r && s.team.length
+        ? { value: euro(payrollY), note: 'la première année, avantages compris' }
+        : null,
+      guide: stepGuide('equipe', journey(store.scenario, store.result)),
+      views, view, onPick: (k) => { renderTeam.view = k; refresh() },
+      actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
+    }),
 
     view === 'postes' ? h('div', { class: 'view', 'data-gap': 'equipe' },
       s.team.length === 0

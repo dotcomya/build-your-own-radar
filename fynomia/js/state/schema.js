@@ -80,11 +80,18 @@ export function newActivity(overrides = {}) {
   return {
     id: uid('act'), name: 'Nouvelle offre',
     unitPrice: 500, recurringPrice: 0, contractMonths: 12,
-    deliveryLag: 0, paymentLag: 1, deposit: 0.3, milestone: 0, churnMonthly: 0.02,
+    // Payé en une fois à la commande, et rien d'autre : c'est le cas le plus
+    // fréquent et le seul qu'on puisse poser sans rien savoir du métier. Qui
+    // facture à trente jours le dira lui-même — on ne lui invente pas un
+    // décalage de trésorerie dont il n'a jamais parlé.
+    deliveryLag: 0, paymentLag: 0, deposit: 1, milestone: 0, churnMonthly: 0.02,
     unitCost: 100, recurringCost: 0, costPaymentLag: 1, costDeposit: 0,
     vatRateSales: 0.2, vatRatePurchase: 0.2,
     priceByYear: [], recurringPriceByYear: [], unitCostByYear: [], recurringCostByYear: [],
-    volumes: { mode: 'growth', launchMonth: 0, startUnits: 3, monthlyGrowth: 0.08, growthDecay: 0.96, cap: '', seasonality: null, manual: [] },
+    // Décélération à zéro : la croissance saisie est celle qui s'applique.
+    // Amortir la courbe à la place du fondateur, c'est corriger un chiffre
+    // qu'il n'a pas encore discuté.
+    volumes: { mode: 'growth', launchMonth: 0, startUnits: 3, monthlyGrowth: 0.08, growthDecay: 1, cap: '', seasonality: null, manual: [] },
     ...overrides,
   }
 }
