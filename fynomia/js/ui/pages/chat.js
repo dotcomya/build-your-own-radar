@@ -13,7 +13,8 @@
  */
 
 import { h, euro, num } from '../dom.js'
-import { SECTORS, sectorsByFamily, vocabulary } from '../../state/sectors.js'
+import { SECTORS, vocabulary } from '../../state/sectors.js'
+import { FAMILIES, activitiesOf, getActivity, familyOf } from '../../state/activities.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
@@ -22,15 +23,33 @@ const n = (v) => Number(String(v).replace(/\s/g, '').replace(',', '.')) || 0
 
 /* ─────────────────────────────── Les tours ──────────────────────────────── */
 
+/* La famille répondue au tour précédent : elle décide des métiers proposés au
+   suivant. Cent trente-six boutons dans une conversation ne se lisent pas. */
+const asked = { family: null }
+
 const TURNS = [
   {
+    key: 'famille',
+    ask: () => 'Bonjour. On va poser ton business plan en quelques échanges — tu pourras tout reprendre ensuite. Tu es dans quel domaine ?',
+    choices: () => FAMILIES.map((f) => ({ label: f.label, value: f.key })),
+    apply: (value) => { asked.family = value },
+    echo: (value) => `${familyOf(value)?.label}. Et plus précisément ?`,
+  },
+  {
     key: 'metier',
-    ask: () => 'Bonjour. On va poser ton business plan en quelques échanges — tu pourras tout reprendre ensuite. Tu fais quoi ?',
-    choices: () => sectorsByFamily().flatMap((f) => f.sectors).map((sec) => ({ label: sec.label, value: sec.key })),
+    ask: () => 'Ton métier, exactement ?',
+    choices: () => activitiesOf(asked.family || FAMILIES[0].key).map((a) => ({ label: a.label, value: a.key })),
     apply: (value) => {
-      store.create({ template: value, level: 'easy', name: SECTORS[value].label, sample: false })
+      const act = getActivity(value)
+      if (!act) return
+      store.create({ template: act.sector, level: 'easy', name: act.label, sample: false })
+      store.update((d) => {
+        d.meta.activityKey = act.key
+        d.meta.activityLabel = act.label
+        d.meta.unit = act.unit || null
+      })
     },
-    echo: (value) => `${SECTORS[value].label}. Noté — la TVA et les repères de marge de ce métier sont appliqués.`,
+    echo: (value) => `${getActivity(value)?.label}. Noté — la TVA et les repères de marge de ce métier sont appliqués.`,
   },
   {
     key: 'nom',
@@ -122,7 +141,7 @@ const TURNS = [
 
 const talk = { at: 0, said: [] }
 
-export function resetChat() { talk.at = 0; talk.said = [] }
+export function resetChat() { asked.family = null; talk.at = 0; talk.said = [] }
 
 export function renderChat(navigate, refresh) {
   const s = store.scenario

@@ -344,6 +344,99 @@ export const TRADE = {
     watch: "Tes charges fixes tournent même à vide : le sauna chauffe pour un client comme pour vingt. Ton seuil de rentabilité est haut, ton abonnement est la réponse.",
   },
 
+  hebergement: {
+    offers: [
+      { label: 'Petit déjeuner', price: 12, cost: 3.5, note: "Trois prestations para-hôtelières font basculer ton meublé dans le champ de la TVA — et ouvrent la récupération sur tes achats." },
+      { label: 'Ménage de fin de séjour', price: 45, cost: 25 },
+      { label: 'Nuitée haute saison', price: 145, cost: 16, note: "Le même lit, vendu deux fois plus cher deux mois par an." },
+      { label: 'Location de vélos ou d’équipement', price: 18, cost: 2 },
+    ],
+    opex: [
+      { label: 'Commission des plateformes', pct: 0.16, why: "Airbnb, Booking : 15 à 20 % du prix payé par le voyageur. Et la TVA se calcule sur ce prix-là, pas sur ce qui te reste." },
+      { label: 'Ménage et blanchisserie', perUnit: 22, why: "Par nuitée vendue, pas par mois : un mois vide ne coûte pas de linge." },
+      { label: 'Énergie et eau', monthly: 320 },
+      { label: 'Taxe de séjour reversée', pct: 0.03, why: "Collectée sur le voyageur et reversée à la commune : elle transite, elle ne t’appartient pas." },
+      { label: 'Assurance et charges de copropriété', monthly: 480 },
+      { label: 'Consommables d’accueil', perUnit: 3.5 },
+    ],
+    capex: [
+      { label: 'Ameublement et décoration', amount: 28000, years: 7 },
+      { label: 'Literie et linge de maison', amount: 9000, years: 5 },
+      { label: 'Serrure connectée et accueil autonome', amount: 2500, years: 5 },
+      { label: 'Travaux de mise aux normes', amount: 22000, years: 9 },
+    ],
+    watch: "Six chambres ne font pas six fois 365 nuitées. À 55 % de remplissage — déjà correct — tu vends la moitié de ce qu’un calcul naïf annonce. Saisis tes volumes mois par mois.",
+  },
+
+  boulangerie: {
+    offers: [
+      { label: 'Sandwichs et snacking du midi', price: 6.5, cost: 1.9, note: "La marge la plus élevée du magasin, sur le créneau où tout le monde passe." },
+      { label: 'Pâtisserie', price: 9.5, cost: 3.1 },
+      { label: 'Boissons et café', price: 2.2, cost: 0.4 },
+      { label: 'Commandes de fête et pièces montées', price: 85, cost: 28 },
+    ],
+    opex: [
+      { label: 'Farine, beurre et matières premières', pct: 0.28, why: "Indexé sur les ventes. Le cours du beurre et du blé fait bouger ta marge sans prévenir." },
+      { label: 'Énergie — four et froid', monthly: 1250, why: "Le four tourne la nuit. C’est le premier poste fixe du métier, très loin devant le loyer." },
+      { label: 'Invendus et pertes', pct: 0.05, why: "Trois à huit pour cent de la production part chaque soir. Ce n’est pas exceptionnel, c’est structurel." },
+      { label: 'Emballages et sacs', perUnit: 0.09 },
+      { label: 'Entretien du fournil et maintenance', monthly: 220 },
+      { label: 'Analyses et contrôles sanitaires', monthly: 80 },
+    ],
+    capex: [
+      { label: 'Four à pain', amount: 45000, years: 9, note: "L’investissement qui commande tout le reste. Son débit fixe ton chiffre d’affaires maximal." },
+      { label: 'Pétrin et chambre de pousse', amount: 17000, years: 9 },
+      { label: 'Vitrines réfrigérées et agencement', amount: 38000, years: 9 },
+      { label: 'Laboratoire — inox et plonge', amount: 14000, years: 9 },
+      { label: 'Droit au bail', amount: 80000, years: 0, note: "Ne s’amortit pas : il reste au bilan tant que tu exploites." },
+    ],
+    watch: "Ta production commence à quatre heures du matin : la masse salariale porte des majorations de nuit qu’un calcul au taux horaire de base ignore complètement.",
+  },
+
+  batiment: {
+    offers: [
+      { label: 'Dépannage et petites interventions', price: 180, cost: 45, note: "Payé tout de suite, sans devis : ce qui fait vivre la trésorerie entre deux chantiers." },
+      { label: 'Contrat d’entretien annuel', price: 220, recurring: true, cost: 60 },
+      { label: 'Chantier de rénovation', price: 12000, cost: 5600 },
+    ],
+    opex: [
+      { label: 'Assurance décennale et RC pro', monthly: 320, why: "Obligatoire avant le premier chantier, due même sans chiffre d’affaires. C’est la ligne que les prévisionnels d’artisan oublient le plus." },
+      { label: 'Véhicule — carburant, entretien, assurance', monthly: 480 },
+      { label: 'Matériaux et fournitures', pct: 0.42, why: "Indexé sur les chantiers : c’est ton vrai coût de production, pas une charge fixe." },
+      { label: 'Outillage et consommables', monthly: 260 },
+      { label: 'Location de matériel et bennes', monthly: 340 },
+      { label: 'Logiciel de devis et facturation', monthly: 60 },
+    ],
+    capex: [
+      { label: 'Véhicule utilitaire', amount: 24000, years: 5 },
+      { label: 'Outillage professionnel', amount: 12000, years: 5 },
+      { label: 'Échafaudage et matériel de levage', amount: 8000, years: 7 },
+      { label: 'Dépôt et rangement', amount: 6000, years: 9 },
+    ],
+    watch: "Tu achètes les matériaux au début et tu encaisses le solde à la réception. Entre les deux, c’est ta trésorerie qui finance le chantier : exige un acompte de 30 %.",
+  },
+
+  services: {
+    offers: [
+      { label: 'Forfait mensuel d’heures', price: 320, recurring: true, cost: 0, note: "Le revenu régulier qui remplit le planning et lisse la trésorerie." },
+      { label: 'Intervention ponctuelle', price: 32, cost: 0 },
+      { label: 'Majoration dimanche et jours fériés', price: 42, cost: 0 },
+    ],
+    opex: [
+      { label: 'Déplacements des intervenants', perUnit: 2.4, why: "Par heure facturée. Entre deux interventions, l’intervenant est payé et rien n’est facturé." },
+      { label: 'Assurance responsabilité civile professionnelle', monthly: 90 },
+      { label: 'Logiciel de planning et télégestion', monthly: 120, why: "Obligatoire de fait pour justifier les heures auprès des financeurs publics." },
+      { label: 'Produits et petit matériel', perUnit: 0.8 },
+      { label: 'Recrutement et formation', monthly: 280, why: "Le turnover du secteur dépasse souvent 30 % par an : c’est une charge permanente, pas un coût de lancement." },
+      { label: 'Bureau et administratif', monthly: 400 },
+    ],
+    capex: [
+      { label: 'Véhicules de service', amount: 18000, years: 5 },
+      { label: 'Matériel d’intervention', amount: 6000, years: 5 },
+    ],
+    watch: "Ton client paie 28 € de l’heure et en récupère la moitié en crédit d’impôt. C’est ton argument commercial, pas ton revenu : toi, tu encaisses bien 28 €.",
+  },
+
   coach: {
     offers: [
       { label: 'Abonnement mensuel', price: 39, recurring: true, cost: 3 },

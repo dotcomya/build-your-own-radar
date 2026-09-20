@@ -271,6 +271,42 @@ export const SECTORS = {
     },
   },
 
+  boulangerie: {
+    family: 'retail', label: 'Boulangerie et fabrication alimentaire', glyph: '▤',
+    tagline: "Tu fabriques et tu vends le même jour : la perte, c'est de la marge partie à la poubelle.",
+    unit: { one: 'vente', many: 'ventes', verb: 'encaissées', client: 'client' },
+    vat: { sales: 0.055, label: 'TVA 5,5 %', note: "Le pain, la pâtisserie et les produits vendus à emporter pour une consommation différée relèvent du taux de 5,5 %. Ce qui est consommé sur place passe à 10 %, les confiseries et le chocolat à 20 %. Un point de vente mixte a donc trois taux à tenir." },
+    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "CAP exigé pour la fabrication, formation hygiène obligatoire, registre HACCP et déclaration d'activité auprès de la direction départementale." },
+    benchmarks: { grossMargin: [0.65, 0.75], payrollRatio: [0.3, 0.4], rentRatio: [0.05, 0.1], ticket: [4, 12] },
+    metrics: ['revenue', 'grossMargin', 'payrollRatio', 'breakEven'],
+    traps: [
+      { title: 'Les invendus', body: "Trois à huit pour cent de la production part chaque soir. Ce n'est pas une charge exceptionnelle, c'est une ligne du modèle : indexe-la sur les ventes." },
+      { title: "L'énergie du fournil", body: "Un four à pain tourne la nuit. La facture d'énergie d'une boulangerie n'a rien à voir avec celle d'un commerce de même surface." },
+      { title: 'Les horaires', body: "La production commence à quatre heures. La masse salariale porte des majorations de nuit qu'un calcul au taux horaire de base ignore." },
+    ],
+    build(s) {
+      s.activities = [
+        newActivity({ name: 'Pain et viennoiserie', unitPrice: 4.2, unitCost: 1.15, paymentLag: 0, deposit: 1, vatRateSales: 0.055, costPaymentLag: 1,
+          volumes: { mode: 'growth', launchMonth: 0, startUnits: 3800, monthlyGrowth: 0.03, growthDecay: 0.93, cap: 6200, manual: [] } }),
+        newActivity({ name: 'Pâtisserie et snacking', unitPrice: 9.5, unitCost: 3.1, paymentLag: 0, deposit: 1, vatRateSales: 0.055,
+          volumes: { mode: 'growth', launchMonth: 0, startUnits: 700, monthlyGrowth: 0.035, growthDecay: 0.94, cap: 1400, manual: [] } }),
+      ]
+      s.team = [
+        newTeamMember({ role: 'Gérant boulanger', contractType: 'tns', monthlyGross: 2100 }),
+        newTeamMember({ role: 'Boulanger', contractType: 'cdi', monthlyGross: 2100, startMonth: 1 }),
+        newTeamMember({ role: 'Vendeur', contractType: 'cdi', monthlyGross: 1900, count: 2, startMonth: 1 }),
+      ]
+      s.opex = opexSet([['Loyer et charges', 1900], ['Énergie — four et froid', 1250], ['Comptable', 240], ['Assurances', 160], ['Entretien et maintenance', 220]])
+      s.capex = [
+        newCapex({ label: 'Four et pétrin', amount: 62000, amortYears: 9 }),
+        newCapex({ label: 'Agencement et vitrines', amount: 38000, amortYears: 9 }),
+      ]
+      s.assumptions.stockDays = 8
+      s.financing.equityFounders = [{ month: 0, amount: 40000 }]
+      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 120000, month: 0, rate: 0.042, months: 96, graceMonths: 3 }]
+    },
+  },
+
   ecommerce: {
     family: 'retail', label: 'E-commerce', glyph: '⬒',
     tagline: "Tu n'achètes pas des ventes, tu achètes des clients.",
@@ -408,6 +444,56 @@ export const SECTORS = {
     },
   },
 
+  hebergement: {
+    family: 'personal', label: 'Hébergement touristique', glyph: '⌂',
+    tagline: "Ton chiffre d'affaires tient en deux nombres : le prix de la nuit et le taux de remplissage.",
+    unit: { one: 'nuitée', many: 'nuitées', verb: 'vendues', client: 'voyageur' },
+    vat: { sales: 0.1, label: 'TVA 10 %', note: "L'hébergement en hôtel, camping ou meublé de tourisme classé relève du taux de 10 %. La location nue de meublé non classé est exonérée ; dès que trois prestations para-hôtelières sont fournies — petit déjeuner, ménage, linge, accueil — la TVA s'applique." },
+    legal: { forms: ['EI', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Déclaration en mairie, numéro d'enregistrement et taxe de séjour à collecter. En zone tendue, le changement d'usage peut être exigé et limiter la location à cent vingt jours par an." },
+    benchmarks: { grossMargin: [0.72, 0.85], occupancy: [0.45, 0.7], payrollRatio: [0.2, 0.35], ticket: [70, 180] },
+    metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
+    traps: [
+      { title: 'Le taux de remplissage, pas le nombre de lits', body: "Six chambres ne font pas six fois trois cent soixante-cinq nuitées. À 55 % de remplissage annuel — déjà correct — tu vends la moitié de ce qu'un calcul naïf annonce." },
+      { title: 'La commission des plateformes', body: "Quinze à vingt pour cent du prix de la nuit part en commission, et la TVA se calcule sur le prix payé par le voyageur, pas sur ce qui te reste." },
+      { title: 'La saison', body: "Deux mois font souvent la moitié de l'année. Les charges fixes, elles, courent sur douze." },
+    ],
+    build(s) {
+      s.activities = [newActivity({ name: 'Nuitées', unitPrice: 95, unitCost: 14, paymentLag: 0, deposit: 1, vatRateSales: 0.1,
+        volumes: { mode: 'manual', launchMonth: 0, startUnits: 0, manual: seasonal([40, 45, 70, 95, 130, 165, 200, 195, 140, 85, 50, 70]) } })]
+      s.team = [newTeamMember({ role: 'Gérant', contractType: 'tns', monthlyGross: 1900 })]
+      s.opex = opexSet([['Charges de copropriété et taxe foncière', 480], ['Énergie et eau', 320], ['Ménage et blanchisserie', 560], ['Assurances', 140], ['Comptable', 190]])
+      s.capex = [newCapex({ label: 'Ameublement et décoration', amount: 28000, amortYears: 7 })]
+      s.financing.equityFounders = [{ month: 0, amount: 30000 }]
+    },
+  },
+
+  services: {
+    family: 'personal', label: 'Service à la personne', glyph: '◌',
+    tagline: "Tu vends des heures : le prix et le nombre d'intervenants sont tes deux seuls leviers.",
+    unit: { one: 'heure', many: 'heures', verb: 'facturées', client: 'client' },
+    vat: { sales: 0, label: 'Exonéré de TVA', note: "Les services à la personne rendus par un organisme déclaré sont exonérés de TVA. En contrepartie, la TVA sur les achats n'est pas récupérable : raisonne en montants TTC. La déclaration ouvre au client le crédit d'impôt de 50 %, qui divise son prix perçu par deux." },
+    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "La déclaration en préfecture ouvre le crédit d'impôt au client ; l'agrément, obligatoire pour la garde d'enfants de moins de trois ans et l'assistance aux personnes dépendantes, va plus loin et se renouvelle." },
+    benchmarks: { grossMargin: [0.28, 0.45], payrollRatio: [0.55, 0.7], ticket: [25, 40] },
+    metrics: ['revenue', 'payrollRatio', 'breakEven', 'cashLow'],
+    traps: [
+      { title: 'La masse salariale est presque tout', body: "Soixante à soixante-dix pour cent du chiffre part en salaires chargés. Deux euros d'écart sur le taux horaire facturé changent tout le résultat." },
+      { title: 'Le temps de trajet', body: "Entre deux interventions, l'intervenant est payé mais rien n'est facturé. Un planning mal rempli détruit la marge sans qu'aucune ligne comptable ne le dise." },
+      { title: 'Le crédit d’impôt', body: "Ton client paie 25 € de l'heure et en récupère la moitié. C'est ton argument commercial, pas ton revenu : toi, tu encaisses bien 25 €." },
+    ],
+    build(s) {
+      s.activities = [newActivity({ name: 'Heures d’intervention', unitPrice: 28, unitCost: 0, paymentLag: 0, deposit: 1, vatRateSales: 0,
+        volumes: { mode: 'growth', launchMonth: 0, startUnits: 220, monthlyGrowth: 0.06, growthDecay: 0.94, cap: 900, manual: [] } })]
+      s.team = [
+        newTeamMember({ role: 'Gérant', contractType: 'tns', monthlyGross: 1900 }),
+        newTeamMember({ role: 'Intervenant', contractType: 'cdi', monthlyGross: 1870, count: 2, startMonth: 1 }),
+      ]
+      s.opex = opexSet([['Assurance responsabilité civile professionnelle', 90], ['Déplacements des intervenants', 340], ['Comptable', 190], ['Logiciel de planning', 120], ['Bureau', 400]])
+      s.capex = [newCapex({ label: 'Matériel et petit équipement', amount: 6000, amortYears: 5 })]
+      s.meta.vatExempt = true
+      s.financing.equityFounders = [{ month: 0, amount: 12000 }]
+    },
+  },
+
   coach: {
     family: 'personal', label: 'Coach et salle de sport', glyph: '◎',
     tagline: "Vendre un abonnement est facile ; le faire renouveler l'est moins.",
@@ -435,6 +521,36 @@ export const SECTORS = {
   },
 
   // ───────────────────── Formation et intérêt général ────────────────────
+  batiment: {
+    family: 'services', label: 'Artisan du bâtiment', glyph: '◧',
+    tagline: "Ta marge se joue sur le devis, et ta trésorerie sur la date de paiement.",
+    unit: { one: 'chantier', many: 'chantiers', verb: 'réalisés', client: 'client' },
+    vat: { sales: 0.1, label: 'TVA 10 %', note: "Les travaux d'amélioration, de transformation et d'entretien d'un logement achevé depuis plus de deux ans relèvent du taux de 10 %, et de 5,5 % pour la rénovation énergétique. Le neuf et les locaux professionnels restent à 20 %. L'attestation du client conditionne le taux réduit." },
+    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Qualification professionnelle exigée, inscription à la chambre de métiers, et surtout assurance décennale obligatoire avant le premier chantier : sans elle, la responsabilité est personnelle et illimitée." },
+    benchmarks: { grossMargin: [0.35, 0.5], payrollRatio: [0.3, 0.42], dailyRate: [350, 550] },
+    metrics: ['revenue', 'grossMargin', 'payrollCost', 'cashLow'],
+    traps: [
+      { title: "L'assurance décennale", body: "Deux à cinq mille euros par an dès la première année, due avant le premier chantier et quel que soit le chiffre d'affaires. C'est la charge que les prévisionnels d'artisan oublient le plus souvent." },
+      { title: 'Le décalage de paiement', body: "Tu achètes les matériaux au début, tu encaisses le solde à la réception. Entre les deux, c'est ta trésorerie qui finance le chantier : exige un acompte." },
+      { title: 'Les heures non facturées', body: "Devis, déplacements, approvisionnement, SAV : compte un quart du temps qui ne se facture à personne." },
+    ],
+    build(s) {
+      s.activities = [newActivity({ name: 'Chantiers', unitPrice: 4200, unitCost: 1900, paymentLag: 1, deposit: 0.3, vatRateSales: 0.1, costPaymentLag: 0,
+        volumes: { mode: 'growth', launchMonth: 0, startUnits: 3, monthlyGrowth: 0.05, growthDecay: 0.93, cap: 8, manual: [] } })]
+      s.team = [
+        newTeamMember({ role: 'Gérant artisan', contractType: 'tns', monthlyGross: 2400 }),
+        newTeamMember({ role: 'Compagnon', contractType: 'cdi', monthlyGross: 2200, startMonth: 4 }),
+      ]
+      s.opex = opexSet([['Assurance décennale et RC pro', 320], ['Véhicule — carburant et entretien', 480], ['Comptable', 200], ['Outillage et consommables', 260], ['Téléphone et logiciel de devis', 110]])
+      s.capex = [
+        newCapex({ label: 'Véhicule utilitaire', amount: 24000, amortYears: 5 }),
+        newCapex({ label: 'Outillage professionnel', amount: 12000, amortYears: 5 }),
+      ]
+      s.financing.equityFounders = [{ month: 0, amount: 15000 }]
+      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 30000, month: 0, rate: 0.043, months: 60, graceMonths: 0 }]
+    },
+  },
+
   formation: {
     family: 'impact', label: 'Organisme de formation', glyph: '◫',
     tagline: "Sans certification, tes clients ne peuvent pas te financer.",
@@ -502,8 +618,20 @@ export function sectorsByFamily() {
   })).filter((f) => f.sectors.length)
 }
 
-/** Vocabulaire du secteur courant, avec repli générique. */
+/**
+ * Le vocabulaire courant, avec repli générique.
+ *
+ * L'activité passe avant le modèle : une auto-école tourne sur le moteur d'un
+ * organisme de formation, mais elle vend des heures de conduite, pas des
+ * « sessions ». Le mot choisi est rangé dans le scénario, pas déduit à chaque
+ * lecture — il survit ainsi à un export et à une reprise sur un autre appareil.
+ */
 export function vocabulary(scenario) {
   const sector = getSector(scenario?.meta?.sectorKey)
-  return sector?.unit || { one: 'unité', many: 'unités', verb: 'vendues', client: 'client' }
+  return scenario?.meta?.unit || sector?.unit || { one: 'unité', many: 'unités', verb: 'vendues', client: 'client' }
+}
+
+/** Le nom du métier tel que le fondateur l'a dit, sinon celui du modèle. */
+export function tradeName(scenario) {
+  return scenario?.meta?.activityLabel || getSector(scenario?.meta?.sectorKey)?.label || ''
 }

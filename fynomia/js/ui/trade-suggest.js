@@ -22,7 +22,7 @@
 import { h, euro, toast } from './dom.js'
 import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
-import { getSector, vocabulary } from '../state/sectors.js'
+import { getSector, vocabulary, tradeName } from '../state/sectors.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
 
@@ -58,7 +58,9 @@ export function tradeSuggest(kind, navigate, refresh) {
       h('span', { class: 'tradetip-glyph', 'aria-hidden': 'true' }, sector.glyph),
       h('div', { class: 'tradetip-id' },
         h('div', { class: 'tradetip-tag' }, HEAD[kind].tag),
-        h('div', { class: 'tradetip-sub' }, `${HEAD[kind].sub} ${sector.label.toLowerCase()}.`),
+        // « Les charges d'une pizzeria », pas « d'un restaurant » : le modèle
+        // est partagé, le mot ne l'est pas.
+        h('div', { class: 'tradetip-sub' }, `${tradeName(s)} — ${HEAD[kind].sub}`),
       ),
     ),
 
@@ -83,10 +85,13 @@ export function tradeSuggest(kind, navigate, refresh) {
   )
 }
 
+/* Le nom du métier passe devant, et la phrase suit sans article : « une »
+   pizzeria mais « un » food truck, et personne n'a envie d'un dictionnaire de
+   genres pour afficher un sous-titre. */
 const HEAD = {
-  opex: { tag: 'Dans ton métier, on oublie souvent', sub: 'Les charges d’un' },
-  capex: { tag: 'Le matériel du métier', sub: 'Ce qu’on achète pour ouvrir un' },
-  offers: { tag: 'Ce que tu pourrais vendre aussi', sub: 'Les revenus d’un' },
+  opex: { tag: 'Dans ton métier, on oublie souvent', sub: 'ce qui tombe tous les mois.' },
+  capex: { tag: 'Le matériel du métier', sub: 'ce qu’on achète pour ouvrir.' },
+  offers: { tag: 'Ce que tu pourrais vendre aussi', sub: 'les revenus qu’on oublie de compter.' },
 }
 
 /* ───────────────────────── Ce qui est déjà posé ─────────────────────────── */

@@ -13,35 +13,7 @@ import { h } from './dom.js'
 import { checklist, resumeAll } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
-import { STAGES, stageOf } from './stages.js'
-
-/**
- * Où en est le projet — déclaré au parcours, corrigeable ici.
- *
- * Le stade n'est pas un badge : il remonte, dans la liste juste en dessous,
- * les lignes qui comptent pour lui. Le changer réordonne donc la suite
- * immédiatement, ce que le fondateur voit sans qu'on ait à l'expliquer.
- */
-export function stageBand(refresh) {
-  const s = store.scenario
-  if (!s) return null
-  const here = stageOf(s)
-  return h('section', { class: 'stageband', 'data-gap': 'stade' },
-    h('div', { class: 'stageband-id' },
-      h('div', { class: 'stageband-tag' }, here ? 'Tu en es là' : 'Où en es-tu ?'),
-      h('div', { class: 'stageband-cap' }, here ? here.cap : 'Dis-nous où tu en es'),
-      h('div', { class: 'stageband-says' },
-        here ? here.says : "Quatre réponses possibles. Celle que tu choisis décide de ce qu'on te proposera en premier."),
-    ),
-    h('div', { class: 'stageband-pick' },
-      ...STAGES.map((st) => h('button', {
-        class: `stageband-step ${here?.key === st.key ? 'is-here' : ''}`,
-        title: st.hint,
-        onClick: () => { store.update((d) => { d.meta.stage = st.key }, { label: 'Stade du projet' }); refresh() },
-      }, st.label)),
-    ),
-  )
-}
+import { stageOf } from './stages.js'
 
 export function refinePanel(navigate, { compact = false, refresh = () => {} } = {}) {
   const c = checklist(store.scenario)
@@ -55,6 +27,10 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
           c.next
             ? `${c.total - c.done} ligne${c.total - c.done > 1 ? 's' : ''} à poser. La plus utile d’abord.`
             : 'Tout est posé. Ton dossier est complet.'),
+        // Le stade dit au parcours n'est pas un réglage qu'on vient triturer :
+        // c'est une phrase qui rappelle pourquoi cet ordre-là, et qui dit
+        // franchement que tout finira par être rempli de toute façon.
+        stageLine(),
         // Ce qu'on a reporté depuis le guide se voit ici aussi, et se reprend
         // d'un clic : « plus tard » n'est jamais un aller simple.
         c.later > 0 ? h('button', { class: 'refinery-resume', onClick: () => { resumeAll(); refresh() } },
@@ -100,4 +76,20 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
       )),
     ),
   )
+}
+
+/**
+ * Pourquoi cet ordre-là.
+ *
+ * Le fondateur a dit où il en est au tout début. Ça n'a pas fait de lui un
+ * profil, et ça ne lui a rien retiré : ça a seulement décidé par quoi on
+ * commence. La phrase le rappelle et le dit sans détour — les dix-neuf lignes
+ * sont les mêmes pour tout le monde, seul l'ordre change.
+ */
+function stageLine() {
+  const here = stageOf(store.scenario)
+  if (!here) return null
+  return h('p', { class: 'refinery-stage' },
+    h('b', {}, here.cap),
+    ` — ${here.says} Les dix-neuf lignes restent les mêmes pour tout le monde : seul l’ordre change.`)
 }

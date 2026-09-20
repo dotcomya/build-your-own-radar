@@ -184,6 +184,9 @@ export function emptyScenario(name = 'Mon business plan') {
       startDate: `${Math.max(2026, year)}-01-01`, level: 'easy',
       jeiClaimed: false, reducedCorporateTax: true, companyAgeYears: 0,
       sectorKey: null, vatExempt: false, nonProfit: false, persona: 'founder',
+      // Ce que le fondateur a répondu — « pizzeria » — et le mot de son métier.
+      // `sectorKey` reste le modèle économique qui tourne derrière.
+      activityKey: '', activityLabel: '', unit: null,
       // Où en est le projet : idée, structuration, démarches, lancé.
       // Vide tant que le fondateur ne l'a pas dit — on ne présume pas.
       stage: '',

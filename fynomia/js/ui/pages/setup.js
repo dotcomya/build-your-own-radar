@@ -21,13 +21,14 @@
  */
 
 import { h, euro, num, pct, toast, keystone } from '../dom.js'
-import { sectorsByFamily, SECTORS, getSector, vocabulary } from '../../state/sectors.js'
+import { getSector, vocabulary } from '../../state/sectors.js'
 import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 import { pfuTotal } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
+import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
 
 /** Le poste du fondateur dans l'équipe, quel que soit le mot employé. */
 const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
@@ -43,7 +44,10 @@ const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
  */
 const flow = { index: 0, touched: new Set() }
 
-export function resetSetup() { flow.index = 0; flow.touched = new Set() }
+/** Où en est le choix du métier : la famille ouverte, et ce qui est tapé. */
+const pick = { family: null, query: '' }
+
+export function resetSetup() { flow.index = 0; flow.touched = new Set(); pick.family = null; pick.query = '' }
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -64,7 +68,9 @@ const STEPS = [
     question: 'Tu fais quoi ?',
     help: "Ce choix commande la TVA, ton statut et les repères de marge du reste du parcours.",
     render: sectorPicker,
-    ready: (s) => !!s?.meta?.sectorKey,
+    // « Autre chose » est une réponse : elle ne pose pas de secteur mais elle
+    // engage le fondateur autant qu'un métier de la liste.
+    ready: (s) => !!s?.meta?.sectorKey || answered('metier'),
   },
   {
     key: 'stade', short: 'Où tu en es',
@@ -400,41 +406,110 @@ function choice(ctx, options) {
 
 /* ───────────────────────────── Écran : métier ───────────────────────────── */
 
+/**
+ * Deux temps, et une recherche qui les court-circuite.
+ *
+ * Personne ne se décrit comme « commerce de détail non alimentaire ». On dit
+ * « pizzeria », « Airbnb », « plombier ». Montrer d'emblée vingt et un modèles
+ * économiques, c'est demander au fondateur de faire lui-même la traduction.
+ *
+ * On lui montre donc douze familles larges, puis les métiers de la famille
+ * qu'il a désignée. Et par-dessus, un champ de recherche : celui qui sait déjà
+ * tape « piz » et n'ouvre jamais Restauration.
+ *
+ * Le champ ne se recrée pas à chaque frappe — il perdrait le curseur, et la
+ * touche suivante écraserait la précédente. Seule la grille de dessous se
+ * redessine.
+ */
 function sectorPicker(ctx) {
-  const current = store.scenario?.meta?.sectorKey
-  return h('div', { class: 'setup-sectors' },
-    ...sectorsByFamily().flatMap((family) => family.sectors.map((sector) => h('button', {
-      class: `setup-sector ${current === sector.key ? 'active' : ''}`,
-      onClick: () => {
-        // Le stade du projet parle du fondateur, pas du commerce : passer de
-        // glacier à salon de coiffure ne le fait pas revenir à l'idée.
-        const stage = store.scenario?.meta?.stage || ''
-        if (store.scenario && !store.scenario.meta.isDemo && store.scenario.meta.sectorKey) {
-          // Changer de métier réécrit les hypothèses : on repart d'un plan neuf
-          // plutôt que de mélanger deux jeux de valeurs par défaut.
-          store.create({ template: sector.key, level: store.scenario.meta.level || 'easy', name: SECTORS[sector.key].label, sample: false })
-        } else {
-          store.create({ template: sector.key, level: 'easy', name: SECTORS[sector.key].label, sample: false })
-        }
-        if (stage) store.update((d) => { d.meta.stage = stage })
-        ctx.refresh()
-      },
-    },
-      h('span', { class: 'setup-sector-glyph' }, sector.glyph),
-      h('span', { class: 'setup-sector-name' }, sector.label),
-    ))),
-    h('button', {
-      class: `setup-sector ${current === null && store.scenario ? 'active' : ''}`,
-      onClick: () => {
-        const stage = store.scenario?.meta?.stage || ''
-        store.create({ template: null, level: 'easy', name: 'Mon projet' })
-        if (stage) store.update((d) => { d.meta.stage = stage })
-        ctx.refresh()
-      },
-    },
-      h('span', { class: 'setup-sector-glyph' }, '＋'),
-      h('span', { class: 'setup-sector-name' }, 'Autre chose'),
-    ),
+  const grid = h('div', { class: 'setup-sectors' })
+  const input = h('input', {
+    type: 'text', class: 'setup-search-input', placeholder: 'Tape ton métier',
+    'aria-label': 'Chercher une activité', value: pick.query,
+  })
+  const clear = h('button', {
+    class: 'setup-search-clear', 'aria-label': 'Effacer',
+    onClick: () => { pick.query = ''; input.value = ''; input.focus(); draw() },
+  }, '✕')
+
+  const choose = (activity) => {
+    // Le stade du projet parle du fondateur, pas du commerce : passer de
+    // glacier à salon de coiffure ne le fait pas revenir à l'idée.
+    const stage = store.scenario?.meta?.stage || ''
+    const level = store.scenario?.meta?.level || 'easy'
+    store.create({ template: activity ? activity.sector : null, level, name: activity ? activity.label : 'Mon projet', sample: false })
+    store.update((d) => {
+      if (stage) d.meta.stage = stage
+      d.meta.activityKey = activity ? activity.key : ''
+      d.meta.activityLabel = activity ? activity.label : ''
+      // Le mot du métier quand il diffère de celui du modèle : une auto-école
+      // vend des heures de conduite, pas des sessions de formation.
+      d.meta.unit = activity?.unit || null
+    })
+    flow.touched.add('metier')
+    ctx.refresh()
+  }
+
+  const card = (glyph, name, note, active, onClick) => h('button', {
+    class: `setup-sector ${active ? 'active' : ''}`, onClick,
+  },
+    h('span', { class: 'setup-sector-glyph' }, glyph),
+    h('span', { class: 'setup-sector-name' }, name),
+    note ? h('span', { class: 'setup-sector-note' }, note) : null,
+  )
+
+  // Le fil de retour vit dans son propre hôte : il apparaît en entrant dans
+  // une famille et disparaît en sortant, au même rythme que la grille.
+  const trail = h('div', { class: 'setup-trail' })
+
+  const draw = () => {
+    const current = store.scenario?.meta?.activityKey
+    const q = pick.query.trim()
+    clear.style.display = q ? '' : 'none'
+
+    trail.replaceChildren(...(pick.family && q.length < 2
+      ? [h('button', { class: 'setup-back', onClick: () => { pick.family = null; draw() } },
+          '← Toutes les activités', h('b', {}, familyOf(pick.family)?.label))]
+      : []))
+
+    // ─── Recherche libre : elle traverse les douze familles d'un coup ───
+    if (q.length >= 2) {
+      const hits = searchActivities(q)
+      grid.replaceChildren(
+        ...hits.map((a) => card(familyOf(a.in[0])?.glyph || '▸', a.label,
+          familyOf(a.in[0])?.label, current === a.key, () => choose(a))),
+        card('＋', 'Autre chose', 'Un modèle vierge, à toi de le remplir', false, () => choose(null)),
+      )
+      if (!hits.length) {
+        grid.prepend(h('p', { class: 'setup-search-none' },
+          `Rien ne correspond à « ${q} ». Choisis « Autre chose » : le modèle part vierge et rien ne t’empêche d’avancer.`))
+      }
+      return
+    }
+
+    // ─── Premier temps : les familles ───
+    if (!pick.family) {
+      grid.replaceChildren(...FAMILIES.map((f) => card(f.glyph, f.label,
+        `${activitiesOf(f.key).length} métiers`, false,
+        () => { pick.family = f.key; draw() })))
+      return
+    }
+
+    // ─── Second temps : les métiers de la famille ───
+    const fam = familyOf(pick.family)
+    grid.replaceChildren(
+      ...activitiesOf(pick.family).map((a) => card(fam.glyph, a.label, null, current === a.key, () => choose(a))),
+      card('＋', 'Autre chose', null, false, () => choose(null)),
+    )
+  }
+
+  input.addEventListener('input', () => { pick.query = input.value; draw() })
+  draw()
+
+  return h('div', { class: 'setup-pick' },
+    h('div', { class: 'setup-search' }, h('span', { class: 'setup-search-icon' }, '⌕'), input, clear),
+    trail,
+    grid,
   )
 }
 

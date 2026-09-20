@@ -13,11 +13,12 @@
  */
 
 import { h, euro, num, textField, selectField, switchField, helpButton, refine, fold, moduleHead } from '../dom.js'
-import { SECTORS, sectorsByFamily, getSector, FAMILIES } from '../../state/sectors.js'
+import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { partBanner } from '../tutorial.js'
 import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
+import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
 const CLIENTS = [
@@ -193,30 +194,44 @@ export function renderProject(navigate, refresh) {
  * ne prend de la place que le temps qu'on en a besoin.
  */
 function sectorPicks(s, set, refresh) {
-  const current = getSector(s.meta.sectorKey)
-  const families = sectorsByFamily()
+  const chosen = getActivity(s.meta.activityKey)
+  const sector = getSector(s.meta.sectorKey)
 
   const grid = h('div', {},
-    ...families.map((fam) => h('div', { class: 'sector-family' },
-      h('div', { class: 'sector-family-tag' }, FAMILIES[fam.key]?.label || fam.label),
+    ...ACTIVITY_FAMILIES.map((fam) => h('div', { class: 'sector-family' },
+      h('div', { class: 'sector-family-tag' }, `${fam.glyph}  ${fam.label}`),
       h('div', { class: 'picks' },
-        ...fam.sectors.map((sec) => h('button', {
-          class: `pick ${s.meta.sectorKey === sec.key ? 'active' : ''}`,
+        ...activitiesOf(fam.key).map((act) => h('button', {
+          class: `pick ${s.meta.activityKey === act.key ? 'active' : ''}`,
           onClick: () => {
-            set({ sectorKey: sec.key, vatExempt: !!SECTORS[sec.key].vat.exempt }, "Type d’activité")
+            // Corriger son métier ici ne repart pas d'un plan neuf : le
+            // fondateur a déjà saisi des choses, et les perdre pour une
+            // requalification serait une punition. Seul le cadre bouge.
+            set({
+              sectorKey: act.sector,
+              activityKey: act.key,
+              activityLabel: act.label,
+              unit: act.unit || null,
+              vatExempt: !!SECTORS[act.sector].vat.exempt,
+            }, "Type d’activité")
             refresh()
           },
         },
-          h('div', { class: 'pick-name' }, sec.label),
-          h('div', { class: 'pick-note' }, sec.tagline),
+          h('div', { class: 'pick-name' }, act.label),
+          // Le modèle qui tourne derrière n'est dit que s'il porte un autre
+          // nom : répéter « Pizzeria — Restaurant » n'apprend rien.
+          SECTORS[act.sector].label !== act.label
+            ? h('div', { class: 'pick-note' }, `Modèle ${SECTORS[act.sector].label.toLowerCase()}`)
+            : null,
         )),
       ),
     )),
   )
 
+  const title = chosen ? chosen.label : sector ? sector.label : 'À choisir'
   return fold(
     "Type d’activité",
-    current ? `${current.glyph} ${current.label}` : 'À choisir',
+    sector ? `${sector.glyph} ${title}` : title,
     grid,
     { id: 'projet-secteur', open: !s.meta.sectorKey },
   )
