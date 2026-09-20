@@ -79,6 +79,13 @@ export const uid = (prefix = 'id') => `${prefix}_${Math.random().toString(36).sl
 export function newActivity(overrides = {}) {
   return {
     id: uid('act'), name: 'Nouvelle offre',
+    // Comment cette offre rapporte : une vente ferme, un abonnement, ou une
+    // commission sur une affaire apportée. Les trois s'excluent — une offre
+    // qui serait deux choses à la fois en fait deux, et le modèle se lit
+    // mieux ainsi. La commission n'est pas un troisième calcul : c'est un
+    // prix de vente obtenu en multipliant le montant de l'affaire par le
+    // pourcentage retenu, donc le moteur n'a rien de spécial à savoir.
+    priceMode: 'unit', dealValue: 0, commissionRate: 0,
     unitPrice: 500, recurringPrice: 0, contractMonths: 12,
     // Payé en une fois à la commande, et rien d'autre : c'est le cas le plus
     // fréquent et le seul qu'on puisse poser sans rien savoir du métier. Qui
@@ -156,9 +163,17 @@ export function newTeamMember(overrides = {}) {
 export function newCampaign(overrides = {}) {
   return {
     id: uid('camp'), name: 'Nouvelle campagne', channel: 'ads', enabled: true,
-    activityId: null, startMonth: 0, durationMonths: 12, monthlyBudget: 1000,
-    model: 'cpc', cpc: 1.2, cpm: 8, cpl: 25, cac: 200,
-    ctr: 0.02, visitToLead: 0.03, leadToClient: 0.2, clientsPerMonth: 5,
+    // Une campagne arrive entièrement à zéro.
+    //
+    // Le budget, le coût par clic, les taux de conversion : ce sont des
+    // chiffres que seul le fondateur connaît. En pré-remplir un jeu complet
+    // produisait un plan d'acquisition qu'il n'a jamais discuté mais qui
+    // pesait déjà sur son chiffre d'affaires — et, pire, qu'il croyait
+    // vérifié parce qu'il était écrit. Les ordres de grandeur de chaque canal
+    // existent toujours, mais il faut les demander.
+    activityId: null, startMonth: 0, durationMonths: 12, monthlyBudget: 0,
+    model: 'cpc', cpc: 0, cpm: 0, cpl: 0, cac: 0,
+    ctr: 0, visitToLead: 0, leadToClient: 0, clientsPerMonth: 0,
     ...overrides,
   }
 }

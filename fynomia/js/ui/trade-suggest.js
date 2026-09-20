@@ -19,7 +19,7 @@
  * Changer de métier change tout le bloc : il ne lit que `meta.sectorKey`.
  */
 
-import { h, euro, toast } from './dom.js'
+import { h, euro, toast, PLUS } from './dom.js'
 import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
 import { getSector, vocabulary, tradeName } from '../state/sectors.js'
@@ -70,7 +70,7 @@ export function tradeSuggest(kind, navigate, refresh) {
         title: 'Ajouter au modèle',
         onClick: () => { added(kind, it, vocab, navigate, refresh) },
       },
-        h('span', { class: 'tradetip-plus', 'aria-hidden': 'true' }, '＋'),
+        h('span', { class: 'tradetip-plus', 'aria-hidden': 'true', html: PLUS }),
         h('span', { class: 'tradetip-text' },
           h('span', { class: 'tradetip-label' }, it.label),
           h('span', { class: 'tradetip-amount num' }, amountOf(kind, it, vocab)),

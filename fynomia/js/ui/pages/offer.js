@@ -1,6 +1,6 @@
 /** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, MINUS, CROSS, COPY } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
@@ -89,14 +89,71 @@ export function renderOffer(navigate, refresh) {
   )
 }
 
-/** Les offres dont on a demandé le coût de revient, le temps de la session. */
-const costOpen = new Set()
+const n = (v) => Number(v) || 0
+
+/**
+ * Les trois façons dont une offre rapporte.
+ *
+ * Elles ne sont pas trois calculs : ce sont trois questions. Ce que paie le
+ * client une fois, ce qu'il paie tous les mois, ou la part qui te revient sur
+ * une affaire que tu as amenée sans la porter. Le moteur, lui, ne connaît
+ * qu'un prix et des volumes — la commission s'y ramène par une
+ * multiplication, et c'est tant mieux : rien de nouveau à vérifier dans les
+ * comptes.
+ */
+const MODES = [
+  { key: 'unit', label: 'Vente unique', note: 'Le client paie une fois' },
+  { key: 'recurring', label: 'Abonnement', note: 'Il paie tous les mois' },
+  { key: 'commission', label: 'Commission', note: "Une part de l'affaire" },
+]
+
+/**
+ * Le coût de revient hérité d'avant.
+ *
+ * Il ne se saisit plus ici — il vit dans les charges, où on le voit à côté
+ * des autres. Mais un plan commencé avant ce déménagement en porte encore un,
+ * et le moteur le compte toujours : le taire reviendrait à laisser un euro
+ * sortir deux fois du résultat sans que personne ne puisse le voir.
+ */
+function legacyCost(a, voc, set) {
+  if (!(n(a.unitCost) > 0)) return null
+  return h('p', { class: 'cost-warn' },
+    `Cette offre a un coût de revient de ${euro(a.unitCost)} par ${voc.one}. Il ne se saisit plus ici — il se règle en charge par vente, dans « Achats et coûts », où on le voit à côté des autres. Il reste compté : vérifie qu'il n'y figure pas aussi, sinon le même euro sort deux fois du résultat.`,
+    h('button', {
+      class: 'btn btn-quiet btn-sm', style: { marginLeft: '10px' },
+      onClick: () => set({ unitCost: 0 }, 'Retrait du coût de revient'),
+    }, 'L’enlever d’ici'))
+}
+
+/**
+ * Ce que la commission donne, en clair.
+ *
+ * Deux pourcentages et un montant, c'est trois nombres à multiplier de tête.
+ * La phrase le fait à sa place, et dit lequel des trois est celui qui entre
+ * vraiment sur le compte.
+ */
+function commissionRead(a, voc) {
+  const deal = n(a.dealValue), rate = n(a.commissionRate)
+  const take = deal * rate
+  if (!deal || !rate) {
+    return h('p', { class: 'pmode-read is-empty' },
+      "Pose le montant moyen d'une affaire et la part qui te revient : ton chiffre d'affaires sera cette part, pas l'affaire entière.")
+  }
+  return h('div', { class: 'pmode-read' },
+    h('div', { class: 'pmode-read-line' },
+      h('span', { class: 'num' }, euro(deal)),
+      h('span', {}, "d'affaire"),
+      h('span', { class: 'pmode-read-op' }, '×'),
+      h('span', { class: 'num' }, pct(rate, 1)),
+      h('span', { class: 'pmode-read-op' }, '='),
+      h('strong', { class: 'num' }, euro(take)),
+    ),
+    h('p', {},
+      `Tu encaisses ${euro(take)} par affaire apportée. C'est ce montant qui compte comme chiffre d'affaires — les ${euro(deal)} de l'affaire ne passent jamais par tes comptes. Les volumes se saisissent dans l'onglet voisin : une unité vaut une affaire.`),
+  )
+}
 
 function activityCard(a, index, r, level, open, refresh, duplicate) {
-  // Quelles parts de prix sont à l'écran : celles qui portent déjà un chiffre,
-  // plus celles que l'utilisateur vient d'ouvrir. Retirer une part remet son
-  // prix à zéro — c'est ce qui la fait disparaître du calcul comme de l'écran.
-  const parts = activityCard.parts || (activityCard.parts = new Set())
   const voc = vocabulary(store.scenario)
   const isOpen = open.has(a.id)
   const detail = r?.revenue.perActivity.find((x) => x.id === a.id)
@@ -126,14 +183,53 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
   ]
   const sec = secs.some((x) => x && x.key === activityCard.sec) ? activityCard.sec : 'offre'
 
-  const key = (kind) => `${a.id}:${kind}`
-  const hasUnit = (Number(a.unitPrice) || 0) > 0 || (Number(a.unitCost) || 0) > 0 || parts.has(key('unit'))
-  const hasRecurring = (Number(a.recurringPrice) || 0) > 0 || (Number(a.recurringCost) || 0) > 0 || parts.has(key('recurring'))
-  const addPart = (kind) => { parts.add(key(kind)); refresh() }
-  const dropPart = (kind) => {
-    parts.delete(key(kind))
-    set(kind === 'unit' ? { unitPrice: 0, unitCost: 0 } : { recurringPrice: 0, recurringCost: 0 }, 'Retrait d\'une part de prix')
+  // Comment cette offre rapporte : trois modes, un seul à la fois.
+  //
+  // C'était auparavant deux blocs qu'on ajoutait ou retirait, et qui
+  // pouvaient coexister : l'écran ne disait plus quel modèle était le sien.
+  // Un onglet le dit en un mot, et la commission d'apport d'affaires — qui
+  // n'existait nulle part — y a sa place.
+  //
+  // Le mode déclaré ne l'emporte que s'il ne contredit pas les chiffres. Un
+  // plan écrit avant que ce réglage n'existe — un modèle de métier, une
+  // sauvegarde — porte le mode par défaut sans le savoir : si son prix est un
+  // abonnement, c'est l'abonnement qui s'affiche, pas un champ vide.
+  const stored = MODES.some((m) => m.key === a.priceMode) ? a.priceMode : null
+  // Le mode déclaré ne cède que s'il ne sait pas montrer ce que l'offre porte.
+  // Un abonnement sait afficher un montant à la signature en plus ; une vente
+  // unique ne sait rien faire d'un prix mensuel, et le taire reviendrait à le
+  // laisser peser sur le chiffre d'affaires depuis un champ invisible.
+  const SHOWS = {
+    unit: () => !(n(a.recurringPrice) > 0) && !(n(a.commissionRate) > 0),
+    recurring: () => !(n(a.commissionRate) > 0),
+    commission: () => !(n(a.recurringPrice) > 0),
+  }
+  const seen = n(a.commissionRate) > 0 ? 'commission'
+    : n(a.recurringPrice) > 0 ? 'recurring'
+    : n(a.unitPrice) > 0 ? 'unit' : null
+  const mode = stored && SHOWS[stored]() ? stored : (seen || stored || 'unit')
+
+  // Changer de mode remet à zéro le prix des autres : sans ça, un abonnement
+  // saisi puis abandonné continuait d'alimenter le chiffre d'affaires depuis
+  // un onglet qu'on ne regardait plus. L'annulation reste à un clic.
+  const setMode = (k) => {
+    const patch = { priceMode: k }
+    if (k !== 'unit' && k !== 'commission') patch.unitPrice = 0
+    if (k !== 'recurring') { patch.recurringPrice = 0; patch.recurringCost = 0 }
+    if (k !== 'commission') { patch.dealValue = 0; patch.commissionRate = 0 }
+    if (k === 'commission') patch.unitPrice = (Number(a.dealValue) || 0) * (Number(a.commissionRate) || 0)
+    set(patch, 'Mode de revenu')
     refresh()
+  }
+
+  // La commission n'est pas un calcul à part : le prix de vente est le
+  // montant de l'affaire multiplié par le pourcentage retenu. On le réécrit
+  // à chaque frappe pour que le moteur, qui ne connaît que des prix, tombe
+  // juste sans rien savoir de l'apport d'affaires.
+  const setCommission = (patch, opts = {}) => {
+    const next = { ...a, ...patch }
+    set({ ...patch, unitPrice: (Number(next.dealValue) || 0) * (Number(next.commissionRate) || 0) },
+      'Commission', opts)
   }
 
   return h('div', { class: `item ${isOpen ? 'open' : ''}` },
@@ -143,9 +239,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
         h('div', { class: 'item-title' }, a.name || 'Sans nom'),
         h('div', { class: 'item-meta' },
           [
-            (Number(a.unitPrice) || 0) > 0 ? `${euro(a.unitPrice)} l'unité` : null,
-            (Number(a.recurringPrice) || 0) > 0 ? `${euro(a.recurringPrice)}/mois pendant ${a.contractMonths} mois` : null,
-            margin !== null ? `${pct(margin, 0)} de marge` : null,
+            mode === 'commission' && n(a.commissionRate) > 0
+              ? `${pct(a.commissionRate, 1)} de ${euro(a.dealValue)}, soit ${euro(a.unitPrice)} par affaire`
+              : mode === 'recurring' && n(a.recurringPrice) > 0
+                ? `${euro(a.recurringPrice)}/mois pendant ${a.contractMonths} mois`
+                : n(a.unitPrice) > 0 ? `${euro(a.unitPrice)} l'unité` : null,
+            margin !== null && n(a.unitCost) > 0 ? `${pct(margin, 0)} de marge` : null,
           ].filter(Boolean).join(' · ')),
       ),
       detail && h('div', { class: 'right', style: { marginRight: '10px' } },
@@ -155,11 +254,13 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
       duplicate && h('button', {
         class: 'item-act', title: 'Dupliquer cette offre',
         onClick: (e) => { e.stopPropagation(); duplicate(a) },
-      }, '⧉'),
+        html: COPY,
+      }),
       h('button', {
         class: 'item-act is-drop', title: 'Supprimer cette offre',
         onClick: (e) => { e.stopPropagation(); remove() },
-      }, '−'),
+        html: MINUS,
+      }),
       h('span', { class: 'disclose' }, '›'),
     ),
     isOpen && h('div', { class: 'item-body' },
@@ -186,70 +287,82 @@ function activityCard(a, index, r, level, open, refresh, duplicate) {
 
       sec === 'prix' ? h('div', { class: 'view', 'data-gap': 'prix' },
 
-        // Vente à l'unité et abonnement ne s'excluent pas : une offre peut
-        // être l'une, l'autre, ou les deux. Chaque part apparaît dès qu'elle
-        // porte un prix, et s'ajoute d'un clic quand elle n'en a pas encore.
-        hasUnit
-          ? h('section', { class: 'part' },
-              h('div', { class: 'part-head' },
-                h('h5', {}, "Vente \u00e0 l'unit\u00e9"),
-                h('span', { class: 'spacer' }),
-                h('button', { class: 'part-drop', title: 'Retirer cette part', onClick: () => dropPart('unit') }, '\u00d7'),
-              ),
-              // On saisit, puis on voit ce que ça donne. L'inverse — le dessin
-              // au-dessus des champs qui le produisent — demandait de lire un
-              // résultat avant d'avoir posé la question.
-              h('div', { class: `grid ${a.unitCost > 0 ? 'grid-2' : ''}` },
-                numberField({ label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT', onInput: (v) => set({ unitPrice: v }) }),
-                // Le coût de revient ne s'impose plus : il se demande.
-                //
-                // Compté ici ET dans les charges, il double — et c'est l'erreur
-                // la plus fréquente d'un prévisionnel de création. Le champ
-                // n'apparaît donc que si on le réclame, avec la phrase qui
-                // évite la double saisie.
-                a.unitCost > 0 || costOpen.has(a.id)
-                  ? numberField({
-                      label: `Coût de revient par ${voc.one}`, field: 'unitCost', value: a.unitCost, suffix: '€ HT',
-                      hint: 'Ce que coûte une vente et rien d’autre : matière, marchandise, sous-traitance.',
-                      onInput: (v) => set({ unitCost: v }),
-                    })
-                  : null,
-              ),
-              a.unitCost > 0 || costOpen.has(a.id)
-                ? h('p', { class: 'cost-warn' },
-                    'À ne pas recompter dans « Achats et coûts » : ce montant y est déjà, par vente. Les charges de ce module sont celles qui tombent même sans vendre — loyer, assurances, salaires.')
-                : h('button', {
-                    class: 'part-add is-slim',
-                    onClick: (e) => { costOpen.add(a.id); e.target.closest('.view')?.dispatchEvent(new CustomEvent('x', { bubbles: true })); refresh() },
-                  }, '＋', h('span', {}, `Compter un coût de revient par ${voc.one}`)),
-              unitEconomics(`Une vente \u00e0 l'unit\u00e9`, a.unitPrice, a.unitCost),
-              margin !== null && h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
-                h('div', { class: 'note-title' }, `Marge unitaire : ${euro((Number(a.unitPrice) || 0) - (Number(a.unitCost) || 0))} par vente, soit ${pct(margin, 0)}`),
-                marginAdvice(margin)),
-            )
-          : h('button', { class: 'part-add', onClick: () => addPart('unit') }, '\uFF0B', h('span', {}, "Une vente \u00e0 l'unit\u00e9")),
+        // Le mode d'abord, le prix ensuite. Dans cet ordre, parce qu'un prix
+        // ne veut rien dire tant qu'on ne sait pas s'il est encaissé une fois,
+        // tous les mois, ou en pourcentage d'une affaire qu'on amène.
+        h('div', { class: 'pmode' },
+          ...MODES.map((m) => h('button', {
+            class: `pmode-tab ${m.key === mode ? 'is-on' : ''}`,
+            'aria-pressed': String(m.key === mode),
+            onClick: () => m.key === mode || setMode(m.key),
+          },
+            h('span', { class: 'pmode-label' }, m.label),
+            h('span', { class: 'pmode-note' }, m.note),
+          )),
+        ),
 
-        hasRecurring
-          ? h('section', { class: 'part' },
-              h('div', { class: 'part-head' },
-                h('h5', {}, 'Abonnement'),
-                h('span', { class: 'spacer' }),
-                h('button', { class: 'part-drop', title: 'Retirer cette part', onClick: () => dropPart('recurring') }, '\u00d7'),
-              ),
-              h('div', { class: 'grid grid-2' },
-                numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '\u20ac HT', onInput: (v) => set({ recurringPrice: v }) }),
-                numberField({ label: 'Co\u00fbt mensuel r\u00e9current', field: 'recurringPrice', value: a.recurringCost, suffix: '\u20ac HT', hint: 'H\u00e9bergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
-              ),
-              unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
-              refine(`${a.id}-abo`, 'Affiner : dur\u00e9e de contrat, attrition, valeur vie client',
-                h('div', { class: 'grid grid-2' },
-                numberField({ label: 'Dur\u00e9e du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
-                numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c\u2019est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
-                ),
-                lifetimeValue(a),
-              ),
-            )
-          : h('button', { class: 'part-add', onClick: () => addPart('recurring') }, '\uFF0B', h('span', {}, 'Un abonnement mensuel'))
+        mode === 'unit' ? h('section', { class: 'part' },
+          h('div', {},
+            numberField({
+              label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT',
+              hint: 'Ce que paie le client, une fois, hors taxes.',
+              onInput: (v) => set({ unitPrice: v }),
+            }),
+          ),
+          // Le coût de revient a quitté cette section : saisi ici, il était
+          // recompté dans « Achats et coûts » neuf fois sur dix — le même euro
+          // sorti deux fois du résultat. Il vit désormais à un seul endroit,
+          // en charge par vente, où on le voit à côté des autres coûts.
+          legacyCost(a, voc, set),
+          margin !== null && n(a.unitCost) > 0
+            ? h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
+                h('div', { class: 'note-title' }, `Marge unitaire : ${euro(n(a.unitPrice) - n(a.unitCost))} par vente, soit ${pct(margin, 0)}`),
+                marginAdvice(margin))
+            : null,
+        ) : null,
+
+        mode === 'recurring' ? h('section', { class: 'part' },
+          h('div', { class: 'grid grid-2' },
+            numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '\u20ac HT', onInput: (v) => set({ recurringPrice: v }) }),
+            numberField({ label: 'Co\u00fbt mensuel r\u00e9current', field: 'recurringPrice', value: a.recurringCost, suffix: '\u20ac HT', hint: 'H\u00e9bergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
+          ),
+          // \u00ab Les deux \u00bb n'est pas un quatri\u00e8me mode : c'est un abonnement qui
+          // porte en plus un montant encaiss\u00e9 \u00e0 la signature. Un plan qui en a un
+          // doit pouvoir le voir \u2014 sinon il compte dans le chiffre d'affaires
+          // depuis un champ que plus personne n'affiche.
+          h('div', { class: 'grid grid-2' },
+            numberField({
+              label: '\u00c0 la signature', field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
+              hint: 'Frais de mise en route, encaiss\u00e9s une fois. Laisse \u00e0 z\u00e9ro s\u2019il n\u2019y en a pas.',
+              onInput: (v) => set({ unitPrice: v }),
+            }),
+          ),
+          unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
+          refine(`${a.id}-abo`, 'Affiner : dur\u00e9e de contrat, attrition, valeur vie client',
+            h('div', { class: 'grid grid-2' },
+              numberField({ label: 'Dur\u00e9e du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
+              numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c\u2019est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+            ),
+            lifetimeValue(a),
+          ),
+        ) : null,
+
+        mode === 'commission' ? h('section', { class: 'part' },
+          h('div', { class: 'grid grid-2' },
+            numberField({
+              label: "Montant moyen de l'affaire", field: 'dealValue', value: a.dealValue, suffix: '\u20ac HT',
+              hint: "Ce que paie le client final \u2014 tu n'encaisses pas cette somme, tu en prends une part.",
+              onInput: (v, o) => setCommission({ dealValue: v }, o),
+            }),
+            numberField({
+              label: 'Ta commission', field: 'commissionRate', value: a.commissionRate, percent: true,
+              hint: "La part de l'affaire qui te revient.",
+              onInput: (v, o) => setCommission({ commissionRate: v }, o),
+            }),
+          ),
+          commissionRead(a, voc),
+          legacyCost(a, voc, set),
+        ) : null,
       ) : null,
 
       sec === 'volumes' ? h('div', { class: 'view', 'data-gap': 'volumes' },
@@ -562,7 +675,8 @@ function priceEvolutionFields(a, set) {
             forced ? h('button', {
               class: 'byyear-clear', title: 'Revenir au prix de l’année précédente',
               onClick: () => { const next = arr.slice(); next[y - 1] = ''; set({ [arrKey]: next }) },
-            }, '\u00d7') : null,
+              html: CROSS,
+            }) : null,
           )
         }),
       ),
@@ -572,7 +686,11 @@ function priceEvolutionFields(a, set) {
   return h('div', {},
     h('p', { class: 'view-intro' },
       "Une année vide reconduit le prix de la précédente : le montant en gris est celui qui s’applique. Écris dans une case pour forcer une hausse à partir de cette année-là."),
-    hasUnit ? row('Prix unitaire', 'unitPrice', 'priceByYear', '€ HT') : null,
+    // En commission, le prix unitaire est ce que tu encaisses par affaire :
+    // l'appeler « prix unitaire » ferait croire qu'on parle de l'affaire entière.
+    hasUnit
+      ? row(n(a.commissionRate) > 0 ? 'Ta commission par affaire' : 'Prix unitaire', 'unitPrice', 'priceByYear', '€ HT')
+      : null,
     hasRec ? row('Abonnement mensuel', 'recurringPrice', 'recurringPriceByYear', '€ HT/mois') : null,
     !hasUnit && !hasRec
       ? h('p', { class: 'muted small' }, 'Renseigne d’abord un prix dans l’onglet « Prix et marge ».')

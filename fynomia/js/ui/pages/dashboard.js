@@ -17,6 +17,7 @@ import { storyline, gauge } from '../story.js'
 import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
 import { refinePanel } from '../refine-panel.js'
+import { plainBoard } from '../plain.js'
 import { breakEvenBoard } from './model.js'
 import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
@@ -49,16 +50,20 @@ export function renderDashboard(navigate, refresh) {
   renderDashboard.year = y
   const pickYearFn = (next) => { renderDashboard.year = next; refresh() }
 
-  // Trois temps, trois onglets : où j'en suis, ce que disent mes chiffres, et
-  // ce qui se passerait si. Les conseils génériques ont disparu — ils
-  // répétaient ce que les repères de métier disent déjà là où ça compte.
+  // Quatre temps, quatre onglets. Le premier répond en français aux trois
+  // questions qu'on se pose vraiment — est-ce que je gagne, est-ce que je
+  // tiens, combien il m'en reste — parce qu'un fondateur pressé ouvre cette
+  // page pour ça et non pour un graphique. Viennent ensuite où j'en suis, ce
+  // que disent mes chiffres, et ce qui se passerait si.
   const views = [
+    { key: 'synthese', read: true, label: 'Synthèse' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
     { key: 'analyse', read: true, label: 'Analyse' },
     { key: 'simulation', label: 'Simulation' },
   ]
-  const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'pilotage'
+  const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'synthese'
   renderDashboard.view = view
+  const goView = (k) => { renderDashboard.view = k; refresh() }
 
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
@@ -67,8 +72,10 @@ export function renderDashboard(navigate, refresh) {
       no: '06', title: 'Tableau de bord',
       lede: "La synthèse de tout ce que tu as saisi. Rien ne s’écrit ici.",
       guide: stepGuide(null, null, 'tableau-de-bord'),
-      views, view, onPick: (k) => { renderDashboard.view = k; refresh() },
+      views, view, onPick: goView,
     }),
+
+    view === 'synthese' ? h('div', { class: 'view' }, plainBoard(s, r, navigate, () => goView('pilotage'))) : null,
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
       // Le verdict, sur toute la largeur et en tête.

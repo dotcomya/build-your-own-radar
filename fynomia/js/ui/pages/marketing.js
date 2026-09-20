@@ -263,10 +263,18 @@ function campaignCard(c, index, r, open, refresh) {
     }
   }
 
-  const applyChannel = (key) => {
-    const defaults = CHANNELS[key]?.defaults || {}
-    set({ channel: key, ...defaults }, 'Changement de canal')
-  }
+  // Changer de canal ne réécrit rien.
+  //
+  // Il écrasait auparavant le coût par clic, les taux et le modèle d'achat
+  // avec les ordres de grandeur du canal choisi : trois chiffres que le
+  // fondateur venait de saisir disparaissaient sans qu'on le lui dise. Le
+  // canal ne change désormais que le canal ; les ordres de grandeur restent
+  // disponibles, mais il faut les demander — c'est le bouton juste en dessous.
+  const applyChannel = (key) => set({ channel: key }, 'Changement de canal')
+
+  const hints = CHANNELS[c.channel]?.defaults || {}
+  const untouched = Object.keys(hints).every((k) => k === 'model' || !(Number(c[k]) > 0))
+  const seed = () => { set(hints, 'Ordres de grandeur du canal'); refresh() }
 
   const on = c.enabled !== false
   return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
@@ -294,7 +302,7 @@ function campaignCard(c, index, r, open, refresh) {
         selectField({
           label: 'Canal', value: c.channel,
           options: Object.entries(CHANNELS).map(([k, v]) => ({ value: k, label: v.label })),
-          hint: 'Le choix du canal ajuste les paramètres par défaut.',
+          hint: 'Le canal décrit où tu dépenses. Il ne touche pas à tes chiffres.',
           onInput: applyChannel,
         }),
         selectField({
@@ -312,6 +320,16 @@ function campaignCard(c, index, r, open, refresh) {
       ),
 
       h('h4', { style: { margin: '18px 0 8px' } }, "Entonnoir de conversion"),
+      // Une campagne naît à zéro : aucun taux inventé ne vient gonfler le
+      // chiffre d'affaires à son insu. Les ordres de grandeur du canal sont
+      // là quand il n'a aucune idée par où commencer — mais c'est lui qui les
+      // demande, et la phrase dit d'où ils sortent.
+      untouched && Object.keys(hints).length
+        ? h('div', { class: 'seed-row' },
+            h('p', {}, `Tout est à zéro : c'est à toi de poser tes chiffres. Si tu n'en as aucune idée, on peut partir des ordres de grandeur observés en ${(CHANNELS[c.channel]?.label || '').toLowerCase()} — à corriger dès que tu auras les tiens.`),
+            h('button', { class: 'btn btn-sm', onClick: seed }, 'Partir des ordres de grandeur'),
+          )
+        : null,
       selectField({
         label: "Mode de calcul", value: c.model,
         options: [

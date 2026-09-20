@@ -29,7 +29,7 @@ import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
-import { familyIcon } from '../icons.js'
+import { familyIcon, icon } from '../icons.js'
 
 /** Le poste du fondateur dans l'équipe, quel que soit le mot employé. */
 const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
@@ -51,6 +51,7 @@ const pick = { family: null, query: '' }
 export function resetSetup() { flow.index = 0; flow.touched = new Set(); pick.family = null; pick.query = '' }
 
 const pad = (n) => String(n).padStart(2, '0')
+
 
 /**
  * Une étape a-t-elle reçu une réponse ?
@@ -189,6 +190,15 @@ const STEPS = [
 
 ]
 
+/**
+ * Combien de questions sont vraiment posées.
+ *
+ * Le compte était tiré de la longueur du tableau : la page d'ouverture et
+ * l'écran de résultat passaient pour des questions, et l'écran annonçait
+ * treize là où la barre latérale en listait douze. On les compte.
+ */
+const QUESTIONS = STEPS.filter((st) => !st.bare && !st.last).length
+
 /* ─────────────────────────────── La page ────────────────────────────────── */
 
 export function renderSetup(navigate, refresh) {
@@ -248,7 +258,7 @@ export function renderSetup(navigate, refresh) {
         // signaient : « et si je me trompe ? ». Ils ne se trompent pas, ils
         // commencent. Le dire une fois, en haut, à demeure, vaut mieux que de
         // le répéter sous chaque bouton.
-        !step.last ? h('div', { class: 'setup-banner' },
+        !step.last && !step.bare ? h('div', { class: 'setup-banner' },
           h('span', { class: 'setup-banner-mark' }, '\u21BA'),
           h('div', {},
             h('strong', {}, 'Rien n’est définitif.'),
@@ -256,16 +266,23 @@ export function renderSetup(navigate, refresh) {
           ),
         ) : null,
 
-        h('div', { class: `setup-card ${step.last ? 'is-last' : ''}` },
-          h('div', { class: 'setup-tag' },
+        // L'ouverture n'est pas une question.
+        //
+        // Elle portait pourtant tout l'attirail : « Question 01 / 12 », un
+        // titre, le bandeau rassurant, et un « Continuer » sous le bouton
+        // « Commencer » qui faisait exactement la même chose. Quatre façons de
+        // dire la même chose sur le premier écran qu'on voit du produit. Un
+        // écran marqué `bare` n'en garde aucune : il se présente seul.
+        h('div', { class: `setup-card ${step.last ? 'is-last' : ''} ${step.bare ? 'is-bare' : ''}` },
+          !step.bare ? h('div', { class: 'setup-tag' },
             h('span', { class: 'setup-tag-bar' }),
-            h('span', {}, step.last ? 'Résultat' : `Question ${pad(flow.index + 1)} / ${pad(STEPS.length - 1)}`),
+            h('span', {}, step.last ? 'Résultat' : `Question ${pad(flow.index)} / ${pad(QUESTIONS)}`),
             step.optional ? h('span', { class: 'setup-tag-opt' }, 'facultatif') : null,
-          ),
-          h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question),
-          step.help ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
+          ) : null,
+          !step.bare ? h('h1', { class: 'setup-q' }, typeof step.question === 'function' ? step.question(s) : step.question) : null,
+          step.help && !step.bare ? h('p', { class: 'setup-help' }, typeof step.help === 'function' ? step.help(s) : step.help) : null,
           body,
-          !step.last ? h('div', {},
+          !step.last && !step.bare ? h('div', {},
             h('div', { class: 'setup-actions' },
               flow.index > 0 ? h('button', { class: 'btn btn-lg btn-ghost', onClick: () => go(-1) }, 'Retour') : null,
               nextBtn,
@@ -293,7 +310,7 @@ function stepList(s, jump, navigate) {
   return h('nav', { class: 'setup-steps', 'aria-label': 'Les questions' },
     h('div', { class: 'setup-steps-head' },
       h('span', { class: 'setup-steps-title' }, 'Ton business plan'),
-      h('span', { class: 'setup-steps-sub' }, `${STEPS.length - 1} questions · tout reste modifiable`),
+      h('span', { class: 'setup-steps-sub' }, `${QUESTIONS} questions · tout reste modifiable`),
     ),
     ...STEPS.map((st, i) => {
       const done = i < flow.index && st.ready(s)
@@ -530,27 +547,59 @@ function sectorPicker(ctx) {
 /**
  * La page qu'on lit avant la première question.
  *
- * Un fondateur qui ouvre un prévisionnel a peur de se tromper. Il hésite sur
- * son prix, il ne connaît pas ses charges, il ne sait pas s'il se paiera — et
- * cette hésitation le fait reporter l'exercice de semaine en semaine.
+ * Trois versions ont échoué pour la même raison. Quatre cartes de promesses se
+ * lisaient comme un formulaire : on cherchait laquelle cliquer. Une phrase
+ * géante et un bouton ne disaient plus rien du tout. Et surtout, l'écran
+ * gardait par-dessus tout l'attirail des questions — « Question 01 / 12 », un
+ * titre, un bandeau, un « Continuer » sous le « Commencer ». C'était ça, le
+ * désordre, plus que le texte.
  *
- * Cette page ne demande rien. Elle enlève l'enjeu : douze questions, des
- * réponses approximatives acceptées, et tout modifiable ensuite. C'est la
- * seule chose à comprendre pour oser commencer.
+ * Ce qu'il faut ici tient en trois temps : ce que tu obtiens, ce que ça coûte
+ * en temps, et pourquoi tu ne peux pas te tromper. Les trois lignes du bas
+ * répondent aux trois objections qu'on entend vraiment — « je ne connais pas
+ * mes chiffres », « je ne sais pas par où commencer », « et si je me trompe ».
  */
 function welcomeScreen(ctx) {
   return h('div', { class: 'welcome' },
-    h('p', { class: 'welcome-big' },
-      'Tu vas écrire des chiffres que tu ne connais pas encore.',
-      h('b', {}, ' C’est normal, et ça se corrige à tout moment.'),
+    h('div', { class: 'welcome-hero' },
+      h('div', { class: 'welcome-say' },
+        h('div', { class: 'welcome-kicker' }, 'Avant de commencer'),
+        h('h1', { class: 'welcome-big' },
+          'Tu n’as pas besoin de connaître tes chiffres',
+          h('b', {}, ' pour commencer.'),
+        ),
+        h('p', { class: 'welcome-lede' },
+          `${QUESTIONS} questions, des réponses au jugé. À la fin tu as un prévisionnel complet — comptes, trésorerie, point mort, ce que tu te verses — et pas une ligne qui ne se corrige.`),
+        h('div', { class: 'welcome-cta' },
+          h('button', {
+            class: 'btn btn-primary btn-lg welcome-go',
+            onClick: () => ctx.go(1),
+          }, 'Commencer'),
+          h('span', { class: 'welcome-meta' }, 'Environ dix minutes'),
+        ),
+      ),
+      h('div', { class: 'welcome-art', 'aria-hidden': 'true', html: icon('depart', 'welcome-art-img') }),
     ),
-    h('p', { class: 'welcome-sub' }, 'Douze questions. Dix minutes.'),
-    h('button', {
-      class: 'btn btn-primary btn-lg welcome-go',
-      onClick: () => ctx.go(1),
-    }, 'Commencer'),
+
+    h('ul', { class: 'welcome-points' },
+      ...[
+        ['idee', 'Réponds au jugé.', 'Un ordre de grandeur suffit. Le but du premier passage est d’avoir une photo, pas la bonne.'],
+        ['cible', 'Tu pars des repères de ton métier.', 'Prix, marges, charges habituelles : on te les propose, tu les remplaces par les tiens.'],
+        ['savoir', 'Rien n’est définitif.', 'Chaque chiffre reste modifiable ensuite, et tout le plan se recalcule dans la seconde.'],
+      ].map(([ico, title, note], i) => h('li', {
+        class: 'welcome-point',
+        style: { '--d': `${0.3 + i * 0.09}s` },
+      },
+        h('span', { class: 'welcome-point-ico', 'aria-hidden': 'true', html: icon(ico) }),
+        h('div', {},
+          h('b', {}, title),
+          h('span', {}, note),
+        ),
+      )),
+    ),
   )
 }
+
 
 /* ───────────────────────────── Écran : le stade ─────────────────────────── */
 
@@ -702,6 +751,11 @@ function priceScreen(ctx) {
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'unitaire'
+        // Le modèle s'inscrit aussi sur l'offre elle-même : c'est là que la
+        // page « Prix et marge » le relit, et deux endroits qui se contredisent
+        // valent moins qu'un seul qui fait foi.
+        a.priceMode = 'unit'
+        a.dealValue = 0; a.commissionRate = 0
         if (!(Number(a.unitPrice) > 0)) a.unitPrice = 0
         a.recurringPrice = 0; a.recurringCost = 0; a.contractMonths = 0
       }),
@@ -712,6 +766,8 @@ function priceScreen(ctx) {
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'abonnement'
+        a.priceMode = 'recurring'
+        a.dealValue = 0; a.commissionRate = 0
         a.unitPrice = 0; a.unitCost = 0
         if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
         if (!(Number(a.churnMonthly) > 0)) a.churnMonthly = 0.03
@@ -723,6 +779,10 @@ function priceScreen(ctx) {
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'mixte'
+        // « Les deux » n'est pas un quatrième mode : c'est un abonnement qui
+        // porte en plus un montant à la signature. L'éditeur l'affiche ainsi.
+        a.priceMode = 'recurring'
+        a.dealValue = 0; a.commissionRate = 0
         if (!(Number(a.contractMonths) > 0)) a.contractMonths = 12
       }),
     },
@@ -734,6 +794,9 @@ function priceScreen(ctx) {
         sc.meta.revenueModel = 'commission'
         sc.meta.commissionBasket = sc.meta.commissionBasket || 0
         sc.meta.commissionRate = sc.meta.commissionRate || 0.1
+        a.priceMode = 'commission'
+        a.dealValue = sc.meta.commissionBasket
+        a.commissionRate = sc.meta.commissionRate
         a.recurringPrice = 0; a.recurringCost = 0; a.contractMonths = 0; a.unitCost = 0
         a.unitPrice = Math.round((sc.meta.commissionBasket || 0) * (sc.meta.commissionRate || 0))
       }),
@@ -751,7 +814,13 @@ function priceScreen(ctx) {
  */
 function commissionFields(ctx) {
   const recompute = (sc) => {
-    sc.activities[0].unitPrice = Math.round((Number(sc.meta.commissionBasket) || 0) * (Number(sc.meta.commissionRate) || 0))
+    const a = sc.activities[0]
+    // Les deux nombres vivent sur l'offre — la page « Prix et marge » les y
+    // relit et les y réécrit. `meta` n'en garde qu'un écho, pour que ce parcours
+    // retrouve ce qu'on vient d'y taper.
+    a.dealValue = Number(sc.meta.commissionBasket) || 0
+    a.commissionRate = Number(sc.meta.commissionRate) || 0
+    a.unitPrice = Math.round(a.dealValue * a.commissionRate)
   }
   return h('div', {},
     field(ctx, {

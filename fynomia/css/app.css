@@ -1910,7 +1910,11 @@ i.swatch.split-margin { background: var(--gain); }
 @media (max-width: 860px) {
   /* Sur téléphone, la liste des questions devient une frise horizontale :
      elle situe sans occuper la moitié de l'écran. */
-  .setup-shell { grid-template-columns: 1fr; }
+  /* Les deux rangées étaient « auto » dans une grille plus haute que son
+     contenu : le navigateur les étirait à parts égales, et la frise des
+     questions poussait la question elle-même à deux cents pixels du haut.
+     La première rangée prend sa hauteur, la seconde prend le reste. */
+  .setup-shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .setup-steps {
     position: static; border-right: 0; border-bottom: 1px solid var(--rule);
     flex-direction: row; align-items: center; gap: 2px; overflow-x: auto;
@@ -2643,26 +2647,11 @@ i.swatch.split-margin { background: var(--gain); }
 }
 .item-act:hover { border-color: var(--ink); color: var(--ink); }
 
-/* ─── Une offre peut être une vente, un abonnement, ou les deux ─── */
+/* ─── Le cadre d'un mode de revenu ───
+   « Vente à l'unité » et « Abonnement » étaient deux blocs qu'on ajoutait et
+   retirait, avec leur en-tête et leur croix. Ce sont désormais trois modes
+   exclusifs choisis en haut : il ne reste du bloc que son cadre. */
 .part { border: 1px solid var(--rule); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--surface); }
-.part-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.part-head h5 {
-  margin: 0; font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4); font-weight: 500;
-}
-.part-drop {
-  border: 0; background: none; color: var(--ink-5); font-size: 17px; line-height: 1;
-  cursor: pointer; padding: 0 3px; flex: none;
-}
-.part-drop:hover { color: var(--loss); }
-.part-add {
-  display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 12px;
-  padding: 11px 14px; border: 1px dashed var(--rule-strong); border-radius: 12px;
-  background: none; cursor: pointer; font: inherit; color: var(--ink-3);
-  transition: background .12s, color .12s;
-}
-.part-add:hover { background: var(--surface-2); color: var(--ink); }
-.part-add > span { font-size: 13px; font-weight: 500; }
 
 /* ─────────── Financement : une grille de sources, pas une pile ─────────── */
 /* Des tuiles bordées, pas un damier : la grille tramée laissait des cases
@@ -2919,7 +2908,6 @@ table.data th, table.data td { padding: 9px 12px; }
 
 /* Le panneau affiché arrive, il n'apparaît pas d'un coup. */
 .view { animation: view-in .22s var(--ease); }
-@keyframes view-in { from { opacity: 0; transform: translateY(4px); } }
 .view-intro {
   display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
   margin: 0 0 12px; font-size: 12.5px; color: var(--ink-4); line-height: 1.55; max-width: 84ch;
@@ -4344,49 +4332,6 @@ body { background: var(--paper); }
   .tradetip-items { grid-template-columns: 1fr; }
 }
 
-/* ═══════════════════ Où en est le projet ═══════════════════════════════════
-   Quatre stades, en une ligne. Ce n'est pas un fil d'étapes qu'on parcourt :
-   c'est une position qu'on déclare, et qu'on corrige quand elle change.
-   ═══════════════════════════════════════════════════════════════════════════ */
-.stageband {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  border: 1px solid var(--rule); border-left: 3px solid var(--ink);
-  border-radius: 14px; background: var(--surface); padding: 14px 18px;
-}
-/* La phrase du stade a besoin d'une colonne, pas d'une gouttière : sous
-   420 px elle se casse en quatre lignes et les pastilles gagnent la place
-   qu'elle perd. Elles passent dessous plutôt que de l'écraser. */
-.stageband-id { min-width: 300px; flex: 1 1 420px; }
-.stageband-tag {
-  font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.stageband-cap {
-  font-family: var(--display); font-weight: 700; font-size: 16px;
-  letter-spacing: -.022em; color: var(--ink); margin-top: 3px;
-}
-.stageband-says { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.5; max-width: 76ch; }
-/* Les quatre pastilles s'enroulent au lieu de pousser la page : `flex: none`
-   leur donnait la largeur des quatre mises bout à bout, soit sept cents
-   pixels qu'une tablette n'a pas. */
-.stageband-pick { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 320px; min-width: 0; }
-.stageband-step {
-  border: 1px solid var(--rule); background: var(--surface); border-radius: 999px;
-  padding: 5px 12px; font-size: 12px; color: var(--ink-4); cursor: pointer; font: inherit;
-  transition: border-color .18s var(--ease-soft), background .18s, color .18s;
-}
-.stageband-step:hover { border-color: var(--ink); color: var(--ink); }
-.stageband-step.is-here { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
-
-@media (max-width: 760px) {
-  .stageband { padding: 13px 14px; }
-  .stageband-step { font-size: 11.5px; padding: 4px 10px; }
-  /* Sur un téléphone il n'y a qu'une colonne : le plancher de 300 px ferait
-     déborder la page au lieu de protéger la phrase. */
-  .stageband-id { min-width: 0; flex: 1 1 100%; }
-  .stageband-pick { width: 100%; }
-}
-
 /* ═════════════════ La tête de module : une seule, pas cinq ════════════════
    Il y avait le titre, une question repliée, une barre qui répétait le sujet
    avec un chiffre, les onglets, puis le bouton d'ajout. Sur un portable, la
@@ -4519,26 +4464,35 @@ body { background: var(--paper); }
 ::view-transition-old(guide), ::view-transition-new(guide) { animation: none; mix-blend-mode: normal; }
 
 /* ─── Changer de module ─── */
-.is-move-page::view-transition-old(root) { animation: page-out .38s cubic-bezier(.4, 0, 1, 1) both; }
-.is-move-page::view-transition-new(root) { animation: page-in .58s var(--ease-soft) both; }
+/* Un changement de module doit se sentir. À quatre dixièmes de seconde on ne
+   voyait rien passer : l'écran était déjà l'autre avant que l'œil n'ait noté
+   qu'il avait changé, et on se demandait si le clic avait pris. La sortie
+   s'éloigne et se floute, l'arrivée revient de plus loin et prend son temps :
+   c'est la durée qui fait le voyage, pas l'effet. */
+.is-move-page::view-transition-old(root) { animation: page-out .52s cubic-bezier(.4, 0, 1, 1) both; }
+.is-move-page::view-transition-new(root) { animation: page-in .86s var(--ease-soft) both; }
 @keyframes page-out {
   from { opacity: 1; transform: none; filter: blur(0); }
-  to   { opacity: 0; transform: translateY(-1.5%) scale(.97); filter: blur(6px); }
+  to   { opacity: 0; transform: translateY(-3%) scale(.94); filter: blur(10px); }
 }
 @keyframes page-in {
-  0%   { opacity: 0; transform: translateY(2.4%) scale(.985); filter: blur(5px); }
-  55%  { opacity: 1; }
+  0%   { opacity: 0; transform: translateY(5%) scale(.965); filter: blur(9px); }
+  45%  { opacity: .9; }
   100% { opacity: 1; transform: none; filter: blur(0); }
 }
 
 /* ─── Changer d'onglet ─── */
-.is-move-view::view-transition-old(root) { animation: view-out .2s cubic-bezier(.4, 0, 1, 1) both; }
-.is-move-view::view-transition-new(root) { animation: view-in .38s var(--ease-soft) both; }
-@keyframes view-out {
+/* Ces images-là ne portent pas le nom « view-in » : il sert déjà à l'entrée
+   d'une vue ordinaire, plus haut, et une règle @keyframes du même nom écrase
+   l'autre silencieusement — le contenu d'un onglet se mettait alors à glisser
+   de côté au lieu de monter, sans que rien ne le demande. */
+.is-move-view::view-transition-old(root) { animation: travel-out .2s cubic-bezier(.4, 0, 1, 1) both; }
+.is-move-view::view-transition-new(root) { animation: travel-in .38s var(--ease-soft) both; }
+@keyframes travel-out {
   from { opacity: 1; transform: none; }
   to   { opacity: 0; transform: translateX(-1.6%); }
 }
-@keyframes view-in {
+@keyframes travel-in {
   from { opacity: 0; transform: translateX(2.2%); }
   to   { opacity: 1; transform: none; }
 }
@@ -4655,46 +4609,103 @@ body { background: var(--paper); }
 }
 .setup-skip:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
-/* ═══════════════════ La page d'avant la première question ═════════════════
-   Quatre cartes de promesses, c'était déjà un formulaire : on les lisait en
-   cherchant ce qu'il fallait en faire. Une phrase, une précision, un bouton.
-   Ce qu'il y a à comprendre tient en une ligne — le reste s'apprend en le
-   faisant.
-   ═══════════════════════════════════════════════════════════════════════════ */
-/* Le `ch` se mesure sur la police de l'élément : posé sur le conteneur, qui
+/* ═══════════════════ La page d'avant la première question ══════════════
+   Une ouverture, pas une question. Le titre porte la seule chose qui débloque
+   un fondateur — il n'a pas à savoir —, le rendu 3D lui donne l'échelle d'une
+   page d'accueil, et les trois lignes du bas répondent aux trois objections.
+
+   Le `ch` se mesure sur la police de l'élément : posé sur le conteneur, qui
    hérite du corps de texte, il donnait une colonne de cent cinquante pixels et
-   cassait le titre mot par mot. La largeur se borne sur le titre lui-même. */
-.welcome {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 22px;
-  padding: 6vh 0 2vh;
+   cassait le titre mot par mot. La largeur se borne sur le titre lui-même.
+   ════════════════════════════════════════════════════════════════════════ */
+.setup-card.is-bare { background: transparent; border: 0; box-shadow: none; padding: 0; }
+
+.welcome { display: flex; flex-direction: column; gap: clamp(26px, 5vh, 48px); padding: 2vh 0 1vh; }
+.welcome-hero { display: flex; align-items: center; gap: 28px; }
+.welcome-say { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+
+.welcome-kicker {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-4);
+  display: inline-flex; align-items: center; gap: 9px;
+  animation: welcome-rise .66s var(--ease-soft) both;
 }
+.welcome-kicker::before { content: ''; width: 26px; height: 2px; background: var(--accent); display: block; }
 .welcome-big {
   margin: 0; font-family: var(--display); font-weight: 800;
-  font-size: clamp(30px, 5.2vw, 52px); line-height: 1.06; letter-spacing: -.035em;
-  color: var(--ink-4); max-width: 15ch;
-  animation: welcome-rise .7s var(--ease-soft) both;
+  font-size: clamp(28px, 3.1vw, 40px); line-height: 1.1; letter-spacing: -.032em;
+  color: var(--ink-4); max-width: 26ch; text-wrap: balance;
+  animation: welcome-rise .7s .06s var(--ease-soft) both;
 }
 .welcome-big b { color: var(--ink); font-weight: 800; }
-.welcome-sub {
-  margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--ink-4);
-  animation: welcome-rise .7s .12s var(--ease-soft) both;
+.welcome-lede {
+  margin: 0; font-size: 15px; line-height: 1.6; color: var(--ink-3); max-width: 56ch;
+  animation: welcome-rise .7s .14s var(--ease-soft) both;
 }
+.welcome-cta {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  animation: welcome-rise .7s .22s var(--ease-soft) both;
+}
+.welcome-go { border-radius: 999px; padding: 15px 38px; font-size: 16px; }
+.welcome-meta {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-5);
+}
+
+/* Le rendu 3D donne l'échelle. Il ne dit rien que le texte ne dise — c'est
+   exactement son rôle : occuper l'œil pendant que la phrase se lit. */
+.welcome-art {
+  flex: 0 0 auto; width: clamp(110px, 16vw, 180px); line-height: 0;
+  animation: welcome-float 6s ease-in-out .9s infinite, welcome-pop .9s .18s var(--ease-soft) both;
+}
+.welcome-art-img {
+  width: 100%; height: auto; display: block;
+  filter: drop-shadow(0 22px 34px rgba(11, 14, 16, .22));
+}
+@keyframes welcome-pop {
+  from { opacity: 0; transform: translateY(24px) scale(.88); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes welcome-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-11px); }
+}
+
+/* Les trois objections, et leur réponse. Une ligne chacune : ce n'est pas un
+   choix à faire, donc ça ne doit pas ressembler à des cartes cliquables. */
+.welcome-points {
+  list-style: none; margin: 0; padding: 20px 0 0; border-top: 1px solid var(--rule);
+  display: grid; gap: 20px 26px; grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 960px) { .welcome-points { grid-template-columns: 1fr; gap: 16px; } }
+.welcome-point {
+  display: flex; align-items: flex-start; gap: 12px; min-width: 0;
+  animation: welcome-rise .7s var(--d, .3s) var(--ease-soft) both;
+}
+.welcome-point-ico { width: 34px; height: 34px; flex: none; line-height: 0; }
+.welcome-point b {
+  display: block; font-family: var(--display); font-size: 14px; font-weight: 700;
+  letter-spacing: -.015em; color: var(--ink); margin-bottom: 2px;
+}
+.welcome-point span { display: block; font-size: 12.5px; line-height: 1.5; color: var(--ink-4); }
+
 @keyframes welcome-rise {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: none; }
 }
-.welcome-go {
-  border-radius: 999px; padding: 15px 38px; font-size: 16px;
-  animation: welcome-rise .7s .22s var(--ease-soft) both;
-}
 
-@media (max-width: 700px) {
-  .welcome { max-width: none; }
-  .welcome-big { max-width: none; }
-  .welcome-go { width: 100%; justify-content: center; }
+@media (max-width: 680px) {
+  .welcome-hero { flex-direction: column-reverse; align-items: flex-start; gap: 16px; }
+  .welcome-art { width: 96px; align-self: flex-start; }
+  .welcome-big, .welcome-lede { max-width: none; }
 }
-@media (prefers-reduced-motion: reduce) { .welcome-big, .welcome-sub, .welcome-go { animation: none; } }
+@media (max-width: 700px) {
+  .welcome-go { width: 100%; justify-content: center; }
+  .welcome-cta { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-kicker, .welcome-big, .welcome-lede, .welcome-cta, .welcome-art, .welcome-point { animation: none; }
+}
 
 /* ═══════════════ La simulation : chaque ligne du plan a son curseur ════════
    Un fondateur qui a trois offres et onze charges ne cherche pas « le prix » :
@@ -4763,19 +4774,24 @@ details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: va
 
 /* ─── « Affiner mon dossier » se referme ─── */
 .refinery-toggle {
-  display: flex; align-items: center; justify-content: center; flex: none;
-  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
-  font-size: 15px; line-height: 1; padding: 0;
-  transition: transform .42s var(--ease-soft), border-color .2s, color .2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none;
+  height: 30px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
+  font: inherit; font-size: 12px; font-weight: 500; line-height: 1;
+  transition: border-color .2s, color .2s, background .2s;
 }
-.refinery-toggle:hover { border-color: var(--ink); color: var(--ink); }
-.refinery.is-shut .refinery-toggle { transform: rotate(-90deg); }
+.refinery-toggle:hover { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
+.refinery-toggle-sign {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none;
+  transition: transform .42s var(--ease-soft);
+}
+.refinery-toggle-sign svg { width: 14px; height: 14px; display: block; }
+.refinery.is-shut .refinery-toggle-sign { transform: rotate(-90deg); }
 .refinery-fold { overflow: hidden; transition: max-height .52s var(--ease-soft), opacity .34s var(--ease-soft); max-height: 4000px; opacity: 1; }
 .refinery.is-shut .refinery-fold { max-height: 0; opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  .refine-sign, .refine-body, .refinery-toggle, .refinery-fold { transition: none; animation: none; }
+  .refine-sign, .refine-body, .refinery-toggle, .refinery-toggle-sign, .refinery-fold { transition: none; animation: none; }
 }
 
 /* ─── Le coût de revient : demandé, et jamais compté deux fois ─── */
@@ -4783,10 +4799,6 @@ details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: va
   margin: 10px 0 0; padding: 9px 12px; border-radius: 9px;
   background: var(--warn-wash); border: 1px solid #EBD3A8;
   font-size: 12px; color: var(--ink-2); line-height: 1.5; max-width: 82ch;
-}
-.part-add.is-slim {
-  margin-top: 10px; padding: 9px 13px; font-size: 12.5px;
-  border-style: dashed; width: auto;
 }
 
 /* ─── Les charges, en deux natures ─── */
@@ -4840,3 +4852,185 @@ details[open] > .refine-head .refine-sign { transform: rotate(135deg); color: va
 .famfold-icon { width: 26px; height: 26px; }
 
 @media (prefers-reduced-motion: reduce) { .ico3 { transition: none; } }
+
+/* ─── Les vrais rendus, quand il en existe un ───
+   Une image, pas un tracé : la matière et la lumière d'un moteur 3D, qu'un
+   vectoriel ne sait pas produire. Le dessin ci-dessus reste le repli. */
+.ico3d {
+  width: 100%; height: 100%; display: block; object-fit: contain;
+  transition: transform .42s var(--ease-soft), filter .42s var(--ease-soft);
+}
+.setup-sector:hover .ico3d { transform: translateY(-3px) scale(1.06); filter: drop-shadow(0 8px 14px rgba(11, 14, 16, .22)); }
+.setup-sector.active .ico3d { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .35)); }
+@media (prefers-reduced-motion: reduce) { .ico3d { transition: none; } }
+
+/* ═══════════════════════════════ La synthèse ════════════════════════════
+   Trois cartes, trois réponses. C'est la seule page de l'outil où la phrase
+   passe avant le chiffre : le graphique n'y est qu'une silhouette, sans axe
+   ni graduation, parce qu'il ne sert qu'à confirmer d'un coup d'œil ce que
+   la phrase vient de dire. Le ton — vert, ambre, rouge — est porté par un
+   filet haut, jamais par un fond : un fond coloré crie, un filet informe. */
+.plain { display: flex; flex-direction: column; gap: 18px; }
+.plain-lede {
+  margin: 0; font-size: 14px; color: var(--ink-3); max-width: 64ch;
+}
+.plain-cards {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  align-items: stretch;
+}
+
+.plaincard {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 3px solid var(--ink-5);
+  padding: 16px 18px 18px;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0;
+}
+.plaincard.is-good  { border-top-color: var(--gain); }
+.plaincard.is-watch { border-top-color: var(--warn); }
+.plaincard.is-bad   { border-top-color: var(--loss); }
+
+.plaincard-head { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.plaincard-ico { width: 44px; height: 44px; flex: none; display: block; }
+.plaincard-kicker {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px;
+}
+.plaincard-title {
+  margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink); text-wrap: balance;
+}
+.plaincard-body {
+  margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-3); flex: 1 1 auto;
+}
+
+/* Le chiffre de la carte : une seule ligne, l'étiquette à gauche, la valeur
+   au bout. Un seul nombre par carte — tout le reste est dans la phrase. */
+.plaincard-figure {
+  display: flex; align-items: baseline; gap: 10px;
+  border-top: 1px solid var(--rule); padding-top: 10px; margin-top: auto;
+}
+.plaincard-figure-label { font-size: 12px; color: var(--ink-4); flex: 1 1 auto; min-width: 0; }
+.plaincard-figure-value { font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+.plaincard-figure-value.pos { color: var(--gain); }
+.plaincard-figure-value.neg { color: var(--loss); }
+
+/* Cinq barres, une par année : ça part du rouge, ça passe au vert. */
+.plainbars { display: flex; align-items: flex-end; gap: 8px; }
+.plainbar { flex: 1 1 0; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.plainbar-track { height: 48px; position: relative; }
+.plainbar-track i {
+  position: absolute; left: 0; right: 0; bottom: 0; display: block; border-radius: 1px;
+  transform-origin: bottom; animation: plainbar-rise .52s var(--ease-soft) both;
+}
+.plainbar-track i.is-pos { background: var(--gain); }
+.plainbar-track i.is-neg { background: var(--loss); }
+.plainbar-label {
+  font-family: var(--mono); font-size: 9px; color: var(--ink-5);
+  text-align: center; letter-spacing: .04em;
+}
+@keyframes plainbar-rise { from { transform: scaleY(.04); transform-origin: bottom; } to { transform: scaleY(1); } }
+
+/* La courbe de trésorerie, réduite à sa forme et à son passage sous zéro. */
+.plainline { display: flex; flex-direction: column; gap: 5px; }
+.plainline svg { width: 100%; height: 56px; display: block; overflow: visible; }
+.plainline-zero { stroke: var(--ink-5); stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.plainline-path {
+  fill: none; stroke: var(--signal); stroke-width: 2;
+  stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke;
+}
+.plainline-note { font-size: 11px; color: var(--ink-5); }
+
+.plain-foot {
+  border-top: 1px solid var(--rule); padding-top: 14px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.plain-foot p { margin: 0; flex: 1 1 320px; font-size: 12.5px; color: var(--ink-4); max-width: 70ch; }
+.plain-foot-go { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ─── Acquisition : une campagne naît à zéro, les repères se demandent ─── */
+.seed-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 13px; margin: 0 0 12px;
+  background: var(--surface-2); border: 1px dashed var(--rule-strong);
+}
+.seed-row p { margin: 0; flex: 1 1 320px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+
+/* ═════════════ Comment l'offre rapporte : trois modes exclusifs ═════════
+   Ce n'est pas une barre d'onglets de plus : c'est un choix de modèle, et il
+   se voit comme tel — trois cartes larges, celle qui est retenue encrée,
+   chacune portant en petit ce qu'elle veut dire. Un menu déroulant aurait
+   caché deux options sur trois derrière un clic. */
+.pmode {
+  display: grid; gap: 8px; margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.pmode-tab {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 11px 13px; cursor: pointer; font: inherit; min-width: 0;
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule);
+  transition: border-color .18s, background .18s, transform .18s var(--ease-soft);
+}
+.pmode-tab:hover { border-color: var(--ink-5); border-top-color: var(--ink-5); }
+.pmode-tab.is-on {
+  border-color: var(--ink); border-top-color: var(--accent);
+  background: var(--surface); transform: translateY(-1px);
+}
+.pmode-label {
+  font-family: var(--display); font-size: 14.5px; font-weight: 700;
+  letter-spacing: -.018em; color: var(--ink-4);
+}
+.pmode-tab.is-on .pmode-label { color: var(--ink); }
+.pmode-note { font-size: 11.5px; color: var(--ink-5); line-height: 1.35; }
+.pmode-tab.is-on .pmode-note { color: var(--ink-3); }
+
+/* La commission, lue à voix haute : montant × part = ce qui entre. */
+.pmode-read { margin-top: 14px; padding: 13px 15px; background: var(--surface-2); border: 1px solid var(--rule); }
+.pmode-read.is-empty { font-size: 12.5px; color: var(--ink-4); line-height: 1.55; }
+.pmode-read p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.55; max-width: 78ch; }
+.pmode-read-line {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-size: 16px; color: var(--ink-3);
+}
+.pmode-read-line strong { font-size: 19px; color: var(--gain); letter-spacing: -.02em; }
+.pmode-read-op { color: var(--ink-5); }
+
+/* ═══════════ Un seul jeu de signes, centré par construction ═══════════════
+   Les « ＋ », « − » et « × » typographiques ne se centrent pas : leur boîte
+   dépend de la police, et dans un bouton rond ou carré ils flottent toujours
+   d'un pixel ou deux — visible dès qu'on en aligne plusieurs. Les mêmes
+   signes dessinés en SVG sont au milieu à toutes les tailles. */
+.item-act, .source-act, .byyear-clear, .tradetip-plus, .btn-sign {
+  display: inline-grid; place-items: center; line-height: 0;
+}
+.item-act svg, .source-act svg, .byyear-clear svg, .tradetip-plus svg, .btn-sign svg {
+  width: 14px; height: 14px; display: block;
+}
+.tradetip-plus svg { width: 11px; height: 11px; }
+.byyear-clear { width: 18px; height: 18px; padding: 0; }
+.btn-sign { padding-left: 10px; padding-right: 10px; }
+
+/* ═══════════ Ce qui s'écrit, et ce qui se lit ══════════════════════════════
+   « Équipe » se remplit ; « Masse salariale » se lit. Les deux étaient des
+   onglets identiques, et on cliquait sur le second en cherchant un champ à
+   modifier. Un « i » d'infobulle aurait ajouté une chose à survoler ; ici le
+   signe est dans l'onglet lui-même : un filet vert vif sur ce qui se modifie,
+   un filet gris et le mot « lecture » sur ce qui ne fait que montrer. Ça se
+   voit sans qu'on ait rien à faire. */
+.hnav-tab::before {
+  content: ''; width: 3px; align-self: stretch; margin: 5px 0; border-radius: 2px;
+  background: var(--accent); flex: none;
+  transition: background .24s var(--ease-soft), opacity .24s;
+}
+.hnav-tab.is-read::before { background: var(--rule); }
+.hnav-tab.active::before { background: var(--ink); }
+.hnav-tab.is-read.active::before { background: var(--ink-5); }
+.hnav-tab.is-read { font-weight: 450; color: var(--ink-4); }
+.hnav-tab.is-read .hnav-read {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-5); margin-left: 1px;
+}
+.hnav-tab:not(.is-read) { font-weight: 600; }
+/* La pastille qui disait la même chose en plus discret n'a plus d'emploi. */
+.hnav-kind { display: none; }

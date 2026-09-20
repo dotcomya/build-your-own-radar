@@ -21,6 +21,8 @@
  * PNG ou WebP, sous licence. Il faudrait les fichiers ; voir le README.
  */
 
+import { icon3d } from './icons3d.js'
+
 /**
  * Le cadre commun : une plaque isométrique, et de la place au-dessus.
  *
@@ -112,9 +114,23 @@ const SHAPES = {
     <path d="M24 15v22" stroke="var(--ico-line)" stroke-width="2" stroke-linecap="round"/>`,
 }
 
-/** L'icône d'une famille, prête à poser dans un `innerHTML`. */
+/**
+ * L'icône d'une famille.
+ *
+ * Un vrai rendu quand il existe — 3dicons.co, CC0, la matière et la lumière
+ * qu'un vectoriel ne sait pas produire — et le dessin isométrique ci-dessus en
+ * repli, pour qu'aucune famille ne se retrouve sans image.
+ */
 export function familyIcon(key) {
+  const png = icon3d(key)
+  if (png) return `<img src="${png}" alt="" class="ico3d" loading="lazy" decoding="async">`
   return frame(SHAPES[key] || SHAPES.entreprises)
+}
+
+/** Une icône hors familles : le départ, l'idée, l'argent, la cible. */
+export function icon(key, cls = 'ico3d') {
+  const png = icon3d(key)
+  return png ? `<img src="${png}" alt="" class="${cls}" loading="lazy" decoding="async">` : ''
 }
 
 /** La liste des familles couvertes — pour vérifier qu'aucune n'est orpheline. */

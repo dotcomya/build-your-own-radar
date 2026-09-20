@@ -2,14 +2,14 @@
  * Le panneau « affiner mon dossier ».
  *
  * Il tient la promesse que le parcours ne pouvait pas tenir : dire ce qui
- * reste, dans l'ordre où ça rapporte. Trois paliers, dix-neuf lignes, une
- * barre pondérée — et chaque ligne est un bouton qui ouvre le champ à remplir.
+ * reste, dans l'ordre où ça rapporte. Trois paliers, une barre pondérée — et
+ * chaque ligne est un bouton qui ouvre le champ à remplir.
  *
  * Ce qui est fait se tasse ; ce qui reste s'affiche. Personne n'a besoin de
  * relire ce qu'il a déjà posé.
  */
 
-import { h } from './dom.js'
+import { h, CHEVRON } from './dom.js'
 import { checklist, resumeAll } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
@@ -46,13 +46,20 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
         // Le panneau se referme : sur un plan bien avancé, trente lignes en
         // tête de tableau de bord repoussent tout le reste sous l'écran.
         h('button', {
-          class: 'refinery-toggle', title: memory.shut ? 'Rouvrir la liste' : 'Replier la liste',
+          class: 'refinery-toggle',
           'aria-expanded': String(!memory.shut),
           onClick: (e) => {
             memory.shut = !memory.shut
-            e.target.closest('.refinery')?.classList.toggle('is-shut', memory.shut)
+            const host = e.currentTarget.closest('.refinery')
+            host?.classList.toggle('is-shut', memory.shut)
+            e.currentTarget.setAttribute('aria-expanded', String(!memory.shut))
+            const word = e.currentTarget.querySelector('.refinery-toggle-word')
+            if (word) word.textContent = memory.shut ? 'Déplier' : 'Replier'
           },
-        }, '⌄'),
+        },
+          h('span', { class: 'refinery-toggle-word' }, memory.shut ? 'Déplier' : 'Replier'),
+          h('span', { class: 'refinery-toggle-sign', 'aria-hidden': 'true', html: CHEVRON }),
+        ),
       ),
     ),
 
@@ -117,13 +124,14 @@ const memory = { open: false, shut: false }
  *
  * Le fondateur a dit où il en est au tout début. Ça n'a pas fait de lui un
  * profil, et ça ne lui a rien retiré : ça a seulement décidé par quoi on
- * commence. La phrase le rappelle et le dit sans détour — les dix-neuf lignes
- * sont les mêmes pour tout le monde, seul l'ordre change.
+ * commence. La phrase le rappelle et le dit sans détour — les lignes sont les
+ * mêmes pour tout le monde, seul l'ordre change.
  */
 function stageLine() {
   const here = stageOf(store.scenario)
   if (!here) return null
+  const total = checklist(store.scenario).total
   return h('p', { class: 'refinery-stage' },
     h('b', {}, here.cap),
-    ` — ${here.says} Les dix-neuf lignes restent les mêmes pour tout le monde : seul l’ordre change.`)
+    ` — ${here.says} Les ${total} lignes restent les mêmes pour tout le monde : seul l’ordre change.`)
 }

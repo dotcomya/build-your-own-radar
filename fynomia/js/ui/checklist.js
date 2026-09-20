@@ -59,9 +59,14 @@ const ITEMS = [
     go: { route: 'achats', view: 'charges', anchor: 'charges' } },
 
   // ── Crédibilité ──────────────────────────────────────────────────────────
+  // Le coût de revient ne se saisit plus dans le prix : il vit en charge par
+  // vente, où on le voit à côté des autres coûts et où il ne peut plus être
+  // compté deux fois. La ligne est donc considérée posée des deux côtés, et
+  // elle emmène désormais là où on la modifie.
   { key: 'cout', tier: 'credibilite', label: 'Le coût de revient', why: 'Sans lui, la marge affichée est le prix entier.',
-    done: (s) => any(s.activities, (a) => (n(a.unitPrice) > 0 ? n(a.unitCost) > 0 : n(a.recurringCost) > 0)),
-    go: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' } },
+    done: (s) => any(s.activities, (a) => (n(a.unitPrice) > 0 ? n(a.unitCost) > 0 : n(a.recurringCost) > 0))
+      || any(s.opex, (o) => o.enabled !== false && (n(o.perUnit) > 0 || n(o.pctRevenue) > 0)),
+    go: { route: 'achats', view: 'charges', anchor: 'charges' } },
   { key: 'salaire', tier: 'credibilite', label: 'Ta rémunération', why: 'Un plan où le fondateur ne se paie pas est faux.',
     done: (s) => any(s.team, (m) => /fondateur|dirigeant|moi|g/i.test(m.role || '') && n(m.monthlyGross) > 0),
     go: { route: 'equipe', view: 'postes', anchor: 'equipe' } },

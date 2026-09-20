@@ -1,6 +1,6 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell } from '../dom.js'
+import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell, PLUS, MINUS } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
@@ -209,7 +209,11 @@ export function renderFinancing(navigate, refresh) {
                 title: on ? `Ne pas utiliser : ${src.label.toLowerCase()}` : `Utiliser : ${src.label.toLowerCase()}`,
                 'aria-label': on ? `Désactiver ${src.label}` : `Activer ${src.label}`,
                 onClick: (e) => { e.stopPropagation(); toggle(src) },
-              }, on ? '−' : '＋'),
+                // Un « + » typographique flotte : sa boîte dépend de la police, et
+                // dans un bouton rond il n'est jamais tout à fait au centre. Deux
+                // traits dessinés le sont par construction, à toutes les tailles.
+                html: on ? MINUS : PLUS,
+              }),
             ),
           )
         }),
@@ -271,7 +275,7 @@ function sourceDetail(src, items, r, { add, drop, setField }) {
                 if (fd.type === 'percent') return numberField({ ...common, field: 'rate', percent: true, step: fd.step, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
                 return numberField({ ...common, field: 'amount', suffix: fd.suffix, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
               }),
-              h('button', { class: 'btn btn-sm btn-danger', title: 'Retirer cette ligne', onClick: () => drop(src.key, item.id) }, '\u2212'),
+              h('button', { class: 'btn btn-sm btn-danger btn-sign', title: 'Retirer cette ligne', html: MINUS, onClick: () => drop(src.key, item.id) }),
             ),
             src.note && h('div', { class: 'tiny muted', style: { marginTop: '6px' } }, src.note(item)),
           ))),

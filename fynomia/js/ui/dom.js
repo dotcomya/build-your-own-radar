@@ -249,7 +249,7 @@ export function tabs(items, active, onPick) {
   if (list.length <= 1) return null
   return h('div', { class: 'hnav', role: 'tablist' },
     ...list.map((it) => h('button', {
-      class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
+      class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.read ? 'is-read' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
       onClick: () => { armTravel('view'); markViewChange(); onPick(it.key) },
     },
@@ -259,11 +259,9 @@ export function tabs(items, active, onPick) {
       // « Masse salariale » en croyant y saisir quelque chose, on n'y trouvait
       // qu'un tableau, et on repartait. Le point plein dit qu'on écrit ici ;
       // le cercle creux dit qu'on y lit ce que le modèle a calculé.
-      h('span', {
-        class: `hnav-kind ${it.read ? 'is-read' : 'is-write'}`,
-        title: it.read ? 'Rien à saisir ici : c’est le calcul' : 'Des champs à remplir',
-        'aria-hidden': 'true',
-      }),
+      // Le mot dit ce qu'on trouve derrière l'onglet. Pas d'infobulle à
+      // survoler : on doit pouvoir choisir sans rien tenter.
+      it.read ? h('span', { class: 'hnav-read' }, 'lecture') : null,
     )),
   )
 }
@@ -275,6 +273,18 @@ export function tabs(items, active, onPick) {
  * liste de réglages rares — tient replié derrière un chevron. Le titre porte
  * déjà l'essentiel : on n'ouvre que pour vérifier.
  */
+/** Deux traits, centrés par construction. */
+export const PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+
+/** Les deux autres signes du même jeu : retirer, et fermer. */
+export const MINUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+export const CROSS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 4.5 7 7m0-7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+
+/** Un chevron, même construction : tracé dans sa boîte, donc centré. */
+export const COPY = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.6" y="5.6" width="7.4" height="7.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 3.6H4.4a1.4 1.4 0 0 0-1.4 1.4v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+
+export const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+
 export function fold(title, summary, body, { open = false, id = null, tone = '' } = {}) {
   // Un seul geste d'ouverture dans toute l'application.
   //
@@ -284,7 +294,10 @@ export function fold(title, summary, body, { open = false, id = null, tone = '' 
   // qu'on ajoute du détail, là où le chevron ne disait qu'un sens.
   const el = h('details', { class: `refine refine-block ${tone}`, open: open || null },
     h('summary', { class: 'refine-head' },
-      h('span', { class: 'refine-sign', 'aria-hidden': 'true' }, '+'),
+      // Un « + » typographique ne se centre pas : sa boîte dépend de la
+      // police, et il flotte toujours d'un pixel ou deux. Deux traits dessinés
+      // sont centrés par construction, à toutes les tailles.
+      h('span', { class: 'refine-sign', 'aria-hidden': 'true', html: PLUS }),
       h('span', { class: 'refine-label' }, title),
       summary ? h('span', { class: 'refine-sum' }, summary) : null,
     ),
