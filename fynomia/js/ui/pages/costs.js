@@ -9,6 +9,7 @@ import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
+import { tradeSuggest } from '../trade-suggest.js'
 import store from '../../state/store.js'
 
 export function renderCosts(navigate, refresh) {
@@ -77,13 +78,20 @@ export function renderCosts(navigate, refresh) {
           ))
         : h('div', { 'data-gap': 'charges' }, ...s.opex.map((o) => opexRow(o, r, level, refresh))),
 
-      missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
-        h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
-        ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: () => addFromTemplate(t) }, `＋ ${t.label}`)),
-      ) : null,
+      // Le métier passe devant le générique : « cornets et pots, 0,18 € par
+      // glace vendue » vaut mieux que « fournitures ». Les pastilles neutres
+      // ne restent que pour les métiers qui n'ont pas encore leur liste.
+      tradeSuggest('opex', navigate, refresh)
+        || (missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
+            h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
+            ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: () => addFromTemplate(t) }, `＋ ${t.label}`)),
+          ) : null),
     ) : null,
 
-    view === 'invest' ? h('div', { class: 'view', 'data-gap': 'capex' }, capexSection(s, r, level, refresh)) : null,
+    view === 'invest' ? h('div', { class: 'view', 'data-gap': 'capex' },
+      capexSection(s, r, level, refresh),
+      tradeSuggest('capex', navigate, refresh),
+    ) : null,
 
     view === 'repartition' && r ? h('div', { class: 'view' },
       h('div', { class: 'board-pair' },

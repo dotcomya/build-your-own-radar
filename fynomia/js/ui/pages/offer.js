@@ -11,6 +11,7 @@ import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
+import { tradeSuggest } from '../trade-suggest.js'
 
 export function renderOffer(navigate, refresh) {
   const s = store.scenario
@@ -74,7 +75,13 @@ export function renderOffer(navigate, refresh) {
     tabs(views, view, (k) => { renderOffer.view = k; refresh() }),
 
     view === 'offres'
-      ? h('div', { class: 'view' }, ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)))
+      ? h('div', { class: 'view' },
+          ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate)),
+          // Un restaurateur qui n'a saisi que ses couverts a oublié les
+          // boissons — son poste le plus rentable. On le lui dit ici, avec le
+          // mot qu'il emploie, pas dans un guide générique.
+          tradeSuggest('offers', navigate, refresh),
+        )
       : view === 'acquisition'
         ? h('div', { class: 'view' }, renderAcquisition(navigate, refresh))
         : h('div', { class: 'view' }, comparisonCard(r)),

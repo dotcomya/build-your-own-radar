@@ -19,6 +19,7 @@
  */
 
 import store from '../state/store.js'
+import { stageOf, liftRank } from './stages.js'
 
 const n = (v) => Number(v) || 0
 const any = (arr, fn) => (arr || []).some(fn)
@@ -134,11 +135,15 @@ export function checklist(scenario) {
   const s = scenario || store.scenario || {}
   const weightOf = (tier) => TIERS.find((t) => t.key === tier)?.weight || 1
 
-  const items = ITEMS.map((it) => {
+  // Le stade du projet remonte quelques lignes devant les autres : celui qui
+  // monte un dossier bancaire n'a pas le même « ensuite » que celui qui teste
+  // une idée. À rang égal, l'ordre des paliers reprend la main.
+  const stage = stageOf(s)
+  const items = ITEMS.map((it, rank) => {
     let ok = false
     try { ok = !!it.done(s) } catch { ok = false }
-    return { ...it, done: ok, weight: weightOf(it.tier) }
-  })
+    return { ...it, done: ok, weight: weightOf(it.tier), rank, lift: liftRank(stage, it.key) }
+  }).sort((a, b) => (a.lift - b.lift) || (a.rank - b.rank))
 
   const groups = TIERS.map((t) => {
     const mine = items.filter((i) => i.tier === t.key)

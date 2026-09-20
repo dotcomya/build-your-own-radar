@@ -174,16 +174,33 @@ function fiscalPanel(refresh) {
               h('td', {},
                 h('div', {}, p.label),
                 h('div', { class: 'tiny muted', style: { whiteSpace: 'normal', maxWidth: '68ch', marginTop: '2px' } }, p.note),
+                // Un chiffre sans son texte est une affirmation. Avec, c'est
+                // une référence que le comptable du fondateur peut rouvrir.
+                p.source ? h('div', { class: 'tiny', style: { whiteSpace: 'normal', marginTop: '3px', color: 'var(--signal-ink)' } }, p.source) : null,
               ),
               h('td', { class: 'num nowrap', style: { verticalAlign: 'top' } }, formatParam(s.fiscal[key] !== undefined ? s.fiscal[key] : p.value, p.unit)),
               h('td', { style: { verticalAlign: 'top' } },
-                h('span', { class: `chip ${p.confidence === 'stable' ? 'chip-pos' : 'chip-warn'}` }, p.confidence === 'stable' ? 'Règle pérenne' : 'À confirmer')),
+                h('span', { class: `chip ${CONF[p.confidence]?.chip || 'chip-warn'}` }, CONF[p.confidence]?.label || 'À confirmer')),
             )),
           ),
         ),
       ),
     ),
   )
+}
+
+/**
+ * Trois statuts, trois niveaux d'engagement.
+ *
+ * « Règle pérenne » ne bouge qu'avec une loi de finances. « 2026, texte publié »
+ * est une valeur relevée dans un texte promulgué, cité juste au-dessus.
+ * « À confirmer » est un ordre de grandeur assumé — un taux moyen de
+ * cotisations n'existe dans aucun journal officiel.
+ */
+const CONF = {
+  stable: { chip: 'chip-pos', label: 'Règle pérenne' },
+  enacted: { chip: 'chip-brand', label: '2026, texte publié' },
+  'to-verify': { chip: 'chip-warn', label: 'À confirmer' },
 }
 
 function dataPanel(navigate, refresh, usage) {
@@ -278,4 +295,8 @@ const shortKey = (k) => ({
   maxAgeYears: 'âge max', rdRatioThreshold: 'seuil R&D', ceiling: 'plafond', windowYears: 'fenêtre',
   exemptionThreshold: 'seuil', maxRate: 'taux max', minimumContribution: 'minimum', additionalTaxRate: 'taxe add.',
   operatingAllowance: 'forfait', equipmentAllowance: 'matériel', exemptFirstYear: '1re année exonérée',
+  // La flat tax et l'abattement : personne n'a à lire « socialCharges » dans
+  // un tableau qui sert à vérifier des taux devant un comptable.
+  total: 'total', incomeTax: 'impôt', socialCharges: 'prélèv. sociaux',
+  min: 'plancher', max: 'plafond',
 }[k] || k)

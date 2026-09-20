@@ -15,6 +15,7 @@ import { milestones } from '../engine/milestones.js'
 import { suggestActions } from '../engine/simulate.js'
 import { founderIncome } from '../engine/founder.js'
 import { monthLabel, num } from '../format.js'
+import { pfuSocial } from '../engine/fiscal-fr-2026.js'
 
 // Le « coût d'un euro net » vaut 2,14 et non 2 : arrondi à l'unité, le chiffre
 // perd ce qu'il a d'intéressant.
@@ -644,7 +645,7 @@ export function buildDeck(scenario, result, profile) {
       ...(incomeRow.distributed > 0 ? [{ label: `Distribué aux associés (${formatPct(income.settings.payout)})`, value: -incomeRow.distributed, kind: 'info',
         note: incomeRow.retained > 0 ? `${eur(incomeRow.retained)} restent en réserves dans l'entreprise` : "rien n'est mis en réserve" }] : []),
       ...(incomeRow.grossDividends > 0 ? [{ label: 'Tes dividendes bruts', value: incomeRow.grossDividends, kind: 'start' }] : []),
-      ...(incomeRow.dividendSocial > 0 ? [{ label: incomeRow.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : 'Prélèvements sociaux sur dividendes (17,2 %)', value: -incomeRow.dividendSocial, kind: 'cost' }] : []),
+      ...(incomeRow.dividendSocial > 0 ? [{ label: incomeRow.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : `Prélèvements sociaux sur dividendes (${pfuSocial()})`, value: -incomeRow.dividendSocial, kind: 'cost' }] : []),
       ...(incomeRow.dividendIncomeTax > 0 ? [{ label: 'Impôt forfaitaire sur dividendes (12,8 %)', value: -incomeRow.dividendIncomeTax, kind: 'cost' }] : []),
       ...(incomeRow.gross > 0 ? [{ label: 'Ton salaire net', value: incomeRow.netBeforeTax, kind: 'gain' }] : []),
       { label: "Impôt sur le revenu", value: -incomeRow.incomeTax, kind: 'cost',

@@ -13,6 +13,35 @@ import { h } from './dom.js'
 import { checklist, resumeAll } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
+import { STAGES, stageOf } from './stages.js'
+
+/**
+ * Où en est le projet — déclaré au parcours, corrigeable ici.
+ *
+ * Le stade n'est pas un badge : il remonte, dans la liste juste en dessous,
+ * les lignes qui comptent pour lui. Le changer réordonne donc la suite
+ * immédiatement, ce que le fondateur voit sans qu'on ait à l'expliquer.
+ */
+export function stageBand(refresh) {
+  const s = store.scenario
+  if (!s) return null
+  const here = stageOf(s)
+  return h('section', { class: 'stageband', 'data-gap': 'stade' },
+    h('div', { class: 'stageband-id' },
+      h('div', { class: 'stageband-tag' }, here ? 'Tu en es là' : 'Où en es-tu ?'),
+      h('div', { class: 'stageband-cap' }, here ? here.cap : 'Dis-nous où tu en es'),
+      h('div', { class: 'stageband-says' },
+        here ? here.says : "Quatre réponses possibles. Celle que tu choisis décide de ce qu'on te proposera en premier."),
+    ),
+    h('div', { class: 'stageband-pick' },
+      ...STAGES.map((st) => h('button', {
+        class: `stageband-step ${here?.key === st.key ? 'is-here' : ''}`,
+        title: st.hint,
+        onClick: () => { store.update((d) => { d.meta.stage = st.key }, { label: 'Stade du projet' }); refresh() },
+      }, st.label)),
+    ),
+  )
+}
 
 export function refinePanel(navigate, { compact = false, refresh = () => {} } = {}) {
   const c = checklist(store.scenario)

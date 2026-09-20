@@ -14,6 +14,7 @@ import { getSector } from '../../state/sectors.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
+import { pfuSocial, pfuDetail } from '../../engine/fiscal-fr-2026.js'
 
 export function renderFounder(navigate, refresh) {
   const s = store.scenario
@@ -155,7 +156,7 @@ function waterfall(income, r, y) {
   })
 
   steps.push({ label: 'Tes dividendes bruts', value: row.grossDividends, kind: 'start' })
-  if (row.dividendSocial > 0) steps.push({ label: row.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : 'Prélèvements sociaux (17,2 %)', value: -row.dividendSocial, kind: 'cost' })
+  if (row.dividendSocial > 0) steps.push({ label: row.tnsPortion > 0 ? 'Prélèvements sociaux et cotisations TNS' : `Prélèvements sociaux (${pfuSocial()})`, value: -row.dividendSocial, kind: 'cost' })
   if (row.dividendIncomeTax > 0) steps.push({ label: "Impôt forfaitaire sur dividendes (12,8 %)", value: -row.dividendIncomeTax, kind: 'cost' })
   steps.push({ label: 'Ton salaire net', value: row.netBeforeTax, kind: 'gain' })
   steps.push({ label: "Impôt sur le revenu", value: -row.incomeTax, kind: 'cost' })
@@ -218,7 +219,7 @@ function settingsPanel(s, income, set, refresh) {
       selectField({
         label: 'Imposition des dividendes', value: f.dividendRegime,
         options: [
-          { value: 'pfu', label: 'Flat tax — 30 % (12,8 % + 17,2 %)' },
+          { value: 'pfu', label: `Flat tax — ${pfuDetail()}` },
           { value: 'bareme', label: 'Barème progressif — abattement de 40 %' },
         ],
         hint: "Le barème devient intéressant quand ton taux marginal est faible.",
@@ -227,7 +228,7 @@ function settingsPanel(s, income, set, refresh) {
       isSarl && switchField({
         label: 'Gérant majoritaire',
         checked: !!f.majorityManager,
-        hint: `En SARL ou EURL, la part des dividendes dépassant 10 % du capital — soit ${euro(income.capitalBase * 0.1)} ici — supporte les cotisations d'indépendant au lieu des 17,2 % de prélèvements sociaux.`,
+        hint: `En SARL ou EURL, la part des dividendes dépassant 10 % du capital — soit ${euro(income.capitalBase * 0.1)} ici — supporte les cotisations d'indépendant au lieu des ${pfuSocial()} de prélèvements sociaux.`,
         onInput: (v) => set({ majorityManager: v }),
       }),
       comparison(income, s),

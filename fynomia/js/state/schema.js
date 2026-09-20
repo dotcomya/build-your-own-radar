@@ -101,7 +101,7 @@ export function newActivity(overrides = {}) {
 export const LEGAL_FORMS = {
   SASU: {
     label: 'SASU', short: 'Toi seul · assimilé salarié', contract: 'dirigeant',
-    note: "Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.",
+    note: `Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de ${pfuTotal()}.`,
   },
   SAS: {
     label: 'SAS', short: 'Plusieurs associés · assimilé salarié', contract: 'dirigeant',
@@ -184,6 +184,9 @@ export function emptyScenario(name = 'Mon business plan') {
       startDate: `${Math.max(2026, year)}-01-01`, level: 'easy',
       jeiClaimed: false, reducedCorporateTax: true, companyAgeYears: 0,
       sectorKey: null, vatExempt: false, nonProfit: false, persona: 'founder',
+      // Où en est le projet : idée, structuration, démarches, lancé.
+      // Vide tant que le fondateur ne l'a pas dit — on ne présume pas.
+      stage: '',
       createdAt: Date.now(), updatedAt: Date.now(),
     },
     fiscal: {},
@@ -344,4 +347,5 @@ const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).
 
 // Importé en fin de module : sectors.js consomme les fabriques ci-dessus.
 import { SECTORS } from './sectors.js'
+import { pfuTotal } from '../engine/fiscal-fr-2026.js'
 export { SECTORS }

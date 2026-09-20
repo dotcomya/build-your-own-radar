@@ -26,6 +26,16 @@ export const FAMILIES = {
 
 const opexSet = (items) => items.map(([label, monthlyAmount]) => newOpex({ label, mode: 'fixed', monthlyAmount }))
 
+/**
+ * Cinq ans de volumes à partir d'une année type.
+ *
+ * Un glacier ne vend pas la même chose en février et en juillet. Saisir une
+ * moyenne mensuelle donnerait un modèle faux là où il compte : la trésorerie
+ * de l'hiver. On répète donc la saison, avec une légère croissance annuelle.
+ */
+const seasonal = (year, growth = 1.08) =>
+  Array.from({ length: 60 }, (_, m) => Math.round(year[m % 12] * growth ** Math.floor(m / 12)))
+
 export const SECTORS = {
   // ───────────────────────────── Tech ────────────────────────────────────
   logiciel: {
@@ -225,6 +235,42 @@ export const SECTORS = {
     },
   },
 
+  glacier: {
+    family: 'retail', label: 'Glacier', glyph: '◔',
+    tagline: "Quatre mois font ton année. Les vitrines, elles, tournent les douze.",
+    unit: { one: 'glace', many: 'glaces', verb: 'vendues', client: 'client' },
+    vat: { sales: 0.1, label: 'TVA 10 %', note: "Une glace consommée sur place ou à emporter pour consommation immédiate relève du taux de 10 %. Un pot vendu pour être emporté et consommé plus tard passe à 5,5 %. Si tu vends surtout des pots et des bacs, ton taux moyen sera plus bas." },
+    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Formation hygiène obligatoire, agrément sanitaire si tu fabriques pour revendre à d'autres commerces, et registre HACCP dès l'ouverture." },
+    benchmarks: { grossMargin: [0.72, 0.8], payrollRatio: [0.24, 0.34], rentRatio: [0.08, 0.14], ticket: [4, 9] },
+    metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
+    traps: [
+      { title: 'La saison n’est pas une moyenne', body: "De juin à septembre, tu fais souvent les deux tiers de l'année. Un prévisionnel lissé sur douze mois affiche une trésorerie confortable en février, alors que c'est le mois où les glaciers ferment." },
+      { title: 'Le froid ne s’arrête jamais', body: "Conservateurs à −18 °C, vitrines à −14 °C : l'électricité court la nuit, le dimanche et hors saison. C'est une charge fixe, pas une charge d'exploitation." },
+      { title: 'Le prix du lait et de la vanille', body: "Ta matière première suit des cours mondiaux. Indexe-la sur tes ventes plutôt qu'en montant fixe, et regarde ce qu'une hausse de 20 % fait à ta marge." },
+    ],
+    build(s) {
+      s.activities = [
+        newActivity({ name: 'Cornets et coupes', unitPrice: 4.5, unitCost: 0.95, paymentLag: 0, deposit: 1, vatRateSales: 0.1,
+          volumes: { mode: 'manual', launchMonth: 0, startUnits: 0, manual: seasonal([300, 400, 900, 1600, 2600, 4200, 5200, 4800, 2400, 1000, 450, 500]) } }),
+        newActivity({ name: 'Pots à emporter', unitPrice: 9.5, unitCost: 2.6, paymentLag: 0, deposit: 1, vatRateSales: 0.055,
+          volumes: { mode: 'manual', launchMonth: 0, startUnits: 0, manual: seasonal([120, 140, 220, 320, 460, 700, 820, 780, 420, 220, 160, 260]) } }),
+      ]
+      s.team = [
+        newTeamMember({ role: 'Gérant glacier', contractType: 'tns', monthlyGross: 2000 }),
+        newTeamMember({ role: 'Vendeur saisonnier', contractType: 'cdd', monthlyGross: 1900, count: 2, startMonth: 4, endMonth: 9 }),
+      ]
+      s.opex = opexSet([['Loyer et charges', 1600], ['Électricité — vitrines et conservateurs', 620], ['Comptable', 200], ['Assurances', 120], ['Maintenance du froid', 180]])
+      s.capex = [
+        newCapex({ label: 'Turbine à glace et pasteurisateur', amount: 24000, amortYears: 7 }),
+        newCapex({ label: 'Vitrine réfrigérée à bacs', amount: 13000, amortYears: 7 }),
+        newCapex({ label: 'Laboratoire et agencement', amount: 26000, amortYears: 9 }),
+      ]
+      s.assumptions.stockDays = 20
+      s.financing.equityFounders = [{ month: 0, amount: 25000 }]
+      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 60000, month: 0, rate: 0.042, months: 84, graceMonths: 3 }]
+    },
+  },
+
   ecommerce: {
     family: 'retail', label: 'E-commerce', glyph: '⬒',
     tagline: "Tu n'achètes pas des ventes, tu achètes des clients.",
@@ -324,6 +370,41 @@ export const SECTORS = {
       s.capex = [newCapex({ label: 'Agencement et matériel', amount: 42000, amortYears: 7 })]
       s.financing.equityFounders = [{ month: 0, amount: 20000 }]
       s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 45000, month: 0, rate: 0.042, months: 72, graceMonths: 3 }]
+    },
+  },
+
+  spa: {
+    family: 'personal', label: 'Spa et institut de bien-être', glyph: '♨',
+    tagline: "Le sauna chauffe pour un client comme pour vingt.",
+    unit: { one: 'soin', many: 'soins', verb: 'réalisés', client: 'client' },
+    vat: { sales: 0.2, label: 'TVA 20 %', note: "Soins du corps, accès au spa et revente de cosmétiques relèvent tous du taux normal. Seuls les actes médicaux pratiqués par un professionnel de santé en sont exonérés." },
+    legal: { forms: ['EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Établissement recevant du public : commission de sécurité, accessibilité et contrôle sanitaire de l'eau conditionnent l'ouverture. Le CAP esthétique est exigé pour les soins du visage et du corps." },
+    benchmarks: { grossMargin: [0.82, 0.9], payrollRatio: [0.35, 0.45], rentRatio: [0.12, 0.2], ticket: [60, 110] },
+    metrics: ['revenue', 'payrollRatio', 'breakEven', 'recurringShare'],
+    traps: [
+      { title: 'Les charges fixes tournent à vide', body: "Hammam, sauna, filtration et ventilation consomment aux heures d'ouverture, pleines ou non. Ton seuil de rentabilité est haut et il se franchit par le remplissage, pas par le prix." },
+      { title: "L'eau et l'humidité", body: "Un bassin se renouvelle, s'évapore et s'analyse. La déshumidification n'est pas une option de confort : sans elle, le bâtiment se dégrade en quelques saisons." },
+      { title: 'Le temps de cabine', body: "Ta capacité n'est pas un nombre de clients mais un nombre d'heures de cabine. Deux praticiennes à temps plein plafonnent ton chiffre, quel que soit ton marketing." },
+    ],
+    build(s) {
+      s.activities = [
+        newActivity({ name: 'Modelages et soins', unitPrice: 85, unitCost: 9, paymentLag: 0, deposit: 1,
+          volumes: { mode: 'growth', launchMonth: 1, startUnits: 90, monthlyGrowth: 0.05, growthDecay: 0.93, cap: 320, manual: [] } }),
+        newActivity({ name: 'Abonnement bien-être', unitPrice: 0, recurringPrice: 120, contractMonths: 12, churnMonthly: 0.04, recurringCost: 14, paymentLag: 0, deposit: 1,
+          volumes: { mode: 'growth', launchMonth: 2, startUnits: 6, monthlyGrowth: 0.1, growthDecay: 0.95, cap: '', manual: [] } }),
+      ]
+      s.team = [
+        newTeamMember({ role: 'Gérante', contractType: 'tns', monthlyGross: 2200 }),
+        newTeamMember({ role: 'Praticienne', contractType: 'cdi', monthlyGross: 2000, count: 2, startMonth: 1 }),
+      ]
+      s.opex = opexSet([['Loyer et charges', 2600], ['Électricité — sauna, hammam, pompes', 950], ['Eau — bassin et douches', 480], ['Linge et blanchisserie', 420], ['Traitement de l’eau et analyses', 260], ['Comptable', 240], ['Assurances', 180]])
+      s.capex = [
+        newCapex({ label: 'Sauna et hammam', amount: 32000, amortYears: 9 }),
+        newCapex({ label: 'Bassin, filtration et traitement d’eau', amount: 48000, amortYears: 9 }),
+        newCapex({ label: 'Cabines de soin et agencement', amount: 41000, amortYears: 9 }),
+      ]
+      s.financing.equityFounders = [{ month: 0, amount: 45000 }]
+      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 130000, month: 0, rate: 0.043, months: 96, graceMonths: 6 }]
     },
   },
 

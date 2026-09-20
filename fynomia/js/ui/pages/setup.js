@@ -26,6 +26,8 @@ import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
+import { pfuTotal } from '../../engine/fiscal-fr-2026.js'
+import { STAGES } from '../stages.js'
 
 /** Le poste du fondateur dans l'équipe, quel que soit le mot employé. */
 const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
@@ -63,6 +65,13 @@ const STEPS = [
     help: "Ce choix commande la TVA, ton statut et les repères de marge du reste du parcours.",
     render: sectorPicker,
     ready: (s) => !!s?.meta?.sectorKey,
+  },
+  {
+    key: 'stade', short: 'Où tu en es',
+    question: 'Où en est ton projet ?',
+    help: "Personne ne démarre au même endroit. Ça change ce que Fynomia te proposera ensuite — et ça se change à tout moment.",
+    render: stageScreen,
+    ready: (s) => !!s?.meta?.stage,
   },
   {
     key: 'nom', short: 'Le nom',
@@ -397,6 +406,9 @@ function sectorPicker(ctx) {
     ...sectorsByFamily().flatMap((family) => family.sectors.map((sector) => h('button', {
       class: `setup-sector ${current === sector.key ? 'active' : ''}`,
       onClick: () => {
+        // Le stade du projet parle du fondateur, pas du commerce : passer de
+        // glacier à salon de coiffure ne le fait pas revenir à l'idée.
+        const stage = store.scenario?.meta?.stage || ''
         if (store.scenario && !store.scenario.meta.isDemo && store.scenario.meta.sectorKey) {
           // Changer de métier réécrit les hypothèses : on repart d'un plan neuf
           // plutôt que de mélanger deux jeux de valeurs par défaut.
@@ -404,6 +416,7 @@ function sectorPicker(ctx) {
         } else {
           store.create({ template: sector.key, level: 'easy', name: SECTORS[sector.key].label, sample: false })
         }
+        if (stage) store.update((d) => { d.meta.stage = stage })
         ctx.refresh()
       },
     },
@@ -412,12 +425,37 @@ function sectorPicker(ctx) {
     ))),
     h('button', {
       class: `setup-sector ${current === null && store.scenario ? 'active' : ''}`,
-      onClick: () => { store.create({ template: null, level: 'easy', name: 'Mon projet' }); ctx.refresh() },
+      onClick: () => {
+        const stage = store.scenario?.meta?.stage || ''
+        store.create({ template: null, level: 'easy', name: 'Mon projet' })
+        if (stage) store.update((d) => { d.meta.stage = stage })
+        ctx.refresh()
+      },
     },
       h('span', { class: 'setup-sector-glyph' }, '＋'),
       h('span', { class: 'setup-sector-name' }, 'Autre chose'),
     ),
   )
+}
+
+/* ───────────────────────────── Écran : le stade ─────────────────────────── */
+
+/**
+ * Quatre réponses, et la question suivante n'est plus la même.
+ *
+ * Ce n'est pas un sondage : le stade choisi remonte, dans tout le reste de
+ * l'application, les lignes qui comptent pour lui. Celui qui monte un dossier
+ * bancaire verra son apport et son emprunt proposés en premier ; celui qui a
+ * une idée verra son prix et ses volumes. On le dit sous chaque carte, pour
+ * que le choix ait l'air de ce qu'il est : utile.
+ */
+function stageScreen(ctx) {
+  return choice(ctx, STAGES.map((st) => ({
+    label: st.label,
+    note: st.hint,
+    active: () => store.scenario?.meta?.stage === st.key,
+    pick: () => store.update((d) => { d.meta.stage = st.key }),
+  })))
 }
 
 /* ──────────────────────────── Écran : forme juridique ───────────────────── */
@@ -447,7 +485,7 @@ function legalScreen(ctx) {
   const chosen = () => flow.touched.has('forme') || store.scenario.meta.legalFormChosen === true
 
   const FORMS = {
-    SASU: { label: 'SASU', note: "Toi seul. Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de 30 %.", contract: 'dirigeant' },
+    SASU: { label: 'SASU', note: `Toi seul. Président assimilé salarié : environ 41 % de cotisations patronales sur ton brut, une vraie protection sociale, pas de chômage. Dividendes à la flat tax de ${pfuTotal()}.`, contract: 'dirigeant' },
     SAS: { label: 'SAS', note: "Plusieurs associés possibles. Même régime que la SASU pour le président. C'est la forme des projets qui lèvent des fonds.", contract: 'dirigeant' },
     EURL: { label: 'EURL', note: "Toi seul. Gérant travailleur non salarié : environ 45 % de cotisations, sensiblement moins cher qu'un assimilé salarié à revenu égal, mais une couverture plus légère.", contract: 'tns' },
     SARL: { label: 'SARL', note: "Plusieurs associés. Gérant majoritaire TNS. Attention aux dividendes : au-delà de 10 % du capital, ils supportent les cotisations d'indépendant, pas la flat tax.", contract: 'tns' },

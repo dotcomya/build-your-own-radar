@@ -4234,3 +4234,99 @@ body { background: var(--paper); }
 .setup-cost:focus-within { background: var(--accent-wash); }
 /* Le champ actif lui-même : un trait d'accent sous le contrôle, rien de plus. */
 .control:focus-within { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+
+/* ═══════════════════ Les suggestions du métier ═════════════════════════════
+   Ce bloc ne montre pas des données : il propose. Il ne doit donc pas
+   ressembler à une carte de saisie de plus — un filet tireté, un fond à peine
+   teinté, et le glyphe du métier en tête pour dire d'où ça vient. Il disparaît
+   quand il n'a plus rien à proposer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.tradetip {
+  margin-top: 18px; padding: 18px 20px;
+  border: 1px dashed var(--rule); border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.tradetip-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.tradetip-glyph {
+  width: 34px; height: 34px; flex: none; border-radius: 10px;
+  background: var(--ink); color: var(--accent);
+  display: grid; place-items: center; font-size: 16px; line-height: 1;
+}
+.tradetip-id { min-width: 0; }
+.tradetip-tag {
+  font-family: var(--display); font-weight: 700; font-size: 15px;
+  letter-spacing: -.02em; color: var(--ink);
+}
+.tradetip-sub { font-size: 12px; color: var(--ink-4); margin-top: 2px; }
+
+/* Les lignes proposées : deux colonnes sur grand écran, une sur téléphone. */
+.tradetip-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 8px; }
+.tradetip-item {
+  display: flex; align-items: flex-start; gap: 10px; text-align: left;
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
+  padding: 10px 12px; cursor: pointer; font: inherit; min-width: 0;
+  transition: border-color .2s var(--ease-soft), transform .18s var(--ease-soft), box-shadow .2s var(--ease-soft);
+}
+.tradetip-item:hover { border-color: var(--ink); transform: translateY(-1px); box-shadow: 0 6px 18px -12px rgba(11, 14, 16, .5); }
+.tradetip-plus {
+  width: 20px; height: 20px; flex: none; margin-top: 1px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; font-size: 11px; line-height: 1;
+}
+.tradetip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tradetip-label { font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+.tradetip-amount { font-size: 11.5px; color: var(--signal-ink); }
+.tradetip-why { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; margin-top: 2px; }
+/* La phrase du métier : elle ne s'ajoute à rien, elle situe tout le reste. */
+.tradetip-watch {
+  margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--rule);
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.55; max-width: 84ch;
+}
+
+@media (max-width: 700px) {
+  .tradetip { padding: 15px 14px; }
+  .tradetip-items { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════ Où en est le projet ═══════════════════════════════════
+   Quatre stades, en une ligne. Ce n'est pas un fil d'étapes qu'on parcourt :
+   c'est une position qu'on déclare, et qu'on corrige quand elle change.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.stageband {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  border: 1px solid var(--rule); border-left: 3px solid var(--ink);
+  border-radius: 14px; background: var(--surface); padding: 14px 18px;
+}
+/* La phrase du stade a besoin d'une colonne, pas d'une gouttière : sous
+   420 px elle se casse en quatre lignes et les pastilles gagnent la place
+   qu'elle perd. Elles passent dessous plutôt que de l'écraser. */
+.stageband-id { min-width: 300px; flex: 1 1 420px; }
+.stageband-tag {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.stageband-cap {
+  font-family: var(--display); font-weight: 700; font-size: 16px;
+  letter-spacing: -.022em; color: var(--ink); margin-top: 3px;
+}
+.stageband-says { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.5; max-width: 76ch; }
+/* Les quatre pastilles s'enroulent au lieu de pousser la page : `flex: none`
+   leur donnait la largeur des quatre mises bout à bout, soit sept cents
+   pixels qu'une tablette n'a pas. */
+.stageband-pick { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 320px; min-width: 0; }
+.stageband-step {
+  border: 1px solid var(--rule); background: var(--surface); border-radius: 999px;
+  padding: 5px 12px; font-size: 12px; color: var(--ink-4); cursor: pointer; font: inherit;
+  transition: border-color .18s var(--ease-soft), background .18s, color .18s;
+}
+.stageband-step:hover { border-color: var(--ink); color: var(--ink); }
+.stageband-step.is-here { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+
+@media (max-width: 760px) {
+  .stageband { padding: 13px 14px; }
+  .stageband-step { font-size: 11.5px; padding: 4px 10px; }
+  /* Sur un téléphone il n'y a qu'une colonne : le plancher de 300 px ferait
+     déborder la page au lieu de protéger la phrase. */
+  .stageband-id { min-width: 0; flex: 1 1 100%; }
+  .stageband-pick { width: 100%; }
+}

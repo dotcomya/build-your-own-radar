@@ -5,6 +5,7 @@
 import { compute } from '../js/engine/engine.js'
 import { scenarioFromTemplate, newActivity, newCapex, newTeamMember } from '../js/state/schema.js'
 import { founderIncome } from '../js/engine/founder.js'
+import { PARAMS } from '../js/engine/fiscal-fr-2026.js'
 const ok=(l,c,d='')=>{ console.log(`${c?'✓':'✗'} ${l}${d?' — '+d:''}`); if(!c) process.exitCode=1 }
 const near=(a,b,t=1)=>Math.abs(a-b)<=t
 const clone=(x)=>JSON.parse(JSON.stringify(x))
@@ -113,11 +114,22 @@ const base = () => {
   sarl.founder.majorityManager = true
   const gerant = founderIncome(sarl, compute(sarl))
 
-  ok('flat tax de 30 % sur les dividendes du président de SAS',
-     near(sas.rows[0].dividendSocial + sas.rows[0].dividendIncomeTax, sas.rows[0].grossDividends * 0.30, 2),
+  // Le taux n'est pas écrit ici : il est lu dans les paramètres. Un contrôle
+  // qui recopie la loi ne vérifie plus rien le jour où la loi change — il
+  // signale seulement qu'on a oublié de le recopier aussi.
+  const pfu = PARAMS.flatTax.value
+  ok(`flat tax de ${(pfu.total * 100).toFixed(1).replace('.', ',')} % sur les dividendes du président de SAS`,
+     near(sas.rows[0].dividendSocial + sas.rows[0].dividendIncomeTax, sas.rows[0].grossDividends * pfu.total, 2),
      `${Math.round(sas.rows[0].dividendSocial + sas.rows[0].dividendIncomeTax)} € sur ${Math.round(sas.rows[0].grossDividends)} €`)
+  // Et le détail : 12,8 % d'impôt d'un côté, 18,6 % de prélèvements sociaux de
+  // l'autre. Le total seul laisserait passer une répartition fausse.
+  ok('dont 12,8 % d’impôt sur le revenu et 18,6 % de prélèvements sociaux',
+     near(sas.rows[0].dividendIncomeTax, sas.rows[0].grossDividends * 0.128, 2)
+     && near(sas.rows[0].dividendSocial, sas.rows[0].grossDividends * 0.186, 2)
+     && near(pfu.incomeTax + pfu.socialCharges, pfu.total, 1e-9),
+     `IR ${Math.round(sas.rows[0].dividendIncomeTax)} € · PS ${Math.round(sas.rows[0].dividendSocial)} €`)
   ok('gérant majoritaire : la fraction au-delà de 10 % du capital passe aux cotisations TNS',
-     gerant.rows[0].tnsPortion > 0 && gerant.rows[0].dividendSocial > gerant.rows[0].grossDividends * 0.17,
+     gerant.rows[0].tnsPortion > 0 && gerant.rows[0].dividendSocial > gerant.rows[0].grossDividends * pfu.socialCharges,
      `part TNS ${Math.round(gerant.rows[0].tnsPortion)} € sur ${Math.round(gerant.rows[0].grossDividends)} €`)
   ok('impôt sur le revenu progressif appliqué à la rémunération',
      sas.rows[0].incomeTax > 0 && sas.rows[0].marginalRate >= 0.11,

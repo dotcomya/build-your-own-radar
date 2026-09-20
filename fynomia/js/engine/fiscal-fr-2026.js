@@ -10,7 +10,9 @@
  * finances, et sont marquées `confidence: 'stable'`.
  *
  * Les VALEURS ANNUELLES — SMIC, plafond de la Sécurité sociale, taux moyens de
- * cotisations — sont revalorisées chaque année. Elles portent
+ * cotisations — sont revalorisées chaque année. Celles qui proviennent d'un
+ * texte publié portent `confidence: 'enacted'` et citent ce texte dans
+ * `source` ; les taux moyens qui restent des ordres de grandeur portent
  * `confidence: 'to-verify'` : ce ne sont pas des approximations acceptables
  * mais des valeurs à confirmer contre le texte publié avant tout usage engageant
  * (dossier bancaire, levée de fonds, liasse fiscale). Réglages → Paramètres
@@ -23,20 +25,40 @@
  * l'affiche et le dit.
  */
 
+/**
+ * Le prélèvement forfaitaire unique, dit en toutes lettres.
+ *
+ * Six écrans écrivaient « 30 % » et « 17,2 % » à la main. Le jour où la loi de
+ * financement de la Sécurité sociale a relevé la CSG sur le capital de 1,4
+ * point, le moteur a suivi et les six phrases ont menti. Elles lisent
+ * désormais le paramètre, comme le calcul.
+ */
+const pct = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
+export const pfuTotal = () => pct(PARAMS.flatTax.value.total)
+export const pfuSocial = () => pct(PARAMS.flatTax.value.socialCharges)
+export const pfuIncome = () => pct(PARAMS.flatTax.value.incomeTax)
+export const pfuDetail = () => `${pfuTotal()} (${pfuIncome()} + ${pfuSocial()})`
+
 export const FISCAL_YEAR = 2026
 
 /** Dernier exercice dont les règles sont issues d'un texte promulgué. */
 export const LAST_ENACTED_YEAR = 2026
 
-/** Confiance : 'stable' = règle pérenne, 'to-verify' = à confirmer pour 2026. */
+/**
+ * Confiance :
+ *   'stable'    — règle pérenne, ne bouge qu'avec une loi de finances ;
+ *   'enacted'   — valeur 2026 relevée dans un texte publié, citée par `source` ;
+ *   'to-verify' — valeur reconduite ou moyenne d'usage, à confirmer.
+ */
 export const PARAMS = {
   // ─────────────────────────────── Bases sociales ──────────────────────────
   smicHourly: {
-    value: 11.88,
+    value: 12.31,
     unit: '€/h',
     label: 'SMIC horaire brut',
-    confidence: 'to-verify',
-    note: "Valeur en vigueur au 1er novembre 2024, reconduite ici. La revalorisation applicable au 1er janvier 2026 doit être vérifiée : elle décale mécaniquement la réduction générale de cotisations et les plafonds JEI.",
+    confidence: 'enacted',
+    source: "Revalorisation anticipée du 1er juin 2026",
+    note: "Le SMIC a connu deux valeurs en 2026 : 12,02 € au 1er janvier, puis 12,31 € au 1er juin après une revalorisation anticipée de 2,41 % (1 867,02 € brut mensuel pour 35 h). C'est la valeur en vigueur qui est retenue. Elle déplace mécaniquement le point de sortie de la réduction générale — trois SMIC — et les plafonds du dispositif JEI.",
   },
   monthlyHours: {
     value: 151.67,
@@ -46,11 +68,12 @@ export const PARAMS = {
     note: '35 h par semaine, soit 151,67 h par mois. Base de conversion du SMIC horaire en SMIC mensuel.',
   },
   pass: {
-    value: 47100,
+    value: 48060,
     unit: '€/an',
     label: 'Plafond annuel de la Sécurité sociale (PASS)',
-    confidence: 'to-verify',
-    note: "Valeur 2025 reconduite. Le PASS sert de plafond au dispositif JEI (5 PASS par établissement) et à plusieurs tranches de cotisations.",
+    confidence: 'enacted',
+    source: "Plafond 2026 — 4 005 € par mois",
+    note: "48 060 € pour 2026, soit 4 005 € par mois : une hausse de 2 % sur 2025. Le PASS borne les tranches de retraite complémentaire, le plafond du dispositif JEI (cinq PASS par établissement) et, par son plafond horaire de 30 €, la gratification de stage.",
   },
 
   // ──────────────────────── Cotisations employeur / salarié ────────────────
@@ -59,7 +82,7 @@ export const PARAMS = {
     unit: '% du brut',
     label: 'Cotisations patronales — non-cadre',
     confidence: 'to-verify',
-    note: "Taux moyen tous risques (maladie, vieillesse, famille, chômage, AT/MP, retraite complémentaire, CSA, FNAL, transport). Avant application de la réduction générale. À ajuster selon la convention collective et le taux AT/MP notifié.",
+    note: "Taux moyen tous risques (maladie, vieillesse, famille, chômage, AT/MP, retraite complémentaire, CSA, FNAL, versement mobilité), avant réduction générale. Depuis le 1er janvier 2026, les bandeaux qui abaissaient la cotisation maladie et la cotisation d'allocations familiales sur les bas salaires sont supprimés : tout le monde paie le taux plein — 13 % pour la maladie, 5,25 % pour les allocations familiales — et la réduction générale dégressive unique est désormais le seul allègement. À ajuster selon la convention collective et le taux AT/MP notifié.",
   },
   employerRateCadre: {
     value: 0.45,
@@ -76,11 +99,12 @@ export const PARAMS = {
     note: "Taux moyen (vieillesse, retraite complémentaire, CSG/CRDS). Sert à afficher le net avant impôt ; sans incidence sur le coût employeur.",
   },
   reductionGenerale: {
-    value: { maxCoefUnder50: 0.4038, maxCoefFrom50: 0.4078, ceilingSmicMultiple: 3.0 },
+    value: { maxCoefUnder50: 0.3981, maxCoefFrom50: 0.4021, ceilingSmicMultiple: 3.0 },
     unit: 'coefficient',
-    label: 'Réduction générale de cotisations patronales',
-    confidence: 'to-verify',
-    note: "Réduction dégressive appliquée jusqu'à 3 SMIC, issue de la fusion des bandeaux maladie et famille prévue par la LFSS. Coefficient = (T / (K−1)) × (K × SMIC annuel / brut annuel − 1), borné entre 0 et T. Les valeurs de T et le plafond K doivent être confirmés par le décret applicable en 2026.",
+    label: 'Réduction générale dégressive unique (RGDU)',
+    confidence: 'enacted',
+    source: "Décret du 31 décembre 2025 — paramètres 2026",
+    note: "Depuis le 1er janvier 2026, la réduction générale a absorbé les deux bandeaux maladie et famille et s'étale jusqu'à trois SMIC. Le coefficient maximal vaut Tmin + Tdelta, soit 0,3981 pour un employeur au FNAL de 0,10 % (moins de cinquante salariés) et 0,4021 au FNAL de 0,50 %. Tmin de 0,0200 garantit deux points d'allègement jusqu'à trois SMIC. Coefficient = (T / (K−1)) × (K × SMIC annuel / brut annuel − 1), borné entre 0 et T.",
   },
   tnsRate: {
     value: 0.45,
@@ -90,11 +114,12 @@ export const PARAMS = {
     note: "Taux global moyen pour un travailleur non salarié affilié au régime des indépendants. Fortement dégressif sur les hauts revenus et majoré sur les faibles revenus (cotisations minimales).",
   },
   internGratification: {
-    value: 4.35,
+    value: 4.50,
     unit: '€/h',
     label: 'Gratification minimale de stage',
-    confidence: 'to-verify',
-    note: "15 % du plafond horaire de la Sécurité sociale. Obligatoire au-delà de 2 mois de stage. Tant que la gratification n'excède pas ce minimum, elle est exonérée de cotisations sociales.",
+    confidence: 'enacted',
+    source: "15 % du plafond horaire 2026 (30 €)",
+    note: "4,50 € par heure de stage en 2026, soit 15 % du plafond horaire de la Sécurité sociale porté à 30 €. Obligatoire au-delà de deux mois de stage. Tant que la gratification n'excède pas ce minimum, elle échappe aux cotisations sociales, part salariale comme part patronale.",
   },
   apprenticeEmployerRate: {
     value: 0.11,
@@ -117,11 +142,12 @@ export const PARAMS = {
     note: "L'employeur rembourse au moins 50 % de l'abonnement aux transports publics du domicile au lieu de travail. Cette part est exonérée de cotisations et d'impôt sur le revenu.",
   },
   mealVoucherExemptCap: {
-    value: 7.26,
+    value: 7.32,
     unit: '€ par titre',
     label: 'Exonération maximale de la part patronale d’un titre-restaurant',
-    confidence: 'to-verify',
-    note: "La part patronale doit représenter entre 50 et 60 % de la valeur du titre. Elle est exonérée de cotisations dans la limite de ce plafond, revalorisé chaque année.",
+    confidence: 'enacted',
+    source: "Plafond d'exonération au 1er janvier 2026",
+    note: "7,32 € par titre depuis le 1er janvier 2026. La part patronale doit représenter entre 50 et 60 % de la valeur du titre ; au-delà du plafond, l'excédent est réintégré dans l'assiette des cotisations.",
   },
   sustainableMobilityCap: {
     value: 700,
@@ -250,37 +276,41 @@ export const PARAMS = {
   // ───────────────────── Fiscalité personnelle du dirigeant ────────────────
   incomeTaxBrackets: {
     value: [
-      { upTo: 11497, rate: 0 },
-      { upTo: 29315, rate: 0.11 },
-      { upTo: 83823, rate: 0.30 },
-      { upTo: 180294, rate: 0.41 },
+      { upTo: 11600, rate: 0 },
+      { upTo: 29579, rate: 0.11 },
+      { upTo: 84577, rate: 0.30 },
+      { upTo: 181917, rate: 0.41 },
       { upTo: Infinity, rate: 0.45 },
     ],
     unit: '€',
     label: "Barème de l'impôt sur le revenu",
-    confidence: 'to-verify',
-    note: "Barème par part de quotient familial. Les limites de tranches sont revalorisées chaque année sur l'inflation : celles retenues ici sont les dernières connues et doivent être confirmées pour l'imposition des revenus 2026.",
+    confidence: 'enacted',
+    source: "Loi de finances pour 2026, article 4",
+    note: "Barème par part de quotient familial, revalorisé de 0,9 % par l'article 4 de la loi de finances pour 2026. Il s'applique à l'imposition des revenus de 2025 ; Fynomia le reconduit pour projeter les années suivantes, faute de texte au-delà.",
   },
   salaryAllowance: {
-    value: { rate: 0.1, min: 504, max: 14426 },
+    value: { rate: 0.1, min: 509, max: 14555 },
     unit: '%',
     label: 'Abattement de 10 % sur les salaires',
-    confidence: 'to-verify',
+    confidence: 'enacted',
+    source: 'Loi de finances pour 2026',
     note: "Déduction forfaitaire pour frais professionnels, plancher et plafond revalorisés annuellement. Le dirigeant peut opter pour les frais réels si ceux-ci sont supérieurs.",
   },
   familyQuotientCap: {
-    value: 1791,
+    value: 1807,
     unit: '€ par demi-part',
     label: 'Plafonnement du quotient familial',
-    confidence: 'to-verify',
+    confidence: 'enacted',
+    source: 'Loi de finances pour 2026',
     note: "Avantage maximal procuré par chaque demi-part supplémentaire au-delà d'une part (deux pour un couple). Au-delà, l'économie d'impôt est écrêtée.",
   },
   flatTax: {
-    value: { total: 0.30, incomeTax: 0.128, socialCharges: 0.172 },
+    value: { total: 0.314, incomeTax: 0.128, socialCharges: 0.186 },
     unit: '%',
     label: 'Prélèvement forfaitaire unique (flat tax)',
-    confidence: 'stable',
-    note: "30 % sur les dividendes et revenus de capitaux mobiliers : 12,8 % d'impôt sur le revenu et 17,2 % de prélèvements sociaux. Le contribuable peut opter pour le barème progressif, avec un abattement de 40 % sur les dividendes, si cela lui est plus favorable.",
+    confidence: 'enacted',
+    source: "LFSS 2026 — loi n° 2025-1403 du 30 décembre 2025",
+    note: "31,4 % depuis le 1er janvier 2026 : 12,8 % d'impôt sur le revenu, inchangé, et 18,6 % de prélèvements sociaux. La loi de financement de la Sécurité sociale pour 2026 a relevé de 1,4 point la CSG sur les revenus du capital, portant les prélèvements sociaux de 17,2 % à 18,6 %. Un dividende de 10 000 € laisse donc 6 860 € au lieu de 7 000 €. Certains produits gardent 17,2 % — assurance-vie, PEL, CEL, PEP, revenus fonciers et plus-values immobilières — mais pas les dividendes. Le contribuable peut toujours opter pour le barème progressif, avec un abattement de 40 % sur les dividendes, si cela lui est plus favorable.",
   },
   dividendAllowance: {
     value: 0.4,
@@ -294,7 +324,7 @@ export const PARAMS = {
     unit: '% du capital',
     label: 'Seuil de cotisations TNS sur dividendes',
     confidence: 'stable',
-    note: "Pour un gérant majoritaire de SARL ou d'EURL, la fraction des dividendes excédant 10 % du capital social, des primes d'émission et des sommes en compte courant est soumise aux cotisations sociales des indépendants au lieu des prélèvements sociaux de 17,2 %. Les présidents de SAS ne sont pas concernés.",
+    note: "Pour un gérant majoritaire de SARL ou d'EURL, la fraction des dividendes excédant 10 % du capital social, des primes d'émission et des sommes en compte courant est soumise aux cotisations sociales des indépendants — de l'ordre de 45 % — au lieu des prélèvements sociaux de 18,6 %. Les présidents de SAS ne sont pas concernés.",
   },
 
   deMinimis: {
