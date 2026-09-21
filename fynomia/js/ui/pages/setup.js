@@ -649,7 +649,7 @@ function welcomeScreen(ctx) {
 
     h('ul', { class: 'welcome-points' },
       ...[
-        ['idee', 'Réponds au jugé.', 'Un ordre de grandeur suffit. Le but du premier passage est d’avoir une photo, pas la bonne.'],
+        ['idee', 'Renseigne tes estimations', 'Pas besoin de chiffres exacts, des ordres de grandeur suffisent pour démarrer.'],
         ['cible', 'Tu pars des repères de ton métier.', 'Prix, marges, charges habituelles : on te les propose, tu les remplaces par les tiens.'],
         ['savoir', 'Rien n’est définitif.', 'Chaque chiffre reste modifiable ensuite, et tout le plan se recalcule dans la seconde.'],
       ].map(([ico, title, note], i) => h('li', {
