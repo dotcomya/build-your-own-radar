@@ -22,23 +22,11 @@ const KEY_CURRENT = 'fynomia.current'
 const AUTOSAVE_DELAY = 400
 const HISTORY_LIMIT = 60
 
-/**
- * Lecture d'une clé locale, avec reprise de l'ancien préfixe.
- *
- * Le produit a changé de nom ; les plans enregistrés avant ce changement ne
- * doivent pas disparaître pour autant. On lit l'ancienne clé une fois, on
- * réécrit sous la nouvelle, et on n'y revient plus.
- */
+/** Lecture d'une clé locale. */
 function read(key, fallback) {
   try {
     const raw = localStorage.getItem(key)
-    if (raw) return JSON.parse(raw)
-    const legacy = localStorage.getItem(key.replace(/^fynomia\./, 'fizzy.'))
-    if (legacy) {
-      localStorage.setItem(key, legacy)
-      return JSON.parse(legacy)
-    }
-    return fallback
+    return raw ? JSON.parse(raw) : fallback
   } catch { return fallback }
 }
 function write(key, value) {

@@ -3,12 +3,11 @@
 Application web et mobile de construction et de pilotage de business plan, avec
 la fiscalité française appliquée automatiquement.
 
-Fynomia est la transposition informatique du modèle financier **FISY Innovation**
-(Rémi Berthier, [fisy.fr](http://www.fisy.fr/)) : les vingt-quatre feuilles du
-classeur — configuration, personnel, charges, sous-traitance, investissements,
-commandes, trésorerie, TVA, BFR, CIR/CII, JEI, impôts, comptes de résultat,
-bilans, plan de financement — deviennent un moteur de calcul et une interface
-utilisable sans connaissance comptable.
+Fynomia couvre ce qu'un prévisionnel complet demande — configuration, personnel,
+charges, sous-traitance, investissements, commandes, trésorerie, TVA, BFR,
+CIR/CII, JEI, impôts, comptes de résultat, bilans, plan de financement — sous la
+forme d'un moteur de calcul et d'une interface utilisable sans connaissance
+comptable.
 
 Fynomia s'adresse à un fondateur qui doit produire un business plan défendable
 sans avoir fait d'école de commerce. L'entrée tient en onze questions ; la
@@ -275,8 +274,9 @@ déficiences de vision des couleurs, et contraste sur le fond clair.
 
 ## Licence
 
-Le modèle financier d'origine, FISY, est diffusé gratuitement par son auteur.
-Cette implémentation en reprend la logique et l'actualise.
+Les règles de calcul appliquées ici sont celles du droit fiscal et social
+français, publiques par nature. Les valeurs de l'exercice en cours sont listées
+et sourcées dans la page Réglages de l'application.
 
 ## Les icônes, et ce qu'il faudrait pour du vrai 3D
 

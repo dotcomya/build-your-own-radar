@@ -232,7 +232,7 @@ function dataPanel(navigate, refresh, usage) {
           class: 'btn btn-danger',
           onClick: async () => {
             if (await confirmDialog({ title: 'Tout effacer ?', message: "Tous tes scénarios et ton profil seront définitivement supprimés de cet appareil. Cette action est irréversible.", confirmLabel: 'Tout effacer', danger: true })) {
-              for (const k of ['scenarios', 'current', 'profile']) { localStorage.removeItem('fynomia.' + k); localStorage.removeItem('fizzy.' + k) }
+              for (const k of ['scenarios', 'current', 'profile']) localStorage.removeItem('fynomia.' + k)
               location.hash = '#/'
               location.reload()
             }
