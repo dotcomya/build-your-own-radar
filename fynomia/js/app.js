@@ -13,6 +13,7 @@ import { PERSONAS, getPersona } from './ui/personas.js'
 import { resetLiveNumbers } from './ui/impact.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
+import { renderHome } from './ui/pages/home.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
 import { installMotion, travel, takeTravel, armTravel } from './ui/motion.js'
@@ -115,7 +116,66 @@ function navigate(to, { move = true } = {}) {
 // chaque profondeur ajoute à cette page-ci.
 let currentKey = ''
 
+/**
+ * Aucun redessin ne part sous le doigt de quelqu'un.
+ *
+ * C'est la cause du « pas toujours de temps réel », et c'est un défaut de
+ * synchronisation, pas de calcul. Sortir d'un champ modifié enregistre la
+ * valeur et reconstruit toute l'interface — or la sortie de champ est
+ * provoquée par l'appui du clic suivant. L'interface se reconstruisait donc
+ * entre l'appui et le relâchement, le bouton visé n'existait plus quand le
+ * clic arrivait, et le clic était perdu. Mesuré : le premier clic dans le
+ * menu, après avoir changé un prix, ne changeait pas de page ; il en fallait
+ * un second. Vu du fondateur : « je modifie une valeur, je clique ailleurs,
+ * rien ne bouge ».
+ *
+ * Le modèle, lui, était juste : la valeur était bien enregistrée et
+ * recalculée. C'est l'écran qui ne suivait pas.
+ *
+ * Un geste en cours suspend donc le redessin. Ce qui arrive entre l'appui et
+ * le clic est mis en attente et rejoué juste après, une fois le clic
+ * distribué et les gestionnaires de la page exécutés. Le filet de sécurité
+ * couvre le geste qui n'aboutit pas — un doigt qui sort de la fenêtre.
+ */
+let holding = false
+let heldScroll = false
+let release = null
+
+const flush = () => {
+  clearTimeout(release)
+  release = null
+  holding = false
+  if (heldScroll === false) return
+  const opts = heldScroll
+  heldScroll = false
+  render(opts)
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('pointerdown', (e) => {
+    // Un curseur qu'on fait glisser est l'exception : son geste dure, et tout
+    // l'intérêt est de voir les chiffres bouger pendant qu'on le tire. Il ne
+    // fait disparaître aucun bouton — on ne quitte pas le curseur — donc rien
+    // ne justifie de suspendre le redessin.
+    if (e.target && e.target.closest && e.target.closest('input[type=range]')) return
+    holding = true
+    clearTimeout(release)
+    // Un geste qui ne se termine jamais ne doit pas geler l'écran.
+    release = setTimeout(flush, 1200)
+  }, true)
+  // On relâche après le clic, pas au relâchement du doigt : c'est le clic qui
+  // porte l'action, et il doit trouver les nœuds encore en place.
+  document.addEventListener('click', flush, false)
+  document.addEventListener('pointercancel', flush, true)
+}
+
 function render({ preserveScroll = false } = {}) {
+  if (holding) {
+    // On retient la demande la plus exigeante : si l'une d'elles veut garder
+    // la position, on la garde.
+    heldScroll = heldScroll === false ? { preserveScroll } : { preserveScroll: heldScroll.preserveScroll || preserveScroll }
+    return
+  }
   const key = route()
   currentKey = key
   const scrollY = preserveScroll ? window.scrollY : 0
@@ -148,9 +208,16 @@ function render({ preserveScroll = false } = {}) {
     return
   }
 
+  // La page d'accueil du site : ce que fait Fynomia, avant qu'on demande
+  // quoi que ce soit. L'adresse racine y mène ; l'outil est à un clic.
+  if (key === 'accueil' || (!store.scenario && key === '')) {
+    clear(root).appendChild(renderHome(navigate))
+    document.title = 'Fynomia — Le business plan calculé'
+    window.scrollTo(0, 0)
+    return
+  }
+
   if (!store.scenario || key === 'demarrer' || key === '') {
-    // Sans plan, l'accueil est la première question : une page de garde qui ne
-    // fait qu'annoncer l'étape suivante n'apporte rien.
     if (!store.scenario) { resetSetup(); navigate('#/creer'); return }
     clear(root).appendChild(renderOnboarding(navigate))
     document.title = 'Fynomia — Business plan'
@@ -208,7 +275,8 @@ function rail(active) {
   const doneByPage = Object.fromEntries(b.bricks.map((x) => [x.page, x.done]))
 
   const el = h('nav', { class: 'rail', id: 'rail' },
-    h('div', { class: 'rail-brand' },
+    // Le logo est cliquable : il ramène à la page qui explique l'outil.
+    h('button', { class: 'rail-brand', onClick: () => navigate('#/accueil'), title: 'Accueil Fynomia' },
       h('span', { class: 'rail-mark' }, 'FYNOMIA'),
       h('span', { class: 'rail-year' }, 'FR / 2026'),
     ),
@@ -472,7 +540,7 @@ markJourney()
 installMotion()
 // Le guide se redessine tout seul quand on le masque ou le rouvre.
 setCoachHost(() => render({ preserveScroll: true }))
-if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/creer'
+if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/accueil'
 render()
 
 // Le compte s'ouvre après le premier rendu : la page ne doit jamais attendre

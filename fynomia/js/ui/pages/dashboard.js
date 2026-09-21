@@ -28,6 +28,7 @@ import { verdict } from '../../engine/verdict.js'
 import { lookup } from '../glossary.js'
 import { icon } from '../icons.js'
 import { goToGap } from '../spotlight.js'
+import { checklist } from '../checklist.js'
 import { journey } from '../../engine/journey.js'
 import { svg } from '../dom.js'
 import store from '../../state/store.js'
@@ -92,6 +93,15 @@ export function renderDashboard(navigate, refresh) {
     }),
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
+      // Ce qui manque se dit avant ce qu'on a trouvé.
+      //
+      // Au sortir du parcours, douze réponses ont produit un modèle complet —
+      // et c'est exactement le piège : l'écran donne des chiffres nets, avec
+      // l'autorité d'un résultat, alors que la moitié des lignes vient encore
+      // des repères du métier. Le fondateur repart en croyant son dossier
+      // fini. Ce bandeau le dit avant tout le reste, et donne le geste suivant
+      // au lieu de le laisser chercher.
+      finishBanner(s, navigate),
       // Le verdict ouvre la synthèse : c'est la phrase qui résume les six
       // cartes qui suivent, et la lire après elles n'avait pas de sens.
       verdictCard(health, navigate),
@@ -287,6 +297,50 @@ function netEquation(r, y) {
  * désormais dans une carte étroite, posée à droite du titre — une pastille de
  * couleur, un mot, une ligne. Le détail est à un clic, pas à l'écran.
  */
+/**
+ * Le dossier n'est pas fini, et ça se voit.
+ *
+ * Tant qu'il reste des lignes à poser, les chiffres affichés reposent en
+ * partie sur les repères du métier. Les donner sans le dire, c'est laisser
+ * quelqu'un présenter à sa banque un prévisionnel qu'il croit être le sien.
+ * Le bandeau annonce ce qui manque, nomme la prochaine ligne, et emmène
+ * dessus — un seul geste, pas une liste.
+ */
+function finishBanner(s, navigate) {
+  const c = checklist(s)
+  if (!c.open || !c.next) return null
+  const reste = c.open
+  return h('section', { class: 'finish' },
+    h('div', { class: 'finish-say' },
+      h('div', { class: 'finish-kicker' }, 'Ton dossier n’est pas terminé'),
+      h('h2', { class: 'finish-big' },
+        `Il reste ${reste} ligne${reste > 1 ? 's' : ''} à poser`),
+      h('p', { class: 'finish-body' },
+        'Partout où tu n’as pas encore répondu, les chiffres ci-dessous prennent les repères de ton métier. ',
+        'Ils tiennent debout, mais ce ne sont pas encore les tiens : chaque ligne posée les rapproche de ta réalité.'),
+      h('div', { class: 'finish-next' },
+        h('span', { class: 'finish-next-tag' }, 'La plus utile maintenant'),
+        h('span', { class: 'finish-next-label' }, c.next.label),
+        c.next.why ? h('span', { class: 'finish-next-why' }, c.next.why) : null,
+      ),
+    ),
+    h('div', { class: 'finish-acts' },
+      h('button', {
+        class: 'btn btn-primary btn-lg finish-go',
+        onClick: () => goToGap(c.next.go, navigate),
+      }, `Poser « ${c.next.label} » →`),
+      h('button', {
+        class: 'btn btn-lg finish-list',
+        onClick: () => { renderDashboard.view = 'pilotage'; navigate('#/tableau-de-bord') },
+      }, `Voir les ${reste} lignes`),
+    ),
+    h('div', { class: 'finish-meter', 'aria-hidden': 'true' },
+      h('i', { style: { width: `${Math.round((c.done / Math.max(1, c.total)) * 100)}%` } }),
+      h('span', {}, `${c.done} / ${c.total} posées`),
+    ),
+  )
+}
+
 function verdictCard(health, navigate) {
   const detail = h('div', { class: 'verdict-body' }, health.body,
     health.figure && h('div', { class: 'verdict-figure' },

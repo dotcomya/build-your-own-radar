@@ -40,22 +40,40 @@ export function plainBoard(s, r, navigate, goRefine) {
   // « aucune année ne dégage de bénéfice » — serait exact et inutile : ce
   // n'est pas le modèle qui est mauvais, c'est qu'il n'y a rien dedans.
   if (!(r.pnl.revenue || []).some((v) => n(v) > 0)) return emptyBoard(goRefine)
-  // Six réponses, dans l'ordre où elles se posent : est-ce que ça gagne, est-ce
-  // que ça tient, ce qu'il m'en reste — puis ce qu'il faut vendre pour couvrir,
-  // où part l'argent, et à quelle vitesse tout ça monte. Ensemble, elles font
-  // le tour de ce qu'on veut savoir avant d'ouvrir un compte de résultat.
-  const cards = [
-    profitCard(r), cashCard(r), takeCard(s, r),
-    breakEvenCard(s, r), keepCard(r), growthCard(r),
+  // Trois actes, pas six lectures.
+  //
+  // Les six cartes disaient quatre fois la même chose sous quatre formes : le
+  // résultat net, le seuil non atteint, les dépenses pour cent euros facturés
+  // et la rémunération incluse dans la perte énoncent tous « tu perds de
+  // l'argent ». Un tableau de bord doit répondre à « qu'est-ce que je dois
+  // traiter », pas énumérer ce que le logiciel sait calculer.
+  //
+  // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
+  // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
+  // dans l'ordre où on se la pose.
+  const actes = [
+    { titre: 'Est-ce que ça tient ?',
+      dit: 'Le résultat et la trésorerie — les deux seules questions qui décident si l’entreprise passe l’année.',
+      cartes: [profitCard(r), cashCard(r)] },
+    { titre: 'D’où ça vient',
+      dit: 'Ce qui produit ce résultat : le poste qui pèse le plus, la répartition de chaque euro encaissé, et ce que tu te verses.',
+      cartes: [causeCard(r), keepCard(r), takeCard(s, r)] },
+    { titre: 'Où agir',
+      dit: 'Ce qu’il faudrait franchir, et à quelle vitesse le modèle y va.',
+      cartes: [breakEvenCard(s, r), growthCard(r)] },
   ]
 
   return h('div', { class: 'plain' },
-    h('p', { class: 'plain-lede' },
-      'Six lectures du même modèle : le résultat, la trésorerie, ta rémunération, le seuil de rentabilité, la structure de coûts et la trajectoire. Chacune énonce un mécanisme et le chiffre qui en découle.'),
-    h('div', { class: 'plain-cards' }, ...cards),
+    ...actes.map((a) => h('section', { class: 'plain-act' },
+      h('div', { class: 'plain-act-head' },
+        h('h2', { class: 'plain-act-title' }, a.titre),
+        h('p', { class: 'plain-act-say' }, a.dit),
+      ),
+      h('div', { class: 'plain-cards' }, ...a.cartes.filter(Boolean)),
+    )),
     h('div', { class: 'plain-foot' },
       h('p', {},
-        'Ces six lectures reposent sur les mêmes calculs que l’analyse détaillée, ci-dessous. Un écart avec ce que tu attendais vient soit d’une hypothèse à revoir, soit d’une ligne qui n’a pas encore été posée.'),
+        'Ces lectures reposent sur les mêmes calculs que l’analyse détaillée, ci-dessous. Un écart avec ce que tu attendais vient soit d’une hypothèse à revoir, soit d’une ligne qui n’a pas encore été posée.'),
       h('div', { class: 'plain-foot-go' },
         // Une synthèse qui se lit au sortir du parcours doit dire la suite :
         // il reste des lignes à poser, et chacune resserre ces trois phrases.
@@ -224,6 +242,45 @@ function breakEvenCard(s, r) {
 /* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 5. Ce qui reste sur 100 \u20ac \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 /** O\u00f9 part l'argent, sur cent euros factur\u00e9s. */
+/**
+ * Le poste qui explique le résultat.
+ *
+ * C'est la question que personne ne posait à l'écran : « pourquoi ce chiffre ».
+ * Les cartes disaient combien on perd, à partir de quel seuil on gagnerait et
+ * ce que représentent cent euros facturés — jamais quel poste, nommément, fait
+ * pencher la balance. Celle-ci compare les trois blocs de charges, désigne le
+ * plus lourd, dit sa part et ce qu'il faudrait pour l'absorber.
+ */
+function causeCard(r) {
+  const p = r.pnl
+  const i = Math.max(0, p.netResult.findIndex((v) => v > 0))
+  const rev = n(p.revenue[i])
+  const blocs = [
+    { cle: 'team', nom: 'la masse salariale', montant: Math.abs(n(p.payroll[i])), page: 'equipe', quoi: 'les salaires et les cotisations' },
+    { cle: 'buys', nom: 'les achats', montant: Math.abs(n(p.variableCost[i])), page: 'achats', quoi: 'ce que coûte chaque vente' },
+    { cle: 'other', nom: 'les charges fixes', montant: Math.abs(n(p.external[i])) + Math.abs(n(p.duties[i])), page: 'achats', quoi: 'le loyer, le comptable, les logiciels, les assurances' },
+  ].sort((a, b) => b.montant - a.montant)
+  const total = blocs.reduce((a, x) => a + x.montant, 0)
+  if (total <= 0) return null
+  const tete = blocs[0]
+  const part = Math.round((tete.montant / total) * 100)
+  const couvre = rev > 0 ? Math.round((tete.montant / rev) * 100) : null
+
+  return card({
+    tone: couvre !== null && couvre > 100 ? 'bad' : couvre !== null && couvre > 60 ? 'watch' : 'good',
+    kicker: 'Le poste qui pèse',
+    title: `${tete.nom.charAt(0).toUpperCase()}${tete.nom.slice(1)} : ${euro(tete.montant)} par an`,
+    ico: 'argent',
+    body: couvre === null
+      ? `En année ${i + 1}, ${tete.nom} représente ${part} % de tes charges — ${tete.quoi}. C'est le premier poste sur lequel agir, mais il manque un chiffre d'affaires pour dire s'il est tenable.`
+      : `En année ${i + 1}, ${tete.nom} représente ${part} % de tes charges et absorbe ${couvre} % de ton chiffre d'affaires — ${tete.quoi}. ` + (couvre > 100
+        ? `À elle seule, cette ligne coûte plus que tout ce que tu encaisses : aucune autre économie ne compensera tant qu'elle n'aura pas bougé.`
+        : `Chaque euro gagné ailleurs passe d'abord par là.`),
+    split: blocs.map((bl) => ({ label: bl.nom.replace('la ', '').replace('les ', ''), value: total ? Math.round((bl.montant / total) * 100) : 0, tone: bl.cle })),
+    figure: { label: `Part de tes charges`, value: `${part} %`, good: part < 50 },
+  })
+}
+
 function keepCard(r) {
   const i = Math.max(0, r.pnl.netResult.findIndex((v) => v > 0))
   const p = r.pnl

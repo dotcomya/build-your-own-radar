@@ -3578,6 +3578,70 @@ details[open] > .refine-head .refine-sign {
   .scenario-row .btn { flex: 1 1 auto; justify-content: center; }
 }
 
+/* ═══════════ Ce qui manque, avant ce qu'on a trouvé ═════════════════════
+   Au sortir du parcours, l'écran donne des chiffres nets, avec l'autorité
+   d'un résultat — alors que la moitié des lignes vient encore des repères du
+   métier. Ce bandeau le dit avant tout le reste. Il emprunte au bloc noir sa
+   force : c'est la seule chose de la page qui parle plus fort que le verdict,
+   et c'est voulu tant que le dossier n'est pas fini. */
+.finish {
+  position: relative; overflow: hidden;
+  background: var(--ink); color: #fff; border: 0; border-radius: var(--r-lg, 16px);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 26px;
+  align-items: center; padding: 26px 28px 22px;
+}
+.finish::after {
+  content: ''; position: absolute; right: -60px; top: -80px; width: 260px; aspect-ratio: 1;
+  background: radial-gradient(circle at 50% 50%, var(--accent) 0%, transparent 62%);
+  opacity: .16; pointer-events: none;
+}
+.finish-say { min-width: 0; position: relative; z-index: 1; }
+.finish-kicker {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.finish-big {
+  font-family: var(--display); font-weight: 800; font-size: clamp(22px, 2.6vw, 32px);
+  line-height: 1.08; letter-spacing: -.032em; color: #fff; margin: 0 0 9px;
+}
+.finish-body { margin: 0 0 14px; font-size: 13.5px; line-height: 1.6; color: #B9C1C7; max-width: 62ch; }
+.finish-next {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.06);
+}
+.finish-next-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em;
+  text-transform: uppercase; color: #8E99A2; flex: none;
+}
+.finish-next-label { font-size: 14.5px; font-weight: 650; color: #fff; letter-spacing: -.01em; }
+.finish-next-why { font-size: 12.5px; color: #A8B1B8; line-height: 1.45; }
+.finish-acts { display: flex; flex-direction: column; gap: 9px; flex: none; position: relative; z-index: 1; }
+.finish-go { border-radius: 999px; white-space: nowrap; }
+.finish-list { background: transparent; border-color: #3A434B; color: #C6CDD2; border-radius: 999px; white-space: nowrap; }
+.finish-list:hover { background: #fff; color: var(--ink); border-color: #fff; }
+.finish-meter {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 11px;
+  margin-top: 4px; position: relative; z-index: 1;
+}
+.finish-meter > i {
+  height: 4px; border-radius: 999px; background: var(--accent); flex: none;
+  min-width: 4px; max-width: 320px; transition: width .4s var(--ease-soft);
+}
+.finish-meter > i + span {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: #8E99A2;
+}
+.finish-meter::before {
+  content: ''; position: absolute; left: 0; top: 50%; width: 320px; height: 4px;
+  border-radius: 999px; background: rgba(255,255,255,.12); transform: translateY(-50%); z-index: -1;
+}
+@media (max-width: 860px) {
+  .finish { grid-template-columns: 1fr; gap: 16px; padding: 20px 18px 18px; }
+  .finish-acts { flex-direction: column; }
+  .finish-acts .btn { width: 100%; justify-content: center; }
+  .finish-meter::before, .finish-meter > i { max-width: none; }
+}
+
 /* ─── Le chiffre à retenir ─── */
 .keystone {
   position: relative; overflow: hidden;
@@ -5512,4 +5576,129 @@ details[open] > .refine-head .refine-sign {
 @media (max-width: 760px) {
   .kpi-value, .metric-value { font-size: clamp(15px, 5.2vw, 20px); letter-spacing: -.045em; }
   .metrics .metric { padding: 12px 11px; }
+}
+
+/* ═══════════ La page d'accueil du site ═══════════════════════════════════
+   L'adresse racine tombait dans la première question du parcours : efficace
+   pour qui sait ce qu'il vient chercher, muet pour tous les autres. Cette
+   page dit à qui ça s'adresse, ce que ça produit et ce que ça coûte en
+   temps — puis elle laisse entrer. Le logo ramène toujours dans l'outil. */
+.home { min-height: 100dvh; background: var(--paper); }
+.home > * { max-width: 1180px; margin: 0 auto; padding-inline: clamp(18px, 5vw, 48px); }
+
+.home-bar { display: flex; align-items: center; gap: 12px; padding-block: 18px 0; }
+.home-logo {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  border: 0; background: none; padding: 6px 8px 6px 6px; margin-left: -6px; border-radius: 10px;
+  transition: background .16s var(--ease-soft);
+}
+.home-logo:hover { background: rgba(14,15,12,.05); }
+.home-logo-mark {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px;
+  background: var(--ink); color: var(--accent);
+  font-family: var(--display); font-weight: 800; font-size: 17px;
+}
+.home-logo-name { font-family: var(--mono); font-size: 13px; letter-spacing: .16em; color: var(--ink); font-weight: 600; }
+.home-logo-year {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--ink-5);
+  border-left: 1px solid var(--rule); padding-left: 9px;
+}
+.home-enter { border-radius: 999px; }
+
+.home-hero { display: flex; align-items: center; gap: 36px; padding-block: clamp(34px, 7vw, 76px) clamp(28px, 5vw, 56px); }
+.home-say { flex: 1 1 auto; min-width: 0; }
+.home-kicker {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-4); display: inline-flex; align-items: center; gap: 9px; margin-bottom: 16px;
+}
+.home-kicker::before { content: ''; width: 26px; height: 2px; background: var(--accent); }
+.home-big {
+  margin: 0 0 16px; font-family: var(--display); font-weight: 800;
+  font-size: clamp(30px, 4.4vw, 56px); line-height: 1.04; letter-spacing: -.038em;
+  color: var(--ink-4); max-width: 20ch; text-wrap: balance;
+}
+.home-big b { color: var(--ink); font-weight: 800; }
+.home-lede { margin: 0 0 24px; font-size: clamp(15px, 1.4vw, 17px); line-height: 1.6; color: var(--ink-3); max-width: 58ch; }
+.home-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.home-go { border-radius: 999px; padding: 15px 32px; font-size: 16px; }
+.home-demo { border-radius: 999px; padding: 15px 28px; }
+.home-meta { margin: 0; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-5); }
+.home-art { flex: none; width: clamp(150px, 20vw, 250px); }
+.home-art-img { width: 100%; height: auto; display: block; }
+
+.home-proof {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;
+  padding-block: clamp(28px, 5vw, 48px); border-top: 1px solid var(--rule);
+}
+.home-proof-item { min-width: 0; }
+.home-proof-no { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--ink-5); display: block; }
+.home-proof-ico { display: block; width: 44px; margin: 10px 0 12px; }
+.home-proof-ico img { width: 100%; height: auto; display: block; }
+.home-proof-item h2 { font-size: 17px; letter-spacing: -.022em; margin-bottom: 7px; }
+.home-proof-item p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-3); }
+
+.home-out {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px;
+  background: var(--ink); color: #fff; border-radius: var(--r-lg, 16px);
+  padding: clamp(26px, 4vw, 40px); margin-block: clamp(20px, 4vw, 36px);
+  max-width: min(1180px, calc(100% - 2 * clamp(18px, 5vw, 48px)));
+}
+.home-out-kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+.home-out-say h2 { color: #fff; font-size: clamp(19px, 2.2vw, 26px); letter-spacing: -.028em; line-height: 1.16; margin-bottom: 10px; }
+.home-out-say p { margin: 0; font-size: 13.5px; line-height: 1.62; color: #B9C1C7; }
+.home-out-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; align-self: center; }
+.home-out-list li {
+  font-size: 14px; color: #E6EAED; padding-left: 26px; position: relative; line-height: 1.45;
+}
+.home-out-list li::before {
+  content: '✓'; position: absolute; left: 0; top: 0; color: var(--accent); font-size: 13px; font-weight: 700;
+}
+
+.home-foot { text-align: center; padding-block: clamp(28px, 5vw, 56px); border-top: 1px solid var(--rule); }
+.home-foot .btn { border-radius: 999px; padding: 15px 34px; font-size: 16px; }
+.home-foot p { margin: 16px auto 0; font-size: 12px; color: var(--ink-5); line-height: 1.6; max-width: 66ch; }
+
+@media (max-width: 860px) {
+  .home-hero { flex-direction: column-reverse; align-items: flex-start; gap: 18px; }
+  .home-art { width: 120px; }
+  .home-proof { grid-template-columns: 1fr; gap: 26px; }
+  .home-out { grid-template-columns: 1fr; gap: 20px; }
+  .home-cta { width: 100%; }
+  .home-cta .btn { flex: 1 1 100%; justify-content: center; }
+  .home-bar .home-enter { display: none; }
+}
+
+/* Le logo du rail est devenu un bouton : il doit s'en tenir aux styles du
+   rail, pas à ceux des boutons. */
+.rail-brand {
+  border: 0; background: none; padding: 2px 10px 18px; width: 100%; text-align: left;
+  cursor: pointer; display: flex; flex-direction: column; gap: 2px; font: inherit;
+  border-radius: 8px; transition: background .16s var(--ease-soft);
+}
+.rail-brand:hover { background: rgba(255,255,255,.05); }
+
+/* ═══════════ La synthèse se lit en trois actes ═══════════════════════════
+   Les six cartes disaient quatre fois la même chose : le résultat net, le
+   seuil non atteint, les dépenses pour cent euros facturés et la rémunération
+   incluse dans la perte énoncent tous « tu perds de l'argent ». Un tableau de
+   bord doit répondre à « qu'est-ce que je dois traiter ». L'ordre porte donc
+   la question de chaque groupe — est-ce que ça tient, d'où ça vient, où agir
+   — et le titre d'acte est la seule chose à lire pour s'orienter. */
+.plain-act + .plain-act { margin-top: 30px; }
+.plain-act-head {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  margin: 0 0 14px; padding-bottom: 9px; border-bottom: 2px solid var(--rule-strong);
+}
+.plain-act-title {
+  font-family: var(--display); font-weight: 800; font-size: 20px;
+  letter-spacing: -.028em; color: var(--ink); margin: 0; flex: none;
+}
+.plain-act-say {
+  margin: 0; font-size: 12.8px; line-height: 1.5; color: var(--ink-4);
+  flex: 1 1 320px; min-width: 0; max-width: 76ch;
+}
+@media (max-width: 760px) {
+  .plain-act-head { gap: 5px; }
+  .plain-act-title { font-size: 18px; flex: 1 1 100%; }
+  .plain-act-say { flex: 1 1 100%; }
 }
