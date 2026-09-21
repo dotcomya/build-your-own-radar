@@ -1,6 +1,7 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
 import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton, moduleShell } from '../dom.js'
+import { stepGuide } from '../tutorial.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
@@ -17,6 +18,7 @@ export function renderSettings(navigate, refresh) {
     moduleShell({
       no: '09', title: 'Réglages',
       lede: "Les hypothèses de fond, les valeurs fiscales et tes scénarios enregistrés.",
+      guide: stepGuide(null, null, 'reglages'),
     }),
 
     teamViews(navigate, refresh),
@@ -98,8 +100,8 @@ function scenarioManager(navigate, refresh) {
     h('div', { class: 'card-body' },
       h('p', { class: 'small muted', style: { marginTop: 0 } },
         "Duplique un scénario pour comparer plusieurs hypothèses — un cas prudent et un cas optimiste, par exemple — sans perdre ton travail."),
-      ...list.map((item) => h('div', { class: 'row', style: { padding: '10px 0', borderTop: '1px solid var(--ink-100)' } },
-        h('div', { class: 'spacer' },
+      ...list.map((item) => h('div', { class: 'row scenario-row', style: { padding: '10px 0', borderTop: '1px solid var(--ink-100)' } },
+        h('div', { class: 'spacer scenario-name' },
           h('div', { style: { fontWeight: '600' } }, item.name,
             item.id === store.currentId ? h('span', { class: 'chip chip-brand', style: { marginLeft: '7px' } }, 'Actuel') : null),
           h('div', { class: 'tiny muted' }, `Modifié ${relative(item.updatedAt)}`),

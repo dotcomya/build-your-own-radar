@@ -45,12 +45,12 @@ const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
  * valeur qu'il a saisie ne l'est plus, pour qu'il puisse la corriger sans la
  * perdre.
  */
-const flow = { index: 0, touched: new Set(), way: 'fwd' }
+const flow = { index: 0, reach: 0, touched: new Set(), way: 'fwd' }
 
 /** Où en est le choix du métier : la famille ouverte, et ce qui est tapé. */
 const pick = { family: null, query: '' }
 
-export function resetSetup() { flow.index = 0; flow.touched = new Set(); pick.family = null; pick.query = '' }
+export function resetSetup() { flow.index = 0; flow.reach = 0; flow.touched = new Set(); pick.family = null; pick.query = '' }
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -85,8 +85,8 @@ const STEPS = [
   },
   {
     key: 'stade', short: 'Où tu en es',
-    question: 'Où en est ton projet ?',
-    help: "Personne ne démarre au même endroit. Ça change ce que Fynomia te proposera ensuite — et ça se change à tout moment.",
+    question: 'Où en est ton projet, aujourd’hui ?',
+    help: "Ça ne change aucun chiffre. Ça change l’ordre : ce que Fynomia te fera remplir en premier, et l’écran sur lequel il t’emmène à la fin. Modifiable à tout moment.",
     render: stageScreen,
     ready: (s) => !!s?.meta?.stage,
   },
@@ -217,9 +217,29 @@ export function renderSetup(navigate, refresh) {
     if (next < 0 || next >= STEPS.length) { if (next >= STEPS.length) navigate('#/parcours'); return }
     flow.way = delta >= 0 ? 'fwd' : 'back'
     flow.index = next
+    flow.reach = Math.max(flow.reach, next)
     refresh()
   }
-  const jump = (i) => { flow.way = i >= flow.index ? 'fwd' : 'back'; flow.index = i; refresh() }
+
+  /**
+   * La liste de gauche revient en arrière, elle n'avance pas.
+   *
+   * Les numéros étaient des raccourcis vers n'importe quelle question : trois
+   * clics et on arrivait au résultat sans avoir rien répondu, avec un modèle
+   * fabriqué de bout en bout par les valeurs du métier. Le parcours ne veut pas
+   * dire grand-chose dans ces conditions, et le tableau de bord qui suit encore
+   * moins.
+   *
+   * On ne peut donc revenir que sur ce qu'on a déjà vu. Pour aller vite, il
+   * reste « Plus tard » : c'est une réponse, elle est assumée, et l'outil sait
+   * qu'il lui manque cette ligne.
+   */
+  const jump = (i) => {
+    if (i > flow.reach) return
+    flow.way = i >= flow.index ? 'fwd' : 'back'
+    flow.index = i
+    refresh()
+  }
   ctx.go = go
 
   // Les nœuds que la frappe met à jour. Tout le reste — la question, le champ,
@@ -234,12 +254,22 @@ export function renderSetup(navigate, refresh) {
   // chiffres que l'utilisateur n'avait pas encore donnés — des valeurs de
   // métier, des charges suggérées — et personne ne pouvait savoir d'où elles
   // venaient. Le résultat se lit à la fin du parcours, une fois qu'il est à soi.
+  // La ligne sous le bouton : pourquoi il attend, ou comment le contourner.
+  // Elle vit avec le bouton — c'est-à-dire qu'elle se met à jour à la frappe,
+  // sans redessiner la question — sinon le reproche restait affiché une fois la
+  // réponse donnée.
+  const hint = h('p', { class: 'setup-reassure' },
+    step.optional
+      ? 'Tu peux passer cette question et y revenir plus tard.'
+      : 'Cette réponse-là fait tourner le calcul : sans elle, la suite serait inventée.')
+
   ctx.tick = () => {
     const live = store.scenario
     ctx.scenario = live
     const ok = step.ready(live)
     nextBtn.disabled = !ok
     nextBtn.classList.toggle('is-waiting', !ok)
+    hint.hidden = ok && !step.optional
   }
   // Ajouter ou retirer une ligne change la question elle-même (une personne de
   // plus dans l'équipe, par exemple) : là, on redessine tout.
@@ -249,6 +279,7 @@ export function renderSetup(navigate, refresh) {
   const ready = step.ready(s)
   nextBtn.disabled = !ready
   if (!ready) nextBtn.classList.add('is-waiting')
+  hint.hidden = ready && !step.optional
   return h('div', { class: 'setup' },
     h('div', { class: 'setup-bar' },
       h('div', { class: 'setup-bar-fill', style: { width: `${(flow.index / (STEPS.length - 1)) * 100}%` } }),
@@ -297,9 +328,7 @@ export function renderSetup(navigate, refresh) {
               nextBtn,
               step.optional ? h('button', { class: 'setup-later', onClick: () => go(1) }, 'Plus tard') : null,
             ),
-            step.optional
-              ? h('p', { class: 'setup-reassure' }, 'Tu peux passer cette question et y revenir plus tard.')
-              : null,
+            hint,
           ) : null,
         ),
       ),
@@ -323,8 +352,13 @@ function stepList(s, jump, navigate) {
     ),
     ...STEPS.map((st, i) => {
       const done = i < flow.index && st.ready(s)
+      const shut = i > flow.reach
       return h('button', {
-        class: `setup-step ${i === flow.index ? 'current' : ''} ${done ? 'done' : ''}`,
+        class: `setup-step ${i === flow.index ? 'current' : ''} ${done ? 'done' : ''} ${shut ? 'is-shut' : ''}`,
+        disabled: shut,
+        title: shut
+          ? 'On y viendra. Réponds à la question ouverte — ou dis « Plus tard » quand c’est proposé.'
+          : st.short || '',
         onClick: () => jump(i),
       },
         h('span', { class: 'setup-step-dot' }, done ? '\u2713' : String(i + 1)),
@@ -645,12 +679,38 @@ function welcomeScreen(ctx) {
  * que le choix ait l'air de ce qu'il est : utile.
  */
 function stageScreen(ctx) {
-  return choice(ctx, STAGES.map((st) => ({
-    label: st.label,
-    note: st.hint,
-    active: () => store.scenario?.meta?.stage === st.key,
-    pick: () => store.update((d) => { d.meta.stage = st.key }),
-  })))
+  const host = h('div', { class: 'setup-stages' })
+  const draw = () => host.replaceChildren(...STAGES.map((st) => {
+    const on = store.scenario?.meta?.stage === st.key
+    return h('button', {
+      class: `stagepick ${on ? 'active' : ''}`,
+      'aria-pressed': on ? 'true' : 'false',
+      onClick: () => {
+        flow.touched.add(ctx.step.key)
+        store.update((d) => { d.meta.stage = st.key })
+        draw(); ctx.tick(); ctx.onChoice?.()
+      },
+    },
+      h('span', { class: 'stagepick-head' },
+        h('span', { class: 'stagepick-label' }, st.label),
+        h('span', { class: 'stagepick-mark', 'aria-hidden': 'true' }, on ? '\u2713' : ''),
+      ),
+      h('span', { class: 'stagepick-hint' }, st.hint),
+      // Ce que le choix change, écrit sur la carte.
+      //
+      // « Je débute » ou « mon activité est lancée » se lisaient comme une
+      // case d'état civil : on cochait sans savoir à quoi ça servait. Le stade
+      // ne touche aucun chiffre — il décide de ce que Fynomia met en avant
+      // ensuite. Autant l'écrire là où le choix se fait.
+      h('span', { class: 'stagepick-then' },
+        h('span', { class: 'stagepick-then-tag' }, 'Fynomia t’emmène vers'),
+        h('span', { class: 'stagepick-then-cap' }, st.cap),
+        h('span', { class: 'stagepick-then-say' }, st.says),
+      ),
+    )
+  }))
+  draw()
+  return host
 }
 
 /* ──────────────────────────── Écran : forme juridique ───────────────────── */

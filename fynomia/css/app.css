@@ -483,6 +483,16 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .drawer-body h4 { margin: 18px 0 5px; color: var(--ink-4); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; font-weight: 500; }
 .drawer-body h4:first-child { margin-top: 0; }
 .drawer-body p { line-height: 1.62; color: var(--ink-2); }
+/* La phrase d'ouverture d'une note de module : c'est elle qu'on lisait au bout
+   du titre, et elle reste en tête du tiroir pour faire la jonction. */
+.drawer-lede {
+  margin: 0 0 16px; font-size: 15px; line-height: 1.55; color: var(--ink);
+  padding-bottom: 14px; border-bottom: 1px solid var(--rule);
+}
+.drawer-body .module-guide-q { margin-bottom: 16px; }
+.drawer-body .guide-grid { display: block; }
+.drawer-body .guide-cell + .guide-cell { margin-top: 14px; }
+
 .formula { font-family: var(--mono); font-size: 12px; background: var(--ink); color: #E6EAED; padding: 11px 13px; line-height: 1.6; overflow-x: auto; }
 
 .modal-wrap { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 18px; }
@@ -1694,6 +1704,13 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-step.current { background: var(--accent-wash); color: var(--ink); }
 .setup-step.current .setup-step-dot { background: var(--ink); border-color: var(--ink); color: var(--accent); }
 .setup-step.current .setup-step-label { font-weight: 600; }
+/* Ce qu'on n'a pas encore atteint ne se clique pas.
+   Les numéros faisaient office de raccourci : on arrivait au résultat sans
+   avoir répondu, avec un modèle entièrement fabriqué par le métier. Ils
+   redeviennent ce qu'ils étaient — un repère, et un retour en arrière. */
+.setup-step.is-shut { color: var(--ink-5); cursor: default; opacity: .5; }
+.setup-step.is-shut:hover { background: none; color: var(--ink-5); }
+.setup-step.is-shut .setup-step-dot { border-style: dashed; }
 .setup-steps-exit {
   margin: 18px 20px 0; padding: 8px 0 0; border: 0; border-top: 1px solid var(--rule);
   background: none; cursor: pointer; font: inherit; text-align: left;
@@ -1716,11 +1733,15 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-tag-opt {
   color: var(--ink-5) !important; border-left: 1px solid var(--rule); padding-left: 11px;
 }
+/* « Plus tard » est la façon d'aller vite, maintenant que les numéros ne
+   sautent plus. Un lien souligné se lisait comme une note de bas de page : il
+   prend la forme d'un bouton, à côté de celui qui avance. */
 .setup-later {
-  border: 0; background: none; cursor: pointer; font: inherit;
-  font-size: 13px; color: var(--ink-4); text-decoration: underline; text-underline-offset: 3px;
+  border: 1px dashed var(--rule-2, var(--rule)); background: none; cursor: pointer; font: inherit;
+  font-size: 13.5px; color: var(--ink-4); border-radius: 999px; padding: 10px 18px;
+  transition: color .16s var(--ease-soft), border-color .16s var(--ease-soft);
 }
-.setup-later:hover { color: var(--ink); }
+.setup-later:hover { color: var(--ink); border-color: var(--ink-4); }
 /* En attente d'une réponse : le bouton doit se lire comme inerte, pas comme
    une action en attente de clic. */
 .btn.is-waiting {
@@ -1765,6 +1786,54 @@ i.swatch.split-margin { background: var(--gain); }
 }
 
 /* Les choix : deux ou trois cartes, jamais une liste déroulante. */
+/* ─── Où en est le projet : un choix qui dit ce qu'il déclenche ───
+   Les quatre stades tenaient dans les mêmes petites cartes que les autres
+   choix — un titre, une demi-ligne — et personne ne voyait à quoi ça servait.
+   Le stade ne touche aucun chiffre : il décide de ce qu'on remplit d'abord et
+   de l'écran où l'on atterrit. C'est écrit sur la carte, sous un filet. */
+.setup-stages {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  gap: 12px; margin-bottom: 18px;
+}
+.stagepick {
+  display: flex; flex-direction: column; gap: 7px; text-align: left; cursor: pointer;
+  border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface);
+  padding: 16px 17px 15px; font: inherit;
+  transition: border-color .18s var(--ease-soft), background .18s var(--ease-soft),
+              transform .18s var(--ease-soft);
+}
+.stagepick:hover { border-color: var(--ink-4); transform: translateY(-1px); }
+.stagepick-head { display: flex; align-items: flex-start; gap: 10px; }
+.stagepick-label {
+  font-family: var(--display); font-weight: 700; font-size: 17px; line-height: 1.2;
+  letter-spacing: -.02em; color: var(--ink); flex: 1;
+}
+.stagepick-mark {
+  flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--rule); font-size: 11px; color: transparent; background: var(--paper);
+}
+.stagepick-hint { font-size: 12.5px; color: var(--ink-4); line-height: 1.45; }
+.stagepick-then {
+  display: flex; flex-direction: column; gap: 3px;
+  margin-top: 4px; padding-top: 11px; border-top: 1px solid var(--rule);
+}
+.stagepick-then-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-5);
+}
+.stagepick-then-cap { font-size: 14px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
+.stagepick-then-say { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+
+.stagepick.active { background: var(--ink); border-color: var(--ink); }
+.stagepick.active .stagepick-label { color: #fff; }
+.stagepick.active .stagepick-hint { color: #A8B1B8; }
+.stagepick.active .stagepick-then { border-top-color: rgba(255,255,255,.16); }
+.stagepick.active .stagepick-then-tag { color: var(--accent); }
+.stagepick.active .stagepick-then-cap { color: var(--accent); }
+.stagepick.active .stagepick-then-say { color: #C6CCD1; }
+.stagepick.active .stagepick-mark { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .stagepick, .stagepick:hover { transform: none; transition: none; } }
+
 .setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-bottom: 18px; }
 .setup-choice {
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
@@ -2908,7 +2977,7 @@ table.data th, table.data td { padding: 9px 12px; }
    Cette règle rejouait un fondu à chaque reconstruction de la vue — y compris
    quand on cochait une simple case : tout le bloc des charges clignotait pour
    un interrupteur. L'entrée appartient à un changement d'onglet délibéré,
-   pas à un recalcul ; elle est portée par « .just-in », plus bas. */
+   pas à un recalcul ; elle est portée par la transition de vue, plus bas. */
 .view-intro {
   display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
   margin: 0 0 12px; font-size: 12.5px; color: var(--ink-4); line-height: 1.55; max-width: 84ch;
@@ -3283,7 +3352,7 @@ body { background: var(--paper); }
 .topbar h1 { display: none; }
 
 /* ─── Le titre de module : un poster, pas un en-tête de formulaire ─── */
-.module-tag { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.module-tag { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .module-bar { width: 30px; height: 7px; background: var(--accent); border-radius: 2px; flex: none; }
 .module-tag span {
   font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
@@ -3294,10 +3363,6 @@ body { background: var(--paper); }
   font-size: clamp(38px, 5.4vw, 62px); line-height: .92; letter-spacing: -.045em;
   color: var(--ink); margin: 0 0 14px; max-width: 16ch; text-wrap: balance;
 }
-.module-lede {
-  font-size: 14px; line-height: 1.6; color: var(--ink-3); max-width: 62ch; margin: 0 0 26px;
-}
-
 /* ─── Les cartes de saisie ─── */
 .slab {
   background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
@@ -3474,32 +3539,20 @@ details[open] > .refine-head .refine-sign {
 .item-act.is-drop:hover { border-color: var(--loss); color: var(--loss); }
 
 /* ─── L'en-tête d'un module ─── */
-.module { margin-bottom: 22px; }
-.module-row { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
 .module-title {
   font-family: var(--display); font-weight: 800;
   font-size: clamp(32px, 4vw, 46px); line-height: .96; letter-spacing: -.04em;
   color: var(--ink); margin: 0 0 10px; max-width: 18ch; text-wrap: balance;
 }
-.module-actions { margin-left: auto; margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-end; }
-/* Le verdict logé dans la ligne de titre garde sa largeur, jamais moins. */
-.module-actions .verdict { flex: 0 0 340px; }
-@media (max-width: 1080px) {
-  .module-actions { margin-left: 0; width: 100%; }
-  .module-actions .verdict { flex: 1 1 auto; }
+
+/* La ligne d'un scénario : nom à gauche, trois actions à droite. Sur un
+   téléphone les trois boutons ne tiennent pas derrière le nom — ils passent
+   à la ligne au lieu de sortir de la carte. */
+@media (max-width: 560px) {
+  .scenario-row { flex-wrap: wrap; row-gap: 8px; }
+  .scenario-row .scenario-name { flex: 1 1 100%; }
+  .scenario-row .btn { flex: 1 1 auto; justify-content: center; }
 }
-/* Sur téléphone, l'action passe après le chapô : intercalée entre le titre et
-   sa phrase, elle coupait la lecture en deux. `display: contents` remet le
-   titre et l'action au niveau du conteneur, seul endroit où `order` agit. */
-@media (max-width: 720px) {
-  .module { display: flex; flex-direction: column; }
-  .module-tag { order: 1; }
-  .module-row { display: contents; }
-  .module-title { order: 2; }
-  .module-lede { order: 3; }
-  .module-actions { order: 4; margin-top: 14px; margin-bottom: 0; }
-}
-.module-lede { font-size: 13.5px; line-height: 1.6; color: var(--ink-3); max-width: 70ch; margin: 0; }
 
 /* ─── Le chiffre à retenir ─── */
 .keystone {
@@ -4091,7 +4144,6 @@ details[open] > .refine-head .refine-sign {
 .slab-apart { margin-top: 34px !important; }
 .slab-pair { gap: 18px; }
 .view > .card, .view > .panel { margin-bottom: 14px; }
-.module { margin-bottom: 26px; }
 
 @media (max-width: 1080px) {
   .content { padding: 24px 22px calc(var(--impact-h) + 30px); }
@@ -4278,21 +4330,13 @@ details[open] > .refine-head .refine-sign {
    qui donnait la nausée. Un seul mouvement le remplace, et sans opacité : un
    masque descend sur chaque bloc, qui monte de huit pixels en arrivant. Le
    bord est net, la direction est lisible, et ça dure un tiers de seconde. */
-/* Rien ne disparaît à l'entrée.
-   Le masque découvrait chaque bloc du haut vers le bas, fond blanc compris :
-   la carte naîssait de rien, et comme le conteneur sautait à sa nouvelle
-   hauteur dans la même image, changer d'onglet ressemblait à un chargement de
-   page. Les blocs ne font plus que monter. */
-@keyframes view-in {
-  from { transform: translateY(10px); }
-  to   { transform: none; }
-}
-.view.just-in > *, .item-body.just-in > * {
-  animation: view-in .34s var(--ease-soft) both;
-}
-.view.just-in > *:nth-child(2), .item-body.just-in > *:nth-child(2) { animation-delay: .055s; }
-.view.just-in > *:nth-child(3), .item-body.just-in > *:nth-child(3) { animation-delay: .105s; }
-.view.just-in > *:nth-child(n+4), .item-body.just-in > *:nth-child(n+4) { animation-delay: .145s; }
+/* Rien ne bouge verticalement à l'entrée d'une vue.
+   Les blocs montaient de dix pixels, l'un après l'autre, pendant que le cadre
+   glissait de son ancienne hauteur à la nouvelle : le contenu descendait puis
+   remontait à chaque changement d'onglet, et ce va-et-vient donnait la nausée.
+   Le passage d'un onglet à l'autre n'est plus qu'un glissement latéral, joué
+   une seule fois sur l'image entière (« travel-in », plus bas). Sous ce point
+   de vue, la page est immobile : seul le contenu change. */
 
 /* ─── La ligne qu'on est en train de remplir ─── */
 /* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est
@@ -4370,37 +4414,39 @@ details[open] > .refine-head .refine-sign {
    première donnée commençait sous la ligne de flottaison. Tout tient en trois
    lignes : le titre, le lede avec son chiffre, la barre de navigation.
    ═══════════════════════════════════════════════════════════════════════════ */
-/* Le lede et son chiffre tiennent dans un même petit bloc, et le chiffre suit
-   la phrase au lieu d'être renvoyé à l'autre bout de l'écran — où l'on ne
-   savait plus de quoi il parlait. */
-.module-line {
-  display: flex; align-items: baseline; justify-content: flex-start;
-  gap: 8px 16px; flex-wrap: wrap; margin-top: 12px;
-  border: 1px solid var(--rule); border-radius: 12px;
-  padding: 12px 16px; background: var(--surface);
+/* Le titre, la note et le chiffre sur une seule ligne.
+   Le lede vivait dans un cadre à lui, sous le titre, avec un « + » qui le
+   dépliait en poussant la page. Il tient maintenant au bout du titre, en
+   gris, et son contenu part dans le tiroir latéral. */
+.module-top {
+  display: flex; align-items: baseline; gap: 6px 14px;
+  flex-wrap: wrap; margin-top: 2px;
 }
-.module-lede-fold { flex: 0 1 auto; min-width: 0; }
-.module-lede-head {
-  display: flex; align-items: baseline; gap: 8px; cursor: pointer;
-  list-style: none; user-select: none; padding: 2px 0;
-}
-.module-lede-head::-webkit-details-marker { display: none; }
-/* Le même « + » que partout ailleurs : un seul geste d'ouverture dans l'outil. */
-.module-lede-sign {
-  font-family: var(--mono); font-size: 14px; color: var(--signal); flex: none;
-  line-height: 1; width: 12px; transition: transform .38s var(--ease-soft);
-}
-.module-lede-fold[open] .module-lede-sign { transform: rotate(45deg); }
-.module-lede {
-  margin: 0; color: var(--ink-3); font-size: 14px; line-height: 1.55; max-width: 74ch;
-}
-.module-lede.is-plain { flex: 1 1 380px; min-width: 0; }
-.module-lede-head:hover .module-lede { color: var(--ink); }
+.module-top .module-title { margin: 0; }
 
-/* Le chiffre du module : collé à la phrase, sur la même ligne tant qu'il y a
-   la place — c'est là qu'on comprend à quoi il se rapporte. */
+/* La note : discrète par défaut, elle ne se souligne qu'au survol. Une seule
+   ligne, coupée s'il le faut — le texte entier est dans le tiroir. */
+.module-why {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  background: none; border: 0; padding: 2px 0; margin: 0;
+  font: inherit; font-size: 13.5px; line-height: 1.5; color: var(--ink-4);
+  cursor: pointer; text-align: left; min-width: 0; max-width: 58ch;
+  transition: color .2s var(--ease-soft);
+}
+.module-why-ico { flex: none; width: 13px; height: 13px; color: var(--signal); align-self: center; }
+.module-why-ico svg { width: 100%; height: 100%; display: block; }
+.module-why-text {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-bottom: 1px solid transparent; transition: border-color .2s var(--ease-soft);
+}
+.module-why:hover { color: var(--ink); }
+.module-why:hover .module-why-text { border-bottom-color: var(--rule-2, var(--rule)); }
+.module-why:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+
+/* Le chiffre du module : au bout de la ligne, poussé à droite quand il y a la
+   place — c'est là qu'on comprend à quoi il se rapporte. */
 .module-figure {
-  flex: none; display: inline-flex; align-items: baseline; gap: 7px;
+  flex: none; margin-left: auto; display: inline-flex; align-items: baseline; gap: 7px;
   padding: 3px 11px; border-radius: 999px; background: var(--ink); max-width: 100%;
 }
 .module-figure-value {
@@ -4410,7 +4456,7 @@ details[open] > .refine-head .refine-sign {
 
 /* Ce qui était le bandeau d'étape, déplié sous le lede. */
 .module-guide { overflow: hidden; }
-.module-guide-body { padding: 14px 0 2px; }
+.module-guide-body { padding: 2px 0; }
 .module-guide-q { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
 .module-guide-mark {
   width: 20px; height: 20px; flex: none; border-radius: 50%; margin-top: 1px;
@@ -4431,8 +4477,9 @@ details[open] > .refine-head .refine-sign {
 .module-acts { display: flex; gap: 8px; flex: none; padding-bottom: 8px; }
 
 @media (max-width: 760px) {
-  .module-line { gap: 10px; padding: 11px 13px; }
-  .module-figure { padding: 3px 9px; }
+  .module-top { gap: 5px 10px; }
+  .module-why { flex: 1 1 100%; max-width: 100%; font-size: 13px; }
+  .module-figure { margin-left: 0; padding: 3px 9px; }
   .module-figure-value { font-size: 14px; }
   .module-nav { gap: 8px; }
   .module-acts { width: 100%; padding-bottom: 10px; }
@@ -4529,10 +4576,10 @@ details[open] > .refine-head .refine-sign {
 }
 
 /* ─── Changer d'onglet ─── */
-/* Ces images-là ne portent pas le nom « view-in » : il sert déjà à l'entrée
-   d'une vue ordinaire, plus haut, et une règle @keyframes du même nom écrase
-   l'autre silencieusement — le contenu d'un onglet se mettait alors à glisser
-   de côté au lieu de monter, sans que rien ne le demande. */
+/* Un seul mouvement, latéral, joué sur l'image entière : ce qu'on quitte part
+   à gauche, ce qui arrive vient de la droite, et rien ne monte ni ne descend.
+   C'est tout ce qui reste du changement d'onglet — et c'est assez pour dire
+   qu'on a changé de vue sans remuer la page sous les yeux. */
 .is-move-view::view-transition-old(root) { animation: travel-out .2s cubic-bezier(.4, 0, 1, 1) both; }
 .is-move-view::view-transition-new(root) { animation: travel-in .38s var(--ease-soft) both; }
 @keyframes travel-out {
@@ -5211,7 +5258,6 @@ details[open] > .refine-head .refine-sign {
 
 @media (prefers-reduced-motion: reduce) {
   .hnav-ink { transition: none; }
-  .view.just-in > *, .item-body.just-in > * { animation: none; }
 }
 
 /* ═══════════ La présentation, dans le tableau de bord ═════════════════════
@@ -5426,9 +5472,7 @@ details[open] > .refine-head .refine-sign {
 .module-mark { height: 1px; margin-bottom: -1px; }
 .module {
   position: sticky; top: var(--header-h); z-index: 20;
-  background: var(--paper); margin-bottom: 22px;
-  transition: padding .28s var(--ease-soft), box-shadow .28s var(--ease-soft);
-  padding-top: 2px;
+  background: var(--paper); padding-top: 2px;
 }
 .module::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
@@ -5436,21 +5480,20 @@ details[open] > .refine-head .refine-sign {
 }
 .module.is-stuck::after { opacity: 1; }
 .module.is-stuck { padding-top: 8px; padding-bottom: 2px; }
-/* Ce qui se resserre : le titre descend au corps d'un titre de bloc, et la
-   phrase d'introduction s'efface — elle a été lue une fois. */
+/* Ce qui se resserre : le titre descend au corps d'un titre de bloc, et le
+   numéro de module s'efface — il a été lu une fois. */
 .module.is-stuck .module-title { font-size: 22px; line-height: 1.1; }
 .module.is-stuck .module-tag { display: none; }
-.module.is-stuck .module-line {
-  max-height: 0; opacity: 0; overflow: hidden; margin: 0; padding: 0; border: 0;
-}
-.module-title, .module-line {
-  transition: font-size .28s var(--ease-soft), max-height .28s var(--ease-soft),
-              opacity .2s var(--ease-soft), margin .28s var(--ease-soft);
-}
 .module.is-stuck .module-nav { margin-bottom: 0; }
-@media (prefers-reduced-motion: reduce) {
-  .module, .module-title, .module-line, .module::after { transition: none; }
-}
+
+/* La cale qui garde la hauteur du document constante.
+   Rien ne s'anime ici : sa hauteur est posée au pixel par le script, en même
+   temps que l'en-tête se resserre. Une transition rendrait la mesure fausse
+   pendant sa durée — et c'est cette mesure qui empêche la page de raccourcir
+   sous le doigt. La marge du bas du module vit ici : elle suit la cale, donc
+   elle reste en place quand l'en-tête maigrit. */
+.module-fill { height: 0; margin-bottom: 22px; }
+@media (max-width: 760px) { .module-fill { margin-bottom: 18px; } }
 
 /* ═══════════ Le pas d'une question à l'autre ═════════════════════════════
    Douze écrans se succédaient sans qu'on sente avancer : la question changeait

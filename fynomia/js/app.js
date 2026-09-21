@@ -6,7 +6,7 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, toast, euro, narrow } from './ui/dom.js'
+import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import store from './state/store.js'
 import { PERSONAS, getPersona } from './ui/personas.js'
@@ -15,7 +15,7 @@ import { resetLiveNumbers } from './ui/impact.js'
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
-import { installMotion, consumeViewChange, travel, takeTravel, armTravel } from './ui/motion.js'
+import { installMotion, travel, takeTravel, armTravel } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
 import { checklist } from './ui/checklist.js'
 import { goToGap, settle } from './ui/spotlight.js'
@@ -84,7 +84,18 @@ function route() {
   return hash.split('?')[0]
 }
 
-function navigate(to) {
+/**
+ * Le menu ne voyage pas.
+ *
+ * Le voyage — le fondu qui éloigne l'écran qu'on quitte et ramène l'autre — dit
+ * qu'on parcourt un document. Il a sa place quand on suit un lien dans le texte
+ * : « y aller », « voir les comptes ». Il n'en a aucune quand on clique dans le
+ * menu, où l'on ne parcourt rien : on choisit une partie, et elle doit être là.
+ * D'où ce drapeau, qui laisse le changement d'adresse se faire sèchement.
+ */
+let plain = false
+
+function navigate(to, { move = true } = {}) {
   const next = to.startsWith('#') ? to : `#/${to}`
   // Cliquer sur le module où l'on se trouve déjà ne change pas l'adresse, donc
   // ne déclenche aucun événement : l'écran restait figé et le clic semblait
@@ -96,7 +107,7 @@ function navigate(to) {
   // clic sur l'EBITDA, sur le rail, sur « Les comptes » changeait d'écran
   // sans rien montrer du trajet — la même action se sentait ou non selon le
   // bouton qui la déclenchait. C'est armé ici, une fois, pour tous.
-  armTravel('page')
+  if (move) armTravel('page'); else plain = true
   location.hash = next
 }
 
@@ -184,7 +195,6 @@ function render({ preserveScroll = false } = {}) {
       window.scrollTo(0, 0)
     }
     settle()
-    consumeViewChange(root)
   }
   const mode = takeTravel()
   if (mode) travel(swap, mode); else swap()
@@ -214,7 +224,7 @@ function rail(active) {
         const done = p.build ? !!doneByPage[k] : false
         return h('button', {
           class: `rail-link ${active === k ? 'active' : ''} ${done ? 'done' : ''}`,
-          onClick: () => { navigate(`#/${k}`); document.getElementById('rail')?.classList.remove('open') },
+          onClick: () => { navigate(`#/${k}`, { move: false }); document.getElementById('rail')?.classList.remove('open') },
         },
           h('span', { class: 'rail-no' }, p.no),
           h('span', {}, p.label),
@@ -224,10 +234,10 @@ function rail(active) {
     ]),
 
     h('div', { class: 'rail-foot' },
-      h('button', { class: 'rail-link', onClick: () => { resetSetup(); navigate('#/creer') } },
+      h('button', { class: 'rail-link', onClick: () => { resetSetup(); navigate('#/creer', { move: false }) } },
         h('span', { class: 'rail-no' }, '\uff0b'), h('span', {}, 'Nouveau plan')),
       h('button', {
-        class: 'rail-account', onClick: () => { navigate('#/reglages'); document.getElementById('rail')?.classList.remove('open') },
+        class: 'rail-account', onClick: () => { navigate('#/reglages', { move: false }); document.getElementById('rail')?.classList.remove('open') },
       },
         h('span', { class: 'rail-account-name' }, cloud.user?.name || 'Mon compte'),
         h('span', { class: 'rail-account-sync' }, syncLabel()),
@@ -313,7 +323,8 @@ function tabbar(active) {
   return h('nav', { class: 'tabbar' },
     ...keys.map((k) => h('button', {
       class: `tab ${active === k ? 'active' : ''}`,
-      onClick: () => navigate(`#/${k}`),
+      // La barre du bas est le menu du téléphone : même règle que le rail.
+      onClick: () => navigate(`#/${k}`, { move: false }),
     }, h('span', { class: 'ico' }, PAGES[k].icon), h('span', {}, shortLabel(PAGES[k].label)))),
   )
 }
@@ -323,29 +334,47 @@ const shortLabel = (l) => ({ 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle
   'Business case': 'Dossier' }[l] || l)
 
 // ───────────────────────────── Tiroir du glossaire ─────────────────────────
-setDrawerHost((key) => {
-  const entry = GLOSSARY[key]
-  if (!entry) return
+/**
+ * Le panneau latéral, une seule mécanique pour deux usages.
+ *
+ * Il servait au glossaire — « c'est quoi, l'EBITDA ». La note de chaque module
+ * y entre maintenant aussi : c'est le même geste, au même endroit, avec la même
+ * façon d'en sortir. Une explication ne pousse plus jamais la page.
+ */
+function openDrawer(title, ...body) {
   const close = () => { scrim.remove(); drawer.remove() }
   const scrim = h('div', { class: 'scrim', onClick: close })
-  const drawer = h('aside', { class: 'drawer', role: 'dialog', 'aria-label': entry.title },
+  const drawer = h('aside', { class: 'drawer', role: 'dialog', 'aria-label': title },
     h('div', { class: 'drawer-head' },
-      h('div', { class: 'spacer' }, h('h2', {}, entry.title)),
+      h('div', { class: 'spacer' }, h('h2', {}, title)),
       h('button', { class: 'btn btn-sm btn-ghost', onClick: close, 'aria-label': 'Fermer' }, '✕'),
     ),
-    h('div', { class: 'drawer-body' },
-      h('h4', {}, "De quoi s'agit-il"),
-      h('p', {}, entry.what),
-      entry.formula && [h('h4', {}, 'Formule'), h('div', { class: 'formula' }, entry.formula)],
-      entry.how && [h('h4', {}, 'Comment Fynomia le calcule'), h('p', {}, entry.how)],
-      entry.use && [h('h4', {}, 'À quoi ça sert'), h('p', {}, entry.use)],
-      entry.watch && [h('h4', {}, 'Point de vigilance'), h('div', { class: 'note warn' }, entry.watch)],
-      currentValue(key),
-    ),
+    h('div', { class: 'drawer-body' }, ...body),
   )
   document.body.append(scrim, drawer)
   const onKey = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey) } }
   document.addEventListener('keydown', onKey)
+}
+
+setDrawerHost((key) => {
+  const entry = GLOSSARY[key]
+  if (!entry) return
+  openDrawer(entry.title,
+    h('h4', {}, "De quoi s'agit-il"),
+    h('p', {}, entry.what),
+    entry.formula && [h('h4', {}, 'Formule'), h('div', { class: 'formula' }, entry.formula)],
+    entry.how && [h('h4', {}, 'Comment Fynomia le calcule'), h('p', {}, entry.how)],
+    entry.use && [h('h4', {}, 'À quoi ça sert'), h('p', {}, entry.use)],
+    entry.watch && [h('h4', {}, 'Point de vigilance'), h('div', { class: 'note warn' }, entry.watch)],
+    currentValue(key),
+  )
+})
+
+setPanelHost(({ title, lede, body }) => {
+  openDrawer(title || 'À propos de cette partie',
+    lede ? h('p', { class: 'drawer-lede' }, lede) : null,
+    body || null,
+  )
 })
 
 /** Rattache la définition aux chiffres du scénario ouvert. */
@@ -389,7 +418,7 @@ window.addEventListener('resize', () => {
 
 // ────────────────────────────────── Démarrage ──────────────────────────────
 // Le retour du navigateur est un déplacement comme un autre : il voyage aussi.
-window.addEventListener('hashchange', () => { armTravel('page'); render() })
+window.addEventListener('hashchange', () => { if (plain) plain = false; else armTravel('page'); render() })
 /**
  * La célébration d'une étape franchie.
  *
