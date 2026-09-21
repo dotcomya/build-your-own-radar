@@ -270,19 +270,39 @@ function teamViews(navigate, refresh) {
   )
 }
 
+/**
+ * Un taux écrit tel qu'il s'applique.
+ *
+ * Cette table est le seul endroit où le comptable du fondateur peut vérifier
+ * ce que le moteur applique. Elle arrondissait : 0,55 % s'y lisait 0,5 %,
+ * 0,68 % devenait 0,7 %, 4,5 SMIC devenait 5, et trois entrées sur sept
+ * seulement étaient montrées. Un relecteur y a vu six erreurs de droit là où
+ * il n'y avait qu'un affichage : c'est pire qu'inutile, ça détruit la
+ * confiance dans des chiffres justes. Ici, rien n'est arrondi et rien n'est
+ * omis.
+ */
 function formatParam(value, unit) {
   if (typeof value === 'boolean') return value ? 'Oui' : 'Non'
   if (typeof value === 'number') {
-    if (unit && unit.includes('%')) return pct(value, value * 100 % 1 === 0 ? 0 : 2)
+    if (unit && unit.includes('%')) return pct(value, decimalsOf(value * 100))
     if (unit === '€/an' || unit === '€') return euro(value)
-    return `${num(value, value % 1 === 0 ? 0 : 2)}${unit && unit.startsWith('€') ? ' ' + unit : ''}`
+    return `${num(value, decimalsOf(value))}${unit && unit.startsWith('€') ? ' ' + unit : ''}`
   }
   if (Array.isArray(value)) return `${value.length} tranches`
   if (value && typeof value === 'object') {
-    const entries = Object.entries(value).filter(([, v]) => typeof v === 'number' || typeof v === 'boolean')
-    return entries.slice(0, 3).map(([k, v]) => `${shortKey(k)} ${typeof v === 'boolean' ? (v ? 'oui' : 'non') : v < 1 && v > 0 ? pct(v, 2) : num(v)}`).join(' · ')
+    return Object.entries(value)
+      .filter(([, v]) => typeof v === 'number' || typeof v === 'boolean')
+      .map(([k, v]) => `${shortKey(k)} ${typeof v === 'boolean' ? (v ? 'oui' : 'non')
+        : v < 1 && v > 0 ? pct(v, decimalsOf(v * 100)) : num(v, decimalsOf(v))}`)
+      .join(' · ')
   }
   return String(value)
+}
+
+/** Combien de décimales il faut pour ne rien perdre, jusqu'à quatre. */
+function decimalsOf(v) {
+  for (let d = 0; d < 4; d++) if (Math.abs(v - Number(v.toFixed(d))) < 1e-9) return d
+  return 4
 }
 
 const shortKey = (k) => ({
@@ -298,4 +318,13 @@ const shortKey = (k) => ({
   // un tableau qui sert à vérifier des taux devant un comptable.
   total: 'total', incomeTax: 'impôt', socialCharges: 'prélèv. sociaux',
   min: 'plancher', max: 'plafond',
+  // Les clés qui manquaient. Faute de traduction, la table affichait
+  // « employeeCapSmicMultiple 5 » : un nom de variable et un nombre arrondi,
+  // là où la règle dit 4,5 SMIC par salarié.
+  employeeCapSmicMultiple: 'plafond / salarié (SMIC)',
+  establishmentCapPassMultiple: 'plafond / établissement (PASS)',
+  corporateTaxExemption: 'exonération IS', exemptibleRate: 'part exonérable',
+  reliefSecondYear: 'abattement 2e année', youngDoctorMultiplier: 'jeune docteur',
+  youngDoctorAllowance: 'forfait jeune docteur', subcontractingMultiple: 'sous-traitance',
+  launchYear: 'année de lancement', years: 'années', months: 'mois',
 }[k] || k)

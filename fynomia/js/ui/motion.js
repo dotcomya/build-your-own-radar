@@ -95,15 +95,54 @@ export function changed(scope, value) {
  * fabrique d'autres nœuds, sans la classe : rien ne rejoue.
  */
 let armed = false
+let fromHeight = 0
+let fromTabs = ''
 
-export function markViewChange() { armed = true }
+/**
+ * @param {number} height Hauteur du panneau qu'on quitte, mesurée avant le
+ *   remplacement. Elle sert à faire glisser le cadre vers sa nouvelle taille
+ *   au lieu de le laisser sauter.
+ * @param {string} sig Signature de la barre d'onglets, pour retrouver « son »
+ *   panneau après le remplacement : une page peut en porter plusieurs, et
+ *   animer la hauteur du mauvais ne vaut pas mieux que de ne rien animer.
+ */
+export function markViewChange(height = 0, sig = '') { armed = true; fromHeight = height; fromTabs = sig }
 
-/** Appelé après chaque rendu : n'anime que la vue née du dernier clic. */
+/**
+ * Appelé après chaque rendu : n'anime que la vue née du dernier clic.
+ *
+ * Le cadre s'adapte, il ne clignote plus.
+ *
+ * L'entrée était un masque qui découvrait chaque bloc du haut vers le bas :
+ * le fond blanc de la carte disparaîtssait avec son contenu, et comme le
+ * conteneur prenait instantanément sa nouvelle hauteur, passer de « Volumes »
+ * à « Paiement » ressemblait au chargement d'une autre page. Deux corrections :
+ * les blocs ne font plus que monter — rien ne disparaît — et le panneau va de
+ * son ancienne hauteur à la nouvelle en trois dixièmes de seconde.
+ */
 export function consumeViewChange(root = document) {
   if (!armed) return
   armed = false
+  const before = fromHeight
+  const sig = fromTabs
+  fromHeight = 0
+  fromTabs = ''
   if (reduced()) return
   for (const view of root.querySelectorAll('.view, .item-body')) view.classList.add('just-in')
+
+  const nav = sig ? root.querySelector(`.hnav[data-tabs="${CSS.escape(sig)}"]`) : null
+  const view = nav ? nav.parentElement?.querySelector('.view') : root.querySelector('.view.just-in')
+  if (!view || !before || typeof view.animate !== 'function') return
+  const after = view.getBoundingClientRect().height
+  if (!after || Math.abs(after - before) < 3) return
+  const was = view.style.overflow
+  view.style.overflow = 'hidden'
+  const anim = view.animate(
+    [{ height: `${before}px` }, { height: `${after}px` }],
+    { duration: 320, easing: 'cubic-bezier(.62, .02, .34, 1)' },
+  )
+  anim.onfinish = () => { view.style.overflow = was }
+  anim.oncancel = () => { view.style.overflow = was }
 }
 
 /**

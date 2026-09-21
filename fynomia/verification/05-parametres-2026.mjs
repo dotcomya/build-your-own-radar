@@ -9,6 +9,7 @@
  * si un paramètre se déclare « texte publié » sans citer ce texte.
  */
 import { PARAMS, FISCAL_YEAR, pfuTotal, pfuDetail } from '../js/engine/fiscal-fr-2026.js'
+import { pct, num } from '../js/format.js'
 const ok=(l,c,d='')=>{console.log(`${c?'✓':'✗'} ${l}${d?' — '+d:''}`); if(!c) process.exitCode=1}
 const near=(a,b,t=1e-9)=>Math.abs(a-b)<=t
 const v = (k) => PARAMS[k].value
@@ -69,3 +70,41 @@ ok('chaque valeur 2026 « texte publié » cite sa source', orphelins.length ===
 const connus = ['stable', 'enacted', 'to-verify']
 const inconnus = Object.entries(PARAMS).filter(([, p]) => !connus.includes(p.confidence)).map(([k]) => k)
 ok('aucun statut de confiance inconnu', inconnus.length === 0, inconnus.join(', ') || 'stable · enacted · to-verify')
+
+// ── Les taxes assises sur la masse salariale, au centième près ────────────
+//
+// Un relecteur extérieur a signalé six taux faux. Cinq ne l'étaient pas : la
+// table des règles les arrondissait à l'affichage — 0,55 % s'y lisait 0,5 %,
+// 0,68 % devenait 0,7 %, 4,5 SMIC devenait 5. Ces contrôles figent les
+// valeurs exactes du côté du moteur ; le formatage, lui, ne perd plus de
+// décimales.
+ok('taxe d’apprentissage 0,68 % — 0,59 % de part principale + 0,09 % de solde',
+   near(v('apprenticeshipTax'), 0.0068) && near(0.0059 + 0.0009, 0.0068, 1e-9))
+ok('formation professionnelle — 0,55 % jusqu’à 10 salariés, 1 % au-delà',
+   near(v('vocationalTraining').under11, 0.0055) && near(v('vocationalTraining').from11, 0.01))
+ok('PEEC — 0,45 % de la masse salariale, à partir de 50 salariés',
+   near(v('constructionEffort').rate, 0.0045) && v('constructionEffort').threshold === 50)
+ok('C3S — 0,16 % de la fraction du CA au-delà de 19 M€',
+   near(v('c3s').rate, 0.0016) && v('c3s').threshold === 19000000)
+ok('JEI — exonération plafonnée à 4,5 SMIC par salarié et 5 PASS par établissement',
+   near(v('jei').employeeCapSmicMultiple, 4.5) && v('jei').establishmentCapPassMultiple === 5)
+
+// ── CVAE : la trajectoire de suppression a été reportée deux fois ─────────
+//
+// La loi de finances pour 2024 prévoyait 0,19 % en 2025 puis 0,09 % en 2026 ;
+// celle pour 2025 a décalé la trajectoire de trois ans et maintient le taux
+// maximal à 0,28 % jusqu'en 2027. C'est 0,28 % qui s'applique en 2026.
+ok('CVAE — taux maximal de 0,28 % en 2026, et non 0,19 %',
+   near(v('cvae').maxRate, 0.0028), `${(v('cvae').maxRate * 100).toFixed(2)} %`)
+ok('CVAE — le report de la suppression cite son texte', !!PARAMS.cvae.source)
+
+// ── Un taux affiché est un taux exact ─────────────────────────────────────
+//
+// Le formateur ignorait la précision demandée au-delà d'une décimale : toute
+// valeur plus fine était arrondie avant d'atteindre l'écran. C'est ce qui a
+// fait conclure à six erreurs de droit là où le moteur était juste.
+ok('pct rend la précision demandée — 0,55 %, 0,68 %, 0,16 %, 0,28 %',
+   pct(0.0055, 2) === '0,55 %' && pct(0.0068, 2) === '0,68 %'
+   && pct(0.0016, 2) === '0,16 %' && pct(0.0028, 2) === '0,28 %',
+   [pct(0.0055, 2), pct(0.0068, 2), pct(0.0016, 2), pct(0.0028, 2)].join(' · '))
+ok('num rend la précision demandée — 4,5 SMIC ne devient pas 5', num(4.5, 1) === '4,5', num(4.5, 1))

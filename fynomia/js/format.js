@@ -23,11 +23,34 @@ export function euro(n, { sign = false, compact = false } = {}) {
   return `${sign && v > 0 ? '+' : ''}${nf0.format(v)} €`
 }
 
-export const num = (n, d = 0) => (Number.isFinite(n) ? (d === 0 ? nf0 : d === 1 ? nf1 : nf2).format(n) : '—')
+export const num = (n, d = 0) => (Number.isFinite(n) ? digits(d).format(n) : '—')
 
+/**
+ * Un pourcentage, à la précision demandée.
+ *
+ * Elle était ignorée au-delà d'une décimale : toute demande supérieure retombait
+ * sur un seul chiffre après la virgule. Sur la page des règles fiscales, dont
+ * l'objet est précisément de montrer les taux tels qu'ils s'appliquent, un
+ * relecteur y a lu 0,5 % là où le moteur calcule 0,55 %, 0,7 % au lieu de
+ * 0,68 %, 0,2 % au lieu de 0,16 % — et en a conclu, légitimement, que le
+ * logiciel appliquait de faux taux. Un affichage qui arrondit un texte de loi
+ * ne vérifie rien : il fabrique un doute.
+ */
 export function pct(n, d = 1) {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'
-  return `${(d === 0 ? nf0 : nf1).format(n * 100)} %`
+  return `${digits(d).format(n * 100)} %`
+}
+
+/** Le formateur à n décimales, fabriqué une fois puis retenu. */
+const kept = new Map()
+function digits(d) {
+  const k = Math.max(0, Math.min(6, Math.round(d)))
+  if (!kept.has(k)) {
+    kept.set(k, new Intl.NumberFormat('fr-FR', k === 0
+      ? { maximumFractionDigits: 0 }
+      : { maximumFractionDigits: k, minimumFractionDigits: k }))
+  }
+  return kept.get(k)
 }
 
 export const monthName = (m) => ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][m % 12]

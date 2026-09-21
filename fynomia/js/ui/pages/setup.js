@@ -29,6 +29,7 @@ import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
 import { openSynthesis } from './dashboard.js'
+import { changed } from '../motion.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
 import { familyIcon, icon } from '../icons.js'
 
@@ -44,7 +45,7 @@ const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
  * valeur qu'il a saisie ne l'est plus, pour qu'il puisse la corriger sans la
  * perdre.
  */
-const flow = { index: 0, touched: new Set() }
+const flow = { index: 0, touched: new Set(), way: 'fwd' }
 
 /** Où en est le choix du métier : la famille ouverte, et ce qui est tapé. */
 const pick = { family: null, query: '' }
@@ -208,13 +209,17 @@ export function renderSetup(navigate, refresh) {
 
   const ctx = { navigate, refresh, scenario: s, step }
 
+  // Le sens du pas, retenu pour l'animation : on avance, la question suivante
+  // vient de la droite ; on revient, elle vient de la gauche. Rien de plus —
+  // mais sans ce sens, douze écrans se succèdent sans qu'on sente avancer.
   const go = (delta) => {
     const next = flow.index + delta
     if (next < 0 || next >= STEPS.length) { if (next >= STEPS.length) navigate('#/parcours'); return }
+    flow.way = delta >= 0 ? 'fwd' : 'back'
     flow.index = next
     refresh()
   }
-  const jump = (i) => { flow.index = i; refresh() }
+  const jump = (i) => { flow.way = i >= flow.index ? 'fwd' : 'back'; flow.index = i; refresh() }
   ctx.go = go
 
   // Les nœuds que la frappe met à jour. Tout le reste — la question, le champ,
@@ -274,7 +279,10 @@ export function renderSetup(navigate, refresh) {
         // « Commencer » qui faisait exactement la même chose. Quatre façons de
         // dire la même chose sur le premier écran qu'on voit du produit. Un
         // écran marqué `bare` n'en garde aucune : il se présente seul.
-        h('div', { class: `setup-card ${step.last ? 'is-last' : ''} ${step.bare ? 'is-bare' : ''}` },
+        h('div', {
+          class: `setup-card ${step.last ? 'is-last' : ''} ${step.bare ? 'is-bare' : ''}`
+            + (changed('setup-step', flow.index) ? ` is-in-${flow.way || 'fwd'}` : ''),
+        },
           !step.bare ? h('div', { class: 'setup-tag' },
             h('span', { class: 'setup-tag-bar' }),
             h('span', {}, step.last ? 'Résultat' : `Question ${pad(flow.index)} / ${pad(QUESTIONS)}`),

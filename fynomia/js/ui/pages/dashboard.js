@@ -92,18 +92,24 @@ export function renderDashboard(navigate, refresh) {
     }),
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
+      // Le verdict ouvre la synthèse : c'est la phrase qui résume les six
+      // cartes qui suivent, et la lire après elles n'avait pas de sens.
+      verdictCard(health, navigate),
       plainBoard(s, r, navigate, () => goView('pilotage')),
       // Les six chiffres qu'un lecteur extérieur réclame, chacun repliable sur
       // ce qu'il veut dire et sur la page où il se corrige.
       kpiBoard(r, s, y, navigate),
-      // L'analyse entière, dans un socle. Elle ne disparaît pas : elle cesse
-      // seulement d'être la première chose qu'on voit.
-      fold('Analyse détaillée',
-        'Exercice par exercice, courbes, cascade et présentation',
+      // L'analyse entière, dans un socle — et sans un seul pli à l'intérieur.
+      //
+      // Elle en portait trois : la cascade, le cycle, les indicateurs. On
+      // ouvrait le socle pour avoir le détail, et il fallait encore ouvrir
+      // trois volets pour l'obtenir. Qui demande le détail le demande en
+      // entier ; le seul choix qui reste est de l'afficher ou non.
+      deepFold(
         h('div', { class: 'board-stack' },
           yearBar(y, r, pickYearFn),
           netEquation(r, y),
-          refine('board-cascade', 'Voir le détail ligne à ligne', moneyPanel(r, y)),
+          moneyPanel(r, y),
           h('section', { class: 'panel story-panel is-key' },
             h('div', { class: 'card-head' },
               h('div', {},
@@ -118,32 +124,21 @@ export function renderDashboard(navigate, refresh) {
           ),
           ...boardCharts(r, s, y, level, sector, navigate),
           deckBoard(navigate, refresh),
-          detailDisclosure(persona, r, s, y, sector, navigate, refresh),
+          detailBoard(persona, r, s, y, sector),
         ),
-        { id: 'board-analyse' },
       ),
     ) : null,
 
+    // Pilotage : non plus « où j'en suis », qui est désormais la synthèse, mais
+    // « qu'est-ce que je fais maintenant ». Ce qu'il reste à poser, le seuil à
+    // franchir, les leviers classés par ce qu'ils rapportent, la position dans
+    // le métier, et les points qui clochent.
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
-      // Le verdict, sur toute la largeur et en tête.
-      //
-      // Il vivait dans un coin de la ligne de titre : une carte de trois cent
-      // quarante pixels, posée à droite d'un titre, qui laissait un vide énorme
-      // au milieu de l'écran et qu'on lisait sans savoir d'où elle sortait.
-      // C'est pourtant la seule phrase qui compte sur cette page — elle prend
-      // donc la première ligne, en entier.
-      //
-      // Le tableau de bord de bord qui la précédait — « présentable à une
-      // banque », sept pastilles d'état et un « prochain jalon » — disait en
-      // cinquante mots ce que la barre du haut dit en dix-neuf encoches et ce
-      // que « Affiner mon dossier » dit en lignes cliquables. Il est parti.
-      verdictCard(health, navigate),
-      // C'est ici qu'on arrive en sortant du parcours : la première chose à
-      // voir n'est pas un graphique, c'est ce qu'il reste à poser.
       refinePanel(navigate, { refresh }),
-      // Le bloc porte son propre titre dans l'opération : l'encadrer d'un
-      // panneau avec un second titre ajoutait une couche pour rien.
       breakEvenBoard(r, s, vocabulary(s)),
+      actionsPanel(r, s, navigate, refresh),
+      gaugePanel(r, s, sector, y),
+      nudgesSection(s, r, navigate),
     ) : null,
 
     view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh, navigate)) : null,
@@ -489,7 +484,9 @@ function boardCharts(r, s, y, level, sector, navigate) {
       Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
       areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }),
       chartNote(cashSentence(r)))
-    out.push(refine('board-cycle', 'Affiner : besoin en fonds de roulement et courbe de trésorerie', pair(bfr, cashPanel)))
+    // Ces deux dessins vivaient dans un volet « affiner ». Ils sont désormais
+    // à l'intérieur de l'analyse détaillée, qu'on n'ouvre que pour tout voir.
+    out.push(pair(bfr, cashPanel))
   }
 
   return out
@@ -710,24 +707,45 @@ function nudgesSection(s, r, navigate) {
  * que les indicateurs détaillés, les leviers à tirer et les pièges propres au
  * métier — utiles, mais qu'on ne consulte pas à chaque visite.
  */
-function detailDisclosure(persona, r, s, y, sector, navigate, refresh) {
-  const board = metricBoard(persona, r)
-  const open = detailDisclosure.open ?? false
-
-  const details = h('details', { class: 'detail-block', open: open || null },
-    h('summary', { class: 'detail-summary refine-head' },
-      foldSign(),
-      h('span', { class: 'detail-title' }, 'Indicateurs détaillés'),
-      h('span', { class: 'detail-hint' }, `${persona.metrics.length} indicateurs détaillés et les pièges du métier`),
+function detailBoard(persona, r, s, y, sector) {
+  return h('section', { class: 'panel' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, 'Indicateurs détaillés'),
+        h('div', { class: 'tiny muted' }, `${persona.metrics.length} indicateurs et les pièges du métier`),
+      ),
     ),
-    h('div', { class: 'detail-body' },
-      board,
+    h('div', { class: 'panel-body' },
+      metricBoard(persona, r),
       sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
         sectorTraps(s), sectorRegime(s)),
     ),
   )
-  details.addEventListener('toggle', () => { detailDisclosure.open = details.open })
-  return details
+}
+
+/**
+ * Le socle de l'analyse détaillée : un bloc, pas une ligne de texte.
+ *
+ * Un volet ordinaire — un chevron et six mots en gris — se lisait comme une
+ * note de bas de page. Ce qu'il ouvre est pourtant la moitié du tableau de
+ * bord : tous les exercices, la cascade, les courbes, la présentation. Il lui
+ * faut la taille de ce qu'il contient.
+ */
+function deepFold(body) {
+  const memory = deepFold.open || (deepFold.open = new Set())
+  const el = h('details', { class: 'deepfold', open: memory.has('analyse') || null },
+    h('summary', { class: 'deepfold-head refine-head' },
+      h('span', { class: 'deepfold-id' },
+        h('span', { class: 'deepfold-title' }, 'Analyse détaillée'),
+        h('span', { class: 'deepfold-sub' },
+          'Les cinq exercices, la cascade du résultat, les courbes, la présentation — tout, d’un coup.'),
+      ),
+      foldSign(),
+    ),
+    h('div', { class: 'deepfold-body' }, body),
+  )
+  el.addEventListener('toggle', () => { el.open ? memory.add('analyse') : memory.delete('analyse') })
+  return el
 }
 
 /** La phrase qui dit ce que le dessin montre. */

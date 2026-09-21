@@ -259,7 +259,7 @@ export function tabs(items, active, onPick) {
   // suivante : c'est le même geste qu'un doigt sur un onglet.
   const sig = list.map((it) => it.key).join('|')
   const ink = h('i', { class: 'hnav-ink', 'aria-hidden': 'true' })
-  const nav = h('div', { class: 'hnav', role: 'tablist' })
+  const nav = h('div', { class: 'hnav', role: 'tablist', 'data-tabs': sig })
 
   // Deux natures d'onglets, séparées par un filet.
   //
@@ -276,9 +276,22 @@ export function tabs(items, active, onPick) {
       class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.read ? 'is-read' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
       title: it.read ? `${it.label} — on y lit ce que le modèle calcule` : `${it.label} — on y saisit`,
-      onClick: () => { markViewChange(); onPick(it.key) },
+      onClick: () => {
+        // La hauteur du panneau qu'on quitte, mesurée avant qu'il ne
+        // disparaîsse : le cadre glissera vers la nouvelle au lieu de sauter.
+        const host = nav.parentElement
+        const panel = host && host.querySelector('.view')
+        markViewChange(panel ? panel.getBoundingClientRect().height : 0, sig)
+        onPick(it.key)
+      },
     },
-      h('span', { class: 'hnav-sign', 'aria-hidden': 'true', html: it.read ? EYE : PENCIL }),
+      // Seul ce qui se lit porte un signe.
+      //
+      // Un crayon sur chaque onglet modifiable, c'était un pictogramme de plus
+      // à chaque ligne pour dire ce qui va de soi : dans un logiciel de saisie,
+      // on saisit. L'œil ne marque donc que l'exception — les pages qui ne font
+      // que montrer un résultat.
+      it.read ? h('span', { class: 'hnav-sign', 'aria-hidden': 'true', html: EYE }) : null,
       h('span', { class: 'hnav-label' }, it.label),
       it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,
     )
@@ -497,10 +510,24 @@ export function moduleHead(no, title, lede, ...actions) {
  * parcours et le mode d'emploi de la partie. On ne le lit qu'une fois ; il n'a
  * pas à occuper l'écran les cinquante fois suivantes.
  */
+/**
+ * L'en-tête d'un module reste à l'écran.
+ *
+ * Deux écrans plus bas dans « Achats et coûts », plus rien ne disait où l'on
+ * était ni quels onglets existaient : il fallait remonter pour changer de
+ * vue. Il se colle donc sous la barre du haut — et se resserre en route : le
+ * titre passe au corps d'une ligne de texte et la phrase d'introduction
+ * s'efface, pour qu'un bandeau de repère ne mange pas le tiers de l'écran.
+ *
+ * La détection passe par une sentinelle placée juste au-dessus : quand elle
+ * sort par le haut, l'en-tête est collé. Un écouteur de défilement ferait le
+ * même travail en s'exécutant à chaque pixel parcouru.
+ */
 export function moduleShell({ no, title, lede, figure, guide, views, view, onPick, actions = [] }) {
   const acts = (actions || []).filter(Boolean)
   const nav = views ? tabs(views, view, onPick) : null
-  return h('header', { class: 'module' },
+  const mark = h('div', { class: 'module-mark', 'aria-hidden': 'true' })
+  const head = h('header', { class: 'module' },
     h('div', { class: 'module-tag' },
       h('span', { class: 'module-bar' }),
       h('span', {}, `Module ${no} / 09`),
@@ -532,6 +559,36 @@ export function moduleShell({ no, title, lede, figure, guide, views, view, onPic
       acts.length ? h('div', { class: 'module-acts' }, ...acts) : null,
     ) : null,
   )
+
+  if (typeof IntersectionObserver === 'function') {
+    // La marge haute vaut la barre fixe du haut : sans elle, la sentinelle
+    // passerait déjà sous la barre alors que le navigateur la compte encore
+    // visible, et l'en-tête se resserrerait trop tard.
+    const bar = getComputedStyle(document.documentElement).getPropertyValue('--header-h').trim() || '54px'
+    const eye = new IntersectionObserver(
+      ([e]) => head.classList.toggle('is-stuck', !e.isIntersecting),
+      { threshold: 0, rootMargin: `-${bar} 0px 0px 0px` },
+    )
+    // Le nœud n'est pas encore dans le document : un changement de module
+    // diffère le remplacement le temps de la transition. On attend qu'il y soit
+    // au lieu de renoncer à la première image.
+    let tries = 0
+    const watch = () => {
+      if (mark.isConnected) eye.observe(mark)
+      else if (tries++ < 90) requestAnimationFrame(watch)
+    }
+    requestAnimationFrame(watch)
+  }
+
+  // Un fragment, pas une boîte.
+  //
+  // Envelopper la sentinelle et l'en-tête dans un div enfermait le « sticky »
+  // dans une boîte haute d'exactement un en-tête : il n'avait nulle part où
+  // coller. Les deux nœuds deviennent donc frères dans le contenu de la page,
+  // dont la hauteur est celle du module entier.
+  const out = document.createDocumentFragment()
+  out.append(mark, head)
+  return out
 }
 
 /**

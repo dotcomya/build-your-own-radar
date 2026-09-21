@@ -51,11 +51,11 @@ export function plainBoard(s, r, navigate, goRefine) {
 
   return h('div', { class: 'plain' },
     h('p', { class: 'plain-lede' },
-      'Ton plan en six phrases : ce que le modèle dégage, ce que le compte encaisse, ce qui te revient — et ce qu’il faut vendre pour que ça tienne.'),
+      'Six lectures du même modèle : le résultat, la trésorerie, ta rémunération, le seuil de rentabilité, la structure de coûts et la trajectoire. Chacune énonce un mécanisme et le chiffre qui en découle.'),
     h('div', { class: 'plain-cards' }, ...cards),
     h('div', { class: 'plain-foot' },
       h('p', {},
-        'Mêmes chiffres que l’analyse détaillée, sans le vocabulaire. Si l’une de ces six phrases te surprend, la réponse est en dessous — ou dans ce qu’il te reste à poser.'),
+        'Ces six lectures reposent sur les mêmes calculs que l’analyse détaillée, ci-dessous. Un écart avec ce que tu attendais vient soit d’une hypothèse à revoir, soit d’une ligne qui n’a pas encore été posée.'),
       h('div', { class: 'plain-foot-go' },
         // Une synthèse qui se lit au sortir du parcours doit dire la suite :
         // il reste des lignes à poser, et chacune resserre ces trois phrases.
@@ -77,17 +77,17 @@ export function plainBoard(s, r, navigate, goRefine) {
 function emptyBoard(goRefine) {
   return h('div', { class: 'plain' },
     h('p', { class: 'plain-lede' },
-      'Il n’y a encore rien à résumer : ton plan ne porte aucun chiffre d’affaires.'),
+      'Aucune synthèse n’est calculable : le modèle ne comporte pas encore de chiffre d’affaires.'),
     h('section', { class: 'plaincard is-watch' },
       h('header', { class: 'plaincard-head' },
         h('span', { class: 'plaincard-ico', html: icon('idee') }),
         h('div', {},
           h('div', { class: 'plaincard-kicker' }, 'Par où commencer'),
-          h('h3', { class: 'plaincard-title' }, 'Pose un prix et un volume'),
+          h('h3', { class: 'plaincard-title' }, 'Un prix et un volume suffisent à démarrer'),
         ),
       ),
       h('p', { class: 'plaincard-body' },
-        'Trois questions suffisent à faire apparaître cette page : ce que tu vends, à quel prix, et combien de fois par mois. Le reste — les charges, l’équipe, la trésorerie — vient se poser dessus.'),
+        'Trois données déclenchent l’ensemble des calculs : la nature de l’offre, son prix unitaire et le volume mensuel vendu. Les charges, la masse salariale et la trésorerie se construisent ensuite sur cette base.'),
       goRefine ? h('div', { class: 'plain-foot-go' },
         h('button', { class: 'btn btn-primary btn-sm', onClick: goRefine }, 'Ce qu’il me reste à poser'),
       ) : null,
@@ -102,72 +102,72 @@ function profitCard(r) {
   const first = net.findIndex((v) => v > 0)
   const y1 = n(net[0])
 
-  let tone = 'bad', title = 'Aucun bénéfice sur cinq ans', body
+  let tone = 'bad', title = 'D\u00e9ficit continu sur 5 ans', body
   if (first === 0) {
     tone = 'good'
-    title = 'Rentable dès la première année'
-    body = `L'exercice se referme sur ${euro(y1)} de résultat net. C'est rare dès la première année : vérifie surtout qu'aucune charge ne manque à l'appel.`
+    title = `R\u00e9sultat net positif d\u00e8s l\u2019ann\u00e9e 1 : ${euro(y1)}`
+    body = `L'exercice se cl\u00f4ture sur un b\u00e9n\u00e9fice net de ${euro(y1)}. Une rentabilit\u00e9 d\u00e8s la premi\u00e8re ann\u00e9e est peu fr\u00e9quente : il faut v\u00e9rifier que l'int\u00e9gralit\u00e9 des charges d'exploitation figure bien au mod\u00e8le.`
   } else if (first > 0) {
     tone = 'watch'
-    title = `Rentable à partir de l'année ${first + 1}`
-    body = `${first === 1 ? 'Le premier exercice coûte' : `Les ${first} premiers exercices coûtent`} plus qu'${first === 1 ? 'il ne rapporte' : 'ils ne rapportent'} — ${euro(Math.abs(y1))} de perte la première année. Le résultat passe au vert en année ${first + 1}, à ${euro(n(net[first]))}.`
+    title = `Retour \u00e0 l\u2019\u00e9quilibre en ann\u00e9e ${first + 1}`
+    body = `L'entreprise enregistre une perte nette de ${euro(Math.abs(y1))} en ann\u00e9e 1. Le r\u00e9sultat reste n\u00e9gatif sur ${first === 1 ? 'ce premier exercice' : `les ${first} premiers exercices`}, puis devient positif en ann\u00e9e ${first + 1} \u00e0 ${euro(n(net[first]))}. La p\u00e9riode d\u00e9ficitaire doit \u00eatre financ\u00e9e int\u00e9gralement avant cette date.`
   } else {
-    body = `Aucun des cinq exercices ne dégage de bénéfice ; la première année perd ${euro(Math.abs(y1))}. Trois leviers, dans cet ordre : le prix, le coût de revient, les volumes.`
+    body = `L'entreprise enregistre une perte nette de ${euro(Math.abs(y1))} en ann\u00e9e 1, et le r\u00e9sultat reste n\u00e9gatif jusqu'\u00e0 l'ann\u00e9e 5. Pour redresser la courbe, l'ajustement doit se faire sur trois variables, dans cet ordre : le prix de vente, le co\u00fbt de revient unitaire, puis le volume de ventes.`
   }
 
   return card({
-    tone, kicker: 'Rentabilité', title, body,
+    tone, kicker: 'Rentabilit\u00e9', title, body,
     ico: 'argent',
     bars: net.slice(0, 5).map((v, i) => ({ label: `A${i + 1}`, value: n(v) })),
-    figure: { label: 'Résultat net — année 1', value: euro(y1), good: y1 >= 0 },
+    figure: { label: 'R\u00e9sultat net \u2014 ann\u00e9e 1', value: euro(y1), good: y1 >= 0 },
   })
 }
 
-/* ────────────────────────────── 2. Trésorerie ───────────────────────────── */
+/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 2. Tr\u00e9sorerie \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 function cashCard(r) {
   const low = r.kpis.cashLow
   const need = n(r.kpis.fundingNeed)
   const when = low && low.month != null ? monthLabel(low.month, r.startDate) : null
 
-  let tone = 'good', title = 'La trésorerie tient', body
+  let tone = 'good', title = 'Tr\u00e9sorerie positive sur tout l\u2019horizon', body
   if (need > 0) {
     tone = 'bad'
-    title = `Il te manque ${euro(need)}`
-    body = `Le compte touche son point bas en ${when}, à ${euro(n(low.value))}. Il faut avoir réuni ${euro(need)} avant cette date : apport, emprunt, ou moins de dépenses au démarrage. Tant que ce trou n'est pas comblé, le reste du plan reste théorique.`
+    title = `Besoin de tr\u00e9sorerie cumul\u00e9 : ${euro(need)}`
+    body = `La courbe de tr\u00e9sorerie atteint son niveau le plus bas en ${when}, avec un solde n\u00e9gatif de ${euro(n(low.value))}. La viabilit\u00e9 de ce pr\u00e9visionnel d\u00e9pend de la capacit\u00e9 \u00e0 injecter ce montant en fonds propres, en endettement ou en r\u00e9duction des d\u00e9penses de d\u00e9marrage, avant cette date.`
   } else if (n(low?.value) < 5000) {
     tone = 'watch'
-    title = 'Ça passe, sans marge'
-    body = `Le point bas s'établit à ${euro(n(low.value))} en ${when}. C'est positif, mais un client qui paie avec un mois de retard suffit à te mettre à découvert.`
+    title = `Marge de s\u00e9curit\u00e9 r\u00e9duite : ${euro(n(low.value))} au plus bas`
+    body = `Le solde de tr\u00e9sorerie reste positif sur les cinq ans, mais descend \u00e0 ${euro(n(low.value))} en ${when}. \u00c0 ce niveau, un d\u00e9calage d'encaissement d'un mois sur un client significatif suffit \u00e0 faire passer le compte en d\u00e9couvert.`
   } else {
-    body = `Le point bas s'établit à ${euro(n(low?.value))}${when ? `, en ${when}` : ''}. Tu traverses les cinq ans sans avoir à chercher d'argent.`
+    body = `Le solde de tr\u00e9sorerie reste positif sur l'ensemble de la p\u00e9riode mod\u00e9lis\u00e9e, avec un point bas \u00e0 ${euro(n(low?.value))}${when ? ` en ${when}` : ''}. Le plan ne requiert aucun financement externe suppl\u00e9mentaire.`
   }
 
   return card({
-    tone, kicker: 'Trésorerie', title, body,
+    tone, kicker: 'Tr\u00e9sorerie', title, body,
     ico: 'cible',
     line: (r.cash?.balance || []).slice(0, 36).map((v) => n(v)),
     figure: { label: 'Point bas du compte', value: euro(n(low?.value)), good: n(low?.value) >= 0 },
   })
 }
 
-/* ─────────────────────────── 3. Ta rémunération ───────────────────────── */
+/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 3. Ta r\u00e9mun\u00e9ration \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 function takeCard(s, r) {
   const team = s.team || []
-  // Un littéral d'expression régulière n'est pas échappé à l'empaquetage : les
-  // accents y passeraient tels quels dans un fichier livré en ASCII, et le
-  // motif ne reconnaîtrait plus « gérant ». Écrit ainsi, il survit au build.
+  // Un litt\u00e9ral d'expression r\u00e9guli\u00e8re n'est pas \u00e9chapp\u00e9 \u00e0 l'empaquetage : les
+  // accents y passeraient tels quels dans un fichier livr\u00e9 en ASCII, et le
+  // motif ne reconna\u00eetrait plus \u00ab g\u00e9rant \u00bb. \u00c9crit ainsi, il survit au build.
   const FOUNDER = new RegExp('fondateur|dirigeant|moi|g\\u00e9rant|president|pr\\u00e9sident', 'i')
   const me = team.find((m) => FOUNDER.test(m.role || '')) || team[0]
   const gross = n(me?.monthlyGross)
 
   if (!gross) {
     return card({
-      tone: 'watch', kicker: 'Ta rémunération',
-      title: 'Tu ne te verses rien', ico: 'commerce',
-      body: "Aucune rémunération n'est saisie à ton nom. Un plan où le fondateur ne se paie pas n'est pas prudent : il est incomplet, et un financeur le lit comme tel. Pose ce que tu comptes prendre, même modeste.",
-      figure: { label: 'Brut annuel', value: '—', good: false },
+      tone: 'watch', kicker: 'Ta r\u00e9mun\u00e9ration',
+      title: 'Aucune r\u00e9mun\u00e9ration du dirigeant au mod\u00e8le', ico: 'commerce',
+      body: "Le pr\u00e9visionnel ne comporte aucune charge de r\u00e9mun\u00e9ration pour le dirigeant. Le r\u00e9sultat affich\u00e9 est donc surestim\u00e9 du montant que tu devras te verser. Un analyste retraitera ce poste avant toute d\u00e9cision : mieux vaut l'inscrire, m\u00eame \u00e0 un niveau modeste.",
+      figure: { label: 'Brut annuel', value: '\u2014', good: false },
     })
   }
 
@@ -175,17 +175,19 @@ function takeCard(s, r) {
   const marge = n(r.pnl.netResult[0])
   return card({
     tone: marge >= 0 ? 'good' : 'watch',
-    kicker: 'Ta rémunération',
-    title: `${euro(yearly)} brut par an`,
+    kicker: 'Ta r\u00e9mun\u00e9ration',
+    title: marge >= 0
+      ? `R\u00e9mun\u00e9ration de ${euro(yearly)} brut/an, r\u00e9sultat positif`
+      : `R\u00e9mun\u00e9ration de ${euro(yearly)} brut/an incluse dans la perte`,
     ico: 'commerce',
     body: marge >= 0
-      ? `Elle est déjà déduite du résultat : l'entreprise dégage ${euro(marge)} au-delà de ce que tu prends. Ce surplus reste en réserve ou se distribue en dividendes.`
-      : `Elle est déjà déduite du résultat : l'entreprise perd ${euro(Math.abs(marge))} la première année en te payant. C'est courant au démarrage, à condition d'avoir de quoi financer cette perte.`,
+      ? `Ce montant est comptabilis\u00e9 en charges de personnel. Apr\u00e8s l'avoir support\u00e9, l'exercice d\u00e9gage encore ${euro(marge)} de r\u00e9sultat net, affectable en r\u00e9serves ou distribuable en dividendes.`
+      : `Ce montant de r\u00e9mun\u00e9ration est comptabilis\u00e9 dans les charges. Le d\u00e9ficit de ${euro(Math.abs(marge))} de la premi\u00e8re ann\u00e9e int\u00e8gre d\u00e9j\u00e0 ce co\u00fbt salarial. Le mod\u00e8le n\u00e9cessite un fonds de roulement suffisant pour couvrir cette charge pendant la phase d\u00e9ficitaire.`,
     figure: { label: 'Brut annuel', value: euro(yearly), good: true },
   })
 }
 
-/* ────────────────────────────── 4. Le point mort ────────────────────────── */
+/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 4. Le point mort \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 /** Ce qu'il faut vendre pour ne plus perdre d'argent. */
 function breakEvenCard(s, r) {
@@ -198,25 +200,28 @@ function breakEvenCard(s, r) {
 
   if (!need) {
     return card({
-      tone: 'bad', kicker: 'Le point mort', title: 'Pas de seuil calculable', ico: 'cible',
-      body: "Tant qu'une vente rapporte moins qu'elle ne co\u00fbte, aucun volume ne couvre les charges : le seuil n'existe pas. C'est le prix ou le co\u00fbt de revient qu'il faut reprendre, pas les volumes.",
+      tone: 'bad', kicker: 'Le point mort',
+      title: 'Seuil de rentabilit\u00e9 inatteignable : co\u00fbt sup\u00e9rieur au prix', ico: 'cible',
+      body: "Le prix de vente unitaire est inf\u00e9rieur au co\u00fbt de revient. Vendre des volumes suppl\u00e9mentaires augmente la perte globale au lieu d'amortir les charges fixes. Le calcul du point mort suppose d'abord de rendre la marge unitaire positive.",
       figure: { label: 'Seuil annuel', value: '\u2014', good: false },
     })
   }
   return card({
     tone: done ? 'good' : 'watch',
     kicker: 'Le point mort',
-    title: done ? 'Le seuil est franchi' : `Il te faut ${euro(need)} par an`,
+    title: done
+      ? `Seuil de rentabilit\u00e9 franchi en ann\u00e9e ${ref + 1}`
+      : `Seuil de rentabilit\u00e9 \u00e0 ${euro(need)} de chiffre d\u2019affaires`,
     ico: 'cible',
     body: done
-      ? `Tes charges sont couvertes \u00e0 partir de ${euro(need)} de chiffre d'affaires, et tu en fais ${euro(revenue)}. Au-del\u00e0 de ce seuil, chaque vente de plus tombe en r\u00e9sultat.`
-      : `Tes charges exigent ${euro(need)} de chiffre d'affaires pour \u00eatre couvertes ; tu en pr\u00e9vois ${euro(revenue)}. L'\u00e9cart se comble par le prix, par les volumes, ou en all\u00e9geant les charges fixes.`,
+      ? `Les charges de l'exercice sont couvertes \u00e0 partir de ${euro(need)} de chiffre d'affaires ; le mod\u00e8le en pr\u00e9voit ${euro(revenue)} en ann\u00e9e ${ref + 1}. Au-del\u00e0 de ce seuil, chaque vente suppl\u00e9mentaire contribue int\u00e9gralement au r\u00e9sultat, d\u00e9duction faite de son co\u00fbt direct.`
+      : `Les charges de l'exercice exigent ${euro(need)} de chiffre d'affaires pour \u00eatre couvertes ; le mod\u00e8le en pr\u00e9voit ${euro(revenue)} en ann\u00e9e ${ref + 1}. L'\u00e9cart se r\u00e9duit par le prix, par le volume, ou par une baisse des charges fixes \u2014 les trois leviers ne se valent pas : le prix agit imm\u00e9diatement, le volume suppose de la demande.`,
     meter: { part: share, label: `${Math.round(share * 100)} % du seuil atteint en ann\u00e9e ${ref + 1}` },
     figure: { label: 'Seuil annuel', value: euro(need), good: done },
   })
 }
 
-/* ─────────────────────── 5. Ce qui reste sur 100 € ──────────────────── */
+/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 5. Ce qui reste sur 100 \u20ac \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 /** O\u00f9 part l'argent, sur cent euros factur\u00e9s. */
 function keepCard(r) {
@@ -225,34 +230,37 @@ function keepCard(r) {
   const rev = n(p.revenue[i])
   if (rev <= 0) {
     return card({
-      tone: 'watch', kicker: 'Sur 100 \u20ac factur\u00e9s', title: 'Rien \u00e0 partager encore', ico: 'alimentaire',
-      body: "Aucun chiffre d'affaires sur cet exercice : pose un prix et des volumes, et cette carte dira o\u00f9 part chaque euro encaiss\u00e9.",
-      figure: { label: 'Marge nette', value: '\u2014', good: false },
+      tone: 'watch', kicker: 'Sur 100 \u20ac factur\u00e9s', title: 'R\u00e9partition non calculable', ico: 'alimentaire',
+      body: "L'exercice ne comporte aucun chiffre d'affaires : la r\u00e9partition de chaque euro encaiss\u00e9 ne peut pas \u00eatre \u00e9tablie. Un prix et un volume de ventes suffisent \u00e0 la faire appara\u00eetre.",
+      figure: { label: 'R\u00e9sultat pour 100 \u20ac', value: '\u2014', good: false },
     })
   }
-  const share = (v) => Math.max(0, Math.round((n(v) / rev) * 100))
-  const buys = share(p.variableCost[i])
-  const team = share(p.payroll[i])
-  const other = share(n(p.external[i]) + n(p.duties[i]) + n(p.amortisation[i]) + n(p.interest[i]) + n(p.corporateTax[i]))
-  const net = Math.round((n(p.netResult[i]) / rev) * 100)
+  const per100 = (v) => Math.round((n(v) / rev) * 100)
+  const buys = Math.max(0, per100(p.variableCost[i]))
+  const team = Math.max(0, per100(p.payroll[i]))
+  const other = Math.max(0, per100(n(p.external[i]) + n(p.duties[i]) + n(p.amortisation[i]) + n(p.interest[i]) + n(p.corporateTax[i])))
+  const net = per100(p.netResult[i])
+  const spend = buys + team + other
 
   return card({
     tone: net >= 10 ? 'good' : net >= 0 ? 'watch' : 'bad',
     kicker: 'Sur 100 \u20ac factur\u00e9s',
-    title: net >= 0 ? `Il t\u2019en reste ${net} \u20ac` : `Il t\u2019en manque ${Math.abs(net)} \u20ac`,
+    title: net >= 0
+      ? `R\u00e9sultat net de ${euro(net)} pour 100 \u20ac de chiffre d\u2019affaires`
+      : `D\u00e9penses de ${euro(spend)} pour 100 \u20ac de chiffre d\u2019affaires`,
     ico: 'alimentaire',
-    body: `Sur cent euros encaiss\u00e9s en ann\u00e9e ${i + 1}, les achats en prennent ${buys}, l'\u00e9quipe ${team}, les autres charges et l'imp\u00f4t ${other}.`,
+    body: `Pour chaque tranche de 100 \u20ac de chiffre d'affaires g\u00e9n\u00e9r\u00e9e en ann\u00e9e ${i + 1}, la structure d\u00e9pense ${euro(team)} en masse salariale, ${euro(buys)} en achats et ${euro(other)} en autres charges et imp\u00f4ts. Le r\u00e9sultat net par tranche de 100 \u20ac s'\u00e9tablit \u00e0 ${euro(net)}.`,
     split: [
       { label: 'Achats', value: buys, tone: 'buys' },
-      { label: '\u00c9quipe', value: team, tone: 'team' },
-      { label: 'Autres', value: other, tone: 'other' },
-      { label: net >= 0 ? 'Reste' : 'Manque', value: Math.abs(net), tone: net >= 0 ? 'left' : 'bad' },
+      { label: 'Masse salariale', value: team, tone: 'team' },
+      { label: 'Autres charges', value: other, tone: 'other' },
+      { label: net >= 0 ? 'R\u00e9sultat' : '\u00c9cart', value: Math.abs(net), tone: net >= 0 ? 'left' : 'bad' },
     ],
-    figure: { label: 'Marge nette', value: `${net} %`, good: net >= 0 },
+    figure: { label: 'R\u00e9sultat pour 100 \u20ac', value: euro(net), good: net >= 0 },
   })
 }
 
-/* ───────────────────────────── 6. La croissance ─────────────────────────── */
+/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 6. La croissance \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 
 /** De la premi\u00e8re \u00e0 la cinqui\u00e8me ann\u00e9e : ce que le plan promet. */
 function growthCard(r) {
@@ -260,9 +268,9 @@ function growthCard(r) {
   const a1 = rev[0], a5 = rev[4]
   if (a1 <= 0 && a5 <= 0) {
     return card({
-      tone: 'watch', kicker: 'La croissance', title: 'Aucun chiffre d\u2019affaires', ico: 'depart',
-      body: 'Pose un prix et des volumes : cette courbe dira ce que ton plan promet sur cinq ans.',
-      figure: { label: 'Ann\u00e9e 5', value: '\u2014', good: false },
+      tone: 'watch', kicker: 'La croissance', title: 'Trajectoire non calculable', ico: 'depart',
+      body: "Le mod\u00e8le ne comporte aucun chiffre d'affaires : la trajectoire sur cinq ans ne peut pas \u00eatre \u00e9tablie. Un prix et un volume de ventes suffisent \u00e0 la faire appara\u00eetre.",
+      figure: { label: 'Chiffre d\u2019affaires \u2014 ann\u00e9e 5', value: '\u2014', good: false },
     })
   }
   const mult = a1 > 0 ? a5 / a1 : null
@@ -270,11 +278,13 @@ function growthCard(r) {
   return card({
     tone: mult === null ? 'watch' : mult >= 2 ? 'good' : 'watch',
     kicker: 'La croissance',
-    title: mult === null ? `${euro(a5)} en ann\u00e9e 5` : `${euro(a1)} \u2192 ${euro(a5)}`,
+    title: yearly === null
+      ? `Chiffre d\u2019affaires de ${euro(a5)} en ann\u00e9e 5`
+      : `Croissance du CA de ${pct(yearly, 0)} par an sur 4 ans`,
     ico: 'depart',
     body: yearly === null
-      ? `Ton chiffre d'affaires atteint ${euro(a5)} la cinqui\u00e8me ann\u00e9e.`
-      : `Ton chiffre d'affaires est multipli\u00e9 par ${num(mult, 1)} en quatre ans, soit ${pct(yearly, 0)} par an. C'est l'hypoth\u00e8se la plus fragile d'un pr\u00e9visionnel : un financeur la discutera avant toutes les autres.`,
+      ? `Le chiffre d'affaires atteint ${euro(a5)} en ann\u00e9e 5.`
+      : `Le chiffre d'affaires passe de ${euro(a1)} \u00e0 ${euro(a5)} entre l'ann\u00e9e 1 et l'ann\u00e9e 5, soit une multiplication par ${num(mult, 1)}. Ce taux de croissance annuel moyen de ${pct(yearly, 0)} constitue l'hypoth\u00e8se principale \u00e0 justifier lors de la v\u00e9rification du plan d'affaires par un tiers.`,
     bars: rev.map((v, k) => ({ label: `A${k + 1}`, value: v })),
     figure: { label: 'Chiffre d\u2019affaires \u2014 ann\u00e9e 5', value: euro(a5), good: a5 >= a1 },
   })

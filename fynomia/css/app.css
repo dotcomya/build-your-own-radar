@@ -4278,12 +4278,17 @@ details[open] > .refine-head .refine-sign {
    qui donnait la nausée. Un seul mouvement le remplace, et sans opacité : un
    masque descend sur chaque bloc, qui monte de huit pixels en arrivant. Le
    bord est net, la direction est lisible, et ça dure un tiers de seconde. */
+/* Rien ne disparaît à l'entrée.
+   Le masque découvrait chaque bloc du haut vers le bas, fond blanc compris :
+   la carte naîssait de rien, et comme le conteneur sautait à sa nouvelle
+   hauteur dans la même image, changer d'onglet ressemblait à un chargement de
+   page. Les blocs ne font plus que monter. */
 @keyframes view-in {
-  from { clip-path: inset(0 0 100% 0); transform: translateY(9px); }
-  to   { clip-path: inset(0 0 0 0);    transform: none; }
+  from { transform: translateY(10px); }
+  to   { transform: none; }
 }
 .view.just-in > *, .item-body.just-in > * {
-  animation: view-in .40s var(--ease-soft) both;
+  animation: view-in .34s var(--ease-soft) both;
 }
 .view.just-in > *:nth-child(2), .item-body.just-in > *:nth-child(2) { animation-delay: .055s; }
 .view.just-in > *:nth-child(3), .item-body.just-in > *:nth-child(3) { animation-delay: .105s; }
@@ -4483,12 +4488,23 @@ details[open] > .refine-head .refine-sign {
 .topbar { view-transition-name: topbar; }
 .tabbar { view-transition-name: tabbar; }
 .nextstep, .nextstep-tab { view-transition-name: guide; }
+/* La charpente ne voyage pas : elle bascule.
+   « animation: none » sur les deux images ne suffisait pas. L'ancienne reste
+   alors posée sur la nouvelle pendant toute la transition, et le rail gardait
+   son surlignage précédent une seconde entière : on cliquait sur « Équipe »,
+   le menu continuait d'indiquer « Projet ». On efface l'ancienne dès la
+   première image et on montre la nouvelle : le menu répond au clic comme
+   avant, pendant que le contenu, lui, fait le voyage. */
 ::view-transition-group(rail), ::view-transition-group(topbar),
-::view-transition-group(tabbar), ::view-transition-group(guide) { animation-duration: .2s; }
-::view-transition-old(rail), ::view-transition-new(rail),
-::view-transition-old(topbar), ::view-transition-new(topbar),
-::view-transition-old(tabbar), ::view-transition-new(tabbar),
-::view-transition-old(guide), ::view-transition-new(guide) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(tabbar), ::view-transition-group(guide) { animation: none; }
+::view-transition-old(rail), ::view-transition-old(topbar),
+::view-transition-old(tabbar), ::view-transition-old(guide) {
+  animation: none; opacity: 0; mix-blend-mode: normal;
+}
+::view-transition-new(rail), ::view-transition-new(topbar),
+::view-transition-new(tabbar), ::view-transition-new(guide) {
+  animation: none; opacity: 1; mix-blend-mode: normal;
+}
 
 /* ─── Changer de module ─── */
 /* Un changement de module doit se sentir. À quatre dixièmes de seconde on ne
@@ -5056,8 +5072,6 @@ details[open] > .refine-head .refine-sign {
   color: var(--ink-5); transition: color .2s var(--ease-soft);
 }
 .hnav-sign svg { width: 13px; height: 13px; display: block; }
-.hnav-tab:not(.is-read) .hnav-sign { color: var(--accent-dim); }
-.hnav-tab:not(.is-read).active .hnav-sign { color: var(--ink); }
 .hnav-tab.is-read { font-weight: 450; color: var(--ink-4); }
 .hnav-tab:not(.is-read) { font-weight: 600; }
 
@@ -5370,3 +5384,101 @@ details[open] > .refine-head .refine-sign {
 .knob-label { font-size: 12px; }
 .knob-value { font-size: 14px; }
 .sim-levers { gap: 4px 18px; }
+
+/* ═══════════ Le socle de l'analyse détaillée ═════════════════════════════
+   Un volet ordinaire — un chevron et six mots en gris — se lisait comme une
+   note de bas de page. Ce qu'il ouvre est la moitié du tableau de bord : il
+   lui faut la taille de ce qu'il contient. */
+.deepfold {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule-strong); min-width: 0;
+}
+.deepfold-head {
+  display: flex; align-items: center; gap: 16px; padding: 20px 22px;
+  cursor: pointer; list-style: none; user-select: none; width: 100%;
+  font-size: inherit; color: inherit;
+  transition: background .16s var(--ease);
+}
+.deepfold-head::-webkit-details-marker { display: none; }
+.deepfold-head:hover { background: var(--surface-2); }
+.deepfold-id { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.deepfold-title {
+  font-family: var(--display); font-size: 21px; font-weight: 700;
+  letter-spacing: -.026em; line-height: 1.2; color: var(--ink);
+}
+.deepfold-sub { font-size: 12.5px; color: var(--ink-4); line-height: 1.5; }
+.deepfold .foldsign { width: 32px; height: 32px; }
+.deepfold .foldsign svg { width: 17px; height: 17px; }
+.deepfold[open] .deepfold-head { border-bottom: 1px solid var(--rule); }
+.deepfold-body { padding: 20px 22px 22px; }
+@media (max-width: 760px) {
+  .deepfold-head { padding: 16px 16px; }
+  .deepfold-title { font-size: 18px; }
+  .deepfold-body { padding: 16px 14px 18px; }
+}
+
+/* ═══════════ L'en-tête du module reste à l'écran ═════════════════════════
+   Deux écrans plus bas dans « Achats et coûts », plus rien ne disait où l'on
+   était ni quels onglets existaient : il fallait remonter pour changer de
+   vue. Il se colle donc sous la barre du haut — et se resserre en route,
+   pour qu'un bandeau de repère ne mange pas le tiers de l'écran. */
+/* La sentinelle : un pixel qui sort par le haut, et l'en-tête se resserre. */
+.module-mark { height: 1px; margin-bottom: -1px; }
+.module {
+  position: sticky; top: var(--header-h); z-index: 20;
+  background: var(--paper); margin-bottom: 22px;
+  transition: padding .28s var(--ease-soft), box-shadow .28s var(--ease-soft);
+  padding-top: 2px;
+}
+.module::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: var(--rule); opacity: 0; transition: opacity .28s var(--ease-soft);
+}
+.module.is-stuck::after { opacity: 1; }
+.module.is-stuck { padding-top: 8px; padding-bottom: 2px; }
+/* Ce qui se resserre : le titre descend au corps d'un titre de bloc, et la
+   phrase d'introduction s'efface — elle a été lue une fois. */
+.module.is-stuck .module-title { font-size: 22px; line-height: 1.1; }
+.module.is-stuck .module-tag { display: none; }
+.module.is-stuck .module-line {
+  max-height: 0; opacity: 0; overflow: hidden; margin: 0; padding: 0; border: 0;
+}
+.module-title, .module-line {
+  transition: font-size .28s var(--ease-soft), max-height .28s var(--ease-soft),
+              opacity .2s var(--ease-soft), margin .28s var(--ease-soft);
+}
+.module.is-stuck .module-nav { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .module, .module-title, .module-line, .module::after { transition: none; }
+}
+
+/* ═══════════ Le pas d'une question à l'autre ═════════════════════════════
+   Douze écrans se succédaient sans qu'on sente avancer : la question changeait
+   au même endroit, sans mouvement. Elle glisse maintenant dans le sens du
+   pas — de la droite quand on avance, de la gauche quand on revient. Le
+   mouvement est court : il dit la direction, il ne fait pas attendre. */
+.setup-card.is-in-fwd { animation: setup-step-fwd .38s var(--ease-soft) both; }
+.setup-card.is-in-back { animation: setup-step-back .38s var(--ease-soft) both; }
+@keyframes setup-step-fwd {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes setup-step-back {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+/* La frise des questions suit le même pas : la pastille courante se pose. */
+.setup-step.current { transition: background .3s var(--ease-soft), color .3s var(--ease-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .setup-card.is-in-fwd, .setup-card.is-in-back { animation: none; }
+}
+
+/* ─── Un montant ne se coupe pas à deux pixels près ───
+   « 90 168 € » dépassait de deux pixels sa cellule sur un téléphone : le
+   bloc d'indicateurs, autrefois derrière un volet, est désormais toujours
+   visible dans l'analyse, et le défaut s'est vu. Le chiffre se réduit
+   plutôt que de perdre son dernier caractère. */
+@media (max-width: 760px) {
+  .kpi-value, .metric-value { font-size: clamp(15px, 5.2vw, 20px); letter-spacing: -.045em; }
+  .metrics .metric { padding: 12px 11px; }
+}

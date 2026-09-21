@@ -244,11 +244,12 @@ export const PARAMS = {
     note: "Barème de la base minimum, fixé par chaque commune à l'intérieur d'une fourchette légale : les montants retenus ici sont des médianes. Exonération totale l'année de création, puis abattement de 50 % la première année d'imposition.",
   },
   cvae: {
-    value: { exemptionThreshold: 500000, maxRate: 0.0019, minimumContribution: 63, additionalTaxRate: 0.1384 },
+    value: { exemptionThreshold: 500000, maxRate: 0.0028, minimumContribution: 63, additionalTaxRate: 0.1384 },
     unit: '% de la valeur ajoutée',
     label: 'Cotisation sur la valeur ajoutée des entreprises (CVAE)',
     confidence: 'to-verify',
-    note: "Exonération en dessous de 500 000 € de chiffre d'affaires. Taux maximal de 0,19 %, atteint à 50 M€ de CA et progressif en dessous. Une taxe additionnelle de 13,84 % s'ajoute au montant dû. Le calendrier de suppression progressive doit être vérifié pour 2026.",
+    note: "Exonération en dessous de 500 000 € de chiffre d'affaires. Taux maximal de 0,28 %, atteint à 50 M€ de CA et progressif en dessous. Une taxe additionnelle s'ajoute au montant dû. Le calendrier de suppression a été décalé deux fois : la loi de finances pour 2024 prévoyait 0,19 % en 2025 puis 0,09 % en 2026, celle pour 2025 a reporté la trajectoire de trois ans et maintient 0,28 % jusqu'en 2027. Le taux de la taxe additionnelle et l'issue du prochain budget restent à confirmer.",
+    source: "Loi n° 2025-127 du 14 février 2025 de finances pour 2025, art. 62 — report de trois ans de la suppression progressive de la CVAE.",
   },
 
   // ───────────────────── Crédits d'impôt et statuts innovants ──────────────
