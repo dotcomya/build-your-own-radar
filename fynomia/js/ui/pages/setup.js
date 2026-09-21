@@ -650,7 +650,7 @@ function welcomeScreen(ctx) {
     h('ul', { class: 'welcome-points' },
       ...[
         ['idee', 'Renseigne tes estimations', 'Pas besoin de chiffres exacts, des ordres de grandeur suffisent pour démarrer.'],
-        ['cible', 'Tu pars des repères de ton métier.', 'Prix, marges, charges habituelles : on te les propose, tu les remplaces par les tiens.'],
+        ['cible', 'Utilise les benchmarks sectoriels', 'Prix, charges fixes et marges types sont déjà pré-configurés selon ton secteur d’activité.'],
         ['savoir', 'Rien n’est définitif.', 'Chaque chiffre reste modifiable ensuite, et tout le plan se recalcule dans la seconde.'],
       ].map(([ico, title, note], i) => h('li', {
         class: 'welcome-point',
