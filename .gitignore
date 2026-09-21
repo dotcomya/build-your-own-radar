@@ -21,3 +21,6 @@ cypress/
 .talismanrc
 
 .vscode/
+
+dist/
+node_modules/
