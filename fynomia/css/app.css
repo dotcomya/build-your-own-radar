@@ -4738,6 +4738,14 @@ details[open] > .refine-head .refine-sign {
   margin: 0; font-size: 15px; line-height: 1.6; color: var(--ink-3); max-width: 56ch;
   animation: welcome-rise .7s .14s var(--ease-soft) both;
 }
+/* La petite note : la dernière objection levée juste avant le bouton. Elle se
+   lit après la promesse, pas avec elle — d'où le corps plus petit et le filet
+   qui la détache. */
+.welcome-note {
+  margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-4); max-width: 52ch;
+  padding-left: 13px; border-left: 2px solid var(--rule);
+  animation: welcome-rise .7s .18s var(--ease-soft) both;
+}
 .welcome-cta {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   animation: welcome-rise .7s .22s var(--ease-soft) both;
@@ -4801,14 +4809,14 @@ details[open] > .refine-head .refine-sign {
 @media (max-width: 680px) {
   .welcome-hero { flex-direction: column-reverse; align-items: flex-start; gap: 16px; }
   .welcome-art { width: 96px; align-self: flex-start; }
-  .welcome-big, .welcome-lede { max-width: none; }
+  .welcome-big, .welcome-lede, .welcome-note { max-width: none; }
 }
 @media (max-width: 700px) {
   .welcome-go { width: 100%; justify-content: center; }
   .welcome-cta { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .welcome-kicker, .welcome-big, .welcome-lede, .welcome-cta, .welcome-art, .welcome-point { animation: none; }
+  .welcome-kicker, .welcome-big, .welcome-lede, .welcome-note, .welcome-cta, .welcome-art, .welcome-point { animation: none; }
 }
 
 /* ═══════════════ La simulation : chaque ligne du plan a son curseur ════════

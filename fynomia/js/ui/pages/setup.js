@@ -629,13 +629,17 @@ function welcomeScreen(ctx) {
   return h('div', { class: 'welcome' },
     h('div', { class: 'welcome-hero' },
       h('div', { class: 'welcome-say' },
-        h('div', { class: 'welcome-kicker' }, 'Avant de commencer'),
+        // Quatre niveaux : la marque, la promesse, à qui elle s'adresse, et la
+        // petite note qui lève la dernière objection avant le bouton.
+        h('div', { class: 'welcome-kicker' }, 'Fynomia'),
         h('h1', { class: 'welcome-big' },
-          'Tu n’as pas besoin de connaître tes chiffres',
-          h('b', {}, ' pour commencer.'),
+          'La puissance d’une direction financière',
+          h('b', {}, ' à la portée de chaque entrepreneur.'),
         ),
         h('p', { class: 'welcome-lede' },
-          `${QUESTIONS} questions, des réponses au jugé. À la fin tu as un prévisionnel complet — comptes, trésorerie, point mort, ce que tu te verses — et pas une ligne qui ne se corrige.`),
+          'Que tu ouvres une boulangerie ou que tu développes une startup, piloter ton activité ne devrait pas nécessiter un master en finance.'),
+        h('p', { class: 'welcome-note' },
+          'Tu n’as pas besoin de connaître tes chiffres pour commencer, Fynomia va t’aider à tout intégrer'),
         h('div', { class: 'welcome-cta' },
           h('button', {
             class: 'btn btn-primary btn-lg welcome-go',
