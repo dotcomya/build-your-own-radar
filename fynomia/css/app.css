@@ -1804,53 +1804,38 @@ i.swatch.split-margin { background: var(--gain); }
 }
 
 /* Les choix : deux ou trois cartes, jamais une liste déroulante. */
-/* ─── Où en est le projet : un choix qui dit ce qu'il déclenche ───
-   Les quatre stades tenaient dans les mêmes petites cartes que les autres
-   choix — un titre, une demi-ligne — et personne ne voyait à quoi ça servait.
-   Le stade ne touche aucun chiffre : il décide de ce qu'on remplit d'abord et
-   de l'écran où l'on atterrit. C'est écrit sur la carte, sous un filet. */
+/* ─── Où en est le projet ───
+   Chaque carte portait cinq éléments : titre, précision, étiquette en
+   capitales, conséquence et paragraphe. Quatre cartes comme ça font un mur.
+   Il reste ce qui fait choisir — le stade, et ce vers quoi il emmène — et le
+   reste se lit au survol. */
 .setup-stages {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
-  gap: 12px; margin-bottom: 18px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px; margin-bottom: 18px; max-width: 620px;
 }
+@media (max-width: 560px) { .setup-stages { grid-template-columns: 1fr; } }
 .stagepick {
-  display: flex; flex-direction: column; gap: 7px; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer;
   border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface);
-  padding: 16px 17px 15px; font: inherit;
-  transition: border-color .18s var(--ease-soft), background .18s var(--ease-soft),
-              transform .18s var(--ease-soft);
+  padding: 15px 16px; font: inherit;
+  transition: border-color .18s var(--ease-soft), background .18s var(--ease-soft);
 }
-.stagepick:hover { border-color: var(--ink-4); transform: translateY(-1px); }
+.stagepick:hover { border-color: var(--ink-4); }
 .stagepick-head { display: flex; align-items: flex-start; gap: 10px; }
 .stagepick-label {
-  font-family: var(--display); font-weight: 700; font-size: 17px; line-height: 1.2;
+  font-family: var(--display); font-weight: 700; font-size: 16px; line-height: 1.2;
   letter-spacing: -.02em; color: var(--ink); flex: 1;
 }
 .stagepick-mark {
-  flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
-  border: 1px solid var(--rule); font-size: 11px; color: transparent; background: var(--paper);
+  flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--rule); font-size: 10px; color: transparent; background: var(--paper);
 }
-.stagepick-hint { font-size: 12.5px; color: var(--ink-4); line-height: 1.45; }
-.stagepick-then {
-  display: flex; flex-direction: column; gap: 3px;
-  margin-top: 4px; padding-top: 11px; border-top: 1px solid var(--rule);
-}
-.stagepick-then-tag {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--ink-5);
-}
-.stagepick-then-cap { font-size: 14px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
-.stagepick-then-say { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.stagepick-then { font-size: 13px; color: var(--ink-4); line-height: 1.45; }
 
 .stagepick.active { background: var(--ink); border-color: var(--ink); }
 .stagepick.active .stagepick-label { color: #fff; }
-.stagepick.active .stagepick-hint { color: #A8B1B8; }
-.stagepick.active .stagepick-then { border-top-color: rgba(255,255,255,.16); }
-.stagepick.active .stagepick-then-tag { color: var(--accent); }
-.stagepick.active .stagepick-then-cap { color: var(--accent); }
-.stagepick.active .stagepick-then-say { color: #C6CCD1; }
+.stagepick.active .stagepick-then { color: var(--accent); }
 .stagepick.active .stagepick-mark { background: var(--accent); border-color: var(--accent); color: var(--ink); }
-@media (prefers-reduced-motion: reduce) { .stagepick, .stagepick:hover { transform: none; transition: none; } }
 
 .setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-bottom: 18px; }
 .setup-choice {
@@ -1981,14 +1966,37 @@ i.swatch.split-margin { background: var(--gain); }
 /* L'écran final. */
 .setup-card.is-last { max-width: 660px; }
 .setup-results { border-top: 1px solid var(--rule); margin: 18px 0 20px; }
-.setup-result {
+/* Chaque chiffre porte sa phrase.
+   Trois lignes « libellé — valeur » se lisent comme un bulletin de notes quand
+   on n'a jamais tenu de comptabilité : on voit qu'on est jugé, pas ce qui est
+   mesuré. La phrase dit ce que le nombre veut dire, sous lui, en clair. */
+.setup-result { padding: 13px 0; border-bottom: 1px solid var(--rule); }
+.setup-result-line {
   display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
-  padding: 13px 0; border-bottom: 1px solid var(--rule);
 }
 .setup-result-label { font-size: 13.5px; color: var(--ink-3); }
-.setup-result-value { font-size: 20px; font-weight: 600; letter-spacing: -.03em; color: var(--ink); }
+.setup-result-value { font-size: 20px; font-weight: 600; letter-spacing: -.03em; color: var(--ink); white-space: nowrap; }
 .setup-result.ok .setup-result-value { color: var(--gain); }
 .setup-result.warn .setup-result-value { color: var(--warn); }
+.setup-result-why {
+  margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-4); max-width: 62ch;
+}
+@media (max-width: 560px) {
+  .setup-result-line { flex-direction: column; gap: 2px; }
+  .setup-result-value { font-size: 18px; }
+}
+
+/* Les prochaines étapes : trois gestes numérotés, pas une liste à puces de
+   fonctionnalités. On dit quoi faire, dans l'ordre. */
+.setup-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.setup-next-item { display: flex; align-items: flex-start; gap: 11px; }
+.setup-next-no {
+  flex: none; width: 21px; height: 21px; border-radius: 50%; margin-top: 1px;
+  display: grid; place-items: center; background: var(--ink); color: var(--accent);
+  font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+}
+.setup-next-title { font-size: 14px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
+.setup-next-body { margin: 2px 0 0; font-size: 12.8px; line-height: 1.55; color: var(--ink-3); max-width: 64ch; }
 
 
 

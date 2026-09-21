@@ -86,7 +86,7 @@ const STEPS = [
   {
     key: 'stade', short: 'Où tu en es',
     question: 'Où en est ton projet, aujourd’hui ?',
-    help: "Ça ne change aucun chiffre. Ça change l’ordre : ce que Fynomia te fera remplir en premier, et l’écran sur lequel il t’emmène à la fin. Modifiable à tout moment.",
+    help: 'Ça ne change aucun chiffre — seulement l’ordre de la suite. Modifiable à tout moment.',
     render: stageScreen,
     ready: (s) => !!s?.meta?.stage,
   },
@@ -184,7 +184,8 @@ const STEPS = [
   },
   {
     key: 'fin', short: 'Le résultat',
-    question: 'Ton business plan est prêt',
+    question: 'Voilà où tu en es, pour le moment',
+    help: 'Ces chiffres sortent de tes réponses et des repères de ton métier. Ils ne sont pas un jugement : ils disent ce que ton modèle donne aujourd’hui, avec ce que tu as posé.',
     render: doneScreen,
     ready: () => true,
     last: true,
@@ -689,6 +690,8 @@ function stageScreen(ctx) {
     return h('button', {
       class: `stagepick ${on ? 'active' : ''}`,
       'aria-pressed': on ? 'true' : 'false',
+      // Le détail du stade se lit au survol, pas en permanence sur l'écran.
+      title: st.says,
       onClick: () => {
         flow.touched.add(ctx.step.key)
         store.update((d) => { d.meta.stage = st.key })
@@ -699,18 +702,14 @@ function stageScreen(ctx) {
         h('span', { class: 'stagepick-label' }, st.label),
         h('span', { class: 'stagepick-mark', 'aria-hidden': 'true' }, on ? '\u2713' : ''),
       ),
-      h('span', { class: 'stagepick-hint' }, st.hint),
-      // Ce que le choix change, écrit sur la carte.
+      // Deux lignes par carte, pas cinq.
       //
-      // « Je débute » ou « mon activité est lancée » se lisaient comme une
-      // case d'état civil : on cochait sans savoir à quoi ça servait. Le stade
-      // ne touche aucun chiffre — il décide de ce que Fynomia met en avant
-      // ensuite. Autant l'écrire là où le choix se fait.
-      h('span', { class: 'stagepick-then' },
-        h('span', { class: 'stagepick-then-tag' }, 'Fynomia t’emmène vers'),
-        h('span', { class: 'stagepick-then-cap' }, st.cap),
-        h('span', { class: 'stagepick-then-say' }, st.says),
-      ),
+      // Chaque carte portait son titre, une précision, une étiquette en
+      // capitales, une conséquence et un paragraphe de trois lignes. Quatre
+      // cartes de cinq éléments, c'était un mur — « trop de texte et
+      // d'artefact ». Il reste ce qui fait choisir : le stade, et ce vers quoi
+      // il emmène. Le reste est dans l'infobulle.
+      h('span', { class: 'stagepick-then' }, st.cap),
     )
   }))
   draw()
@@ -837,13 +836,18 @@ function priceScreen(ctx) {
     fieldHost.replaceChildren(...nodes)
   }
 
+  // Même règle que pour la forme juridique et la croissance : le modèle de
+  // revenu vient du métier pour que le moteur tourne, il n'a pas été choisi.
+  // Tant que le fondateur n'a pas cliqué, aucune carte n'est allumée.
+  const chosen = () => answered('prix')
+
   const setMode = (patch) => store.update((sc) => patch(sc), { label: 'Modèle de revenu', silent: true })
 
   ctx.onChoice = drawField
   const picker = choice(ctx, [
     {
       label: 'À la vente', note: 'Le client paie une fois, et c’est réglé.',
-      active: () => mode() === 'unitaire',
+      active: () => chosen() && mode() === 'unitaire',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'unitaire'
@@ -858,7 +862,7 @@ function priceScreen(ctx) {
     },
     {
       label: 'Par abonnement', note: 'Il paie tous les mois tant qu’il reste.',
-      active: () => mode() === 'abonnement',
+      active: () => chosen() && mode() === 'abonnement',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'abonnement'
@@ -871,7 +875,7 @@ function priceScreen(ctx) {
     },
     {
       label: 'Les deux', note: 'Un montant à la signature, puis un abonnement.',
-      active: () => mode() === 'mixte',
+      active: () => chosen() && mode() === 'mixte',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'mixte'
@@ -884,7 +888,7 @@ function priceScreen(ctx) {
     },
     {
       label: 'À la commission', note: 'Tu prélèves un pourcentage sur ce qui passe par toi.',
-      active: () => mode() === 'commission',
+      active: () => chosen() && mode() === 'commission',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
         sc.meta.revenueModel = 'commission'
@@ -1060,10 +1064,17 @@ function growthScreen(ctx) {
   const g = () => Number(store.scenario.activities[0].volumes.monthlyGrowth) || 0
   const pick = (value) => store.update((sc) => { sc.activities[0].volumes.monthlyGrowth = value },
     { label: 'Croissance', silent: true })
+  // Aucune carte n'est allumée tant que le fondateur n'a pas choisi.
+  //
+  // Le modèle de métier pose déjà une croissance pour que le moteur tourne :
+  // « Normalement » apparaissait donc cochée avant le moindre clic, et le
+  // fondateur validait un rythme qu'il n'avait pas choisi. Une valeur présente
+  // n'est pas une réponse — c'est la même règle que pour la forme juridique.
+  const chosen = () => answered('croissance')
   return choice(ctx, [
-    { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: () => g() > 0 && g() <= 0.04, pick: () => pick(0.03) },
-    { label: 'Normalement', note: '+8 % par mois — tu prospectes', active: () => g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
-    { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: () => g() > 0.10, pick: () => pick(0.15) },
+    { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: () => chosen() && g() > 0 && g() <= 0.04, pick: () => pick(0.03) },
+    { label: 'Normalement', note: '+8 % par mois — tu prospectes', active: () => chosen() && g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
+    { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: () => chosen() && g() > 0.10, pick: () => pick(0.15) },
   ])
 }
 
@@ -1326,30 +1337,49 @@ function doneScreen(ctx) {
 
   const k = r.kpis, p = r.pnl
   const need = k.fundingNeed > 0
+  const rentable = k.firstProfitableYear !== null
 
   return h('div', {},
-    // Le chiffre qu'on emporte en quittant le parcours. Le reste était la
-    // manière de l'obtenir.
-    keystone("Chiffre d'affaires année 1", euro(p.revenue[0], { compact: true }),
-      need
-        ? `Il manque ${euro(k.fundingNeed)} au point bas de trésorerie. Le module Financement dit quoi aller chercher.`
-        : 'La trésorerie ne passe jamais sous zéro sur cinq ans.'),
+    // Le chiffre qu'on emporte en quittant le parcours, et ce qu'il veut dire.
+    //
+    // Un premier créateur qui tombe sur un bloc noir, un grand nombre et trois
+    // lignes de ratios ne comprend rien — il voit un bulletin de notes. Chaque
+    // chiffre porte donc sa phrase : ce qu'il mesure, en français, avant sa
+    // valeur.
+    keystone("Ce que tu encaisserais la première année", euro(p.revenue[0], { compact: true }),
+      'Le total de tes ventes sur douze mois, avant toute dépense.'),
 
     h('div', { class: 'setup-results' },
-      resultRow('Point mort', k.breakEven[0] ? euro(k.breakEven[0], { compact: true }) : '—'),
+      resultRow('Point mort',
+        k.breakEven[0] ? euro(k.breakEven[0], { compact: true }) : 'Pas encore calculable',
+        k.breakEven[0] ? '' : 'warn',
+        k.breakEven[0]
+          ? 'Le chiffre d’affaires à atteindre pour arrêter de perdre de l’argent.'
+          : 'Il manque un prix ou un volume pour le calculer. Tu pourras y revenir.'),
       resultRow('Premier exercice rentable',
-        k.firstProfitableYear !== null ? `Année ${k.firstProfitableYear + 1}` : 'Au-delà de 5 ans',
-        k.firstProfitableYear !== null ? 'ok' : 'warn'),
-      resultRow(need ? 'Financement à trouver' : 'Trésorerie',
-        need ? euro(k.fundingNeed) : 'Jamais négative', need ? 'warn' : 'ok'),
+        rentable ? `Année ${k.firstProfitableYear + 1}` : 'Au-delà de 5 ans',
+        rentable ? 'ok' : 'warn',
+        rentable
+          ? 'L’année où ce que tu gagnes dépasse enfin ce que tu dépenses.'
+          : 'En l’état, le modèle ne devient pas rentable sur cinq ans. C’est fréquent à ce stade : un prix, un volume ou une charge suffit souvent à le changer.'),
+      resultRow(need ? 'Argent à trouver' : 'Trésorerie',
+        need ? euro(k.fundingNeed) : 'Jamais négative', need ? 'warn' : 'ok',
+        need
+          ? 'Ce qui te manquerait au pire moment, avant que les encaissements ne rattrapent les dépenses.'
+          : 'Ton compte ne passe jamais sous zéro sur cinq ans.'),
     ),
 
+    // Ce qu'il faut faire ensuite, dans l'ordre — pas la liste des
+    // fonctionnalités qui viennent de se débloquer.
     h('div', { class: 'setup-unlocked' },
-      h('div', { class: 'setup-unlocked-title' }, 'Ce qui s’ouvre maintenant'),
-      h('ul', { class: 'setup-unlocked-list' },
-        h('li', {}, 'Des offres, des salariés, des campagnes et des investissements, chacun activable pour voir ce qu’il coûte.'),
-        h('li', {}, 'Les délais de paiement, la TVA, la saisonnalité et les crédits d’impôt.'),
-        h('li', {}, 'Le tableau de bord, les états financiers et le dossier à exporter.'),
+      h('div', { class: 'setup-unlocked-title' }, 'Tes trois prochaines étapes'),
+      h('ol', { class: 'setup-next' },
+        nextStep('1', 'Regarde ta synthèse',
+          'Six lectures du même modèle, en français : ce que tu gagnes, ce qu’il te reste, ce qu’il te manque.'),
+        nextStep('2', 'Corrige ce qui te paraît faux',
+          'Chaque chiffre s’ouvre là où il a été saisi. Une valeur changée, et tout se recalcule.'),
+        nextStep('3', 'Complète ce que tu as passé',
+          'Les lignes encore vides sont listées dans le tableau de bord, de la plus utile à la moins urgente.'),
       ),
     ),
 
@@ -1371,10 +1401,24 @@ function doneScreen(ctx) {
         onClick: () => { resetSetup(); ctx.navigate('#/business-case') },
       }, 'Exporter le dossier'),
     ),
+
+    h('p', { class: 'setup-reassure' },
+      'Rien n’est figé : tout ce que tu viens de répondre se modifie, champ par champ, dans le logiciel.'),
   )
 }
 
-const resultRow = (label, value, tone = '') => h('div', { class: `setup-result ${tone}` },
-  h('span', { class: 'setup-result-label' }, label),
-  h('span', { class: 'setup-result-value num' }, value),
+const nextStep = (no, title, body) => h('li', { class: 'setup-next-item' },
+  h('span', { class: 'setup-next-no' }, no),
+  h('div', {},
+    h('div', { class: 'setup-next-title' }, title),
+    h('p', { class: 'setup-next-body' }, body),
+  ),
+)
+
+const resultRow = (label, value, tone = '', why = '') => h('div', { class: `setup-result ${tone}` },
+  h('div', { class: 'setup-result-line' },
+    h('span', { class: 'setup-result-label' }, label),
+    h('span', { class: 'setup-result-value num' }, value),
+  ),
+  why ? h('p', { class: 'setup-result-why' }, why) : null,
 )
