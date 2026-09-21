@@ -641,7 +641,7 @@ function welcomeScreen(ctx) {
             class: 'btn btn-primary btn-lg welcome-go',
             onClick: () => ctx.go(1),
           }, 'Commencer'),
-          h('span', { class: 'welcome-meta' }, 'Environ dix minutes'),
+          h('span', { class: 'welcome-meta' }, 'Environ trois minutes'),
         ),
       ),
       h('div', { class: 'welcome-art', 'aria-hidden': 'true', html: icon('depart', 'welcome-art-img') }),
@@ -651,7 +651,7 @@ function welcomeScreen(ctx) {
       ...[
         ['idee', 'Renseigne tes estimations', 'Pas besoin de chiffres exacts, des ordres de grandeur suffisent pour démarrer.'],
         ['cible', 'Utilise les benchmarks sectoriels', 'Prix, charges fixes et marges types sont déjà pré-configurés selon ton secteur d’activité.'],
-        ['savoir', 'Rien n’est définitif.', 'Chaque chiffre reste modifiable ensuite, et tout le plan se recalcule dans la seconde.'],
+        ['savoir', 'Pivote à volonté', 'Chaque paramètre reste ajustable. Modifie une valeur, l’intégralité du modèle financier se recalcule à la seconde.'],
       ].map(([ico, title, note], i) => h('li', {
         class: 'welcome-point',
         style: { '--d': `${0.3 + i * 0.09}s` },
