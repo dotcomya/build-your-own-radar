@@ -7,7 +7,7 @@
  * qu'un salaire se négocie et se compare.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell, foldSign } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -158,7 +158,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         h('div', { class: 'small num', style: { fontWeight: '650' } }, euro(cost.cost * count * 12)),
         h('div', { class: 'tiny muted' }, 'coût annuel'),
       ),
-      h('span', { class: 'disclose' }, '›'),
+      foldSign(),
     ),
 
     isOpen && h('div', { class: 'item-body' },

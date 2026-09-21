@@ -53,6 +53,17 @@
   --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
+  /* L'échelle des titres : un rôle, une valeur, partout.
+     Il y en avait sept pour la même chose — un titre de bloc mesurait 15 px
+     dans l'acquisition, 16 dans une carte, 17 dans la paie, 18 dans une liste,
+     19 dans le tableau de bord, 21 dans l'analyse, 24 dans l'écran de
+     validation. On lisait donc sept niveaux de hiérarchie là où il n'y a
+     qu'une seule sorte de chose. Ces trois jetons sont désormais les seuls
+     endroits où ces valeurs existent. */
+  --t-block: 19px;      /* le titre d'un bloc : carte, panneau, section */
+  --t-block-sub: 12.5px;/* la ligne qui l'explique, juste dessous */
+  --t-row: 15.5px;      /* le titre d'une ligne à l'intérieur d'un bloc */
+
   --rail-w: 214px;
   --live-w: 250px;
   --header-h: 54px;
@@ -86,7 +97,7 @@ h1, h2, h3, h4 {
   text-wrap: balance;
 }
 h1 { font-size: 30px; letter-spacing: -.028em; }
-h2 { font-size: 17px; }
+h2 { font-size: var(--t-block); }
 h3 { font-size: 15px; }
 h4 { font-size: 13px; }
 p { margin: 0 0 10px; }
@@ -462,8 +473,15 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .item-title { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: -.015em; }
 .item-meta { font-size: 12px; color: var(--ink-4); }
 .item-body { padding: 4px 14px 16px; border-top: 1px solid var(--rule); }
-.disclose { transition: transform .38s var(--ease-soft); color: var(--ink-4); font-size: 11px; flex: none; }
-.item.open .disclose { transform: rotate(90deg); }
+/* La ligne d'une liste plie comme tout le reste.
+   Elle portait un chevron typographique nu — un « › » de onze pixels, sans
+   rond, sans cadre — pendant que les volets voisins montraient le signe rond
+   de l'application. Deux affordances pour un même geste sur le même écran.
+   C'est le même signe partout, maintenant, et il tourne dans le même sens. */
+.item.open .item-head > .foldsign {
+  transform: rotate(180deg); border-color: var(--ink); color: var(--ink);
+}
+.item-head:hover > .foldsign { border-color: var(--ink-5); }
 
 .empty { text-align: center; padding: 44px 20px; color: var(--ink-4); }
 .empty-icon { font-size: 30px; opacity: .25; margin-bottom: 10px; }
@@ -2333,7 +2351,6 @@ i.swatch.split-margin { background: var(--gain); }
   display: flex; align-items: baseline; gap: 12px;
   padding: 15px 18px; border-bottom: 1px solid var(--rule);
 }
-.pay-head h2 { font-size: 17px; }
 .pay-year {
   margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-4);
@@ -2706,7 +2723,6 @@ i.swatch.split-margin { background: var(--gain); }
   display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
   margin: 0 0 14px; padding-bottom: 12px; border-bottom: 2px solid var(--rule-strong);
 }
-.list-head h2 { font-size: 18px; }
 .item-act {
   border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
   width: 26px; height: 26px; border-radius: 6px; cursor: pointer; flex: none;
@@ -2948,10 +2964,10 @@ table.data th, table.data td { padding: 9px 12px; }
 }
 .pagebar-id { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .pagebar-title {
-  font-family: var(--display); font-size: 15px; font-weight: 700;
-  letter-spacing: -.02em; color: var(--ink); margin: 0; line-height: 1.2;
+  font-family: var(--display); font-size: var(--t-block); font-weight: 700;
+  letter-spacing: -.024em; color: var(--ink); margin: 0; line-height: 1.2;
 }
-.pagebar-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 0; }
+.pagebar-sub { font-size: var(--t-block-sub); color: var(--ink-4); margin-top: 0; }
 
 .hnav {
   display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none;
@@ -3724,11 +3740,11 @@ details[open] > .refine-head .refine-sign {
 
 /* L'échelle des titres. Un seul niveau par rôle, la même valeur partout. */
 .card-head h2, .panel-head h2, .panel h2 {
-  font-family: var(--display); font-size: 16px; font-weight: 700;
-  letter-spacing: -.022em; line-height: 1.25; color: var(--ink);
+  font-family: var(--display); font-size: var(--t-block); font-weight: 700;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
 }
 .card-head .tiny.muted, .panel-head .tiny.muted, .panel-sub {
-  font-size: 12px; color: var(--ink-4); line-height: 1.45; margin-top: 3px;
+  font-size: var(--t-block-sub); color: var(--ink-4); line-height: 1.5; margin-top: 3px;
 }
 
 /* L'échelle des nombres : trois marches, pas sept.
@@ -3888,10 +3904,10 @@ details[open] > .refine-head .refine-sign {
   gap: 18px; margin-bottom: 14px; flex-wrap: wrap;
 }
 .refinery-tag {
-  font-family: var(--display); font-weight: 700; font-size: 17px;
-  letter-spacing: -.022em; color: var(--ink);
+  font-family: var(--display); font-weight: 700; font-size: var(--t-block);
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
 }
-.refinery-sub { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
+.refinery-sub { font-size: var(--t-block-sub); color: var(--ink-4); margin-top: 3px; }
 /* Le rappel du stade : une phrase, pas un réglage. */
 .refinery-stage {
   margin: 8px 0 0; font-size: 12px; color: var(--ink-4); line-height: 1.55; max-width: 78ch;
@@ -4275,7 +4291,6 @@ details[open] > .refine-head .refine-sign {
 
 /* ─── L'écran de validation ─── */
 .apply { max-width: 720px; }
-.apply-head h2 { font-size: 24px; letter-spacing: -.03em; }
 .apply-head p { margin: 6px 0 20px; color: var(--ink-3); font-size: 13.5px; }
 .apply-mod { margin-bottom: 20px; }
 .apply-mod-head {
@@ -4872,7 +4887,7 @@ details[open] > .refine-head .refine-sign {
 /* Le même rond que partout ailleurs, et rien d'écrit dedans : un bouton qui
    dit « Déplier » explique ce qu'un chevron montre déjà. */
 .refinery-toggle {
-  width: 30px; height: 30px; border-radius: 50%; flex: none; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 50%; flex: none; cursor: pointer;
   display: inline-grid; place-items: center; padding: 0; line-height: 0;
   border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
   transition: transform .42s var(--ease-soft), border-color .2s, color .2s, background .2s;
@@ -5140,30 +5155,15 @@ details[open] > .refine-head .refine-sign {
    l'on en est. Un filet les sépare, pas un blanc. */
 .seuil-chart { border-top: 1px solid var(--rule); padding: 18px 22px 20px; }
 .seuil-chart-head { margin-bottom: 14px; }
-.seuil-chart-head h2 {
-  margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700;
-  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
-}
+.seuil-chart-head h2 { margin: 0; }
 .seuil-chart .chart-note { margin-bottom: 0; }
 @media (max-width: 860px) { .seuil-chart { padding: 16px 16px 18px; } }
 
-/* ════════════ Le tableau de bord parle d'une seule voix ═══════════════════
-   Un verdict en dix-neuf, un titre de bloc en dix-sept, un autre en seize :
-   on lisait trois niveaux de hiérarchie là où il n'y a qu'une seule sorte de
-   chose — une section du tableau de bord. Une taille, une graisse, une
-   sous-ligne. */
-.board-stack .refinery-tag,
-.board-stack .panel h2,
-.board-stack .card-head h2,
-.board-stack .seuil-chart-head h2 {
-  font-family: var(--display); font-weight: 700; font-size: 19px;
-  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
-}
-.board-stack .refinery-sub,
-.board-stack .card-head .tiny.muted,
-.board-stack .seuil-chart-head .tiny.muted {
-  font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5;
-}
+/* Le tableau de bord n'a plus de rattrapage local.
+   Il en avait un — une règle qui ramenait ses titres à dix-neuf pixels — parce
+   que le reste de l'application en affichait cinq autres valeurs. C'est
+   maintenant l'échelle de tout le monde, posée en jetons plus haut ; le
+   rattrapage a disparu avec la raison qui l'avait fait naître. */
 
 /* ─── Ce que coûte une vente : un lien, pas un avertissement ───
    Un pavé ambre de quatre lignes expliquait, en plein milieu de l'écran du
@@ -5322,11 +5322,8 @@ details[open] > .refine-head .refine-sign {
   border-top: 2px solid var(--rule-strong); min-width: 0;
 }
 .kpis6-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--rule); }
-.kpis6-head h2 {
-  margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700;
-  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
-}
-.kpis6-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-4); }
+.kpis6-head h2 { margin: 0; }
+.kpis6-head p { margin: 4px 0 0; font-size: var(--t-block-sub); color: var(--ink-4); }
 /* Les cases ne s'étirent pas sur la hauteur de la plus haute : un chiffre
    déplié fait quatre cents pixels, et ses deux voisines devenaient deux
    grandes cartes blanches vides. Chacune prend sa taille ; le vide qui reste
@@ -5449,17 +5446,19 @@ details[open] > .refine-head .refine-sign {
 .deepfold-head:hover { background: var(--surface-2); }
 .deepfold-id { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
 .deepfold-title {
-  font-family: var(--display); font-size: 21px; font-weight: 700;
-  letter-spacing: -.026em; line-height: 1.2; color: var(--ink);
+  font-family: var(--display); font-size: var(--t-block); font-weight: 700;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
 }
-.deepfold-sub { font-size: 12.5px; color: var(--ink-4); line-height: 1.5; }
-.deepfold .foldsign { width: 32px; height: 32px; }
+.deepfold-sub { font-size: var(--t-block-sub); color: var(--ink-4); line-height: 1.5; }
+/* Le signe d'un volet a deux tailles, et deux seulement : vingt-deux quand il
+   plie quelque chose à l'intérieur d'un bloc, vingt-huit quand il plie le bloc
+   entier. Au-delà, on lisait des signes différents pour un geste identique. */
+.deepfold .foldsign { width: 28px; height: 28px; }
 .deepfold .foldsign svg { width: 17px; height: 17px; }
 .deepfold[open] .deepfold-head { border-bottom: 1px solid var(--rule); }
 .deepfold-body { padding: 20px 22px 22px; }
 @media (max-width: 760px) {
   .deepfold-head { padding: 16px 16px; }
-  .deepfold-title { font-size: 18px; }
   .deepfold-body { padding: 16px 14px 18px; }
 }
 

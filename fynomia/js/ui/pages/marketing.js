@@ -4,7 +4,7 @@
  * budget publicitaire déplace immédiatement le résultat et la trésorerie.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar, fold } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar, fold, foldSign } from '../dom.js'
 import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -25,7 +25,16 @@ export function renderAcquisition(navigate, refresh) {
   const r = store.result
   const level = store.level
   const open = renderAcquisition.open || (renderAcquisition.open = new Set())
-  if (open.size === 0 && s.marketing[0]) open.add(s.marketing[0].id)
+  // La première ligne s'ouvre à l'arrivée, pas à chaque rendu.
+  //
+  // « Si rien n'est ouvert, ouvre la première » se rejouait à chaque passage :
+  // refermer la seule ligne de la liste était donc impossible — elle se
+  // rouvrait dans la foulée, et le chevron ne servait à rien. On ne l'amorce
+  // qu'une fois par dossier ouvert.
+  if (renderAcquisition.seeded !== store.currentId) {
+    renderAcquisition.seeded = store.currentId
+    if (s.marketing[0]) open.add(s.marketing[0].id)
+  }
 
   // En mode simple, l'acquisition tient en deux nombres : ce que coûte un
   // client et combien on en veut par mois. L'entonnoir, les canaux et le
@@ -294,7 +303,7 @@ function campaignCard(c, index, r, open, refresh) {
         h('div', { class: 'small num', style: { fontWeight: '650' } }, detail.cac ? euro(detail.cac) : '—'),
         h('div', { class: 'tiny muted' }, 'CAC'),
       ),
-      h('span', { class: 'disclose' }, '›'),
+      foldSign(),
     ),
     isOpen && h('div', { class: 'item-body' },
       h('div', { class: 'grid grid-3 mt' },

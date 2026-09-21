@@ -1,6 +1,6 @@
 /** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, MINUS, CROSS, COPY } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, MINUS, CROSS, COPY, foldSign } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
@@ -18,7 +18,16 @@ export function renderOffer(navigate, refresh) {
   const r = store.result
   const level = store.level
   const open = renderOffer.open || (renderOffer.open = new Set())
-  if (open.size === 0 && s.activities[0]) open.add(s.activities[0].id)
+  // La première ligne s'ouvre à l'arrivée, pas à chaque rendu.
+  //
+  // « Si rien n'est ouvert, ouvre la première » se rejouait à chaque passage :
+  // refermer la seule ligne de la liste était donc impossible — elle se
+  // rouvrait dans la foulée, et le chevron ne servait à rien. On ne l'amorce
+  // qu'une fois par dossier ouvert.
+  if (renderOffer.seeded !== store.currentId) {
+    renderOffer.seeded = store.currentId
+    if (s.activities[0]) open.add(s.activities[0].id)
+  }
 
   // Ajouter une offre n'est pas une fonctionnalité avancée : vendre deux choses
   // différentes est le cas courant, pas l'exception. Aucun niveau ne le bloque.
@@ -286,7 +295,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
         onClick: (e) => { e.stopPropagation(); remove() },
         html: MINUS,
       }),
-      h('span', { class: 'disclose' }, '›'),
+      foldSign(),
     ),
     isOpen && h('div', { class: 'item-body' },
       tabs(secs, sec, (k) => { activityCard.sec = k; refresh() }),
