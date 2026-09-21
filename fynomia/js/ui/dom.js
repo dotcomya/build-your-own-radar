@@ -1,6 +1,5 @@
 /** Fabrique d'éléments : un hyperscript minimal, sans dépendance. */
 
-import { armTravel } from './motion.js'
 
 export function h(tag, props = {}, ...children) {
   const el = document.createElement(tag)
@@ -290,11 +289,15 @@ export function tabs(items, active, onPick) {
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
       title: it.read ? `${it.label} — on y lit ce que le modèle calcule` : `${it.label} — on y saisit`,
       onClick: () => {
-        // Un seul mouvement : l'ancienne vue part à gauche, la nouvelle vient
-        // de la droite. Rien ne monte, rien ne descend, la page ne change pas
-        // de hauteur sous les yeux — c'est le va-et-vient vertical d'avant qui
-        // donnait la nausée.
-        armTravel('view')
+        // Aucun mouvement. Le contenu change, rien d'autre.
+        //
+        // Il y a eu, dans l'ordre : une entrée en cascade des blocs, une
+        // animation de hauteur du cadre, puis un glissement latéral de toute
+        // l'image. Chacune a été ajoutée pour corriger la précédente, et
+        // chacune a produit la même plainte — ça bouge. Changer d'onglet n'est
+        // pas un déplacement : on ne quitte pas la page, on ne parcourt rien,
+        // on remplace le contenu d'un panneau. Le geste juste est donc le plus
+        // court : il n'y en a pas.
         onPick(it.key)
       },
     },
@@ -484,10 +487,6 @@ export function refine(id, label, ...children) {
   return el
 }
 
-/** L'en-tête est-il resserré ? Retenu entre deux rendus, pour qu'il renaisse
- *  dans l'état où l'écran l'a laissé. */
-let stuck = false
-
 /**
  * La tête d'un module — une seule, au lieu de quatre.
  *
@@ -524,7 +523,6 @@ let stuck = false
 export function moduleShell({ no, title, lede, figure, guide, views, view, onPick, actions = [] }) {
   const acts = (actions || []).filter(Boolean)
   const nav = views ? tabs(views, view, onPick) : null
-  const mark = h('div', { class: 'module-mark', 'aria-hidden': 'true' })
 
   // La note du module passe à côté du titre, et son contenu part au tiroir.
   //
@@ -544,14 +542,21 @@ export function moduleShell({ no, title, lede, figure, guide, views, view, onPic
       )
     : null
 
-  // L'état de l'en-tête survit au remplacement du nœud.
+  // Le titre ne bouge plus, et c'est tout le sujet.
   //
-  // Changer d'onglet refabrique l'en-tête. Le nouveau naissait déployé, et
-  // l'observateur ne le resserrait qu'une image plus tard : au milieu du
-  // glissement, la barre s'ouvrait puis se refermait — un clignotement de
-  // soixante-dix pixels, à chaque onglet. Il naît donc dans l'état où on l'a
-  // laissé, et la mesure ci-dessous confirme ou corrige dès qu'il est en place.
-  const head = h('header', { class: `module ${stuck ? 'is-stuck' : ''}` },
+  // Il était collé sous la barre du haut et se resserrait en route : le titre
+  // passait de quarante-six à vingt-deux pixels et le numéro de module
+  // s'effaçait. Sauf que la bascule n'avait aucune zone morte — mesurée, elle
+  // se faisait à trente pixels de défilement et revenait à vingt-neuf. Un
+  // geste de trackpad près du haut de la page faisait donc claquer le titre
+  // d'une taille à l'autre, plusieurs fois par seconde. C'est le
+  // clignotement.
+  //
+  // On ne règle pas une bascule qui clignote, on la supprime : l'affiche du
+  // module défile normalement, comme le reste de la page, et ne change jamais
+  // de taille. Avec elle disparaissent la sentinelle, la cale qui compensait
+  // sa hauteur, et les deux observateurs qui la surveillaient.
+  const head = h('header', { class: 'module' },
     h('div', { class: 'module-tag' },
       h('span', { class: 'module-bar' }),
       h('span', {}, `Module ${no} / 09`),
@@ -566,86 +571,29 @@ export function moduleShell({ no, title, lede, figure, guide, views, view, onPic
         figure.note ? h('span', { class: 'module-figure-note' }, figure.note) : null,
       ) : null,
     ),
-
-    // Une seule barre pour naviguer dans le module et pour y ajouter quelque
-    // chose : l'action appartient à l'onglet ouvert, pas à un bandeau séparé.
-    nav || acts.length ? h('div', { class: 'module-nav' },
-      nav || h('span', { class: 'spacer' }),
-      acts.length ? h('div', { class: 'module-acts' }, ...acts) : null,
-    ) : null,
   )
 
-  // Le compensateur.
+  // Ce qui reste à l'écran, c'est la barre d'onglets — et elle seule.
   //
-  // C'est le bug « impossible de scroller ». L'en-tête est « sticky », donc il
-  // reste dans le flux : en se resserrant il rendait cent vingt pixels au
-  // document, la page raccourcissait sous le doigt pendant qu'on la faisait
-  // défiler, et près du bas le navigateur remontait la position pour rester
-  // dans les clous — on poussait vers le bas, ça revenait vers le haut.
+  // C'est ce qu'on avait cherché à obtenir en collant tout l'en-tête : savoir
+  // où l'on est et pouvoir changer de vue sans remonter. Une barre d'onglets a
+  // une hauteur fixe : rien à resserrer, rien à compenser, rien qui puisse
+  // clignoter. Le nom du module, lui, est déjà dans le fil d'Ariane de la
+  // barre du haut, qui ne quitte jamais l'écran.
   //
-  // Cette cale reprend exactement ce que l'en-tête vient de rendre. La hauteur
-  // totale du document ne bouge plus d'un pixel, que l'en-tête soit resserré
-  // ou non, et rien de ce qui est en dessous ne se déplace.
-  const fill = h('div', { class: 'module-fill', 'aria-hidden': 'true' })
+  // Elle sort de l'en-tête pour devenir sa sœur : un élément « sticky » ne
+  // dépasse pas la boîte de son parent, et enfermée dans l'en-tête elle
+  // n'aurait tenu que le temps de le traverser.
+  const bar = nav || acts.length
+    ? h('div', { class: 'module-nav' },
+        nav || h('span', { class: 'spacer' }),
+        acts.length ? h('div', { class: 'module-acts' }, ...acts) : null,
+      )
+    : null
 
-  // La hauteur de repos se mesure même quand l'en-tête est resserré : on lui
-  // retire sa classe, on lit, on la remet — dans la même image, donc sans rien
-  // afficher entre les deux. La retenir d'un rendu à l'autre serait plus
-  // économique et plus faux : chaque module a son titre, et un titre passe sur
-  // deux lignes dès que la fenêtre rétrécit.
-  let busy = false
-  const sync = () => {
-    if (busy || !head.isConnected) return
-    busy = true
-    const on = head.classList.contains('is-stuck')
-    if (on) head.classList.remove('is-stuck')
-    const rest = head.offsetHeight
-    if (on) head.classList.add('is-stuck')
-    const px = `${Math.max(0, Math.round(rest - head.offsetHeight))}px`
-    if (fill.style.height !== px) fill.style.height = px
-    busy = false
-  }
-
-  const barPx = parseFloat(
-    getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 54
-  const set = (v) => { stuck = v; head.classList.toggle('is-stuck', v); sync() }
-
-  if (typeof IntersectionObserver === 'function') {
-    // La marge haute vaut la barre fixe du haut : sans elle, la sentinelle
-    // passerait déjà sous la barre alors que le navigateur la compte encore
-    // visible, et l'en-tête se resserrerait trop tard.
-    const eye = new IntersectionObserver(
-      ([e]) => set(!e.isIntersecting),
-      { threshold: 0, rootMargin: `-${barPx}px 0px 0px 0px` },
-    )
-    // Le nœud n'est pas encore dans le document : un changement de module
-    // diffère le remplacement le temps de la transition. On attend qu'il y soit
-    // au lieu de renoncer à la première image.
-    let tries = 0
-    const watch = () => {
-      if (!mark.isConnected) { if (tries++ < 90) requestAnimationFrame(watch); return }
-      // On tranche tout de suite, sans attendre la première observation :
-      // c'est ce délai d'une image qui faisait clignoter la barre.
-      set(mark.getBoundingClientRect().bottom <= barPx)
-      eye.observe(mark)
-    }
-    requestAnimationFrame(watch)
-  }
-
-  // Le titre peut passer sur deux lignes quand la fenêtre rétrécit : la hauteur
-  // de repos change alors sans que la sentinelle bouge. On la remesure.
-  if (typeof ResizeObserver === 'function') {
-    new ResizeObserver(() => sync()).observe(head)
-  }
-
-  // Un fragment, pas une boîte.
-  //
-  // Envelopper la sentinelle et l'en-tête dans un div enfermait le « sticky »
-  // dans une boîte haute d'exactement un en-tête : il n'avait nulle part où
-  // coller. Les trois nœuds deviennent donc frères dans le contenu de la page,
-  // dont la hauteur est celle du module entier.
   const out = document.createDocumentFragment()
-  out.append(mark, head, fill)
+  out.append(head)
+  if (bar) out.append(bar)
   return out
 }
 

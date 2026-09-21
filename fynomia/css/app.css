@@ -4345,13 +4345,13 @@ details[open] > .refine-head .refine-sign {
    qui donnait la nausée. Un seul mouvement le remplace, et sans opacité : un
    masque descend sur chaque bloc, qui monte de huit pixels en arrivant. Le
    bord est net, la direction est lisible, et ça dure un tiers de seconde. */
-/* Rien ne bouge verticalement à l'entrée d'une vue.
-   Les blocs montaient de dix pixels, l'un après l'autre, pendant que le cadre
-   glissait de son ancienne hauteur à la nouvelle : le contenu descendait puis
-   remontait à chaque changement d'onglet, et ce va-et-vient donnait la nausée.
-   Le passage d'un onglet à l'autre n'est plus qu'un glissement latéral, joué
-   une seule fois sur l'image entière (« travel-in », plus bas). Sous ce point
-   de vue, la page est immobile : seul le contenu change. */
+/* Rien ne bouge du tout à l'entrée d'une vue.
+   Trois tentatives successives ont été retirées ici : l'entrée en cascade des
+   blocs, l'animation de hauteur du cadre, puis le glissement latéral de toute
+   l'image. Chacune corrigeait la précédente et produisait la même plainte —
+   ça bouge. Changer d'onglet n'est pas un déplacement : on ne quitte pas la
+   page, on remplace le contenu d'un panneau. Le remplacement est donc sec, et
+   la structure autour ne bronche pas. */
 
 /* ─── La ligne qu'on est en train de remplir ─── */
 /* Aucune classe à poser, aucun état à retenir : le navigateur sait déjà où est
@@ -4433,6 +4433,9 @@ details[open] > .refine-head .refine-sign {
    Le lede vivait dans un cadre à lui, sous le titre, avec un « + » qui le
    dépliait en poussant la page. Il tient maintenant au bout du titre, en
    gris, et son contenu part dans le tiroir latéral. */
+.module {
+  margin-bottom: 14px;
+}
 .module-top {
   display: flex; align-items: baseline; gap: 6px 14px;
   flex-wrap: wrap; margin-top: 2px;
@@ -4486,7 +4489,7 @@ details[open] > .refine-head .refine-sign {
    ouvert, pas à un bandeau séparé au-dessus. */
 .module-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  margin-top: 16px; border-bottom: 1px solid var(--rule); flex-wrap: wrap;
+  border-bottom: 1px solid var(--rule); flex-wrap: wrap;
 }
 .module-nav .hnav { border-bottom: 0; margin-bottom: -1px; flex: 1; min-width: 0; }
 .module-acts { display: flex; gap: 8px; flex: none; padding-bottom: 8px; }
@@ -4588,22 +4591,6 @@ details[open] > .refine-head .refine-sign {
   0%   { opacity: 0; transform: translateY(8%) scale(.93); filter: blur(14px); }
   35%  { opacity: 1; }
   100% { opacity: 1; transform: none; filter: blur(0); }
-}
-
-/* ─── Changer d'onglet ─── */
-/* Un seul mouvement, latéral, joué sur l'image entière : ce qu'on quitte part
-   à gauche, ce qui arrive vient de la droite, et rien ne monte ni ne descend.
-   C'est tout ce qui reste du changement d'onglet — et c'est assez pour dire
-   qu'on a changé de vue sans remuer la page sous les yeux. */
-.is-move-view::view-transition-old(root) { animation: travel-out .2s cubic-bezier(.4, 0, 1, 1) both; }
-.is-move-view::view-transition-new(root) { animation: travel-in .38s var(--ease-soft) both; }
-@keyframes travel-out {
-  from { opacity: 1; transform: none; }
-  to   { opacity: 0; transform: translateX(-1.6%); }
-}
-@keyframes travel-in {
-  from { opacity: 0; transform: translateX(2.2%); }
-  to   { opacity: 1; transform: none; }
 }
 
 /* ─── Basculer un interrupteur ─── */
@@ -5462,37 +5449,23 @@ details[open] > .refine-head .refine-sign {
   .deepfold-body { padding: 16px 14px 18px; }
 }
 
-/* ═══════════ L'en-tête du module reste à l'écran ═════════════════════════
-   Deux écrans plus bas dans « Achats et coûts », plus rien ne disait où l'on
-   était ni quels onglets existaient : il fallait remonter pour changer de
-   vue. Il se colle donc sous la barre du haut — et se resserre en route,
-   pour qu'un bandeau de repère ne mange pas le tiers de l'écran. */
-/* La sentinelle : un pixel qui sort par le haut, et l'en-tête se resserre. */
-.module-mark { height: 1px; margin-bottom: -1px; }
-.module {
-  position: sticky; top: var(--header-h); z-index: 20;
-  background: var(--paper); padding-top: 2px;
-}
-.module::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-  background: var(--rule); opacity: 0; transition: opacity .28s var(--ease-soft);
-}
-.module.is-stuck::after { opacity: 1; }
-.module.is-stuck { padding-top: 8px; padding-bottom: 2px; }
-/* Ce qui se resserre : le titre descend au corps d'un titre de bloc, et le
-   numéro de module s'efface — il a été lu une fois. */
-.module.is-stuck .module-title { font-size: 22px; line-height: 1.1; }
-.module.is-stuck .module-tag { display: none; }
-.module.is-stuck .module-nav { margin-bottom: 0; }
+/* ═══════════ Ce qui reste à l'écran : la barre d'onglets ════════════════
+   L'en-tête entier se collait sous la barre du haut et se resserrait en
+   route. Mesurée, la bascule se faisait à trente pixels de défilement et
+   revenait à vingt-neuf : aucune zone morte. Un geste de trackpad près du
+   haut de la page faisait claquer le titre de quarante-six à vingt-deux
+   pixels, plusieurs fois par seconde — le clignotement.
 
-/* La cale qui garde la hauteur du document constante.
-   Rien ne s'anime ici : sa hauteur est posée au pixel par le script, en même
-   temps que l'en-tête se resserre. Une transition rendrait la mesure fausse
-   pendant sa durée — et c'est cette mesure qui empêche la page de raccourcir
-   sous le doigt. La marge du bas du module vit ici : elle suit la cale, donc
-   elle reste en place quand l'en-tête maigrit. */
-.module-fill { height: 0; margin-bottom: 22px; }
-@media (max-width: 760px) { .module-fill { margin-bottom: 18px; } }
+   On ne règle pas une bascule qui clignote, on la supprime. L'affiche du
+   module défile comme le reste et ne change jamais de taille. Seule la barre
+   d'onglets reste : elle a une hauteur fixe, donc rien à resserrer, rien à
+   compenser, rien qui puisse clignoter. Le nom du module est déjà dans le fil
+   d'Ariane de la barre du haut, qui ne quitte jamais l'écran. */
+.module-nav {
+  position: sticky; top: var(--header-h); z-index: 20;
+  background: var(--paper); margin-bottom: 22px; padding-top: 6px;
+}
+@media (max-width: 760px) { .module-nav { margin-bottom: 18px; } }
 
 /* ═══════════ Le pas d'une question à l'autre ═════════════════════════════
    Douze écrans se succédaient sans qu'on sente avancer : la question changeait
