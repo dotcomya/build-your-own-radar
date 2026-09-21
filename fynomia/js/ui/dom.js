@@ -275,19 +275,29 @@ export function tabs(items, active, onPick) {
     const btn = h('button', {
       class: `hnav-tab ${it.key === active ? 'active' : ''} ${it.read ? 'is-read' : ''} ${it.tone ? `is-${it.tone}` : ''}`,
       role: 'tab', 'aria-selected': it.key === active ? 'true' : 'false',
+      title: it.read ? `${it.label} — on y lit ce que le modèle calcule` : `${it.label} — on y saisit`,
       onClick: () => { markViewChange(); onPick(it.key) },
     },
+      h('span', { class: 'hnav-sign', 'aria-hidden': 'true', html: it.read ? EYE : PENCIL }),
       h('span', { class: 'hnav-label' }, it.label),
       it.count ? h('span', { class: 'hnav-count' }, String(it.count)) : null,
-      it.read ? h('span', { class: 'hnav-read' }, 'lecture') : null,
     )
     nav.appendChild(btn)
   })
   nav.appendChild(ink)
 
-  requestAnimationFrame(() => {
+  // La barre n'est pas encore dans le document quand on la fabrique, et elle
+  // peut le rester un moment : un changement de module diffère le remplacement
+  // du DOM le temps de la transition. On attend donc qu'elle y soit, au lieu de
+  // renoncer à la première image — sinon le trait restait large de zéro.
+  let tries = 0
+  const settleInk = () => {
+    if (!nav.isConnected) {
+      if (tries++ < 90) requestAnimationFrame(settleInk)
+      return
+    }
     const on = nav.querySelector('.hnav-tab.active')
-    if (!on || !nav.isConnected) return
+    if (!on) return
     const to = { x: on.offsetLeft, w: on.offsetWidth }
     const from = tabs.ink?.[sig] || to
     const place = (p) => { ink.style.transform = `translateX(${p.x}px)`; ink.style.width = `${p.w}px` }
@@ -302,7 +312,8 @@ export function tabs(items, active, onPick) {
       place(to)
     })
     ;(tabs.ink || (tabs.ink = {}))[sig] = to
-  })
+  }
+  requestAnimationFrame(settleInk)
 
   return nav
 }
@@ -323,6 +334,16 @@ export const CROSS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 
 
 /** Un chevron, même construction : tracé dans sa boîte, donc centré. */
 export const COPY = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.6" y="5.6" width="7.4" height="7.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 3.6H4.4a1.4 1.4 0 0 0-1.4 1.4v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+
+/**
+ * Ce qu'on fait derrière un onglet : écrire, ou lire.
+ *
+ * Le mot « lecture » sous le libellé demandait d'être lu pour être compris.
+ * Un crayon et un œil se reconnaissent sans lecture, et disent la même chose
+ * dans toutes les langues.
+ */
+export const PENCIL = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.1 2.6a1.5 1.5 0 0 1 2.1 2.1l-7.3 7.3-2.8.7.7-2.8 7.3-7.3Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+export const EYE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 8s2.4-4.2 6.4-4.2S14.4 8 14.4 8s-2.4 4.2-6.4 4.2S1.6 8 1.6 8Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
 
 export const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 

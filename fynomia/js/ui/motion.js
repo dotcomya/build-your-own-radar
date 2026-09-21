@@ -61,6 +61,28 @@ function collapse(details, body) {
 }
 
 /**
+ * Une animation d'entrée appartient à un changement d'état, jamais à un rendu.
+ *
+ * C'est l'erreur qu'on a faite trois fois au même endroit : poser
+ * « animation: … » sur une classe toujours présente. L'élément étant refabriqué
+ * à chaque rendu — donc à chaque case cochée, chaque champ modifié, chaque
+ * recalcul — l'animation rejoue pour dire exactement la même chose, et
+ * l'écran clignote sans raison.
+ *
+ * `changed(scope, value)` rend vrai la première fois qu'une valeur apparaît
+ * sous ce nom, puis chaque fois qu'elle change. Un composant s'en sert pour
+ * poser sa classe d'entrée : l'animation redevient le signe qu'il s'est passé
+ * quelque chose.
+ */
+const seen = new Map()
+export function changed(scope, value) {
+  const key = String(value)
+  const was = seen.get(scope)
+  seen.set(scope, key)
+  return was !== undefined && was !== key
+}
+
+/**
  * Le changement d'onglet.
  *
  * La vue est reconstruite à chaque rendu, y compris pendant la frappe. Marquer

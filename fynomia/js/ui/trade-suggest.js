@@ -24,6 +24,7 @@ import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
 import { getSector, vocabulary, tradeName } from '../state/sectors.js'
 import { goToGap } from './spotlight.js'
+import { focusOffer } from './pages/offer.js'
 import store from '../state/store.js'
 
 /** Deux libellés désignent la même ligne si on les lit pareil. */
@@ -128,8 +129,12 @@ function amountOf(kind, item, vocab) {
 function added(kind, item, vocab, navigate, refresh) {
   add(kind, item, vocab)
   if (kind === 'offers') {
-    goToGap({ route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' }, navigate)
-    toast(`${item.label} ajouté. Combien tu en vends par mois ?`)
+    // On atterrissait sur « Volumes » : on venait d'accepter une idée, et la
+    // première question posée était combien on en vend — avant même d'avoir vu
+    // ce qu'elle coûte au client. Le prix d'abord ; les volumes sont l'onglet
+    // d'à côté.
+    goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' }, navigate)
+    toast(`${item.label} ajouté. Vérifie son prix.`)
     return
   }
   toast(`${item.label} — ${amountOf(kind, item, vocab)}`, 'ok')
@@ -162,7 +167,9 @@ function add(kind, item, vocab) {
     return
   }
 
-  store.update((sc) => sc.activities.push(newActivity(item.recurring
+  // Une offre proposée s'ouvre là où on la décrit, pas sur ses volumes : on
+  // vient d'accepter une idée, la première chose à vérifier est son prix.
+  const made = newActivity(item.recurring
     ? {
         name: item.label, unitPrice: 0, recurringPrice: item.price, recurringCost: item.cost || 0,
         contractMonths: 12, churnMonthly: 0.03, deposit: 1, paymentLag: 0,
@@ -172,5 +179,7 @@ function add(kind, item, vocab) {
         name: item.label, unitPrice: item.price, unitCost: item.cost || 0,
         recurringPrice: 0, contractMonths: 0, deposit: 1, paymentLag: 0,
         volumes: { mode: 'growth', launchMonth: 1, startUnits: 0, monthlyGrowth: 0.06, growthDecay: 0.95, cap: '', manual: [] },
-      })), { label: `Ajout — ${item.label}` })
+      })
+  store.update((sc) => sc.activities.push(made), { label: `Ajout — ${item.label}` })
+  focusOffer(made.id)
 }

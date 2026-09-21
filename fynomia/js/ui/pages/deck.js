@@ -20,6 +20,7 @@ import { barChart, areaChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } fro
 import { getSector, vocabulary } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { founderIncome } from '../../engine/founder.js'
+import { changed } from '../motion.js'
 import store from '../../state/store.js'
 
 const at = { i: 0 }
@@ -355,7 +356,9 @@ export function deckBoard(navigate, refresh) {
     ),
     h('div', { class: 'deckin-stage' },
       arrow('prev', 'Écran précédent', at.i === 0),
-      h('div', { class: 'deckin-slide' }, slides[at.i]),
+      // L'écran ne glisse que lorsqu'on en change, pas à chaque rendu du
+      // tableau de bord — sinon il repartirait de la droite à chaque recalcul.
+      h('div', { class: `deckin-slide ${changed('deckin', at.i) ? 'is-fresh' : ''}` }, slides[at.i]),
       arrow('next', 'Écran suivant', at.i === slides.length - 1),
     ),
     h('div', { class: 'deckin-dots' },

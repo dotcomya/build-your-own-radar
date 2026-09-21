@@ -22,6 +22,7 @@
 import { h } from './dom.js'
 import { checklist, defer, resumeAll } from './checklist.js'
 import { goToGap } from './spotlight.js'
+import { changed } from './motion.js'
 import store from '../state/store.js'
 
 const memory = { closed: false }
@@ -40,18 +41,14 @@ export function coach(navigate) {
 
   if (memory.closed) {
     return h('button', {
-      class: 'nextstep-tab', title: 'Reprendre le guide',
+      class: `nextstep-tab ${changed('coachtab', pct) ? 'is-fresh' : ''}`, title: 'Reprendre le guide',
       onClick: () => { memory.closed = false; render() },
     }, h('span', { class: 'nextstep-tab-dot' }), `${pct} %`)
   }
 
-  // Le guide ne rejoue son entrée que lorsqu'il change de ligne.
-  //
-  // Il est refabriqué à chaque rendu, donc à chaque case cochée : il remontait
-  // et se refondait pour dire exactement la même chose, et ce clignotement au
-  // coin de l'écran était ce qu'on voyait le plus en saisissant ses charges.
-  const fresh = memory.shown !== c.next.key
-  memory.shown = c.next.key
+  // Le guide ne rejoue son entrée que lorsqu'il change de ligne — sinon il
+  // remonte et se refond à chaque rendu pour dire la même chose.
+  const fresh = changed('coach', c.next.key)
 
   const el = h('aside', { class: `nextstep ${fresh ? 'is-fresh' : ''}`, role: 'complementary' },
     // La part posée se dessine sur l'anneau lui-même : c'est lui qui porte le

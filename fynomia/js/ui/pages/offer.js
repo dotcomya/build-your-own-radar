@@ -26,8 +26,7 @@ export function renderOffer(navigate, refresh) {
     if (s.activities.length >= 8) { toast('Huit offres au maximum.', 'err'); return }
     const a = newActivity({ name: `Offre ${s.activities.length + 1}` })
     store.update((sc) => sc.activities.push(a), { label: 'Ajout d\'une offre' })
-    open.clear()
-    open.add(a.id)
+    focusOffer(a.id)
     refresh()
   }
 
@@ -35,7 +34,7 @@ export function renderOffer(navigate, refresh) {
     if (s.activities.length >= 8) { toast('Huit offres au maximum.', 'err'); return }
     const copy = { ...JSON.parse(JSON.stringify(src)), id: newActivity().id, name: `${src.name} (copie)` }
     store.update((sc) => sc.activities.push(copy), { label: "Duplication de l'offre" })
-    open.add(copy.id)
+    focusOffer(copy.id)
     refresh()
   }
 
@@ -158,6 +157,22 @@ function commissionRead(a, voc) {
     h('p', {},
       `Tu encaisses ${euro(take)} par affaire apportée. C'est ce montant qui compte comme chiffre d'affaires — les ${euro(deal)} de l'affaire ne passent jamais par tes comptes. Les volumes se saisissent dans l'onglet voisin : une unité vaut une affaire.`),
   )
+}
+
+/**
+ * Ouvrir une offre neuve, sur son premier onglet.
+ *
+ * L'onglet retenu est partagé par toutes les offres — c'est voulu : on compare
+ * deux prix en passant de l'une à l'autre. Mais une offre qu'on vient de créer
+ * n'a ni prix ni nom, et s'ouvrir sur « Volumes » revient à demander combien
+ * on en vend avant d'avoir dit ce que c'est. Accepter une idée proposée doit
+ * donc ouvrir cette offre-là, là où on la décrit.
+ */
+export function focusOffer(id) {
+  activityCard.sec = 'offre'
+  const open = renderOffer.open || (renderOffer.open = new Set())
+  open.clear()
+  if (id) open.add(id)
 }
 
 function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {

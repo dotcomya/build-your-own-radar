@@ -3431,8 +3431,12 @@ details[open] > .refine-head .refine-sign {
 }
 .refine-label { font-weight: 500; }
 .refine[open] .refine-label { color: var(--ink); font-weight: 600; }
-.refine-body { padding-top: 14px; animation: refine-in .24s var(--ease); }
-@keyframes refine-in { from { opacity: 0; transform: translateY(-4px); } }
+/* Aucune animation ici.
+   Elle rejouait à chaque rendu, pour chaque volet ouvert de la page : ouvrir
+   une famille de métiers refondait les trois volets du module. Le geste
+   d'ouverture est déjà animé par `installMotion`, qui, lui, n'agit que sur un
+   vrai clic. */
+.refine-body { padding-top: 14px; }
 .refine-body > .grid + .grid { margin-top: 12px; }
 /* Le résumé, aligné à droite : ce que le volet contient sans l'ouvrir. */
 .refine-sum { margin-left: auto; padding-left: 16px; font-size: 12px; color: var(--ink-4); }
@@ -4006,6 +4010,7 @@ details[open] > .refine-head .refine-sign {
    le guide remontait et se refondait à chaque rendu — donc à chaque case
    cochée — pour dire exactement la même chose. */
 .nextstep.is-fresh { animation: nextstep-in .52s var(--ease-soft) both; }
+.nextstep-tab.is-fresh { animation: nextstep-in .4s var(--ease-soft) both; }
 @keyframes nextstep-in {
   from { opacity: 0; transform: translateY(14px) scale(.98); }
   to   { opacity: 1; transform: none; }
@@ -4062,7 +4067,6 @@ details[open] > .refine-head .refine-sign {
   border-radius: 999px; padding: 7px 13px; cursor: pointer;
   font-family: var(--mono); font-size: 11px;
   box-shadow: var(--lift); transition: border-color .18s var(--ease-soft), color .18s;
-  animation: nextstep-in .4s var(--ease-soft) both;
 }
 .nextstep-tab:hover { border-color: var(--ink); color: var(--ink); }
 .nextstep-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
@@ -4756,19 +4760,27 @@ details[open] > .refine-head .refine-sign {
 }
 .sim-levers { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 20px; }
 
-.knob-foot { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
-.knob-basetag {
-  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-5);
+/* La valeur du plan, posée sur la piste plutôt qu'écrite dessous.
+   Un trait pointillé à sa place exacte, le chiffre en dessous : on voit
+   l'écart au lieu de le calculer. Cliquable, pour y revenir d'un geste. */
+.knob-track { position: relative; padding-bottom: 15px; }
+.knob-track .lever-range { position: relative; z-index: 1; }
+.knob-mark {
+  position: absolute; top: 0; bottom: 0; transform: translateX(-50%);
+  border: 0; background: none; padding: 0 5px; cursor: pointer; font: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
 }
-/* La valeur du plan : cliquable, pour y revenir d'un geste. */
-.knob-base {
-  border: 0; background: none; padding: 0; cursor: pointer; font: inherit;
-  font-family: var(--mono); font-size: 11.5px; color: var(--ink-5);
-  border-bottom: 1px dashed var(--rule); transition: color .18s var(--ease-soft), border-color .18s;
+.knob-mark i {
+  display: block; width: 0; height: 13px; margin-top: 3px;
+  border-left: 1px dashed var(--ink-5); transition: border-color .18s;
 }
-.knob-base:hover { color: var(--ink); border-bottom-color: var(--ink); }
-.knob-why { font-size: 11px; color: var(--ink-5); line-height: 1.45; flex: 1 1 100%; }
+.knob-mark b {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 400; color: var(--ink-5);
+  white-space: nowrap; transition: color .18s;
+}
+.knob-mark:hover i { border-left-color: var(--ink); }
+.knob-mark:hover b { color: var(--ink); }
+.knob-why { font-size: 11px; color: var(--ink-5); line-height: 1.45; display: block; margin-top: 2px; }
 /* Ce qui a bougé se voit sans lire le chiffre d'origine. */
 .knob-value.is-moved { color: var(--signal-ink); }
 
@@ -4792,12 +4804,6 @@ details[open] > .refine-head .refine-sign {
 
 
 
-/* Le corps d'un volet coule au lieu d'apparaître. */
-.refine-body { animation: refine-flow .42s var(--ease-soft) both; }
-@keyframes refine-flow {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: none; }
-}
 
 /* ─── « Affiner mon dossier » se referme ─── */
 /* Le même rond que partout ailleurs, et rien d'écrit dedans : un bouton qui
@@ -4945,8 +4951,9 @@ details[open] > .refine-head .refine-sign {
 .plainbar-track { height: 48px; position: relative; }
 .plainbar-track i {
   position: absolute; left: 0; right: 0; bottom: 0; display: block; border-radius: 1px;
-  transform-origin: bottom; animation: plainbar-rise .52s var(--ease-soft) both;
+  transform-origin: bottom;
 }
+.plainbars.is-fresh .plainbar-track i { animation: plainbar-rise .52s var(--ease-soft) both; }
 .plainbar-track i.is-pos { background: var(--gain); }
 .plainbar-track i.is-neg { background: var(--loss); }
 .plainbar-label {
@@ -5042,20 +5049,26 @@ details[open] > .refine-head .refine-sign {
    signe est dans l'onglet lui-même : un filet vert vif sur ce qui se modifie,
    un filet gris et le mot « lecture » sur ce qui ne fait que montrer. Ça se
    voit sans qu'on ait rien à faire. */
-.hnav-tab::before {
-  content: ''; width: 3px; align-self: stretch; margin: 5px 0; border-radius: 2px;
-  background: var(--accent); flex: none;
-  transition: background .24s var(--ease-soft), opacity .24s;
+/* Un crayon sur ce qui se remplit, un œil sur ce qui se lit. Le mot
+   « lecture » demandait d'être lu ; ces deux-là se reconnaissent. */
+.hnav-sign {
+  display: inline-grid; place-items: center; width: 15px; height: 15px; flex: none;
+  color: var(--ink-5); transition: color .2s var(--ease-soft);
 }
-.hnav-tab.is-read::before { background: var(--rule); }
-.hnav-tab.active::before { background: var(--ink); }
-.hnav-tab.is-read.active::before { background: var(--ink-5); }
+.hnav-sign svg { width: 13px; height: 13px; display: block; }
+.hnav-tab:not(.is-read) .hnav-sign { color: var(--accent-dim); }
+.hnav-tab:not(.is-read).active .hnav-sign { color: var(--ink); }
 .hnav-tab.is-read { font-weight: 450; color: var(--ink-4); }
-.hnav-tab.is-read .hnav-read {
-  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-5); margin-left: 1px;
-}
 .hnav-tab:not(.is-read) { font-weight: 600; }
+
+/* L'onglet ouvert porte un fond clair : le trait seul, sous la ligne, se
+   perdait dès qu'il y avait plus de trois onglets. */
+.hnav-tab.active {
+  background: var(--surface); color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--rule), inset 0 -1px 0 var(--surface);
+}
+.hnav-tab.is-read.active { background: var(--surface-2); }
+.hnav-tab.active:hover { background: var(--surface); }
 /* La pastille qui disait la même chose en plus discret n'a plus d'emploi. */
 .hnav-kind { display: none; }
 
@@ -5208,7 +5221,8 @@ details[open] > .refine-head .refine-sign {
 .deckin-slide { min-width: 0; }
 /* Le même écran que le plein écran, en plus sobre : pas de rebond à l'entrée
    ni de marge de scène, il est déjà dans un cadre. */
-.deckin-slide .slide { max-width: none; animation: deckin-slide .34s var(--ease-soft) both; }
+.deckin-slide .slide { max-width: none; animation: none; }
+.deckin-slide.is-fresh .slide { animation: deckin-slide .34s var(--ease-soft) both; }
 .deckin-slide .slide-inner { border-radius: 16px; padding: clamp(20px, 3vw, 34px); }
 @keyframes deckin-slide {
   from { opacity: 0; transform: translateX(14px); }
@@ -5237,3 +5251,122 @@ details[open] > .refine-head .refine-sign {
   .deckin-arrow.is-next { order: 3; }
 }
 @media (prefers-reduced-motion: reduce) { .deckin-slide .slide { animation: none; } }
+
+/* ═══════════ Les six chiffres, chacun repliable sur ce qu'il veut dire ════
+   C'étaient des tuiles qui emmenaient ailleurs d'un clic : on quittait la
+   page sans savoir ce qu'on allait y faire, et qui ne connaît pas le mot
+   « EBITDA » n'avait qu'un « ? » à survoler. Un clic déplie la définition ;
+   le déplacement vient après, par un bouton qui dit où il mène. */
+.kpis6 {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-top: 2px solid var(--rule-strong); min-width: 0;
+}
+.kpis6-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--rule); }
+.kpis6-head h2 {
+  margin: 0; font-family: var(--display); font-size: 19px; font-weight: 700;
+  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
+}
+.kpis6-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-4); }
+/* Les cases ne s'étirent pas sur la hauteur de la plus haute : un chiffre
+   déplié fait quatre cents pixels, et ses deux voisines devenaient deux
+   grandes cartes blanches vides. Chacune prend sa taille ; le vide qui reste
+   est du fond, pas une carte. */
+.kpis6-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  align-items: start;
+}
+.kpi6 {
+  background: var(--surface); min-width: 0;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.kpi6-head {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  cursor: pointer; list-style: none; user-select: none;
+  transition: background .16s var(--ease);
+}
+.kpi6-head::-webkit-details-marker { display: none; }
+.kpi6-head:hover { background: var(--surface-2); }
+.kpi6-ico { width: 30px; height: 30px; flex: none; line-height: 0; }
+.kpi6-id { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.kpi6-label {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.kpi6-value { font-size: 21px; font-weight: 650; letter-spacing: -.035em; color: var(--ink); line-height: 1.1; }
+.kpi6.pos .kpi6-value { color: var(--gain); }
+.kpi6.neg .kpi6-value { color: var(--loss); }
+.kpi6.warn .kpi6-value { color: var(--warn); }
+.kpi6-note { font-size: 11.5px; color: var(--ink-4); line-height: 1.35; }
+.kpi6-spark { flex: none; line-height: 0; opacity: .8; }
+.kpi6[open] .kpi6-head { background: var(--surface-2); }
+.kpi6[open] .kpi6-head .foldsign { transform: rotate(180deg); border-color: var(--ink); color: var(--ink); }
+.kpi6-body {
+  padding: 0 16px 16px; display: flex; flex-direction: column; gap: 9px;
+  background: var(--surface-2); border-top: 1px dashed var(--rule);
+  padding-top: 14px;
+}
+.kpi6-body p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); }
+.kpi6-what { color: var(--ink-2) !important; }
+.kpi6-watch { color: var(--ink-4) !important; }
+.kpi6-watch b { color: var(--warn); font-weight: 600; }
+.kpi6-body .btn { align-self: flex-start; margin-top: 3px; }
+
+/* ═══════════ Ce qui se clique, et ce qui se lit ═══════════════════════════
+   Les cinq exercices sont des boutons ; l'opération juste dessous ne l'est
+   pas, et les deux avaient la même carte blanche. On soulève ce qui répond
+   au clic, et on pose l'autre à plat sur le papier. */
+.year { cursor: pointer; transition: transform .2s var(--ease-soft), border-color .16s, box-shadow .2s var(--ease-soft); }
+.year:hover { transform: translateY(-2px); border-color: var(--ink); box-shadow: 0 6px 16px rgba(11, 14, 16, .08); }
+.years::before {
+  content: 'Choisis l’exercice';
+  grid-column: 1 / -1; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-5); margin-bottom: 2px;
+}
+.eq { box-shadow: none; }
+.eq-term { cursor: default; }
+
+/* ─── Sur 100 € facturés : une barre en parts, pas un camembert ─── */
+.plainsplit { display: flex; flex-direction: column; gap: 8px; }
+.plainsplit-bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: var(--rule); }
+.plainsplit-bar i { display: block; min-width: 2px; }
+.plainsplit-bar i.is-buys { background: var(--ink-3); }
+.plainsplit-bar i.is-team { background: var(--ink-5); }
+.plainsplit-bar i.is-other { background: var(--rule-strong); opacity: .35; }
+.plainsplit-bar i.is-left { background: var(--gain); }
+.plainsplit-bar i.is-bad { background: var(--loss); }
+.plainsplit-keys { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.plainsplit-key { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-4); }
+.plainsplit-key i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.plainsplit-key.is-buys i { background: var(--ink-3); }
+.plainsplit-key.is-team i { background: var(--ink-5); }
+.plainsplit-key.is-other i { background: var(--rule-strong); opacity: .35; }
+.plainsplit-key.is-left i { background: var(--gain); }
+.plainsplit-key.is-bad i { background: var(--loss); }
+
+/* ─── Une jauge : où l'on en est d'un seuil ─── */
+.plainmeter { display: flex; flex-direction: column; gap: 6px; }
+.plainmeter-track { position: relative; height: 8px; background: var(--rule); border-radius: 4px; }
+.plainmeter-track > i {
+  display: block; height: 100%; background: var(--warn); border-radius: 4px;
+  transition: width .5s var(--ease-soft);
+}
+.plainmeter-track > i.is-ok { background: var(--gain); }
+/* Le trait du seuil : à cent pour cent, quoi qu'il arrive. */
+.plainmeter-mark {
+  position: absolute; left: calc(100% / 1.4); top: -3px; bottom: -3px;
+  width: 2px; background: var(--ink); border-radius: 1px;
+}
+.plainmeter-label { font-size: 11px; color: var(--ink-5); }
+
+/* ─── La simulation tient dans moins de place ───
+   Trente curseurs déroulés d'emblée, chacun dans un pavé de cent pixels :
+   on cherchait le sien au pouce avant d'avoir décidé de quoi parler. Tout
+   est replié, et ce qui s'ouvre est plus serré. */
+.sim-knobs .refine-block { margin-top: 10px; }
+.sim-line { padding: 10px 0; }
+.sim-line-name { font-size: 11.5px; }
+.knob { padding: 9px 0; }
+.knob-top { margin-bottom: 3px; }
+.knob-label { font-size: 12px; }
+.knob-value { font-size: 14px; }
+.sim-levers { gap: 4px 18px; }

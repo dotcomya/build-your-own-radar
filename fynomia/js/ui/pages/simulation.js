@@ -125,7 +125,9 @@ function leverGroups(levers, onLive) {
         h('div', { class: 'sim-levers' }, ...b.items.map((l) => knob(l, onLive))),
       )),
     )
-    return fold(g.label, g.note, body, { id: `sim-${g.key}`, open: i === 0 })
+    // Tout est replié au départ : quatre groupes ouverts, c'étaient trente
+    // curseurs déroulés avant qu'on ait décidé de quoi on voulait parler.
+    return fold(g.label, `${mine.length} curseur${mine.length > 1 ? 's' : ''} · ${g.note}`, body, { id: `sim-${g.key}` })
   }).filter(Boolean)
 }
 
@@ -146,14 +148,14 @@ function knob(lever, onLive) {
   const max = Math.max(lever.max, base * 1.6 || lever.max)
   const input = h('input', {
     type: 'range', min, max, step: lever.step, value: initial,
-    'aria-label': `${lever.line} — ${lever.label}`, class: 'lever-range',
+    'aria-label': `${lever.line} \u2014 ${lever.label}`, class: 'lever-range',
   })
 
   const paint = (raw) => {
     value.textContent = lever.fmt(raw)
     const delta = raw - base
     const same = Math.abs(delta) < (lever.step || 1) / 2
-    shift.textContent = same ? '' : `${delta > 0 ? '+' : '−'}${lever.fmt(Math.abs(delta))}`
+    shift.textContent = same ? '' : `${delta > 0 ? '+' : '\u2212'}${lever.fmt(Math.abs(delta))}`
     shift.className = `knob-shift num ${same ? '' : delta > 0 ? 'up' : 'down'}`
     value.classList.toggle('is-moved', !same)
   }
@@ -166,24 +168,33 @@ function knob(lever, onLive) {
     onLive()
   })
 
-  const reset = h('button', {
-    class: 'knob-base', title: 'Revenir à la valeur de ton plan',
+  // La valeur du plan, pos\u00e9e sur la piste.
+  //
+  // Elle vivait sous le curseur, en gris, parmi trois autres mentions : pour
+  // savoir de combien on s'\u00e9tait \u00e9cart\u00e9, il fallait lire un nombre et le
+  // comparer de t\u00eate \u00e0 un autre. Un trait pointill\u00e9 \u00e0 sa place exacte, le
+  // chiffre dessous, dit la m\u00eame chose sans calcul \u2014 comme le seuil sur la
+  // courbe des volumes. Un clic dessus y ram\u00e8ne le curseur.
+  const at = max > min ? ((base - min) / (max - min)) * 100 : 0
+  const mark = h('button', {
+    class: 'knob-mark', style: { left: `${Math.min(100, Math.max(0, at))}%` },
+    title: `Ton plan : ${lever.fmt(base)} \u2014 cliquer pour y revenir`,
     onClick: () => { input.value = base; lever.write(sandbox.draft, base); paint(base); onLive() },
-  }, lever.fmt(base))
+  },
+    h('i', { 'aria-hidden': 'true' }),
+    h('b', { class: 'num' }, lever.fmt(base)),
+  )
 
   return h('div', { class: 'knob' },
     h('div', { class: 'knob-top' },
       h('label', { class: 'knob-label' }, lever.label),
       h('div', { class: 'knob-readout' }, value, shift),
     ),
-    input,
-    h('div', { class: 'knob-foot' },
-      h('span', { class: 'knob-basetag' }, 'ton plan'),
-      reset,
-      lever.hint ? h('span', { class: 'knob-why' }, lever.hint) : null,
-    ),
+    h('div', { class: 'knob-track' }, input, mark),
+    lever.hint ? h('span', { class: 'knob-why' }, lever.hint) : null,
   )
 }
+
 
 /* ──────────────────────── Ce que ça donne, en direct ─────────────────────── */
 

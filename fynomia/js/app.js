@@ -15,7 +15,7 @@ import { resetLiveNumbers } from './ui/impact.js'
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderChat } from './ui/pages/chat.js'
 import { renderDeck, resetDeck } from './ui/pages/deck.js'
-import { installMotion, consumeViewChange, travel, takeTravel } from './ui/motion.js'
+import { installMotion, consumeViewChange, travel, takeTravel, armTravel } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
 import { checklist } from './ui/checklist.js'
 import { goToGap, settle } from './ui/spotlight.js'
@@ -90,6 +90,13 @@ function navigate(to) {
   // ne déclenche aucun événement : l'écran restait figé et le clic semblait
   // perdu. On redessine explicitement dans ce cas.
   if (location.hash === next) { render(); window.scrollTo(0, 0); return }
+  // Tout déplacement vers un autre module est un voyage.
+  //
+  // Seul « Y aller » l'armait, parce que lui seul passait par `goToGap`. Un
+  // clic sur l'EBITDA, sur le rail, sur « Les comptes » changeait d'écran
+  // sans rien montrer du trajet — la même action se sentait ou non selon le
+  // bouton qui la déclenchait. C'est armé ici, une fois, pour tous.
+  armTravel('page')
   location.hash = next
 }
 
@@ -381,7 +388,8 @@ window.addEventListener('resize', () => {
 })
 
 // ────────────────────────────────── Démarrage ──────────────────────────────
-window.addEventListener('hashchange', render)
+// Le retour du navigateur est un déplacement comme un autre : il voyage aussi.
+window.addEventListener('hashchange', () => { armTravel('page'); render() })
 /**
  * La célébration d'une étape franchie.
  *

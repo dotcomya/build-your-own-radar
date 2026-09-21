@@ -7,7 +7,10 @@
  *
  *   1. Rentabilité   — le modèle dégage-t-il un résultat, et à partir de quand ;
  *   2. Trésorerie    — le compte tient-il jusque-là, et sinon de combien ;
- *   3. Rémunération  — ce qui revient au fondateur, une fois tout payé.
+ *   3. Rémunération  — ce qui revient au fondateur, une fois tout payé ;
+ *   4. Point mort    — ce qu'il faut vendre pour couvrir les charges ;
+ *   5. Sur 100 €     — où part l'argent encaissé, et ce qu'il en reste ;
+ *   6. Croissance    — ce que le plan promet d'une année sur l'autre.
  *
  * Cette page ne calcule rien de neuf. Elle prend ce que le moteur a produit et
  * l'écrit en phrases : un titre qui est déjà la réponse, trois lignes pour la
@@ -16,10 +19,11 @@
  * synthèse.
  */
 
-import { h, svg, euro, monthLabel } from './dom.js'
+import { h, svg, euro, pct, num, monthLabel } from './dom.js'
 import { goToGap } from './spotlight.js'
 import { icon } from './icons.js'
 import { checklist } from './checklist.js'
+import { changed } from './motion.js'
 import store from '../state/store.js'
 
 const n = (v) => Number(v) || 0
@@ -36,17 +40,22 @@ export function plainBoard(s, r, navigate, goRefine) {
   // « aucune année ne dégage de bénéfice » — serait exact et inutile : ce
   // n'est pas le modèle qui est mauvais, c'est qu'il n'y a rien dedans.
   if (!(r.pnl.revenue || []).some((v) => n(v) > 0)) return emptyBoard(goRefine)
-  const money = profitCard(r)
-  const cash = cashCard(r)
-  const mine = takeCard(s, r)
+  // Six réponses, dans l'ordre où elles se posent : est-ce que ça gagne, est-ce
+  // que ça tient, ce qu'il m'en reste — puis ce qu'il faut vendre pour couvrir,
+  // où part l'argent, et à quelle vitesse tout ça monte. Ensemble, elles font
+  // le tour de ce qu'on veut savoir avant d'ouvrir un compte de résultat.
+  const cards = [
+    profitCard(r), cashCard(r), takeCard(s, r),
+    breakEvenCard(s, r), keepCard(r), growthCard(r),
+  ]
 
   return h('div', { class: 'plain' },
     h('p', { class: 'plain-lede' },
-      'Ton plan en trois phrases : ce que le modèle dégage, ce que le compte encaisse, ce qui te revient.'),
-    h('div', { class: 'plain-cards' }, money, cash, mine),
+      'Ton plan en six phrases : ce que le modèle dégage, ce que le compte encaisse, ce qui te revient — et ce qu’il faut vendre pour que ça tienne.'),
+    h('div', { class: 'plain-cards' }, ...cards),
     h('div', { class: 'plain-foot' },
       h('p', {},
-        'Mêmes chiffres que l’onglet Analyse, sans le vocabulaire. Si l’une des trois te surprend, la réponse est là-bas — ou dans ce qu’il te reste à poser.'),
+        'Mêmes chiffres que l’analyse détaillée, sans le vocabulaire. Si l’une de ces six phrases te surprend, la réponse est en dessous — ou dans ce qu’il te reste à poser.'),
       h('div', { class: 'plain-foot-go' },
         // Une synthèse qui se lit au sortir du parcours doit dire la suite :
         // il reste des lignes à poser, et chacune resserre ces trois phrases.
@@ -176,9 +185,105 @@ function takeCard(s, r) {
   })
 }
 
+/* ────────────────────────────── 4. Le point mort ────────────────────────── */
+
+/** Ce qu'il faut vendre pour ne plus perdre d'argent. */
+function breakEvenCard(s, r) {
+  const first = r.pnl.netResult.findIndex((v) => v > 0)
+  const ref = first >= 0 ? first : 0
+  const need = n(r.kpis.breakEven[ref])
+  const revenue = n(r.pnl.revenue[ref])
+  const done = need > 0 && revenue >= need
+  const share = need > 0 ? Math.min(1.4, revenue / need) : 0
+
+  if (!need) {
+    return card({
+      tone: 'bad', kicker: 'Le point mort', title: 'Pas de seuil calculable', ico: 'cible',
+      body: "Tant qu'une vente rapporte moins qu'elle ne co\u00fbte, aucun volume ne couvre les charges : le seuil n'existe pas. C'est le prix ou le co\u00fbt de revient qu'il faut reprendre, pas les volumes.",
+      figure: { label: 'Seuil annuel', value: '\u2014', good: false },
+    })
+  }
+  return card({
+    tone: done ? 'good' : 'watch',
+    kicker: 'Le point mort',
+    title: done ? 'Le seuil est franchi' : `Il te faut ${euro(need)} par an`,
+    ico: 'cible',
+    body: done
+      ? `Tes charges sont couvertes \u00e0 partir de ${euro(need)} de chiffre d'affaires, et tu en fais ${euro(revenue)}. Au-del\u00e0 de ce seuil, chaque vente de plus tombe en r\u00e9sultat.`
+      : `Tes charges exigent ${euro(need)} de chiffre d'affaires pour \u00eatre couvertes ; tu en pr\u00e9vois ${euro(revenue)}. L'\u00e9cart se comble par le prix, par les volumes, ou en all\u00e9geant les charges fixes.`,
+    meter: { part: share, label: `${Math.round(share * 100)} % du seuil atteint en ann\u00e9e ${ref + 1}` },
+    figure: { label: 'Seuil annuel', value: euro(need), good: done },
+  })
+}
+
+/* ─────────────────────── 5. Ce qui reste sur 100 € ──────────────────── */
+
+/** O\u00f9 part l'argent, sur cent euros factur\u00e9s. */
+function keepCard(r) {
+  const i = Math.max(0, r.pnl.netResult.findIndex((v) => v > 0))
+  const p = r.pnl
+  const rev = n(p.revenue[i])
+  if (rev <= 0) {
+    return card({
+      tone: 'watch', kicker: 'Sur 100 \u20ac factur\u00e9s', title: 'Rien \u00e0 partager encore', ico: 'alimentaire',
+      body: "Aucun chiffre d'affaires sur cet exercice : pose un prix et des volumes, et cette carte dira o\u00f9 part chaque euro encaiss\u00e9.",
+      figure: { label: 'Marge nette', value: '\u2014', good: false },
+    })
+  }
+  const share = (v) => Math.max(0, Math.round((n(v) / rev) * 100))
+  const buys = share(p.variableCost[i])
+  const team = share(p.payroll[i])
+  const other = share(n(p.external[i]) + n(p.duties[i]) + n(p.amortisation[i]) + n(p.interest[i]) + n(p.corporateTax[i]))
+  const net = Math.round((n(p.netResult[i]) / rev) * 100)
+
+  return card({
+    tone: net >= 10 ? 'good' : net >= 0 ? 'watch' : 'bad',
+    kicker: 'Sur 100 \u20ac factur\u00e9s',
+    title: net >= 0 ? `Il t\u2019en reste ${net} \u20ac` : `Il t\u2019en manque ${Math.abs(net)} \u20ac`,
+    ico: 'alimentaire',
+    body: `Sur cent euros encaiss\u00e9s en ann\u00e9e ${i + 1}, les achats en prennent ${buys}, l'\u00e9quipe ${team}, les autres charges et l'imp\u00f4t ${other}.`,
+    split: [
+      { label: 'Achats', value: buys, tone: 'buys' },
+      { label: '\u00c9quipe', value: team, tone: 'team' },
+      { label: 'Autres', value: other, tone: 'other' },
+      { label: net >= 0 ? 'Reste' : 'Manque', value: Math.abs(net), tone: net >= 0 ? 'left' : 'bad' },
+    ],
+    figure: { label: 'Marge nette', value: `${net} %`, good: net >= 0 },
+  })
+}
+
+/* ───────────────────────────── 6. La croissance ─────────────────────────── */
+
+/** De la premi\u00e8re \u00e0 la cinqui\u00e8me ann\u00e9e : ce que le plan promet. */
+function growthCard(r) {
+  const rev = r.pnl.revenue.slice(0, 5).map((v) => n(v))
+  const a1 = rev[0], a5 = rev[4]
+  if (a1 <= 0 && a5 <= 0) {
+    return card({
+      tone: 'watch', kicker: 'La croissance', title: 'Aucun chiffre d\u2019affaires', ico: 'depart',
+      body: 'Pose un prix et des volumes : cette courbe dira ce que ton plan promet sur cinq ans.',
+      figure: { label: 'Ann\u00e9e 5', value: '\u2014', good: false },
+    })
+  }
+  const mult = a1 > 0 ? a5 / a1 : null
+  const yearly = a1 > 0 && a5 > 0 ? Math.pow(a5 / a1, 1 / 4) - 1 : null
+  return card({
+    tone: mult === null ? 'watch' : mult >= 2 ? 'good' : 'watch',
+    kicker: 'La croissance',
+    title: mult === null ? `${euro(a5)} en ann\u00e9e 5` : `${euro(a1)} \u2192 ${euro(a5)}`,
+    ico: 'depart',
+    body: yearly === null
+      ? `Ton chiffre d'affaires atteint ${euro(a5)} la cinqui\u00e8me ann\u00e9e.`
+      : `Ton chiffre d'affaires est multipli\u00e9 par ${num(mult, 1)} en quatre ans, soit ${pct(yearly, 0)} par an. C'est l'hypoth\u00e8se la plus fragile d'un pr\u00e9visionnel : un financeur la discutera avant toutes les autres.`,
+    bars: rev.map((v, k) => ({ label: `A${k + 1}`, value: v })),
+    figure: { label: 'Chiffre d\u2019affaires \u2014 ann\u00e9e 5', value: euro(a5), good: a5 >= a1 },
+  })
+}
+
+
 /* ──────────────────────────── La carte commune ──────────────────────────── */
 
-function card({ tone, kicker, title, body, figure, bars, line, ico }) {
+function card({ tone, kicker, title, body, figure, bars, line, split, meter, ico }) {
   return h('section', { class: `plaincard is-${tone}` },
     h('header', { class: 'plaincard-head' },
       ico ? h('span', { class: 'plaincard-ico', html: icon(ico) }) : null,
@@ -190,6 +295,8 @@ function card({ tone, kicker, title, body, figure, bars, line, ico }) {
     h('p', { class: 'plaincard-body' }, body),
     bars ? miniBars(bars) : null,
     line ? miniLine(line) : null,
+    split ? miniSplit(split) : null,
+    meter ? miniMeter(meter) : null,
     figure ? h('div', { class: 'plaincard-figure' },
       h('span', { class: 'plaincard-figure-label' }, figure.label),
       h('span', { class: `plaincard-figure-value num ${figure.good ? 'pos' : 'neg'}` }, figure.value),
@@ -206,7 +313,10 @@ function card({ tone, kicker, title, body, figure, bars, line, ico }) {
  */
 function miniBars(items) {
   const max = Math.max(1, ...items.map((i) => Math.abs(i.value)))
-  return h('div', { class: 'plainbars' },
+  // Les barres ne repoussent que si les chiffres ont bougé. Animées à chaque
+  // rendu, elles se seraient relevées à chaque frappe dans un champ.
+  const fresh = changed('plainbars', items.map((i) => Math.round(i.value)).join())
+  return h('div', { class: `plainbars ${fresh ? 'is-fresh' : ''}` },
     ...items.map((it) => h('div', { class: 'plainbar' },
       h('div', { class: 'plainbar-track' },
         h('i', {
@@ -240,5 +350,39 @@ function miniLine(values) {
       svg('polyline', { points: pts, class: 'plainline-path' }),
     ),
     h('span', { class: 'plainline-note' }, 'Ton compte, mois par mois, sur trois ans'),
+  )
+}
+
+/**
+ * O\u00f9 part chaque euro : une seule barre, en parts.
+ *
+ * Un camembert \u00e0 quatre parts demande de comparer des angles ; une barre
+ * empil\u00e9e se lit de gauche \u00e0 droite, comme la phrase qui la pr\u00e9c\u00e8de.
+ */
+function miniSplit(parts) {
+  const keep = parts.filter((p) => p.value > 0)
+  const total = keep.reduce((a, p) => a + p.value, 0) || 100
+  return h('div', { class: 'plainsplit' },
+    h('div', { class: 'plainsplit-bar' },
+      ...keep.map((p) => h('i', {
+        class: `is-${p.tone}`, style: { flexGrow: String(p.value / total) },
+        title: `${p.label} \u2014 ${p.value} \u20ac sur 100`,
+      })),
+    ),
+    h('div', { class: 'plainsplit-keys' },
+      ...keep.map((p) => h('span', { class: `plainsplit-key is-${p.tone}` },
+        h('i', {}), `${p.label} ${p.value}`)),
+    ),
+  )
+}
+
+/** Une jauge : o\u00f9 l'on en est d'un seuil, sans axe ni graduation. */
+function miniMeter({ part, label }) {
+  return h('div', { class: 'plainmeter' },
+    h('div', { class: 'plainmeter-track' },
+      h('i', { style: { width: `${Math.min(100, Math.max(2, part * 100))}%` }, class: part >= 1 ? 'is-ok' : '' }),
+      h('span', { class: 'plainmeter-mark', 'aria-hidden': 'true' }),
+    ),
+    h('span', { class: 'plainmeter-label' }, label),
   )
 }

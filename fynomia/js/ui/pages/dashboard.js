@@ -7,7 +7,7 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, tabs, moduleShell, foldSign } from '../dom.js'
+import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, fold, tabs, moduleShell, foldSign } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
@@ -25,6 +25,9 @@ import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
 import { verdict } from '../../engine/verdict.js'
+import { lookup } from '../glossary.js'
+import { icon } from '../icons.js'
+import { goToGap } from '../spotlight.js'
 import { journey } from '../../engine/journey.js'
 import { svg } from '../dom.js'
 import store from '../../state/store.js'
@@ -61,15 +64,17 @@ export function renderDashboard(navigate, refresh) {
   renderDashboard.year = y
   const pickYearFn = (next) => { renderDashboard.year = next; refresh() }
 
-  // Quatre temps, quatre onglets. Le premier répond en français aux trois
-  // questions qu'on se pose vraiment — est-ce que je gagne, est-ce que je
-  // tiens, combien il m'en reste — parce qu'un fondateur pressé ouvre cette
-  // page pour ça et non pour un graphique. Viennent ensuite où j'en suis, ce
-  // que disent mes chiffres, et ce qui se passerait si.
+  // Trois temps, trois onglets.
+  //
+  // « Synthèse » et « Analyse » n'en font plus qu'un : c'étaient deux lectures
+  // du même calcul, et passer de l'une à l'autre demandait de retrouver de
+  // quel exercice on parlait. La synthèse ouvre, en grand ; les six chiffres
+  // qui la fondent viennent dessous, dans l'ordre où on les interroge ; et
+  // l'analyse complète — courbes, cascade, présentation — attend dans un
+  // socle qu'on déplie quand on veut vérifier.
   const views = [
     { key: 'synthese', read: true, label: 'Synthèse' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
-    { key: 'analyse', read: true, label: 'Analyse' },
     { key: 'simulation', label: 'Simulation' },
   ]
   const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'synthese'
@@ -86,7 +91,38 @@ export function renderDashboard(navigate, refresh) {
       views, view, onPick: goView,
     }),
 
-    view === 'synthese' ? h('div', { class: 'view' }, plainBoard(s, r, navigate, () => goView('pilotage'))) : null,
+    view === 'synthese' ? h('div', { class: 'view board-stack' },
+      plainBoard(s, r, navigate, () => goView('pilotage')),
+      // Les six chiffres qu'un lecteur extérieur réclame, chacun repliable sur
+      // ce qu'il veut dire et sur la page où il se corrige.
+      kpiBoard(r, s, y, navigate),
+      // L'analyse entière, dans un socle. Elle ne disparaît pas : elle cesse
+      // seulement d'être la première chose qu'on voit.
+      fold('Analyse détaillée',
+        'Exercice par exercice, courbes, cascade et présentation',
+        h('div', { class: 'board-stack' },
+          yearBar(y, r, pickYearFn),
+          netEquation(r, y),
+          refine('board-cascade', 'Voir le détail ligne à ligne', moneyPanel(r, y)),
+          h('section', { class: 'panel story-panel is-key' },
+            h('div', { class: 'card-head' },
+              h('div', {},
+                h('h2', {}, 'Trajectoire sur cinq ans'),
+                h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
+              ),
+              h('span', { class: 'spacer' }),
+              h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
+            ),
+            storyline(r, s, { compact: narrow() }),
+            h('p', { class: 'chart-note' }, trajectorySentence(r)),
+          ),
+          ...boardCharts(r, s, y, level, sector, navigate),
+          deckBoard(navigate, refresh),
+          detailDisclosure(persona, r, s, y, sector, navigate, refresh),
+        ),
+        { id: 'board-analyse' },
+      ),
+    ) : null,
 
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
       // Le verdict, sur toute la largeur et en tête.
@@ -108,35 +144,6 @@ export function renderDashboard(navigate, refresh) {
       // Le bloc porte son propre titre dans l'opération : l'encadrer d'un
       // panneau avec un second titre ajoutait une couche pour rien.
       breakEvenBoard(r, s, vocabulary(s)),
-    ) : null,
-
-    // L'analyse part de ce qui a été saisi : l'année regardée, les six chiffres
-    // qui en découlent, puis les dessins — chacun accompagné d'une phrase qui
-    // dit ce qu'il montre. Un graphique qu'on doit interpréter seul ne sert
-    // qu'à celui qui connaissait déjà la réponse.
-    view === 'analyse' ? h('div', { class: 'view board-stack' },
-      yearBar(y, r, pickYearFn),
-      netEquation(r, y),
-      keyFigures(r, s, y, navigate),
-      refine('board-cascade', 'Voir le détail ligne à ligne', moneyPanel(r, y)),
-      h('section', { class: 'panel story-panel is-key' },
-        h('div', { class: 'card-head' },
-          h('div', {},
-            h('h2', {}, 'Trajectoire sur cinq ans'),
-            h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
-          ),
-          h('span', { class: 'spacer' }),
-          h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
-        ),
-        storyline(r, s, { compact: narrow() }),
-        h('p', { class: 'chart-note' }, trajectorySentence(r)),
-      ),
-      ...boardCharts(r, s, y, level, sector, navigate),
-      // La présentation est la même lecture, faite pour être montrée : elle
-      // vivait derrière un bouton, dans un autre module, et personne ne la
-      // trouvait. Elle se lit ici, un écran à la fois.
-      deckBoard(navigate, refresh),
-      detailDisclosure(persona, r, s, y, sector, navigate, refresh),
     ) : null,
 
     view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh, navigate)) : null,
@@ -313,87 +320,99 @@ function verdictCard(health, navigate) {
 /* ────────────────────────────── Les chiffres ──────────────────────────── */
 
 /**
- * Les six chiffres qu'on vient chercher, chacun avec sa trajectoire.
+ * Les six chiffres qu'un lecteur extérieur réclame.
  *
- * Un nombre seul ne dit pas s'il monte ou s'il tombe. Chaque tuile porte donc
- * sa courbe sur cinq ans : c'est la différence entre un tableau de chiffres et
- * un tableau de bord.
- */
-/** Les six nombres, calculés à part pour pouvoir être rejoués à la volée. */
-/**
- * Les quatre chiffres qui ne sont pas déjà dans l'opération.
- *
- * Chiffre d'affaires et résultat net figuraient ici en plus de l'équation
- * juste au-dessus : le même nombre deux fois, à dix centimètres d'écart, et la
- * page paraissait deux fois plus chargée qu'elle ne l'est.
+ * Chiffre d'affaires et résultat net n'y sont pas : l'opération de l'analyse
+ * les porte déjà, et le même nombre deux fois double la page sans rien
+ * ajouter. Restent les six qu'on ne déduit pas d'un coup d'œil.
  */
 function figureSet(r, s, y) {
   const k = r.kpis, p = r.pnl
   const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
+  const runway = Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? k.runwayMonths : null
+  const marginRate = p.revenue[y] > 0 ? k.marginRate[y] : null
   return [
     { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du chiffre d'affaires`,
-      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda' },
+      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda', ico: 'entreprises' },
     { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
-      note: reached ? 'franchi cette année' : 'pas encore franchi',
-      tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort' },
+      note: reached ? 'franchi cette ann\u00e9e' : 'pas encore franchi',
+      tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort', ico: 'cible' },
     { label: 'Tr\u00e9sorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
       note: `au plus bas en ${monthLabel(k.cashLow.month, r.startDate)}`, tone: k.cashLow.value < 0 ? 'neg' : 'pos',
-      spark: r.cash.balance, go: 'financement', help: 'tresorerie' },
+      spark: r.cash.balance, go: 'financement', help: 'tresorerie', ico: 'argent' },
     { label: '\u00c0 financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
       note: k.fundingNeed > 0 ? `\u00e0 r\u00e9unir avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la caisse se suffit',
-      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement' },
+      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement', ico: 'commerce' },
+    { label: 'Marge brute', value: marginRate === null ? '\u2014' : pct(marginRate, 0),
+      note: 'ce qui reste apr\u00e8s les co\u00fbts directs',
+      tone: marginRate === null ? '' : marginRate >= 0.4 ? 'pos' : marginRate >= 0.15 ? 'warn' : 'neg',
+      spark: k.marginRate, go: 'offre', help: 'margeBrute', ico: 'alimentaire' },
+    { label: 'Autonomie', value: runway === null ? 'Illimit\u00e9e' : `${num(runway, 0)} mois`,
+      note: runway === null ? 'la caisse ne se vide pas' : 'au rythme de consommation actuel',
+      tone: runway === null ? 'pos' : runway >= 12 ? 'pos' : runway >= 6 ? 'warn' : 'neg',
+      go: 'financement', help: 'runway', ico: 'depart' },
   ]
 }
 
-function keyFigures(r, s, y, navigate) {
+/**
+ * Le chiffre, puis ce qu'il veut dire, puis où on le corrige.
+ *
+ * C'étaient des tuiles qui emmenaient ailleurs d'un clic. Deux défauts : on
+ * quittait la page sans savoir ce qu'on allait y faire, et celui qui ne
+ * connaît pas le mot « EBITDA » n'avait qu'un « ? » à survoler pour
+ * l'apprendre. Un clic déplie maintenant la définition, ce à quoi le chiffre
+ * sert et le piège à connaître ; le déplacement vient après, par un bouton
+ * qui dit où il mène.
+ */
+function kpiBoard(r, s, y, navigate) {
   const figures = figureSet(r, s, y)
-   const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
-  // Chaque notion porte son « i » : EBITDA, point mort, résultat net ne sont
-  // pas des mots que tout le monde a déjà croisés, et un tableau de bord qui
-  // les affiche sans les définir suppose un bagage qu'un fondateur n'a pas
-  // forcément. La tuile reste cliquable ; le « i » ouvre l'explication.
-  const cells = figures.map((f) => {
-    const valueEl = h('span', { class: 'figure-value num' }, f.value)
-    const noteEl = h('span', { class: 'figure-note' }, f.note)
-    const btn = h('div', {
-      class: `figure ${f.tone || ''}`, role: 'button', tabindex: '0',
-      title: `Aller à la page ${f.go}`,
-      onClick: () => navigate(`#/${f.go}`),
-      onKeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`#/${f.go}`) } },
-    },
-      h('span', { class: 'figure-label' }, f.label),
-      valueEl,
-      h('span', { class: 'figure-foot' },
-        noteEl,
-        f.spark && f.spark.some((v) => v) ? sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }) : null,
-      ),
-      f.help ? h('span', { class: 'figure-help' }, helpButton(f.help)) : null,
-    )
-    return { btn, valueEl, noteEl }
-  })
+  const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
+  const memory = kpiBoard.open || (kpiBoard.open = new Set())
 
-  const section = h('section', { class: 'figures' }, ...cells.map((c) => c.btn))
-
-  // Pendant qu'un curseur bouge, on ne redessine pas la page : on réécrit les
-  // six nombres. C'est ce qui rend le geste continu au lieu de saccadé.
-  section.updateWith = (live) => {
-    if (section.isConnected === false) return
-    const next = figureSet(live, s, y)
-    next.forEach((f, i) => {
-      const cell = cells[i]
-      if (!cell) return
-      if (cell.valueEl.textContent !== f.value) {
-        cell.valueEl.textContent = f.value
-        cell.valueEl.classList.remove('changed')
-        void cell.valueEl.offsetWidth
-        cell.valueEl.classList.add('changed')
-      }
-      cell.noteEl.textContent = f.note
-      cell.btn.className = `figure ${f.tone || ''}`
-    })
-  }
-  return section
+  return h('section', { class: 'kpis6' },
+    h('header', { class: 'kpis6-head' },
+      h('h2', {}, 'Les six chiffres qu\u2019on te demandera'),
+      h('p', {}, 'Clique sur l\u2019un d\u2019eux : il dit ce qu\u2019il signifie avant d\u2019emmener l\u00e0 o\u00f9 il se corrige.'),
+    ),
+    h('div', { class: 'kpis6-grid' },
+      ...figures.map((f) => {
+        const g = lookup(f.help)
+        const el = h('details', { class: `kpi6 ${f.tone || ''}`, open: memory.has(f.help) || null },
+          h('summary', { class: 'kpi6-head' },
+            f.ico ? h('span', { class: 'kpi6-ico', 'aria-hidden': 'true', html: icon(f.ico) }) : null,
+            h('span', { class: 'kpi6-id' },
+              h('span', { class: 'kpi6-label' }, f.label),
+              h('span', { class: 'kpi6-value num' }, f.value),
+              h('span', { class: 'kpi6-note' }, f.note),
+            ),
+            f.spark && f.spark.some((v) => v)
+              ? h('span', { class: 'kpi6-spark' }, sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }))
+              : null,
+            foldSign(),
+          ),
+          h('div', { class: 'kpi6-body' },
+            g ? h('p', { class: 'kpi6-what' }, g.what) : null,
+            g && g.use ? h('p', { class: 'kpi6-use' }, g.use) : null,
+            g && g.watch ? h('p', { class: 'kpi6-watch' }, h('b', {}, '\u00c0 surveiller \u2014 '), g.watch) : null,
+            h('button', {
+              class: 'btn btn-sm',
+              onClick: (e) => { e.preventDefault(); goToGap({ route: f.go }, navigate) },
+            }, `Aller voir \u2014 ${PAGE_NAME[f.go] || f.go}`),
+          ),
+        )
+        el.addEventListener('toggle', () => { el.open ? memory.add(f.help) : memory.delete(f.help) })
+        return el
+      }),
+    ),
+  )
 }
+
+/** Le nom des pages, tel que le rail les nomme. */
+const PAGE_NAME = {
+  resultats: '\u00c9tats financiers', financement: 'Financement', offre: 'Offre et revenus',
+  achats: 'Achats et co\u00fbts', equipe: '\u00c9quipe', projet: 'Mon projet',
+}
+
 
 /* ────────────────────── Le plan, en graphiques ───────────────────── */
 
