@@ -164,43 +164,74 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
     isOpen && h('div', { class: 'item-body' },
       tabs(sections, sec, (k) => { memberCard.sec = k; refresh() }),
 
-      sec === 'poste' ? h('div', { class: 'view' },
-        h('div', { class: 'grid grid-3' },
-          textField({ label: 'Intitulé du poste', value: m.role, onInput: (v, o) => set({ role: v }, undefined, o) }),
-          selectField({
-            label: 'Type de contrat', value: m.contractType,
-            options: Object.entries(CONTRACT_TYPES).map(([k, v]) => ({ value: k, label: v.label })),
-            onInput: (v) => set({ contractType: v }),
-          }),
-          ['cdi', 'cdd'].includes(m.contractType) ? selectField({
-            label: 'Statut', value: m.status,
-            options: Object.entries(STATUSES).map(([k, v]) => ({ value: k, label: v.label })),
-            onInput: (v) => set({ status: v }),
-          }) : null,
-        ),
-        h('div', { class: 'grid grid-2 mt' },
-          unitAmount({
-            label: `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
-            value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
-            hint: annual
-              ? `Soit ${euro(m.monthlyGross)} par mois. ${contract.help}`
-              : contract.help,
-            onUnit: (k) => { renderTeam.unit = k; refresh() },
-            onInput: (v) => set({ monthlyGross: v }, undefined, { silent: true }),
-          }),
-          h('div', { class: 'paycard' },
-            h('div', { class: 'paycard-row' },
-              h('span', {}, "Coût pour l'entreprise"),
-              h('strong', { class: 'num' }, `${euro(cost.cost * 12)} / an`),
-            ),
-            h('div', { class: 'paycard-row is-net' },
-              h('span', {}, m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt'),
-              h('strong', { class: 'num' }, `${euro((m.contractType === 'tns' ? cost.gross : cost.net) * 12)} / an`),
-            ),
-            count > 1 ? h('div', { class: 'paycard-note' }, `Pour ${count} personnes : ${euro(cost.cost * count * 12)} par an.`) : null,
+      sec === 'poste' ? h('div', { class: 'view' }, (() => {
+        // Le coût se recalcule sous les doigts.
+        //
+        // Le salaire s'enregistrait « en silence » — le modèle était à jour,
+        // l'écran ne l'apprenait jamais. On tapait 50 000 € et on lisait le
+        // coût de 3 000 €, sans rien pour signaler l'écart. C'est le défaut le
+        // plus grave qu'on puisse avoir dans un outil de chiffrage : il donne
+        // un chiffre faux avec l'assurance d'un chiffre juste.
+        //
+        // Le silence reste — un redessin complet à chaque caractère ferait
+        // perdre le curseur — mais les trois nombres qui dépendent du salaire
+        // sont réécrits à la main, à chaque frappe. Pas de rendu, pas de perte
+        // de focus, et le chiffre est toujours celui qu'on vient de taper.
+        const coutValue = h('strong', { class: 'num' }, `${euro(cost.cost * 12)} / an`)
+        const netValue = h('strong', { class: 'num' }, `${euro((m.contractType === 'tns' ? cost.gross : cost.net) * 12)} / an`)
+        const plural = h('div', { class: 'paycard-note' },
+          count > 1 ? `Pour ${count} personnes : ${euro(cost.cost * count * 12)} par an.` : '')
+        const soit = h('div', { class: 'field-hint' },
+          annual ? `Soit ${euro(m.monthlyGross)} par mois. ${contract.help}` : contract.help)
+
+        const relire = (brut) => {
+          const vivant = { ...m, monthlyGross: brut }
+          let neuf
+          try {
+            neuf = monthlyCost(vivant, {
+              headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0,
+              fiscal: store.scenario.fiscal, benefits: store.scenario.hr?.benefits,
+            })
+          } catch { return }
+          coutValue.textContent = `${euro(neuf.cost * 12)} / an`
+          netValue.textContent = `${euro((m.contractType === 'tns' ? neuf.gross : neuf.net) * 12)} / an`
+          plural.textContent = count > 1 ? `Pour ${count} personnes : ${euro(neuf.cost * count * 12)} par an.` : ''
+          soit.textContent = annual ? `Soit ${euro(brut)} par mois. ${contract.help}` : contract.help
+        }
+
+        const champSalaire = unitAmount({
+          label: `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
+          value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
+          onUnit: (k) => { renderTeam.unit = k; refresh() },
+          onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
+        })
+
+        return [
+          // Tout ce qui décrit le poste sur une ligne ; ce qu'il coûte dessous.
+          h('div', { class: 'grid grid-4 postline' },
+            textField({ label: 'Intitulé du poste', value: m.role, onInput: (v, o) => set({ role: v }, undefined, o) }),
+            selectField({
+              label: 'Type de contrat', value: m.contractType,
+              options: Object.entries(CONTRACT_TYPES).map(([k, v]) => ({ value: k, label: v.label })),
+              onInput: (v) => set({ contractType: v }),
+            }),
+            ['cdi', 'cdd'].includes(m.contractType) ? selectField({
+              label: 'Statut', value: m.status,
+              options: Object.entries(STATUSES).map(([k, v]) => ({ value: k, label: v.label })),
+              onInput: (v) => set({ status: v }),
+            }) : null,
+            champSalaire,
           ),
-        ),
-      ) : null,
+          soit,
+          h('div', { class: 'paystrip' },
+            h('div', { class: 'paystrip-cell' },
+              h('span', {}, "Coût pour l’entreprise"), coutValue),
+            h('div', { class: 'paystrip-cell is-net' },
+              h('span', {}, m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt'), netValue),
+            plural,
+          ),
+        ]
+      })()) : null,
 
       sec === 'dates' ? h('div', { class: 'view' },
         h('div', { class: 'grid grid-3' },

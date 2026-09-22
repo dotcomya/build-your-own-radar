@@ -4682,13 +4682,13 @@ details[open] > .refine-head .refine-sign {
 /* ─── L'interrupteur : une vraie bascule, pas un rechargement ─── */
 /* La pastille glisse, la piste change de couleur, la ligne s'éteint — le tout
    sur la même durée, pour que ce soit un seul mouvement et pas trois. */
-.onoff { transition: background .34s var(--ease-soft), border-color .34s var(--ease-soft); }
-.onoff > i { transition: transform .34s var(--ease-soft), background .34s var(--ease-soft); }
+.onoff { transition: background .18s var(--ease-soft), border-color .18s var(--ease-soft); }
+.onoff > i { transition: transform .18s var(--ease-soft), background .18s var(--ease-soft); }
 .onoff.is-switching { box-shadow: 0 0 0 4px var(--accent-wash); }
 .onoff:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 /* Ce qui est mis en pause s'estompe au lieu de clignoter. */
-.item, .card, .opex-line { transition: opacity .34s var(--ease-soft); }
+.item, .card, .opex-line { transition: opacity .2s var(--ease-soft); }
 .item.is-off, .card.is-off, .opex-line.is-off { opacity: .48; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5701,4 +5701,74 @@ details[open] > .refine-head .refine-sign {
   .plain-act-head { gap: 5px; }
   .plain-act-title { font-size: 18px; flex: 1 1 100%; }
   .plain-act-say { flex: 1 1 100%; }
+}
+
+/* ═══════════ La fiche d'un poste : une ligne, puis ce qu'il coûte ════════
+   L'intitulé, le contrat, le statut et le salaire décrivent le poste : ils
+   tiennent sur une ligne. Ce qu'il coûte à l'entreprise en découle, et se lit
+   dessous — c'est une conséquence, pas une quatrième saisie. */
+.grid.grid-4.postline { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1080px) { .grid.grid-4.postline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .grid.grid-4.postline { grid-template-columns: 1fr; } }
+.postline + .field-hint { margin-top: 8px; }
+
+.paystrip {
+  display: flex; align-items: stretch; flex-wrap: wrap; gap: 0;
+  margin-top: 14px; border: 1px solid var(--rule); border-radius: var(--r-md);
+  background: var(--surface-2); overflow: hidden;
+}
+.paystrip-cell {
+  flex: 1 1 220px; min-width: 0; padding: 13px 16px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+}
+.paystrip-cell + .paystrip-cell { border-left: 1px solid var(--rule); }
+.paystrip-cell > span { font-size: 13px; color: var(--ink-3); }
+.paystrip-cell > strong { font-size: 19px; font-weight: 650; letter-spacing: -.03em; color: var(--ink); white-space: nowrap; }
+.paystrip-cell.is-net > strong { color: var(--gain); }
+.paystrip .paycard-note {
+  flex: 1 1 100%; padding: 9px 16px; border-top: 1px solid var(--rule);
+  font-size: 12px; color: var(--ink-4);
+}
+.paystrip .paycard-note:empty { display: none; }
+@media (max-width: 620px) {
+  .paystrip-cell + .paystrip-cell { border-left: 0; border-top: 1px solid var(--rule); }
+}
+
+/* ═══════════ Le prix et ce qu'il coûte, côte à côte ══════════════════════
+   Empilés, ils obligeaient à retenir le premier pour comprendre le second.
+   Sur la même ligne, la marge se lit sans calcul mental. */
+.priceline {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 14px; align-items: end;
+}
+@media (max-width: 760px) { .priceline { grid-template-columns: 1fr; } }
+
+/* ═══════════ Un choix fait tient sur une ligne ═══════════════════════════
+   Trois cartes de type de client et sept formes juridiques restaient
+   dépliées longtemps après qu'on avait tranché : la moitié de l'écran pour
+   répéter une décision prise. Le choix posé se résume, et « Modifier »
+   rouvre la grille. */
+.pickdone {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 13px 16px; border: 1px solid var(--rule); border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.pickdone-mark {
+  flex: none; width: 19px; height: 19px; border-radius: 50%; align-self: center;
+  display: grid; place-items: center; background: var(--ink); color: var(--accent); font-size: 10px;
+}
+.pickdone-name {
+  font-family: var(--display); font-weight: 700; font-size: 15.5px;
+  letter-spacing: -.018em; color: var(--ink);
+}
+.pickdone-note { font-size: 12.8px; color: var(--ink-4); line-height: 1.45; min-width: 0; }
+.pickdone-edit {
+  flex: none; border: 0; background: none; cursor: pointer; font: inherit;
+  font-size: 12.5px; color: var(--signal-ink); padding: 3px 0;
+  border-bottom: 1px solid currentColor; align-self: center;
+}
+.pickdone-edit:hover { color: var(--ink); }
+@media (max-width: 560px) {
+  .pickdone { gap: 6px 10px; }
+  .pickdone-note { flex: 1 1 100%; }
 }

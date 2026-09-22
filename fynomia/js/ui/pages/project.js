@@ -23,6 +23,36 @@ import { resetSetup } from './setup.js'
 import { familyIcon } from '../icons.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
+/**
+ * Un choix fait n'a plus besoin de montrer ses concurrents.
+ *
+ * Trois cartes de type de client et sept formes juridiques restaient dépliées
+ * en permanence, longtemps après qu'on avait tranché. Elles occupaient la
+ * moitié de l'écran pour répéter une décision prise, et donnaient à la page
+ * l'air d'un formulaire qu'on n'a pas fini de remplir.
+ *
+ * Une fois le choix posé, il tient sur une ligne : ce qu'on a choisi, ce que
+ * ça implique, et « Modifier » pour rouvrir la grille. C'est la hiérarchie
+ * qu'on cherche — d'abord ce qui permet de décider, ensuite ce qui affine.
+ */
+const ouverts = new Set()
+
+function pickSet({ id, chosen, nom, note, cartes, refresh }) {
+  if (!chosen || ouverts.has(id)) {
+    return h('div', { class: 'picks' }, ...cartes)
+  }
+  return h('div', { class: 'pickdone' },
+    h('span', { class: 'pickdone-mark', 'aria-hidden': 'true' }, '\u2713'),
+    h('span', { class: 'pickdone-name' }, nom),
+    note ? h('span', { class: 'pickdone-note' }, note) : null,
+    h('span', { class: 'spacer' }),
+    h('button', {
+      class: 'pickdone-edit',
+      onClick: () => { ouverts.add(id); refresh() },
+    }, 'Modifier'),
+  )
+}
+
 const CLIENTS = [
   { key: 'b2b', name: 'Entreprises', note: 'Cycles longs, paiement à 30 ou 60 jours' },
   { key: 'b2c', name: 'Particuliers', note: 'Cycles courts, paiement comptant' },
@@ -116,15 +146,20 @@ export function renderProject(navigate, refresh) {
           h('span', { class: 'slab-tag' }, 'BFR'),
         ),
       ),
-      h('div', { class: 'picks' },
-        ...CLIENTS.map((c) => h('button', {
-          class: `pick ${(s.meta.clientType || 'b2b') === c.key ? 'active' : ''}`,
-          onClick: () => { set({ clientType: c.key }, 'Type de client'); refresh() },
-        },
-          h('div', { class: 'pick-name' }, c.name),
-          h('div', { class: 'pick-note' }, c.note),
-        )),
-      ),
+      (() => {
+        const cle = s.meta.clientType || 'b2b'
+        const choisi = CLIENTS.find((c) => c.key === cle)
+        return pickSet({
+          id: 'client', chosen: !!choisi, nom: choisi?.name, note: choisi?.note, refresh,
+          cartes: CLIENTS.map((c) => h('button', {
+            class: `pick ${cle === c.key ? 'active' : ''}`,
+            onClick: () => { set({ clientType: c.key }, 'Type de client'); ouverts.delete('client'); refresh() },
+          },
+            h('div', { class: 'pick-name' }, c.name),
+            h('div', { class: 'pick-note' }, c.note),
+          )),
+        })
+      })(),
     ),
     ),
 
@@ -142,15 +177,19 @@ export function renderProject(navigate, refresh) {
           h('span', { class: 'slab-tag' }, 'Fiscalité'),
         ),
       ),
-      h('div', { class: 'picks' },
-        ...legalChoices(sector).map((k) => h('button', {
-          class: `pick ${s.meta.legalForm === k ? 'active' : ''}`,
-          onClick: () => { applyLegal(k); refresh() },
-        },
-          h('div', { class: 'pick-name' }, LEGAL_FORMS[k].label),
-          h('div', { class: 'pick-note' }, LEGAL_FORMS[k].short),
-        )),
-      ),
+      (() => {
+        const forme = LEGAL_FORMS[s.meta.legalForm]
+        return pickSet({
+          id: 'forme', chosen: !!forme, nom: forme?.label, note: forme?.short, refresh,
+          cartes: legalChoices(sector).map((k) => h('button', {
+            class: `pick ${s.meta.legalForm === k ? 'active' : ''}`,
+            onClick: () => { applyLegal(k); ouverts.delete('forme'); refresh() },
+          },
+            h('div', { class: 'pick-name' }, LEGAL_FORMS[k].label),
+            h('div', { class: 'pick-note' }, LEGAL_FORMS[k].short),
+          )),
+        })
+      })(),
       h('p', { class: 'field-hint mt' }, LEGAL_FORMS[s.meta.legalForm]?.note || ''),
 
       refine('projet-fiscal', 'Affiner le régime fiscal',

@@ -51,17 +51,7 @@ export function plainBoard(s, r, navigate, goRefine) {
   // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
   // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
   // dans l'ordre où on se la pose.
-  const actes = [
-    { titre: 'Est-ce que ça tient ?',
-      dit: 'Le résultat et la trésorerie — les deux seules questions qui décident si l’entreprise passe l’année.',
-      cartes: [profitCard(r), cashCard(r)] },
-    { titre: 'D’où ça vient',
-      dit: 'Ce qui produit ce résultat : le poste qui pèse le plus, la répartition de chaque euro encaissé, et ce que tu te verses.',
-      cartes: [causeCard(r), keepCard(r), takeCard(s, r)] },
-    { titre: 'Où agir',
-      dit: 'Ce qu’il faudrait franchir, et à quelle vitesse le modèle y va.',
-      cartes: [breakEvenCard(s, r), growthCard(r)] },
-  ]
+  const actes = acts(s, r)
 
   return h('div', { class: 'plain' },
     ...actes.map((a) => h('section', { class: 'plain-act' },
@@ -89,6 +79,60 @@ export function plainBoard(s, r, navigate, goRefine) {
       ),
     ),
   )
+}
+
+/**
+ * Les trois actes, dits pour la situation qu'on a sous les yeux.
+ *
+ * Un titre d'acte fixe — « Est-ce que ça tient ? » — pose la question sans
+ * jamais y répondre, et laisse au lecteur le travail de trancher à partir de
+ * six cartes. Or c'est exactement ce travail-là qu'on lui doit. Chaque acte
+ * annonce donc sa réponse, tirée du modèle : rentable ou non, financé ou non,
+ * quel poste pèse, quel levier reste. La matière ne change pas ; ce qui change,
+ * c'est qu'on la lit au lieu de la déchiffrer.
+ */
+function acts(s, r) {
+  const p = r.pnl, k = r.kpis
+  const first = p.netResult.findIndex((v) => v > 0)
+  const rentable = first >= 0
+  const manque = n(k.fundingNeed) > 0
+  const i = Math.max(0, first)
+
+  // Le poste le plus lourd : c'est lui qui donne son verbe au troisième acte.
+  const blocs = [
+    { nom: 'la masse salariale', m: Math.abs(n(p.payroll[i])), ou: 'l’équipe' },
+    { nom: 'les achats', m: Math.abs(n(p.variableCost[i])), ou: 'le coût de revient' },
+    { nom: 'les charges fixes', m: Math.abs(n(p.external[i])) + Math.abs(n(p.duties[i])), ou: 'les charges' },
+  ].sort((a, b) => b.m - a.m)
+  const tete = blocs[0]
+
+  const tient = rentable && !manque
+    ? `Le modèle est rentable dès l’année ${first + 1} et la trésorerie ne passe jamais sous zéro. Ces deux cartes disent à quelles conditions ça tient.`
+    : rentable && manque
+      ? `Le modèle devient rentable en année ${first + 1}, mais il manque ${euro(k.fundingNeed)} avant d’y arriver. Rentable ne veut pas dire financé : c’est la trésorerie qui décide si tu vois cette année-là.`
+      : manque
+        ? `Aucun exercice ne dégage de bénéfice sur cinq ans, et il manque ${euro(k.fundingNeed)} au point bas. Ce sont les deux choses à traiter avant toutes les autres.`
+        : `Aucun exercice ne dégage de bénéfice sur cinq ans. La trésorerie tient, mais elle tient sur ce que tu as mis au départ.`
+
+  const vient = `${tete.nom.charAt(0).toUpperCase()}${tete.nom.slice(1)} est ton premier poste de dépense. ` + (rentable
+    ? 'Les trois cartes suivantes disent où part chaque euro encaissé, et ce qu’il t’en reste une fois tout payé.'
+    : 'Les trois cartes suivantes disent où part chaque euro encaissé — c’est là que se joue le retour à l’équilibre, pas ailleurs.')
+
+  const agir = rentable
+    ? `Le seuil est franchi en année ${first + 1}. Reste à savoir si la trajectoire qui y mène se défend devant quelqu’un qui la lira.`
+    : `Tant que le seuil n’est pas atteint, trois leviers seulement le déplacent : le prix, le volume, et ${tete.ou}. Ils ne se valent pas — le prix agit tout de suite, le volume suppose de la demande.`
+
+  return [
+    { titre: rentable && !manque ? 'Oui, ça tient' : rentable ? 'Ça tient, à condition d’être financé' : 'Non, pas encore',
+      dit: tient,
+      cartes: [profitCard(r), cashCard(r)] },
+    { titre: 'D’où ça vient',
+      dit: vient,
+      cartes: [causeCard(r), keepCard(r), takeCard(s, r)] },
+    { titre: rentable ? 'Ce qu’il reste à défendre' : 'Où agir',
+      dit: agir,
+      cartes: [breakEvenCard(s, r), growthCard(r)] },
+  ]
 }
 
 /** Rien à lire encore : on dit quoi poser, et où. */

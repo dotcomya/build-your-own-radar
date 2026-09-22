@@ -150,10 +150,8 @@ function costLink(a, voc, navigate) {
 function commissionRead(a, voc) {
   const deal = n(a.dealValue), rate = n(a.commissionRate)
   const take = deal * rate
-  if (!deal || !rate) {
-    return h('p', { class: 'pmode-read is-empty' },
-      "Pose le montant moyen d'une affaire et la part qui te revient : ton chiffre d'affaires sera cette part, pas l'affaire entière.")
-  }
+  if (!deal || !rate) return null
+
   return h('div', { class: 'pmode-read' },
     h('div', { class: 'pmode-read-line' },
       h('span', { class: 'num' }, euro(deal)),
@@ -339,18 +337,20 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
         ),
 
         mode === 'unit' ? h('section', { class: 'part' },
-          h('div', {},
+          // Ce qu'on encaisse et ce que ça coûte se lisent ensemble : séparés,
+          // ils obligeaient à retenir le premier pour comprendre le second.
+          //
+          // Le coût de revient ne se saisit pas ici : posé à deux endroits, il
+          // sortait deux fois du résultat. Il vit en charge par vente, et ce
+          // lien y emmène en affichant la valeur en cours.
+          h('div', { class: 'priceline' },
             numberField({
               label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT',
               hint: 'Ce que paie le client, une fois, hors taxes.',
               onInput: (v) => set({ unitPrice: v }),
             }),
+            costLink(a, voc, navigate),
           ),
-          // Le coût de revient a quitté cette section : saisi ici, il était
-          // recompté dans « Achats et coûts » neuf fois sur dix — le même euro
-          // sorti deux fois du résultat. Il vit désormais à un seul endroit,
-          // en charge par vente, où on le voit à côté des autres coûts.
-          costLink(a, voc, navigate),
           margin !== null && n(a.unitCost) > 0
             ? h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
                 h('div', { class: 'note-title' }, `Marge unitaire : ${euro(n(a.unitPrice) - n(a.unitCost))} par vente, soit ${pct(margin, 0)}`),
@@ -577,7 +577,15 @@ function volumesEditor(a, setVolumes, level, detail, refresh = () => {}) {
             numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
             numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que tu ne peux physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
-          h('div', { class: 'grid grid-2 mt' },
+          // Ce qui affine vient après ce qui décide.
+          //
+          // Trois nombres suffisent à poser une courbe de ventes : quand ça
+          // commence, combien au départ, à quelle vitesse ça monte — et
+          // jusqu'où on peut aller. Le freinage et l'attrition sont des
+          // réglages de second tour : ils ne servent qu'à celui qui a déjà une
+          // courbe et la trouve trop belle. Ils attendent donc derrière un pli.
+          refine('offre-volumes-fin', 'Affiner la courbe : freinage et attrition',
+          h('div', { class: 'grid grid-2' },
             numberField({
               label: 'Décélération de la croissance', field: 'growthDecay',
               // Le champ dit un freinage — 0 % veut dire « le taux que j'ai
@@ -598,7 +606,7 @@ function volumesEditor(a, setVolumes, level, detail, refresh = () => {}) {
                 onClick: () => goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' }, () => refresh()),
               }, 'Poser mon attrition →'),
             ),
-          ),
+          )),
           detail && volumeVisual(detail, voc),
         ),
   )
