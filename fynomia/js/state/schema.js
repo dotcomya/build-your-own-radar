@@ -194,7 +194,10 @@ export function newOpex(overrides = {}) {
 }
 
 export function newCapex(overrides = {}) {
-  return { id: uid('cpx'), label: 'Nouvel investissement', amount: 5000, month: 0, amortYears: 3, leasing: false, leaseMonthly: 0, leaseMonths: 36, rdShare: 0, contribution: false, ...overrides }
+  // Éteint d'office : une liste de matériel déjà cochée engage la trésorerie
+  // de quelqu'un qui n'a encore rien décidé. Le bouton « Ajouter un
+  // investissement » est un acte délibéré, lui : il passe `enabled: true`.
+  return { id: uid('cpx'), label: 'Nouvel investissement', amount: 5000, month: 0, amortYears: 3, leasing: false, leaseMonthly: 0, leaseMonths: 36, rdShare: 0, contribution: false, enabled: false, ...overrides }
 }
 
 export const CHANNELS = {

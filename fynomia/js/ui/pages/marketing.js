@@ -335,7 +335,7 @@ function campaignCard(c, index, r, open, refresh) {
 
   const on = c.enabled !== false
   return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
-    h('div', { class: 'item-head', onClick: () => { isOpen ? open.delete(c.id) : open.add(c.id); refresh() } },
+    h('div', { class: 'item-head', onClick: () => { const etait = isOpen; open.clear(); if (!etait) open.add(c.id); refresh() } },
       enableToggle(on, (v) => {
         store.update((sc) => { const x = sc.marketing.find((y) => y.id === c.id); if (x) x.enabled = v },
           { label: v ? 'Campagne réactivée' : 'Campagne en pause' })

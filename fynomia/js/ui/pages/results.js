@@ -48,7 +48,7 @@ export function renderResults(navigate, refresh) {
     h('div', { class: 'view' },
       view === 'resultat' ? pnlView(r, level)
         : view === 'tresorerie' ? cashView(r, level, refresh)
-        : view === 'bilan' ? balanceView(r)
+        : view === 'bilan' ? balanceView(r, refresh)
         : view === 'bfr' ? bfrView(r)
         : view === 'revenu' ? h('div', { class: 'merged' }, renderFounder(navigate, refresh))
         : taxView(r),
@@ -301,44 +301,208 @@ function cashView(r, level, refresh) {
   )
 }
 
-function balanceView(r) {
-  const rowsOf = (keys) => keys.map(([label, key, cls]) => h('tr', { class: cls || '' },
-    h('td', {}, label), ...r.balance.map((b) => h('td', { class: 'num' }, euro(b[key])))))
+/**
+ * L'exercice lu dans le bilan.
+ *
+ * Le bilan se regarde à une date, pas sur cinq ans : afficher les cinq
+ * colonnes côte à côte revient à demander au lecteur de faire lui-même le tri.
+ * On choisit l'année, on lit sa photo, et le tableau complet reste accessible
+ * pour ceux qui veulent comparer.
+ */
+let bilanAn = 0
+
+/**
+ * Le bilan, hiérarchisé.
+ *
+ * Il tenait dans un seul tableau de dix-sept lignes où tout avait le même
+ * poids : « Créance de TVA » s'y lisait exactement comme « Total actif », et
+ * les deux moitiés du bilan — ce qu'on détient, d'où vient l'argent —
+ * n'existaient que sous forme de deux lignes grises de séparation. Résultat :
+ * rien ne ressortait, et le lecteur devait reconstruire mentalement une
+ * structure que la comptabilité lui donne pourtant toute faite.
+ *
+ * Elle est maintenant rendue telle quelle : deux colonnes, trois masses par
+ * colonne, chaque masse avec son total, sa part du bilan et ses composantes en
+ * retrait. Un total de bilan en très grand ouvre chaque côté, parce que c'est
+ * le premier chiffre qu'on cherche. Le détail des cinq exercices n'est pas
+ * perdu : il se déplie sous la photo, dans le même tableau qu'avant.
+ */
+function balanceView(r, refresh) {
+  const nb = (v) => Number(v) || 0
+  const an = Math.max(0, Math.min(r.balance.length - 1, bilanAn))
+  const b = r.balance[an]
+
+  // Une trésorerie négative n'est pas un actif : c'est un découvert, et il se
+  // lit au passif. Le moteur le compte déjà ainsi ; l'affichage le disait mal.
+  const dispo = Math.max(0, nb(b.treasury))
+  const decouvert = Math.max(0, -nb(b.treasury))
+
+  const circulant = nb(b.receivables) + nb(b.stock) + nb(b.vatCredit) + nb(b.taxCredit)
+  const detteFi = nb(b.debt) + nb(b.shareholder) + decouvert
+  const detteExpl = nb(b.payables) + nb(b.vatDebt) + nb(b.taxDebt)
+
+  const actif = [
+    {
+      nom: 'Actif immobilisé', total: nb(b.netFixed),
+      dit: 'Ce que tu possèdes durablement',
+      lignes: [
+        { nom: 'Immobilisations brutes', v: nb(b.grossFixed) },
+        { nom: 'Amortissements cumulés', v: -nb(b.amortisation) },
+      ],
+    },
+    {
+      nom: 'Actif circulant', total: circulant,
+      dit: 'Ce qu’on te doit et ce que tu stockes',
+      lignes: [
+        { nom: 'Créances clients', v: nb(b.receivables) },
+        { nom: 'Stocks', v: nb(b.stock) },
+        { nom: 'Créance de TVA', v: nb(b.vatCredit) },
+        { nom: 'Créance de crédit d’impôt', v: nb(b.taxCredit) },
+      ],
+    },
+    {
+      nom: 'Disponibilités', total: dispo,
+      dit: 'Ce qui est réellement sur le compte',
+      lignes: [{ nom: 'Trésorerie', v: dispo }],
+    },
+  ]
+
+  const passif = [
+    {
+      nom: 'Capitaux propres', total: nb(b.equity),
+      dit: 'Ce que les associés ont mis, et laissé',
+      cle: true,
+      lignes: [
+        { nom: 'Capital et apports', v: nb(b.capital) },
+        { nom: 'Résultats accumulés', v: nb(b.retained) },
+      ],
+    },
+    {
+      nom: 'Dettes financières', total: detteFi,
+      dit: 'Ce que tu dois aux banques et aux associés',
+      lignes: [
+        { nom: 'Emprunts', v: nb(b.debt) },
+        { nom: 'Avances et comptes courants', v: nb(b.shareholder) },
+        { nom: 'Découvert bancaire', v: decouvert },
+      ],
+    },
+    {
+      nom: 'Dettes d’exploitation', total: detteExpl,
+      dit: 'Ce que tu dois à court terme',
+      lignes: [
+        { nom: 'Dettes fournisseurs', v: nb(b.payables) },
+        { nom: 'Dette de TVA', v: nb(b.vatDebt) },
+        { nom: 'Dette fiscale', v: nb(b.taxDebt) },
+      ],
+    },
+  ]
+
+  const masse = (g, base) => {
+    const part = base > 0 ? Math.min(1, Math.abs(g.total) / base) : 0
+    const lignes = g.lignes.filter((l) => Math.abs(l.v) > 0.5)
+    // Une masse vide reste affichee — elle fait partie de la structure du
+    // bilan — mais elle s'efface : « Actif immobilise : 0 € » ne doit pas
+    // peser autant que la masse qui porte 98 % du total.
+    return h('div', { class: `bil-mass ${g.cle ? 'is-key' : ''} ${Math.abs(g.total) < 0.5 ? 'is-empty' : ''}` },
+      h('div', { class: 'bil-mass-head' },
+        h('div', { class: 'spacer' },
+          h('div', { class: 'bil-mass-nom' }, g.nom),
+          h('div', { class: 'bil-mass-dit' }, g.dit),
+        ),
+        h('div', { class: 'bil-mass-fig' },
+          h('div', { class: `bil-mass-val ${g.total < 0 ? 'is-neg' : ''}` }, euro(g.total)),
+          h('div', { class: 'bil-mass-pct' }, base > 0 ? pct(g.total / base) : '—'),
+        ),
+      ),
+      h('div', { class: 'bil-mass-bar', 'aria-hidden': 'true' },
+        h('i', { style: { width: `${part * 100}%` } })),
+      lignes.length
+        ? h('div', { class: 'bil-lines' },
+            ...lignes.map((l) => h('div', { class: `bil-line ${l.v < 0 ? 'is-neg' : ''}` },
+              h('span', { class: 'bil-line-nom' }, l.nom),
+              h('span', { class: 'bil-line-val' }, euro(l.v)),
+            )))
+        : null,
+    )
+  }
+
+  const cote = (titre, dit, total, groupes) => h('div', { class: 'bil-side' },
+    h('div', { class: 'bil-side-head' },
+      h('div', { class: 'bil-side-kicker' }, titre),
+      h('div', { class: 'bil-side-total' }, euro(total)),
+      h('div', { class: 'bil-side-dit' }, dit),
+    ),
+    ...groupes.map((g) => masse(g, total)),
+  )
+
+  const ecart = nb(b.totalAssets) - nb(b.totalLiabilities)
+
   return h('div', { class: 'card' },
     h('div', { class: 'card-head' }, h('h2', {}, 'Bilans prévisionnels'), helpButton('bilan')),
-    h('div', { class: 'table-wrap' },
-      h('table', { class: 'data' },
-        h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
-        h('tbody', {},
-          h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Actif')),
-          ...rowsOf([
-            ['Immobilisations brutes', 'grossFixed'],
-            ['Amortissements cumulés', 'amortisation'],
-            ['Immobilisations nettes', 'netFixed'],
-            ['Créances clients', 'receivables'],
-            ['Stocks', 'stock'],
-            ['Créance de TVA', 'vatCredit'],
-            ["Créance de crédit d'impôt", 'taxCredit'],
-            ['Trésorerie', 'treasury'],
-            ['Total actif', 'totalAssets', 'total'],
-          ]),
-          h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Passif')),
-          ...rowsOf([
-            ['Capital', 'capital'],
-            ['Résultats accumulés', 'retained'],
-            ['Capitaux propres', 'equity', 'highlight'],
-            ['Emprunts', 'debt'],
-            ['Avances et comptes courants', 'shareholder'],
-            ['Dettes fournisseurs', 'payables'],
-            ['Dette de TVA', 'vatDebt'],
-            ['Dette fiscale', 'taxDebt'],
-            ['Total passif', 'totalLiabilities', 'total'],
-          ]),
+    h('div', { class: 'card-body' },
+
+      // L'année se choisit ici, et toute la photo suit.
+      h('div', { class: 'bil-years', role: 'tablist', 'aria-label': 'Exercice' },
+        ...r.balance.map((_, y) => h('button', {
+          class: `bil-year ${y === an ? 'is-on' : ''}`,
+          type: 'button',
+          role: 'tab',
+          'aria-selected': y === an ? 'true' : 'false',
+          onClick: () => { bilanAn = y; refresh && refresh() },
+        }, yearLabel(y))),
+        h('span', { class: 'bil-years-dit' }, `Photo au 31 décembre de l’année ${an + 1}`),
+      ),
+
+      h('div', { class: 'bil-cols' },
+        cote('Actif', 'Ce que l’entreprise détient', nb(b.totalAssets), actif),
+        cote('Passif', 'D’où vient l’argent', nb(b.totalLiabilities), passif),
+      ),
+
+      h('div', { class: 'bil-check' },
+        Math.abs(ecart) < Math.max(50, nb(b.totalAssets) * 0.01)
+          ? `Actif et passif s’équilibrent à ${euro(nb(b.totalAssets))}.`
+          : `Écart actif / passif de ${euro(ecart)} — arrondi ou poste non modélisé, sans incidence sur la trésorerie.`),
+    ),
+
+    // Rien n'est retiré : le tableau des cinq exercices reste disponible pour
+    // qui veut comparer les colonnes, il ne s'impose simplement plus.
+    h('details', { class: 'bil-full' },
+      h('summary', {}, 'Les cinq exercices, ligne à ligne'),
+      h('div', { class: 'table-wrap' },
+        h('table', { class: 'data' },
+          h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
+          h('tbody', {},
+            h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Actif')),
+            ...bilanRows(r, [
+              ['Immobilisations brutes', 'grossFixed'],
+              ['Amortissements cumulés', 'amortisation'],
+              ['Immobilisations nettes', 'netFixed'],
+              ['Créances clients', 'receivables'],
+              ['Stocks', 'stock'],
+              ['Créance de TVA', 'vatCredit'],
+              ["Créance de crédit d'impôt", 'taxCredit'],
+              ['Trésorerie', 'treasury'],
+              ['Total actif', 'totalAssets', 'total'],
+            ]),
+            h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Passif')),
+            ...bilanRows(r, [
+              ['Capital', 'capital'],
+              ['Résultats accumulés', 'retained'],
+              ['Capitaux propres', 'equity', 'highlight'],
+              ['Emprunts', 'debt'],
+              ['Avances et comptes courants', 'shareholder'],
+              ['Dettes fournisseurs', 'payables'],
+              ['Dette de TVA', 'vatDebt'],
+              ['Dette fiscale', 'taxDebt'],
+              ['Total passif', 'totalLiabilities', 'total'],
+            ]),
+          ),
         ),
       ),
     ),
+
     h('div', { class: 'card-body' },
-      r.balance.some((b) => b.equity < 0)
+      r.balance.some((x) => x.equity < 0)
         ? h('div', { class: 'note danger' },
             h('div', { class: 'note-title' }, 'Capitaux propres négatifs'),
             "Tes pertes cumulées dépassent les apports. Juridiquement, les associés doivent se prononcer sur la poursuite de l'activité dès que les capitaux propres passent sous la moitié du capital social. Renforce les apports ou accélère le retour à l'équilibre.")
@@ -347,6 +511,12 @@ function balanceView(r) {
             `Les capitaux propres restent positifs sur tout l'horizon, à ${euro(r.balance[4].equity)} en fin d'année 5, pour un total de bilan de ${euro(r.balance[4].totalAssets)}.`),
     ),
   )
+}
+
+/** Les lignes du tableau complet, une par poste, cinq colonnes. */
+function bilanRows(r, keys) {
+  return keys.map(([label, key, cls]) => h('tr', { class: cls || '' },
+    h('td', {}, label), ...r.balance.map((b) => h('td', { class: 'num' }, euro(b[key])))))
 }
 
 function bfrView(r) {

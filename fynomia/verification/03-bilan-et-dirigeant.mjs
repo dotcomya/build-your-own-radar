@@ -37,9 +37,20 @@ const base = () => {
   const s = base()
   s.activities = [newActivity({ name:'Presta', unitPrice: 8000, unitCost: 0, paymentLag: 0,
     volumes:{ mode:'manual', manual: Array.from({length:60},()=> 3) } })]
-  s.capex = [newCapex({ label:'Matériel', amount: 60000, month: 0, amortYears: 5 })]
+  // Un investissement proposé naît éteint : il ne sort de la trésorerie et ne
+  // s'amortit qu'une fois retenu par le fondateur. Le test le retient donc
+  // explicitement — et vérifie juste après qu'éteint, il ne coûte rien.
+  s.capex = [newCapex({ label:'Matériel', amount: 60000, month: 0, amortYears: 5, enabled: true })]
   const r = compute(s)
   ok('dotation linéaire annuelle', near(r.pnl.amortisation[0], 12000, 1), `${Math.round(r.pnl.amortisation[0])} €/an`)
+
+  const eteint = compute({ ...s, capex: [newCapex({ label:'Matériel', amount: 60000, month: 0, amortYears: 5 })] })
+  ok('un investissement non retenu ne coûte rien',
+     eteint.pnl.amortisation[0] === 0 && eteint.balance[0].grossFixed === 0,
+     `dotation ${Math.round(eteint.pnl.amortisation[0])} € / immobilisations ${Math.round(eteint.balance[0].grossFixed)} €`)
+  ok('le rallumer rétablit exactement la dotation',
+     near(r.pnl.amortisation[0] - eteint.pnl.amortisation[0], 12000, 1),
+     `${Math.round(eteint.pnl.amortisation[0])} → ${Math.round(r.pnl.amortisation[0])} €/an`)
   ok('valeur nette comptable décroissante',
      r.balance.every((b,i)=> i===0 || b.netFixed <= r.balance[i-1].netFixed + 0.5),
      r.balance.map(b=>Math.round(b.netFixed)).join(' / '))

@@ -254,6 +254,10 @@ export function capexSeries(items) {
   const perItem = []
 
   for (const item of items) {
+    // Un investissement éteint ne sort pas de la trésorerie et ne s'amortit
+    // pas : il reste dans la liste, prêt à être rallumé, mais il ne compte
+    // pas. C'est la même règle que pour une charge en pause.
+    if (item.enabled === false) { perItem.push({ id: item.id, label: item.label, amount: 0, yearly: Array(5).fill(0) }); continue }
     const amount = Number(item.amount) || 0
     const month = Math.max(0, Math.min(MONTHS - 1, Number(item.month) || 0))
     const years = Number(item.amortYears) || 0

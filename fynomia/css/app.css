@@ -3744,8 +3744,8 @@ details[open] > .refine-head .refine-sign {
    reconnaît d'un coup d'œil parmi les cartes blanches sans rien éclairer. */
 .affine {
   position: relative;
-  border: 1px solid var(--tune-rule); border-left: 3px solid var(--tune);
-  border-radius: 0 12px 12px 0; background: var(--tune-wash);
+  border: 1px solid var(--rule); border-left: 3px solid var(--ink);
+  border-radius: 0 12px 12px 0; background: none;
   padding: 18px 20px; margin-top: 22px;
 }
 .affine-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
@@ -3757,11 +3757,11 @@ details[open] > .refine-head .refine-sign {
 }
 .affine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 9px; }
 .affine-item {
-  text-align: left; border: 1px solid var(--tune-rule); border-radius: 10px; background: #fff;
+  text-align: left; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
   padding: 11px 13px; cursor: pointer; font: inherit;
   transition: border-color .12s, background .12s;
 }
-.affine-item:hover { border-color: var(--tune); background: #fff; }
+.affine-item:hover { border-color: var(--ink); background: var(--surface-2); }
 .affine-item-label { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
 .affine-item-why { font-size: 11px; color: var(--ink-4); margin-top: 4px; line-height: 1.45; }
 .affine-item-go {
@@ -6254,3 +6254,294 @@ details[open] > .refine-head .refine-sign {
   font-family: var(--mono); font-size: 10px; color: var(--ink-5); letter-spacing: .04em;
 }
 @media (prefers-reduced-motion: reduce) { .st-dot { animation: none; } }
+
+/* ─── Le dépliage d'une carte : posé, pas claqué ─── */
+/* Le corps apparaissait d'un coup, à sa pleine hauteur. Il monte maintenant
+   de quelques pixels en se révélant — assez pour que l'œil suive le geste,
+   trop court pour qu'on l'attende. */
+.item.open > .item-body { animation: item-unfold .26s var(--ease-soft) both; transform-origin: top; }
+@keyframes item-unfold {
+  from { opacity: 0; transform: translateY(-8px) scaleY(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .item.open > .item-body { animation: none; } }
+
+/* ─── Un investissement qu'on retient, ou qu'on écarte ─── */
+/* Une liste de matériel déjà cochée engage la trésorerie de quelqu'un qui n'a
+   rien décidé. Éteint, l'investissement tient sur une ligne et ne compte pas. */
+.capexcard { transition: border-color .16s var(--ease-soft), opacity .16s var(--ease-soft); }
+.capexcard:not(.is-on) { opacity: .62; }
+.capexcard.is-on { border-top: 2px solid var(--ink); }
+.capexcard-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.capexcard-name {
+  font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink);
+  letter-spacing: -.01em;
+}
+.capexcard-sub { font-family: var(--mono); font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
+.capexcard.is-on > .card-body { border-top: 1px solid var(--rule); animation: item-unfold .26s var(--ease-soft) both; }
+
+/* ═══════════════ Synthèse — essai : le fond, et l'écran qui vit ═══════════ */
+/* L'écran portait la direction artistique mais pas les informations. Il porte
+   maintenant les chiffres clés, les cinq exercices, le chemin du chiffre
+   d'affaires au résultat net, la part de chaque offre et les ratios — dans la
+   même écriture : pas de cadre, des règles d'un pixel, la chasse fixe pour
+   tout ce qui se compte, et une entrée en séquence plutôt qu'un bloc posé. */
+
+/* ─── L'entrée en séquence ─── */
+/* Chaque élément porte son rang en --i ; la cascade se fait en décalant le
+   départ, jamais en allongeant la durée : l'écran doit être lisible en moins
+   d'une seconde, quel que soit le nombre de lignes. */
+@keyframes st-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes st-grow-up { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes st-widen { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes st-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes st-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to   { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+
+.st.is-enter > * { animation: st-rise .42s var(--ease-soft) both; }
+.st.is-enter > *:nth-child(2) { animation-delay: .05s; }
+.st.is-enter > *:nth-child(3) { animation-delay: .1s; }
+.st.is-enter > *:nth-child(4) { animation-delay: .14s; }
+.st.is-enter > *:nth-child(5) { animation-delay: .18s; }
+.st.is-enter > *:nth-child(6) { animation-delay: .22s; }
+.st.is-enter > *:nth-child(7) { animation-delay: .26s; }
+.st.is-enter > *:nth-child(8) { animation-delay: .3s; }
+
+/* ─── Les six chiffres qu'on cite de mémoire ─── */
+.st-keys {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule);
+}
+.st-key { padding: 14px 16px 15px; border-left: 1px solid var(--rule); }
+.st-key:first-child { border-left: 0; }
+.st-key.is-strong { background: rgba(214, 240, 52, .16); }
+.st-key-cle {
+  font-family: var(--mono); font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--ink-5);
+}
+.st-key-val {
+  margin-top: 7px; font-family: var(--mono); font-size: 22px; font-weight: 600;
+  letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.st-key-val.is-neg { color: #A8231C; }
+.st-key-sous { margin-top: 4px; font-size: 11px; line-height: 1.4; color: var(--ink-4); }
+.st.is-enter .st-key { animation: st-rise .4s var(--ease-soft) both; animation-delay: calc(.06s + var(--i) * .045s); }
+@media (max-width: 1080px) { .st-keys { grid-template-columns: repeat(3, 1fr); } .st-key:nth-child(4) { border-left: 0; } }
+@media (max-width: 620px) { .st-keys { grid-template-columns: repeat(2, 1fr); } .st-key:nth-child(odd) { border-left: 0; } }
+
+/* ─── Cinq exercices, trois séries, une ligne de zéro ─── */
+.st-perf-keys { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-left: auto; }
+.st-leg.is-ca > i { background: var(--ink); }
+.st-leg.is-ebitda > i { background: #6E7166; }
+.st-leg.is-net > i { background: var(--accent); border: 1px solid var(--accent-dim); }
+
+.st-perf-plot { position: relative; height: 254px; display: flex; gap: 2px; }
+.st-perf-zero {
+  position: absolute; left: 0; right: 0; height: 1px; background: var(--ink);
+  opacity: .28; top: calc((100% - 26px) * var(--zero)); pointer-events: none; z-index: 1;
+}
+.st-perf-col {
+  position: relative; flex: 1; cursor: pointer; border-radius: 3px;
+  transition: background .16s var(--ease-soft);
+}
+.st-perf-col:hover { background: rgba(14, 15, 12, .04); }
+.st-perf-col.is-picked { background: rgba(214, 240, 52, .2); }
+.st-perf-col:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.st-perf-bars { position: absolute; top: 0; left: 0; right: 0; bottom: 26px; display: flex; }
+.st-perf-slot { position: relative; flex: 1; }
+.st-perf-bar { position: absolute; left: 14%; right: 14%; min-height: 1px; display: block; }
+.st-perf-bar.is-ca { background: var(--ink); }
+.st-perf-bar.is-ebitda { background: #6E7166; }
+.st-perf-bar.is-net { background: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-dim); }
+.st-perf-bar.is-down { background: #A8231C; box-shadow: none; }
+.st-perf-year {
+  position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-5); padding-top: 7px;
+  border-top: 1px solid var(--rule);
+}
+.st-perf-col.is-picked .st-perf-year { color: var(--ink); font-weight: 600; border-top-color: var(--ink); }
+.st.is-enter .st-perf-bar { animation: st-grow-up .48s var(--ease-soft) both; animation-delay: calc(.16s + var(--i) * .03s); transform-origin: bottom; }
+.st.is-enter .st-perf-bar.is-down { transform-origin: top; }
+
+/* ─── Du chiffre d'affaires au résultat net, marche par marche ─── */
+.st-ladder { display: flex; flex-direction: column; }
+.st-step {
+  display: grid; grid-template-columns: minmax(96px, 1.1fr) minmax(60px, 2fr) 74px 42px;
+  align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--rule);
+}
+.st-step:last-child { border-bottom: 0; }
+.st-step-nom { font-size: 12px; color: var(--ink-4); letter-spacing: -.005em; }
+.st-step.is-solde .st-step-nom { font-weight: 700; color: var(--ink); }
+.st-step.is-out .st-step-nom::before { content: '− '; font-family: var(--mono); color: var(--ink-5); }
+.st-step-bar { display: block; height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+.st-step-bar > i { display: block; height: 100%; background: #9B9E93; }
+.st-step.is-solde .st-step-bar > i { background: var(--ink); }
+.st-step.is-out .st-step-bar > i { background: #C9A3A0; }
+.st-step:last-child .st-step-bar > i { background: var(--accent); }
+.st-step-val {
+  font-family: var(--mono); font-size: 12px; text-align: right; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.st-step.is-solde .st-step-val { font-weight: 700; }
+.st-step-pct { font-family: var(--mono); font-size: 10.5px; text-align: right; color: var(--ink-5); }
+.st.is-enter .st-step-bar > i { animation: st-widen .5s var(--ease-soft) both; animation-delay: calc(.2s + var(--i) * .035s); transform-origin: left; }
+
+.st-cols-even { grid-template-columns: 1fr 1fr; align-items: start; }
+.st.is-enter .st-bar { animation: st-wipe .6s var(--ease-soft) both; animation-delay: .22s; }
+.st-bar > i { transition: width .45s var(--ease-soft); }
+
+/* ─── La part de chaque offre ─── */
+.st-mix-rows { display: flex; flex-direction: column; }
+.st-mix-row {
+  display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(80px, 3fr) 82px 46px;
+  align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule);
+}
+.st-mix-row:last-child { border-bottom: 0; }
+.st-mix-nom {
+  font-size: 12.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.st-mix-bar { display: block; height: 8px; background: var(--rule); border-radius: 4px; overflow: hidden; }
+.st-mix-bar > i { display: block; height: 100%; background: var(--ink); }
+.st-mix-row:first-child .st-mix-bar > i { background: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-dim); }
+.st-mix-val {
+  font-family: var(--mono); font-size: 12px; text-align: right; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.st-mix-pct { font-family: var(--mono); font-size: 10.5px; text-align: right; color: var(--ink-5); }
+.st.is-enter .st-mix-bar > i { animation: st-widen .5s var(--ease-soft) both; animation-delay: calc(.24s + var(--i) * .05s); transform-origin: left; }
+
+/* ─── La courbe, qu'on peut interroger ─── */
+.st-curve-wrap { position: relative; }
+.st-curve-hit { position: absolute; inset: 0; cursor: crosshair; }
+.st-curve-rule {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--ink);
+  opacity: 0; transition: opacity .12s var(--ease-soft); pointer-events: none;
+}
+.st-curve-dot {
+  position: absolute; top: 0; left: 0; width: 9px; height: 9px; margin: -5px 0 0 -5px;
+  border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink);
+  opacity: 0; transition: opacity .12s var(--ease-soft); pointer-events: none;
+}
+.st-curve-hit.is-on .st-curve-rule, .st-curve-hit.is-on .st-curve-dot { opacity: 1; }
+.st.is-enter .st-curve-line { animation: st-draw .95s var(--ease-soft) both; animation-delay: .2s; }
+.st.is-enter .st-curve-fill { animation: st-rise .5s var(--ease-soft) both; animation-delay: .7s; }
+
+/* ─── Les ratios, en chasse fixe ─── */
+.st-ratio-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule);
+}
+.st-ratio { padding: 12px 14px 13px; border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.st-ratio:nth-child(4n + 1) { border-left: 0; }
+.st-ratio-nom { font-size: 11.5px; font-weight: 600; color: var(--ink); }
+.st-ratio-val {
+  margin-top: 5px; font-family: var(--mono); font-size: 19px; font-weight: 600;
+  color: var(--ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.st-ratio-dit { margin-top: 3px; font-size: 10.5px; line-height: 1.4; color: var(--ink-5); }
+.st.is-enter .st-ratio { animation: st-rise .4s var(--ease-soft) both; animation-delay: calc(.26s + var(--i) * .035s); }
+@media (max-width: 900px) { .st-ratio-grid { grid-template-columns: repeat(2, 1fr); } .st-ratio:nth-child(odd) { border-left: 0; } .st-ratio:nth-child(4n + 1) { border-left: 0; } }
+
+@media (max-width: 860px) {
+  .st-cols-even { grid-template-columns: 1fr; }
+  .st-step { grid-template-columns: minmax(80px, 1fr) minmax(40px, 1.4fr) 68px 38px; gap: 8px; }
+  .st-mix-row { grid-template-columns: minmax(80px, 1fr) minmax(40px, 1.6fr) 72px 40px; gap: 8px; }
+  .st-perf-plot { height: 210px; }
+}
+
+/* Une entrée animée est un confort ; elle ne doit jamais devenir un obstacle. */
+@media (prefers-reduced-motion: reduce) {
+  .st.is-enter > *, .st.is-enter .st-key, .st.is-enter .st-perf-bar,
+  .st.is-enter .st-step-bar > i, .st.is-enter .st-mix-bar > i,
+  .st.is-enter .st-bar, .st.is-enter .st-curve-line,
+  .st.is-enter .st-curve-fill, .st.is-enter .st-ratio { animation: none; }
+  .st-bar > i { transition: none; }
+}
+
+/* ═══════════════════ Le bilan, remis en ordre hiérarchique ═══════════════ */
+/* Dix-sept lignes de même poids ne forment pas un bilan : elles forment une
+   liste. Le bilan a une structure — deux côtés, trois masses par côté, des
+   postes sous chaque masse — et cette structure est la moitié de l'information.
+   Elle est rendue ici par la taille, par le retrait et par la part occupée,
+   jamais par la couleur seule. */
+
+.bil-years { display: flex; align-items: center; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+.bil-year {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+  padding: 5px 11px; border: 1px solid var(--rule); background: none; color: var(--ink-4);
+  border-radius: 999px; cursor: pointer; transition: all .16s var(--ease-soft);
+}
+.bil-year:hover { border-color: var(--ink-4); color: var(--ink); }
+.bil-year.is-on { background: var(--ink); border-color: var(--ink); color: var(--paper); font-weight: 600; }
+.bil-years-dit { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--ink-5); }
+
+.bil-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 860px) { .bil-cols { grid-template-columns: 1fr; gap: 32px; } }
+
+/* Le total du côté, d'abord : c'est le chiffre qu'on cherche en premier. */
+.bil-side-head { padding-bottom: 12px; border-bottom: 2px solid var(--ink); margin-bottom: 4px; }
+.bil-side-kicker {
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: .14em; color: var(--ink-5);
+}
+.bil-side-total {
+  margin-top: 5px; font-family: var(--mono); font-size: 30px; font-weight: 600;
+  letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.05;
+}
+.bil-side-dit { margin-top: 3px; font-size: 11.5px; color: var(--ink-4); }
+
+/* Une masse : son nom, son total, sa part du bilan, puis ses postes. */
+.bil-mass { padding: 14px 0 13px; border-bottom: 1px solid var(--rule); }
+.bil-mass:last-child { border-bottom: 0; }
+.bil-mass-head { display: flex; align-items: flex-start; gap: 14px; }
+.bil-mass-nom {
+  font-family: var(--display); font-size: 13.5px; font-weight: 700; color: var(--ink);
+  letter-spacing: -.01em;
+}
+.bil-mass-dit { margin-top: 2px; font-size: 10.5px; color: var(--ink-5); line-height: 1.35; }
+.bil-mass-fig { flex: none; text-align: right; }
+.bil-mass-val {
+  font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.bil-mass-val.is-neg { color: #A8231C; }
+.bil-mass-pct { font-family: var(--mono); font-size: 10px; color: var(--ink-5); margin-top: 1px; }
+.bil-mass-bar {
+  height: 4px; margin-top: 9px; background: var(--rule); border-radius: 2px; overflow: hidden;
+}
+.bil-mass-bar > i { display: block; height: 100%; background: #9B9E93; transition: width .4s var(--ease-soft); }
+.bil-mass.is-key .bil-mass-bar > i { background: var(--ink); }
+.bil-mass.is-key .bil-mass-nom { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+
+/* Les postes : en retrait, plus petits, jamais confondus avec leur masse. */
+.bil-lines { margin-top: 10px; padding-left: 14px; border-left: 1px solid var(--rule); }
+.bil-line {
+  display: flex; align-items: baseline; gap: 10px; padding: 3px 0;
+}
+.bil-line-nom { font-size: 11.5px; color: var(--ink-4); }
+.bil-line-val {
+  margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+.bil-line.is-neg .bil-line-val { color: #8A8D82; }
+
+.bil-check {
+  margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 11px; color: var(--ink-5);
+}
+
+/* Le tableau complet ne disparaît pas : il attend d'être demandé. */
+.bil-full { border-top: 1px solid var(--rule); }
+.bil-full > summary {
+  cursor: pointer; padding: 13px 20px; font-size: 12.5px; font-weight: 600; color: var(--ink-4);
+  list-style: none;
+}
+.bil-full > summary::-webkit-details-marker { display: none; }
+.bil-full > summary::before { content: '+ '; font-family: var(--mono); color: var(--ink-5); }
+.bil-full[open] > summary::before { content: '− '; }
+.bil-full > summary:hover { color: var(--ink); }
+.bil-mass.is-empty { opacity: .5; }
+.bil-mass.is-empty .bil-mass-bar { background: transparent; border-top: 1px dashed var(--rule); height: 0; margin-top: 12px; }

@@ -10,6 +10,7 @@ import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
+import { pop } from '../spotlight.js'
 import store from '../../state/store.js'
 
 export function renderCosts(navigate, refresh) {
@@ -47,7 +48,7 @@ export function renderCosts(navigate, refresh) {
   const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
   renderCosts.view = view
 
-  const addCapex = () => { store.update((sc) => sc.capex.push(newCapex()), { label: "Ajout d'investissement" }); refresh() }
+  const addCapex = () => { store.update((sc) => sc.capex.push(newCapex({ enabled: true })), { label: "Ajout d'investissement" }); refresh() }
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   return h('div', { class: 'content' },
@@ -67,6 +68,15 @@ export function renderCosts(navigate, refresh) {
     }),
 
     view === 'charges' ? h('div', { class: 'view' },
+      // Les suggestions du métier ouvrent la vue, comme dans Offre et revenus :
+      // ce sont des lignes qu'on prend ou qu'on laisse avant de dérouler tout
+      // ce qu'on a déjà posé, pas une note de bas de page.
+      tradeSuggest('opex', navigate, refresh)
+        || (missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
+            h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
+            ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: (e) => { pop(e.currentTarget); addFromTemplate(t) } }, `＋ ${t.label}`)),
+          ) : null),
+
       s.opex.length === 0
         ? h('div', { class: 'card' }, h('div', { class: 'empty' },
             h('div', { class: 'empty-icon' }, '▦'),
@@ -83,20 +93,11 @@ export function renderCosts(navigate, refresh) {
             // clients qu'il te faut, la seconde rogne la marge de chacun — ce
             // ne sont pas les mêmes questions, et on les range à part.
             ...costBlocks(s, r, level, refresh)),
-
-      // Le métier passe devant le générique : « cornets et pots, 0,18 € par
-      // glace vendue » vaut mieux que « fournitures ». Les pastilles neutres
-      // ne restent que pour les métiers qui n'ont pas encore leur liste.
-      tradeSuggest('opex', navigate, refresh)
-        || (missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
-            h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
-            ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: () => addFromTemplate(t) }, `＋ ${t.label}`)),
-          ) : null),
     ) : null,
 
     view === 'invest' ? h('div', { class: 'view', 'data-gap': 'capex' },
-      capexSection(s, r, level, refresh),
       tradeSuggest('capex', navigate, refresh),
+      capexSection(s, r, level, refresh),
     ) : null,
 
     view === 'repartition' && r ? h('div', { class: 'view' },
@@ -350,8 +351,27 @@ function capexRow(c, r, level, refresh) {
       refresh()
     }
   }
-  return h('div', { class: 'card', style: { marginBottom: '9px' } },
-    h('div', { class: 'card-body tight' },
+  // Un investissement s'allume avant de compter.
+  //
+  // Une liste de matériel déjà cochée engage la trésorerie de quelqu'un qui
+  // n'a encore rien décidé : cinquante mille euros sortent au premier mois
+  // parce qu'une suggestion de métier a été ajoutée. Éteint, l'investissement
+  // reste dans la liste, se lit d'une ligne, et ne pèse ni sur le compte ni
+  // sur l'amortissement. Allumé, il s'ouvre et compte — comme la JEI.
+  const on = c.enabled !== false
+  const bascule = (v) => { set({ enabled: v }, { label: v ? 'Investissement retenu' : 'Investissement écarté' }); refresh() }
+
+  return h('div', { class: `card capexcard ${on ? 'is-on' : ''}`, style: { marginBottom: '9px' } },
+    h('div', { class: 'capexcard-head' },
+      enableToggle(on, bascule, `capex-${c.id}`),
+      h('div', { class: 'spacer' },
+        h('div', { class: 'capexcard-name' }, c.label || 'Investissement'),
+        h('div', { class: 'capexcard-sub' }, on
+          ? `${euro(c.amount)} au mois ${(Number(c.month) || 0) + 1}${Number(c.amortYears) > 0 ? ` · amorti sur ${c.amortYears} ans` : ' · non amortissable'}`
+          : `${euro(c.amount)} — écarté, ne compte pas dans le plan`),
+      ),
+    ),
+    on ? h('div', { class: 'card-body tight' },
       // Les cadres de saisie s'alignent, pas les cellules.
       //
       // En alignant les cellules par le bas, le champ « Amortissement » — seul
@@ -379,7 +399,7 @@ function capexRow(c, r, level, refresh) {
       ),
       c.amortYears > 0 && !c.leasing && h('div', { class: 'tiny muted', style: { marginTop: '8px' } },
         `Soit ${euro((Number(c.amount) || 0) / (Number(c.amortYears) * 12))} de charge par mois pendant ${c.amortYears} an${c.amortYears > 1 ? 's' : ''}, alors que la trésorerie sort intégralement au mois ${(Number(c.month) || 0) + 1}.`),
-    ),
+    ) : null,
   )
 }
 

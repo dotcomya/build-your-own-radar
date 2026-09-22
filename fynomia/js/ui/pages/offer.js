@@ -159,7 +159,7 @@ function costLink(a, voc, navigate) {
     onClick: () => goToGap({ route: 'achats', view: 'charges', anchor: 'charges' }, navigate),
   },
     h('span', { class: 'costlink-text' },
-      h('b', {}, has ? `Co\u00fbt de revient : ${euro(a.unitCost)} par ${voc.one}` : `Ce que te co\u00fbte un ${voc.one}`),
+      h('b', {}, has ? `Co\u00fbt de revient : ${euro(a.unitCost)} par unit\u00e9 vendue` : 'Ce que te co\u00fbte une vente'),
       h('span', {}, has
         ? 'Il est compt\u00e9 dans le r\u00e9sultat. Se modifie dans les charges par vente.'
         : 'Se saisit en charge par vente, avec les autres co\u00fbts.'),
@@ -292,7 +292,12 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
   }
 
   return h('div', { class: `item ${isOpen ? 'open' : ''}` },
-    h('div', { class: 'item-head', onClick: () => { isOpen ? open.delete(a.id) : open.add(a.id); refresh() } },
+    // Une seule offre ouverte à la fois.
+    //
+    // Plusieurs cartes dépliées s'allumaient ensemble, et la couleur ne
+    // désignait plus rien : elle disait « ouvert » là où on attendait « c'est
+    // ici que je travaille ». Ouvrir referme donc les autres.
+    h('div', { class: 'item-head', onClick: () => { const etait = isOpen; open.clear(); if (!etait) open.add(a.id); refresh() } },
       h('span', { class: 'swatch', style: { background: PALETTE[index % PALETTE.length], width: '10px', height: '10px' } }),
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, a.name || 'Sans nom'),
@@ -353,7 +358,11 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
                   onInput: (v, o) => setCommission({ commissionRate: v }, o),
                 })
               : numberField({
-                  label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
+                  // Le mot du métier ne convient pas à toutes les offres d'un
+                  // même plan : « prix par nuitée » sur un ménage de fin de
+                  // séjour ne veut rien dire. « Prix » convient partout, et le
+                  // nom de l'offre est juste à côté pour dire de quoi il s'agit.
+                  label: 'Prix', field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
                   onInput: (v) => set({ unitPrice: v }),
                 }),
           selectField({
