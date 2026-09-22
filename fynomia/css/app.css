@@ -1779,9 +1779,15 @@ i.swatch.split-margin { background: var(--gain); }
    Le contenu se centre donc dans la hauteur disponible et s'élargit : le vide
    se répartit au lieu de tomber d'un bloc, et les réponses se rangent sur
    deux colonnes au lieu d'une file. */
+/* La question se pose en haut de l'écran.
+   Centrer verticalement paraissait élégant : ça répartissait le vide au lieu
+   de le laisser tomber d'un bloc. Mais sur l'écran du métier, qui est le plus
+   haut du parcours, ça poussait la question deux cents pixels vers le bas — un
+   trou franc au-dessus du titre, avant même d'avoir lu quoi que ce soit. Le
+   contenu remonte donc, et le vide reste là où il ne gêne personne : dessous. */
 .setup-main {
-  display: flex; flex-direction: column; justify-content: center;
-  min-height: calc(100vh - 4px); padding: 4vh 40px 5vh;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  padding: 34px 40px 60px;
 }
 .setup-card { max-width: 780px; width: 100%; }
 
