@@ -129,42 +129,54 @@ export function renderCosts(navigate, refresh) {
  *
  * Un menu déroulant n'acceptait qu'une réponse : il fallait dupliquer le
  * carton d'expédition pour l'offre A et pour l'offre B, et le pain à burger
- * autant de fois qu'il entre dans un plat. Chaque changement de prix se faisait
- * alors en trois endroits, et on en oubliait un.
+ * autant de fois qu'il entre dans un plat. Des pastilles acceptaient tout le
+ * monde, mais une par offre sur une ligne déjà pleine : à quatre offres, la
+ * ligne de charge ne parlait plus que de ça.
  *
- * Des pastilles, donc, qu'on allume : « Toutes » d'un côté, les offres de
- * l'autre. Rien d'allumé vaut « toutes » — c'est le cas le plus fréquent et il
- * n'a pas à se déclarer.
+ * Un bouton, donc, qui dit l'état en trois mots — « Toutes les offres »,
+ * « Menu du midi », « 3 offres » — et ouvre la liste à cocher. On coche
+ * plusieurs cases sans que le menu se referme, puisque c'est tout l'intérêt.
  */
-function scopeChips(o, set, refresh) {
+function scopePicker(o, set, refresh) {
   const offres = store.scenario.activities || []
   const ids = Array.isArray(o.activityIds) && o.activityIds.length
     ? o.activityIds
     : (o.activityId ? [o.activityId] : [])
-  const toutes = ids.length === 0
+  const ouverts = scopePicker.ouverts || (scopePicker.ouverts = new Set())
+
+  const nom = (id) => offres.find((a) => a.id === id)?.name || 'Sans nom'
+  const resume = ids.length === 0 ? 'Toutes les offres'
+    : ids.length === 1 ? nom(ids[0])
+      : `${ids.length} offres`
 
   const poser = (liste) => {
-    // On écrit les deux champs : la liste fait foi, et l'ancien champ reste
-    // juste pour qu'une version antérieure du logiciel lise la même chose.
+    // La liste fait foi ; l'ancien champ reste écrit pour qu'une version
+    // antérieure du logiciel lise la même chose.
     set({ activityIds: liste, activityId: liste.length === 1 ? liste[0] : null })
     refresh()
   }
 
-  return h('div', { class: 'cost-scope', role: 'group', 'aria-label': 'Offres concernées' },
-    h('button', {
-      class: `scopechip ${toutes ? 'on' : ''}`,
-      title: 'Cette charge porte sur tout ce que tu vends',
-      onClick: () => poser([]),
-    }, 'Toutes'),
-    ...offres.map((a) => {
-      const pris = ids.includes(a.id)
-      return h('button', {
-        class: `scopechip ${pris ? 'on' : ''}`,
-        title: pris ? `Retirer ${a.name}` : `Ajouter ${a.name}`,
-        onClick: () => poser(pris ? ids.filter((x) => x !== a.id) : [...ids, a.id]),
-      }, a.name || 'Sans nom')
-    }),
+  const ligne = (texte, coche, aller) => h('button', {
+    class: `scopepick-row ${coche ? 'on' : ''}`, type: 'button',
+    onClick: (e) => { e.stopPropagation(); aller() },
+  },
+    h('span', { class: 'scopepick-box', 'aria-hidden': 'true' }, coche ? '\u2713' : ''),
+    h('span', { class: 'scopepick-name' }, texte),
   )
+
+  const d = h('details', { class: 'scopepick', open: ouverts.has(o.id) || null },
+    h('summary', { class: 'scopepick-sum', title: 'Offres concernées par cette charge' },
+      h('span', { class: 'scopepick-text' }, resume),
+      h('span', { class: 'scopepick-chev', 'aria-hidden': 'true' }, '\u203A'),
+    ),
+    h('div', { class: 'scopepick-menu' },
+      ligne('Toutes les offres', ids.length === 0, () => poser([])),
+      ...offres.map((a) => ligne(a.name || 'Sans nom', ids.includes(a.id),
+        () => poser(ids.includes(a.id) ? ids.filter((x) => x !== a.id) : [...ids, a.id]))),
+    ),
+  )
+  d.addEventListener('toggle', () => { d.open ? ouverts.add(o.id) : ouverts.delete(o.id) })
+  return d
 }
 
 /**
@@ -262,7 +274,7 @@ function opexRow(o, r, level, refresh) {
       // tout ce qu'on vend : elle porte sur la glace, pas sur le café servi au
       // comptoir. Le sélecteur n'apparaît que pour les charges indexées.
       ['pctRevenue', 'perUnit'].includes(o.mode) && store.scenario.activities.length
-        ? scopeChips(o, set, refresh)
+        ? scopePicker(o, set, refresh)
         : null,
 
       detail ? h('span', { class: 'cost-year num' }, `${euro(detail.yearly[0], { compact: true })}/an`) : null,

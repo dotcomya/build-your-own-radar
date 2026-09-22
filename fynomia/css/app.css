@@ -6069,17 +6069,38 @@ details[open] > .refine-head .refine-sign {
 .item.open .foldsign { border-color: var(--tune); color: var(--tune); }
 
 /* ─── Sur quelles offres porte une charge indexée ─── */
-/* Un menu déroulant n'acceptait qu'une réponse. Des pastilles en acceptent
-   autant qu'il y a d'offres — et « Toutes » reste le cas par défaut. */
-.cost-scope { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
-.scopechip {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .02em;
-  padding: 4px 9px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
-  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  transition: border-color .12s, background .12s, color .12s;
+/* Une pastille par offre mangeait la ligne dès qu'il y en avait trois. Un
+   bouton dit l'état en trois mots et ouvre la liste à cocher ; le menu ne se
+   referme pas entre deux cases, puisque c'est tout l'intérêt. */
+.scopepick { position: relative; min-width: 0; }
+.scopepick-sum {
+  display: flex; align-items: center; gap: 5px; cursor: pointer; list-style: none;
+  padding: 4px 8px; border-radius: 999px; max-width: 168px;
+  border: 1px solid var(--rule); background: var(--surface);
+  font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  transition: border-color .12s, color .12s;
 }
-.scopechip:hover { border-color: var(--tune); color: var(--tune-ink); }
-.scopechip.on {
-  background: var(--tune); border-color: var(--tune); color: #fff; font-weight: 600;
+.scopepick-sum::-webkit-details-marker { display: none; }
+.scopepick-sum:hover { border-color: var(--tune); color: var(--tune-ink); }
+.scopepick[open] .scopepick-sum { border-color: var(--tune); color: var(--tune-ink); }
+.scopepick-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.scopepick-chev { flex: none; transition: transform .16s var(--ease-soft); }
+.scopepick[open] .scopepick-chev { transform: rotate(90deg); }
+.scopepick-menu {
+  position: absolute; z-index: 30; top: calc(100% + 5px); left: 0; min-width: 210px;
+  background: var(--surface); border: 1px solid var(--tune-rule); border-radius: 10px;
+  padding: 5px; box-shadow: 0 14px 34px -16px rgba(11, 14, 16, .5);
 }
+.scopepick-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; cursor: pointer;
+  padding: 6px 8px; border: 0; border-radius: 7px; background: none; font: inherit;
+  font-size: 12.5px; color: var(--ink-3); text-align: left;
+}
+.scopepick-row:hover { background: var(--tune-wash); color: var(--tune-ink); }
+.scopepick-row.on { color: var(--tune-ink); font-weight: 600; }
+.scopepick-box {
+  width: 15px; height: 15px; flex: none; display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 4px; font-size: 10px; line-height: 1;
+}
+.scopepick-row.on .scopepick-box { background: var(--tune); border-color: var(--tune); color: #fff; }
+.scopepick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
