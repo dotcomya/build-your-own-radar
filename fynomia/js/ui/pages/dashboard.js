@@ -11,7 +11,7 @@ import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, f
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
-import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence } from '../explain.js'
+import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
 import { renderStudio } from './studio.js'
 import { storyline, gauge } from '../story.js'
@@ -32,6 +32,7 @@ import { goToGap } from '../spotlight.js'
 import { checklist } from '../checklist.js'
 import { journey } from '../../engine/journey.js'
 import { svg } from '../dom.js'
+import { figureSet, PAGE_NAME, avancement } from '../figures.js'
 import store from '../../state/store.js'
 
 // Le jugement vient du moteur : l'écran et le PowerPoint exporté disent la
@@ -96,7 +97,7 @@ export function renderDashboard(navigate, refresh) {
       views, view, onPick: goView,
     }),
 
-    view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh)) : null,
+    view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh, goView)) : null,
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
       // Ce qui manque se dit avant ce qu'on a trouvé.
@@ -316,6 +317,7 @@ function finishBanner(s, navigate) {
   const c = checklist(s)
   if (!c.open || !c.next) return null
   const reste = c.open
+  const t = avancement(c)
   // Le bandeau disait ce qui manque ; il dit maintenant où l'on en est.
   //
   // « Ton dossier n'est pas terminé » ouvrait sur un reproche, et la promesse
@@ -324,12 +326,9 @@ function finishBanner(s, navigate) {
   // utilité : c'est ce qui donne envie de poser la ligne suivante.
   return h('section', { class: 'finish' },
     h('div', { class: 'finish-say' },
-      h('div', { class: 'finish-kicker' }, `Avancement : ${c.done} / ${c.total}`),
-      h('h2', { class: 'finish-big' },
-        `Renseigne tes ${reste} dernier${reste > 1 ? 's' : ''} paramètre${reste > 1 ? 's' : ''} de ton business`),
-      h('p', { class: 'finish-body' },
-        'Tes résultats actuels reposent sur des estimations génériques. ',
-        'Ajuste tes hypothèses pour obtenir un dossier prêt pour tes investisseurs et ta banque.'),
+      h('div', { class: 'finish-kicker' }, t.surtitre),
+      h('h2', { class: 'finish-big' }, t.titre),
+      h('p', { class: 'finish-body' }, t.texte),
       h('div', { class: 'finish-next' },
         h('span', { class: 'finish-next-tag' }, 'Prochaine étape'),
         h('span', { class: 'finish-next-label' }, c.next.label),
@@ -344,7 +343,7 @@ function finishBanner(s, navigate) {
       h('button', {
         class: 'btn btn-lg finish-list',
         onClick: () => { renderDashboard.view = 'pilotage'; navigate('#/tableau-de-bord') },
-      }, `Parcourir les ${reste} éléments restants à remplir`),
+      }, t.parcourir),
     ),
     h('div', { class: 'finish-meter', 'aria-hidden': 'true' },
       h('i', { style: { width: `${Math.round((c.done / Math.max(1, c.total)) * 100)}%` } }),
@@ -379,41 +378,6 @@ function verdictCard(health, navigate) {
 }
 
 /* ────────────────────────────── Les chiffres ──────────────────────────── */
-
-/**
- * Les six chiffres qu'un lecteur extérieur réclame.
- *
- * Chiffre d'affaires et résultat net n'y sont pas : l'opération de l'analyse
- * les porte déjà, et le même nombre deux fois double la page sans rien
- * ajouter. Restent les six qu'on ne déduit pas d'un coup d'œil.
- */
-function figureSet(r, s, y) {
-  const k = r.kpis, p = r.pnl
-  const reached = k.breakEven[y] && p.revenue[y] >= k.breakEven[y]
-  const runway = Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? k.runwayMonths : null
-  const marginRate = p.revenue[y] > 0 ? k.marginRate[y] : null
-  return [
-    { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du chiffre d'affaires`,
-      tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda', ico: 'entreprises' },
-    { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
-      note: reached ? 'franchi cette ann\u00e9e' : 'pas encore franchi',
-      tone: reached ? 'pos' : 'warn', spark: k.breakEven.map((v) => v || 0), go: 'resultats', help: 'pointMort', ico: 'cible' },
-    { label: 'Tr\u00e9sorerie au plus bas', value: euro(k.cashLow.value, { compact: true }),
-      note: `au plus bas en ${monthLabel(k.cashLow.month, r.startDate)}`, tone: k.cashLow.value < 0 ? 'neg' : 'pos',
-      spark: r.cash.balance, go: 'financement', help: 'tresorerie', ico: 'argent' },
-    { label: '\u00c0 financer', value: k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Rien',
-      note: k.fundingNeed > 0 ? `\u00e0 r\u00e9unir avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la caisse se suffit',
-      tone: k.fundingNeed > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement', ico: 'commerce' },
-    { label: 'Marge brute', value: marginRate === null ? '\u2014' : pct(marginRate, 0),
-      note: 'ce qui reste apr\u00e8s les co\u00fbts directs',
-      tone: marginRate === null ? '' : marginRate >= 0.4 ? 'pos' : marginRate >= 0.15 ? 'warn' : 'neg',
-      spark: k.marginRate, go: 'offre', help: 'margeBrute', ico: 'alimentaire' },
-    { label: 'Autonomie', value: runway === null ? 'Illimit\u00e9e' : `${num(runway, 0)} mois`,
-      note: runway === null ? 'la caisse ne se vide pas' : 'au rythme de consommation actuel',
-      tone: runway === null ? 'pos' : runway >= 12 ? 'pos' : runway >= 6 ? 'warn' : 'neg',
-      go: 'financement', help: 'runway', ico: 'depart' },
-  ]
-}
 
 /**
  * Le chiffre, puis ce qu'il veut dire, puis où on le corrige.
@@ -468,11 +432,6 @@ function kpiBoard(r, s, y, navigate) {
   )
 }
 
-/** Le nom des pages, tel que le rail les nomme. */
-const PAGE_NAME = {
-  resultats: '\u00c9tats financiers', financement: 'Financement', offre: 'Offre et revenus',
-  achats: 'Achats et co\u00fbts', equipe: '\u00c9quipe', projet: 'Mon projet',
-}
 
 
 /* ────────────────────── Le plan, en graphiques ───────────────────── */
@@ -625,20 +584,6 @@ function moneyFlow(r, y) {
   return items
 }
 
-/** Une phrase qui dit ce que le dessin montre, pour qui ne lit pas les dessins. */
-function moneyFlowSentence(r, y) {
-  const p = r.pnl
-  const rev = p.revenue[y]
-  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseigne tes ventes pour voir la cascade se remplir."
-  const kept = p.netResult[y] / rev
-  const biggest = [
-    { label: 'les achats', v: p.variableCost[y] },
-    { label: 'les charges externes', v: p.external[y] },
-    { label: "l'équipe", v: p.payroll[y] },
-  ].sort((a, b) => b.v - a.v)[0]
-  if (biggest.v <= 0) return `Sur 100 € facturés, il t’en reste ${Math.round(kept * 100)} € après impôt.`
-  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il t’en reste ${Math.round(kept * 100)} € après impôt.`
-}
 
 /* ──────────────────────── Actions déjà chiffrées ──────────────────────── */
 

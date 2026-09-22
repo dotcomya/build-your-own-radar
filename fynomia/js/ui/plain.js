@@ -32,10 +32,17 @@ const n = (v) => Number(v) || 0
 const left = () => { try { const c = checklist(store.scenario); return c.total - c.done } catch { return 0 } }
 const YEARS = ['année 1', 'année 2', 'année 3', 'année 4', 'année 5']
 
-/** La synthèse complète. `r` est le résultat du moteur, `s` le scénario. */
-export function plainBoard(s, r, navigate, goRefine) {
-  if (!r) return null
-
+/**
+ * Le récit de la synthèse, sans sa mise en page.
+ *
+ * Deux écrans lisent la même synthèse — l'onglet d'origine et son essai de
+ * forme. S'ils écrivaient chacun leurs phrases, le moindre correctif de
+ * formulation n'arriverait que dans l'un des deux, et le fondateur lirait deux
+ * verdicts différents pour un même plan. Les actes et leurs cartes sont donc
+ * produits ici, sous forme de données — titre, texte, chiffre, image à tracer
+ * — et chaque écran les dessine à sa façon.
+ */
+export function synthese(s, r) {
   // Avant le premier euro de chiffre d'affaires, on ne renvoyait qu'une phrase
   // fixe : « aucune synthèse n'est calculable ». Elle était exacte et fausse à
   // la fois — le plan ne vend encore rien, mais il coûte déjà quelque chose, et
@@ -45,6 +52,19 @@ export function plainBoard(s, r, navigate, goRefine) {
   // rien. Il y a une synthèse à rendre dans cet état : ce que ça coûte, combien
   // de temps la trésorerie tient, et ce qu'il faudra vendre pour couvrir.
   const sansCA = !(r.pnl.revenue || []).some((v) => n(v) > 0)
+  return { sansCA, actes: sansCA ? actsAvant(s, r) : acts(s, r) }
+}
+
+/** La phrase qui clôt la synthèse : d'où viennent ces lectures, et que faire d'un écart. */
+export const RELIRE = 'Ces lectures reposent sur les mêmes calculs que l’analyse détaillée, ci-dessous. Un écart avec ce que tu attendais vient soit d’une hypothèse à revoir, soit d’une ligne qui n’a pas encore été posée.'
+
+/** Combien de lignes du dossier restent à poser — pour le bouton qui y mène. */
+export const lignesRestantes = () => left()
+
+/** La synthèse complète. `r` est le résultat du moteur, `s` le scénario. */
+export function plainBoard(s, r, navigate, goRefine) {
+  if (!r) return null
+
   // Trois actes, pas six lectures.
   //
   // Les six cartes disaient quatre fois la même chose sous quatre formes : le
@@ -56,7 +76,7 @@ export function plainBoard(s, r, navigate, goRefine) {
   // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
   // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
   // dans l'ordre où on se la pose.
-  const actes = sansCA ? actsAvant(s, r) : acts(s, r)
+  const { actes } = synthese(s, r)
 
   return h('div', { class: 'plain' },
     ...actes.map((a) => h('section', { class: 'plain-act' },
@@ -64,11 +84,10 @@ export function plainBoard(s, r, navigate, goRefine) {
         h('h2', { class: 'plain-act-title' }, a.titre),
         h('p', { class: 'plain-act-say' }, a.dit),
       ),
-      h('div', { class: 'plain-cards' }, ...a.cartes.filter(Boolean)),
+      h('div', { class: 'plain-cards' }, ...a.cartes.filter(Boolean).map(card)),
     )),
     h('div', { class: 'plain-foot' },
-      h('p', {},
-        'Ces lectures reposent sur les mêmes calculs que l’analyse détaillée, ci-dessous. Un écart avec ce que tu attendais vient soit d’une hypothèse à revoir, soit d’une ligne qui n’a pas encore été posée.'),
+      h('p', {}, RELIRE),
       h('div', { class: 'plain-foot-go' },
         // Une synthèse qui se lit au sortir du parcours doit dire la suite :
         // il reste des lignes à poser, et chacune resserre ces trois phrases.
@@ -252,7 +271,7 @@ function coutCard(r) {
   const p = r.pnl
   const a1 = charges(r, 0)
   if (a1 <= 0) {
-    return card({
+    return spec({
       tone: 'watch', kicker: 'Charges', ico: 'argent',
       title: 'Aucune dépense saisie',
       body: 'Ni charge fixe, ni salaire, ni investissement n\u2019est encore entré dans le modèle. Le loyer, l\u2019assurance, le comptable, les logiciels : ce sont eux qui donnent la première marche à franchir.',
@@ -270,7 +289,7 @@ function coutCard(r) {
   ].filter((b) => b.v > 0)
   const part = (v) => Math.round((v / a1) * 100)
 
-  return card({
+  return spec({
     tone: 'watch', kicker: 'Charges', ico: 'argent',
     title: `${euro(a1)} de charges la première année`,
     body: `Soit ${euro(a1 / 12)} par mois, avant d\u2019avoir vendu quoi que ce soit. ` + (equipe > 0
@@ -296,7 +315,7 @@ function tenueCard(r) {
   const trésor = (r.cash?.balance || []).slice(0, 24).map((v) => n(v))
 
   if (mise <= 0) {
-    return card({
+    return spec({
       tone: 'bad', kicker: 'Trésorerie', ico: 'depart',
       title: brule > 0 ? 'Rien n\u2019est prévu pour financer le démarrage' : 'Aucun financement saisi',
       body: brule > 0
@@ -307,7 +326,7 @@ function tenueCard(r) {
     })
   }
 
-  return card({
+  return spec({
     tone: mois >= 18 ? 'good' : mois >= 9 ? 'watch' : 'bad',
     kicker: 'Trésorerie', ico: 'depart',
     title: brule > 0
@@ -334,7 +353,7 @@ function investCard(r) {
   const lignes = (r.capex?.perItem || []).filter((x) => n(x.amount ?? x.value ?? x.cost) > 0)
   const gros = lignes.slice().sort((a, b) => n(b.amount ?? b.value ?? b.cost) - n(a.amount ?? a.value ?? a.cost))[0]
 
-  return card({
+  return spec({
     tone: 'watch', kicker: 'Investissements', ico: 'savoir',
     title: `Ouvrir coûte ${euro(an1)}`,
     body: `${an1 === invest ? 'La totalité' : `${euro(an1)} sur ${euro(invest)}`} est dépensée la première année` +
@@ -355,14 +374,14 @@ function investCard(r) {
 function objectifCard(r) {
   const a1 = charges(r, 0)
   if (a1 <= 0) {
-    return card({
+    return spec({
       tone: 'watch', kicker: 'Objectif', ico: 'argent',
       title: 'Rien à couvrir pour l\u2019instant',
       body: 'Sans charge saisie, il n\u2019y a pas de seuil à franchir. Pose ce que coûte ton activité — même approximativement — et cette carte dira ce qu\u2019il faut encaisser pour l\u2019absorber.',
     })
   }
   const a = (taux) => a1 / taux
-  return card({
+  return spec({
     tone: 'watch', kicker: 'Objectif', ico: 'argent',
     title: `Il faut encaisser au moins ${euro(a1)} la première année`,
     body: `C\u2019est le montant qui couvre exactement tes charges, si chaque euro encaissé restait dans l\u2019entreprise. Il en faut davantage dès que tes ventes ont un coût : ` +
@@ -386,7 +405,7 @@ function manqueCard(s) {
   if (!suite.length) return null
   const trois = suite.slice(0, 3)
 
-  return card({
+  return spec({
     tone: 'watch', kicker: 'Ce qui manque', ico: 'idee',
     title: trois.length === 1
       ? `Une seule ligne manque : ${trois[0].label.toLowerCase()}`
@@ -418,7 +437,7 @@ function profitCard(r) {
     body = `L'entreprise enregistre une perte nette de ${euro(Math.abs(y1))} en ann\u00e9e 1, et le r\u00e9sultat reste n\u00e9gatif jusqu'\u00e0 l'ann\u00e9e 5. Pour redresser la courbe, l'ajustement doit se faire sur trois variables, dans cet ordre : le prix de vente, le co\u00fbt de revient unitaire, puis le volume de ventes.`
   }
 
-  return card({
+  return spec({
     tone, kicker: 'Rentabilit\u00e9', title, body,
     ico: 'argent',
     bars: net.slice(0, 5).map((v, i) => ({ label: `A${i + 1}`, value: n(v) })),
@@ -446,7 +465,7 @@ function cashCard(r) {
     body = `Le solde de tr\u00e9sorerie reste positif sur l'ensemble de la p\u00e9riode mod\u00e9lis\u00e9e, avec un point bas \u00e0 ${euro(n(low?.value))}${when ? ` en ${when}` : ''}. Le plan ne requiert aucun financement externe suppl\u00e9mentaire.`
   }
 
-  return card({
+  return spec({
     tone, kicker: 'Tr\u00e9sorerie', title, body,
     ico: 'cible',
     line: (r.cash?.balance || []).slice(0, 36).map((v) => n(v)),
@@ -466,7 +485,7 @@ function takeCard(s, r) {
   const gross = n(me?.monthlyGross)
 
   if (!gross) {
-    return card({
+    return spec({
       tone: 'watch', kicker: 'Ta r\u00e9mun\u00e9ration',
       title: 'Aucune r\u00e9mun\u00e9ration du dirigeant au mod\u00e8le', ico: 'commerce',
       body: "Le pr\u00e9visionnel ne comporte aucune charge de r\u00e9mun\u00e9ration pour le dirigeant. Le r\u00e9sultat affich\u00e9 est donc surestim\u00e9 du montant que tu devras te verser. Un analyste retraitera ce poste avant toute d\u00e9cision : mieux vaut l'inscrire, m\u00eame \u00e0 un niveau modeste.",
@@ -476,7 +495,7 @@ function takeCard(s, r) {
 
   const yearly = gross * 12
   const marge = n(r.pnl.netResult[0])
-  return card({
+  return spec({
     tone: marge >= 0 ? 'good' : 'watch',
     kicker: 'Ta r\u00e9mun\u00e9ration',
     title: marge >= 0
@@ -502,14 +521,14 @@ function breakEvenCard(s, r) {
   const share = need > 0 ? Math.min(1.4, revenue / need) : 0
 
   if (!need) {
-    return card({
+    return spec({
       tone: 'bad', kicker: 'Le point mort',
       title: 'Seuil de rentabilit\u00e9 inatteignable : co\u00fbt sup\u00e9rieur au prix', ico: 'cible',
       body: "Le prix de vente unitaire est inf\u00e9rieur au co\u00fbt de revient. Vendre des volumes suppl\u00e9mentaires augmente la perte globale au lieu d'amortir les charges fixes. Le calcul du point mort suppose d'abord de rendre la marge unitaire positive.",
       figure: { label: 'Seuil annuel', value: '\u2014', good: false },
     })
   }
-  return card({
+  return spec({
     tone: done ? 'good' : 'watch',
     kicker: 'Le point mort',
     title: done
@@ -551,7 +570,7 @@ function causeCard(r) {
   const part = Math.round((tete.montant / total) * 100)
   const couvre = rev > 0 ? Math.round((tete.montant / rev) * 100) : null
 
-  return card({
+  return spec({
     tone: couvre !== null && couvre > 100 ? 'bad' : couvre !== null && couvre > 60 ? 'watch' : 'good',
     kicker: 'Le poste qui pèse',
     title: `${tete.nom.charAt(0).toUpperCase()}${tete.nom.slice(1)} : ${euro(tete.montant)} par an`,
@@ -571,7 +590,7 @@ function keepCard(r) {
   const p = r.pnl
   const rev = n(p.revenue[i])
   if (rev <= 0) {
-    return card({
+    return spec({
       tone: 'watch', kicker: 'Sur 100 \u20ac factur\u00e9s', title: 'R\u00e9partition non calculable', ico: 'alimentaire',
       body: "L'exercice ne comporte aucun chiffre d'affaires : la r\u00e9partition de chaque euro encaiss\u00e9 ne peut pas \u00eatre \u00e9tablie. Un prix et un volume de ventes suffisent \u00e0 la faire appara\u00eetre.",
       figure: { label: 'R\u00e9sultat pour 100 \u20ac', value: '\u2014', good: false },
@@ -584,7 +603,7 @@ function keepCard(r) {
   const net = per100(p.netResult[i])
   const spend = buys + team + other
 
-  return card({
+  return spec({
     tone: net >= 10 ? 'good' : net >= 0 ? 'watch' : 'bad',
     kicker: 'Sur 100 \u20ac factur\u00e9s',
     title: net >= 0
@@ -609,7 +628,7 @@ function growthCard(r) {
   const rev = r.pnl.revenue.slice(0, 5).map((v) => n(v))
   const a1 = rev[0], a5 = rev[4]
   if (a1 <= 0 && a5 <= 0) {
-    return card({
+    return spec({
       tone: 'watch', kicker: 'La croissance', title: 'Trajectoire non calculable', ico: 'depart',
       body: "Le mod\u00e8le ne comporte aucun chiffre d'affaires : la trajectoire sur cinq ans ne peut pas \u00eatre \u00e9tablie. Un prix et un volume de ventes suffisent \u00e0 la faire appara\u00eetre.",
       figure: { label: 'Chiffre d\u2019affaires \u2014 ann\u00e9e 5', value: '\u2014', good: false },
@@ -617,7 +636,7 @@ function growthCard(r) {
   }
   const mult = a1 > 0 ? a5 / a1 : null
   const yearly = a1 > 0 && a5 > 0 ? Math.pow(a5 / a1, 1 / 4) - 1 : null
-  return card({
+  return spec({
     tone: mult === null ? 'watch' : mult >= 2 ? 'good' : 'watch',
     kicker: 'La croissance',
     title: yearly === null
@@ -634,6 +653,15 @@ function growthCard(r) {
 
 
 /* ──────────────────────────── La carte commune ──────────────────────────── */
+
+/**
+ * Une carte, sous forme de données.
+ *
+ * Chaque lecture renvoie son contenu — ton, surtitre, titre, texte, chiffre
+ * et image à tracer — sans décider de sa forme : `card` le dessine pour la
+ * synthèse d'origine, l'essai de forme le dessine autrement.
+ */
+const spec = (o) => o
 
 function card({ tone, kicker, title, body, figure, bars, line, split, meter, ico }) {
   return h('section', { class: `plaincard is-${tone}` },

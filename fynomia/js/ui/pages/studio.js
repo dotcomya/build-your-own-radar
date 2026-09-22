@@ -1,663 +1,948 @@
 /**
  * La synthèse, deuxième écriture.
  *
- * Le tableau de bord actuel dit tout, et il le dit dans des cartes blanches de
- * même largeur, empilées. C'est lisible et c'est neutre — trop neutre : rien
- * n'y pèse plus que le reste, et le regard doit tout parcourir pour trouver la
- * seule chose qui compte ce matin-là.
+ * Première tentative : une métrique en très grand dans un bloc noir, des
+ * barres sans cadre, tout en chasse fixe. C'était plus beau, et c'était un
+ * autre écran — on y perdait ce qui fait la synthèse : l'avancement du
+ * dossier, le verdict, les trois actes qui répondent dans l'ordre où l'on se
+ * pose les questions, le texte qui explique chaque chiffre, les six chiffres
+ * qu'on te demandera avec ce qu'ils signifient.
  *
- * Cet écran essaie l'inverse, sans rien perdre de la profondeur : une métrique
- * occupe les deux tiers de la largeur dans un bloc noir et une typographie
- * énorme, le reste se range autour d'elle. Les graphiques secondaires n'ont
- * plus de cadre — ils respirent sur le fond crème. Les chiffres, les ratios et
- * les dates passent tous en chasse fixe, parce que c'est ainsi qu'on lit un
- * outil d'ingénierie. Et les proportions se disent en barres empilées fines,
- * pas en camemberts : on compare des longueurs, pas des angles.
+ * Celle-ci garde le fond et ne change que la forme. Le récit vient du même
+ * endroit que l'onglet d'origine — synthese() dans plain.js, figureSet() et
+ * avancement() dans figures.js — si bien que les deux écrans disent toujours
+ * la même chose, mot pour mot. Ce qui change :
  *
- * Deuxième passe : l'écran portait la forme, il lui manquait le fond. Il porte
- * maintenant tout ce que le fondateur vient chercher — les chiffres clés, les
- * cinq exercices, le détail complet de l'EBITDA jusqu'au résultat net, la
- * répartition du chiffre d'affaires par offre et les ratios que lit un
- * financeur. Rien n'est figé : chaque barre se laisse survoler, l'année se
- * choisit d'un clic et l'écran se monte en séquence plutôt que d'apparaître
- * d'un bloc.
- *
- * Aucun calcul nouveau : les mêmes séries que la synthèse, présentées
- * autrement. C'est un essai de forme, et il doit pouvoir être jugé comme tel.
+ *   — une seule surface noire, pour la seule question qui compte ce matin-là
+ *     (ce qu'il reste à poser, ou le verdict quand tout est posé) ;
+ *   — plus de cartes encadrées : des colonnes séparées par un filet, de
+ *     l'air autour, une hiérarchie dite par la taille et non par les boîtes ;
+ *   — des images qu'on interroge : chaque barre, chaque courbe, chaque
+ *     répartition donne son chiffre au survol ;
+ *   — un écran qui se monte en séquence à l'arrivée, et dont les chiffres
+ *     battent quand ils changent.
  */
 
 import { h, euro, num, pct, monthLabel } from '../dom.js'
-import { hot } from '../charts.js'
+import { hot, STATUS } from '../charts.js'
 import { checklist } from '../checklist.js'
 import { goToGap } from '../spotlight.js'
+import { lookup } from '../glossary.js'
+import { changed } from '../motion.js'
+import { synthese, RELIRE, lignesRestantes } from '../plain.js'
+import { figureSet, PAGE_NAME, avancement } from '../figures.js'
+import { revenueSentence, costsSentence, mixSentence, cashSentence, bfrSentence, moneyFlowSentence } from '../explain.js'
 import { suggestActions } from '../../engine/simulate.js'
+import { verdict } from '../../engine/verdict.js'
+import { referenceYear } from '../../format.js'
 import store from '../../state/store.js'
 
 const n = (v) => Number(v) || 0
 const somme = (a) => (a || []).reduce((x, y) => x + n(y), 0)
+const TON = { good: STATUS.gain, bad: STATUS.loss, watch: STATUS.warn }
 
 /**
- * L'année lue en ce moment.
+ * La typographie française, pour les titres.
  *
- * Elle survit aux rendus — sinon le moindre réglage ramènerait le lecteur à
- * l'année 1 alors qu'il examinait l'année 4.
+ * « 37 % » coupé entre le nombre et son signe, « salariale » laissé seul en
+ * bout de ligne et « : 99 360 € » rejeté au début de la suivante : les titres
+ * de l'essai sont grands, et chaque coupure s'y voit. L'espace avant les
+ * signes doubles et le pourcentage devient insécable. Pas d'expression
+ * régulière sur des caractères accentués : le paquet ne les échapperait pas.
  */
-let anneeVue = null
+const INSECABLE = '\u00a0'
+const titre = (t) => [' %', ' :', ' ;', ' ?', ' !', ' \u20ac', ' \u00bb', '\u00ab ']
+  .reduce((acc, m) => acc.split(m).join(m[0] === ' ' ? INSECABLE + m.slice(1) : m.slice(0, -1) + INSECABLE), String(t))
+
+/* ───────────────────────────── L'état de l'écran ─────────────────────────── */
 
 /**
- * Le moment du dernier rendu.
+ * Ce que l'écran retient d'un rendu à l'autre.
  *
- * Les animations d'entrée doivent se jouer quand on arrive sur l'écran, pas à
- * chaque frappe au clavier : le tableau de bord se redessine à chaque
- * changement de chiffre, et des barres qui repoussent trente fois par minute
- * rendent la page illisible. Un écart d'une seconde et demie sépare les deux
- * cas sans avoir à instrumenter le montage du composant.
+ * Le tableau de bord se redessine à chaque changement de chiffre. Sans
+ * mémoire, le moindre réglage refermerait le raisonnement qu'on lisait,
+ * replierait l'analyse qu'on venait d'ouvrir et ramènerait l'année 1 alors
+ * qu'on examinait l'année 4.
  */
-let dernierRendu = 0
+const etat = {
+  annee: null,          // l'exercice lu par les six chiffres et l'analyse
+  raisonnement: false,  // le verdict est-il déplié
+  analyse: false,       // l'analyse détaillée est-elle ouverte
+  analyseNeuve: false,  // vient-elle d'être ouverte (ses images se tracent alors)
+  chiffres: new Set(),  // les chiffres dépliés
+}
 
-export function renderStudio(navigate, refresh) {
+/**
+ * La racine du dernier rendu.
+ *
+ * L'entrée en séquence se joue quand on arrive sur l'écran, jamais quand il se
+ * redessine sous les doigts : des barres qui repoussent à chaque clic rendent
+ * la page illisible. Un délai ne suffit pas à distinguer les deux — on lit
+ * une minute, on clique sur une année, et tout se rejouait. Le critère est
+ * donc la présence de l'écran : si la racine précédente est encore dans le
+ * document, on redessine en place ; sinon, on arrive.
+ */
+let racine = null
+
+export function renderStudio(navigate, refresh, goView) {
   const s = store.scenario
   const r = store.result
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
 
-  const maintenant = Date.now()
-  const entree = maintenant - dernierRendu > 1500
-  dernierRendu = maintenant
+  const entree = !(racine && racine.isConnected)
 
-  const an = anneeChoisie(r)
-  const choisir = (y) => { anneeVue = y; refresh() }
+  const y = etat.annee !== null && etat.annee >= 0 && etat.annee < 5 ? etat.annee : referenceYear(r)
+  const choisir = (k) => { etat.annee = k; refresh() }
+  const pilotage = () => (goView ? goView('pilotage') : navigate('#/tableau-de-bord'))
 
-  return h('div', { class: `st ${entree ? 'is-enter' : ''}` },
-    heroRow(s, r, navigate),
-    keyRow(r),
-    h('div', { class: 'st-cols' }, refineCol(s, navigate), leverCol(s, r)),
-    perfChart(r, an, choisir),
-    h('div', { class: 'st-cols st-cols-even' }, ladder(r, an), splitBar(r, an)),
-    mixBar(r, an),
-    cashCurve(r),
-    ratioRow(r, an),
+  let c = null
+  try { c = checklist(s) } catch { c = null }
+  const v = verdict(r, s)
+  const { actes } = synthese(s, r)
+  const complet = !c || !c.open || !c.next
+
+  racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
+    // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
+    // quelque chose. Un dossier complet ouvre directement sur son verdict.
+    complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage),
+    complet ? null : verdictLigne(v),
+    ...actes.map((a, i) => acte(a, i, actes.length, r, s)),
+    pied(navigate, pilotage),
+    sixChiffres(r, s, y, choisir, navigate),
+    analyse(r, s, y, choisir, navigate, refresh),
+  )
+  return racine
+}
+
+/* ─────────────────────────── 1. Où en est le dossier ─────────────────────── */
+
+/**
+ * L'avancement, en grand, et un échantillon de ce qui vient.
+ *
+ * Le noir porte la promesse — un dossier prêt pour la banque — et le geste
+ * suivant. La colonne claire montre la file : ce qui vient d'être posé,
+ * coché, puis les quatre lignes suivantes avec la raison de chacune. On voit
+ * le chemin, pas seulement la prochaine marche.
+ */
+function heroAvancement(c, navigate, pilotage) {
+  const t = avancement(c)
+  const part = c.done / Math.max(1, c.total)
+  const ouvertes = c.items.filter((i) => !i.done)
+  const suite = [c.next, ...ouvertes.filter((i) => i !== c.next && !i.later)].slice(0, 4)
+  const faites = c.items.filter((i) => i.done).slice(-2)
+
+  return h('section', { class: 'sy-hero' },
+    h('div', { class: 'sy-ink' },
+      h('div', { class: 'sy-ink-top' },
+        h('span', { class: 'sy-kicker is-accent' }, t.surtitre),
+        h('span', { class: 'sy-live' }, h('i', { 'aria-hidden': 'true' }), 'Live'),
+      ),
+      h('h2', { class: 'sy-ink-title' }, t.titre),
+      h('p', { class: 'sy-ink-text' }, t.texte),
+
+      // Une case par ligne du dossier : on voit ce qui est fait et ce qui
+      // reste, sans avoir à lire un pourcentage.
+      h('div', { class: 'sy-cells', role: 'img', 'aria-label': `${c.done} lignes posées sur ${c.total}` },
+        ...c.items.map((i, k) => h('i', {
+          class: i.done ? 'is-done' : i === c.next ? 'is-next' : '',
+          style: { '--i': String(k) },
+        })),
+      ),
+      h('div', { class: 'sy-cells-legend' },
+        ...c.groups.map((g) => h('span', {},
+          h('b', {}, `${g.done}/${g.total}`), ` ${g.label.toLowerCase()}`)),
+      ),
+
+      h('div', { class: 'sy-ink-acts' },
+        h('button', {
+          class: 'sy-btn is-accent',
+          onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
+        }, `Renseigner « ${c.next.label} » →`),
+        h('button', { class: 'sy-btn is-ghost', onClick: pilotage }, t.parcourir),
+      ),
+      h('div', { class: 'sy-ink-meter', 'aria-hidden': 'true' },
+        h('i', { style: { width: `${Math.round(part * 100)}%` } })),
+    ),
+
+    h('aside', { class: 'sy-next' },
+      h('div', { class: 'sy-kicker' }, 'Tes prochaines étapes'),
+      h('ol', { class: 'sy-steps' },
+        ...faites.map((i) => h('li', { class: 'sy-step is-done' },
+          h('button', { class: 'sy-step-go', onClick: (e) => goToGap(i.go, navigate, e.currentTarget) },
+            h('span', { class: 'sy-step-mark', 'aria-hidden': 'true' }, '✓'),
+            h('span', { class: 'sy-step-txt' }, h('span', { class: 'sy-step-label' }, i.label)),
+          ))),
+        ...suite.map((i, k) => h('li', { class: `sy-step ${k === 0 ? 'is-next' : ''}` },
+          h('button', { class: 'sy-step-go', onClick: (e) => goToGap(i.go, navigate, e.currentTarget) },
+            h('span', { class: 'sy-step-mark', 'aria-hidden': 'true' }, k === 0 ? '→' : String(k + 1)),
+            h('span', { class: 'sy-step-txt' },
+              k === 0 ? h('span', { class: 'sy-step-tag' }, 'Prochaine étape') : null,
+              h('span', { class: 'sy-step-label' }, i.label),
+              i.why ? h('span', { class: 'sy-step-why' }, i.why) : null,
+            ),
+          ))),
+      ),
+      c.open > suite.length
+        ? h('button', { class: 'sy-link', onClick: pilotage },
+            `+ ${c.open - suite.length} autre${c.open - suite.length > 1 ? 's' : ''} à poser`)
+        : null,
+    ),
   )
 }
 
-/** L'année lue : celle qu'on a choisie, sinon la première qui gagne de l'argent. */
-function anneeChoisie(r) {
-  if (anneeVue !== null && anneeVue >= 0 && anneeVue < 5) return anneeVue
-  const y = r.kpis?.firstProfitableYear
-  return y !== null && y !== undefined && y >= 0 ? y : 0
-}
-
-/* ─────────────────────── 1. Deux tiers, un tiers ─────────────────────────── */
-
 /**
- * Le point mort en très grand, la trésorerie à côté.
+ * Quand tout est posé, le noir revient au verdict.
  *
- * Deux blocs de largeur inégale : celui qui décide prend les deux tiers et le
- * noir, celui qui accompagne prend le tiers restant et reste clair. C'est la
- * hiérarchie dite par la surface, avant même qu'on ait lu un mot.
+ * Il n'y a plus rien à renseigner : la seule question qui reste est « est-ce
+ * que ça tient ». Le mot du verdict prend la place, le raisonnement suit, et la
+ * colonne claire donne le chiffre qui décide.
  */
-function heroRow(s, r, navigate) {
-  const k = r.kpis
-  const mois = (k.breakEvenMonth || []).findIndex((v) => v !== null && v !== undefined)
-  const moisVal = mois >= 0 ? n(k.breakEvenMonth[mois]) : null
-  const annee = k.firstProfitableYear
-  const grand = moisVal !== null ? `M${Math.round(moisVal) + 1}`
-    : annee !== null && annee !== undefined ? `A${annee + 1}`
-      : '—'
-
-  const bas = k.cashLow || {}
+function heroVerdict(v, r, navigate) {
+  const bas = r.kpis.cashLow || {}
   const quand = bas.month != null ? monthLabel(bas.month, r.startDate) : null
-  const manque = n(k.fundingNeed)
-
-  const dit = annee !== null && annee !== undefined
-    ? `Tu atteindrais l’équilibre en année ${annee + 1}. ` + (manque > 0
-        ? `D’ici là, ${euro(manque)} doivent être trouvés — c’est la trésorerie qui commande, pas le résultat.`
-        : 'La trésorerie ne passe jamais sous zéro sur l’horizon.')
-    : 'Aucun exercice ne dégage de bénéfice sur cinq ans. Le prix, les volumes et le poste le plus lourd sont les trois seuls leviers.'
-
-  return h('section', { class: 'st-hero' },
-    h('div', { class: 'st-big' },
-      h('div', { class: 'st-big-top' },
-        h('span', { class: 'st-kicker' },
-          h('i', { class: 'st-dot', 'aria-hidden': 'true' }), 'Point mort estimé'),
-        h('span', { class: 'st-badge' }, 'Live'),
+  return h('section', { class: 'sy-hero' },
+    h('div', { class: `sy-ink is-${v.tone}` },
+      h('div', { class: 'sy-ink-top' },
+        h('span', { class: 'sy-kicker is-accent' }, 'Dossier complet · le verdict'),
+        h('span', { class: 'sy-live' }, h('i', { 'aria-hidden': 'true' }), 'Live'),
       ),
-      h('div', { class: 'st-big-fig' },
-        h('span', { class: 'st-big-num' }, grand),
-        annee !== null && annee !== undefined
-          ? h('span', { class: 'st-big-delta' }, `↘ année ${annee + 1} d’exploitation`)
-          : h('span', { class: 'st-big-delta is-off' }, '↗ hors horizon'),
-      ),
-      h('p', { class: 'st-big-say' }, dit),
+      h('div', { class: 'sy-ink-word' }, v.word),
+      h('h2', { class: 'sy-ink-title is-small' }, v.line),
+      h('p', { class: 'sy-ink-text' }, v.body),
     ),
-
-    h('aside', { class: 'st-side' },
-      h('div', { class: 'st-kicker is-dark' }, 'Trésorerie point bas'),
-      h('div', { class: 'st-side-fig' },
-        h('span', { class: 'st-side-num' }, euro(n(bas.value), { compact: true })),
-      ),
-      h('div', { class: 'st-side-when' }, quand ? `Point bas en ${quand}` : 'Jamais négative'),
+    h('aside', { class: 'sy-next' },
+      h('div', { class: 'sy-kicker' }, v.figure ? v.figure.label : 'Trésorerie au plus bas'),
+      h('div', { class: 'sy-side-num' }, v.figure ? v.figure.value : euro(n(bas.value), { compact: true })),
+      h('div', { class: 'sy-side-when' }, quand ? `Trésorerie au plus bas en ${quand} : ${euro(n(bas.value))}` : ''),
       h('span', { class: 'spacer' }),
       h('button', {
-        class: 'st-cta',
+        class: 'sy-btn is-ink',
         onClick: (e) => goToGap({ route: 'financement' }, navigate, e.currentTarget),
       }, 'Voir le plan de financement'),
     ),
   )
 }
 
-/* ─────────────────────── 2. La ligne des chiffres clés ───────────────────── */
+/* ─────────────────────────────── 2. Le verdict ───────────────────────────── */
 
 /**
- * Six chiffres, une ligne, aucune carte.
+ * Le mot, la phrase, et le raisonnement à un geste.
  *
- * Ce sont les valeurs qu'on cite de mémoire quand on parle de son entreprise :
- * le chiffre d'affaires de l'année 1 et celui de l'année 5, ce que l'activité
- * dégage, ce qu'elle laisse, ce qu'elle emploie et ce qu'il faut apporter.
- * Chacun porte sa mesure secondaire en dessous — la croissance, le taux de
- * marge, le mois — parce qu'un montant seul ne se juge pas.
+ * C'est la phrase qui résume les actes qui suivent : elle se lit avant eux.
+ * Le raisonnement se déplie sur place — l'œil ne quitte pas la ligne.
  */
-function keyRow(r) {
-  const p = r.pnl
-  const k = r.kpis
-  const eff = r.payroll?.headcount || []
-  const effFin = n(eff[11])
-  const effCinq = n(eff[59])
-  const croissance = n(p.revenue[0]) > 0 ? n(p.revenue[4]) / n(p.revenue[0]) : null
-  const runway = k.runwayMonths
-  const unites = somme((r.revenue?.units || []).slice(0, 12))
-
-  const cases = [
-    {
-      cle: 'CA année 1', val: euro(n(p.revenue[0]), { compact: true }),
-      sous: unites > 0 ? `${num(unites)} unités vendues` : 'Aucune vente saisie',
+function verdictLigne(v) {
+  const el = h('section', { class: `sy-verdict is-${v.tone} ${etat.raisonnement ? 'is-open' : ''}` })
+  const tete = h('button', {
+    class: 'sy-verdict-head',
+    'aria-expanded': String(etat.raisonnement),
+    onClick: () => {
+      etat.raisonnement = !etat.raisonnement
+      el.classList.toggle('is-open', etat.raisonnement)
+      tete.setAttribute('aria-expanded', String(etat.raisonnement))
     },
-    {
-      cle: 'CA année 5', val: euro(n(p.revenue[4]), { compact: true }),
-      sous: croissance ? `× ${num(croissance, 1)} en cinq ans` : 'Croissance non calculable',
-      fort: true,
-    },
-    {
-      cle: 'EBITDA année 1', val: euro(n(p.ebitda[0]), { compact: true }),
-      sous: `${pct(n(k.ebitdaMargin[0]))} du chiffre d’affaires`,
-      signe: n(p.ebitda[0]),
-    },
-    {
-      cle: 'Résultat net année 1', val: euro(n(p.netResult[0]), { compact: true }),
-      sous: `${pct(n(k.netMargin[0]))} du chiffre d’affaires`,
-      signe: n(p.netResult[0]),
-    },
-    {
-      cle: 'Effectif fin d’année 1', val: num(effFin, effFin % 1 ? 1 : 0),
-      sous: effCinq ? `${num(effCinq, effCinq % 1 ? 1 : 0)} en fin d’année 5` : 'Aucune embauche prévue',
-    },
-    {
-      cle: 'Besoin de financement', val: euro(n(k.fundingNeed), { compact: true }),
-      sous: runway !== null && runway !== undefined && Number.isFinite(runway)
-        ? `${num(runway, 1)} mois d’autonomie`
-        : 'Trésorerie toujours positive',
-      signe: -n(k.fundingNeed),
-    },
-  ]
-
-  return h('section', { class: 'st-keys' },
-    ...cases.map((c, i) => h('div', {
-      class: `st-key ${c.fort ? 'is-strong' : ''}`,
-      style: { '--i': String(i) },
-    },
-      h('div', { class: 'st-key-cle' }, c.cle),
-      h('div', {
-        class: `st-key-val ${c.signe !== undefined ? (c.signe < 0 ? 'is-neg' : 'is-pos') : ''}`,
-      }, c.val),
-      h('div', { class: 'st-key-sous' }, c.sous),
-    )),
+  },
+    h('span', { class: 'sy-verdict-word' }, h('i', { 'aria-hidden': 'true' }), v.word),
+    h('span', { class: 'sy-verdict-line' }, titre(v.line)),
+    h('span', { class: 'sy-verdict-more' }, h('span', {}, 'Le raisonnement'), h('i', { 'aria-hidden': 'true' })),
   )
-}
-
-/* ─────────────────────── 3. Deux colonnes de travail ─────────────────────── */
-
-/** Ce qu'il reste à poser : une barre segmentée, puis les lignes. */
-function refineCol(s, navigate) {
-  let c
-  try { c = checklist(s) } catch { return null }
-  const items = (c.items || [])
-  const faits = items.filter((i) => i.done).length
-  const part = items.length ? faits / items.length : 0
-  const cinq = items.filter((i) => !i.done).slice(0, 4)
-  const derniers = items.filter((i) => i.done).slice(-2)
-  const liste = [...derniers, ...cinq]
-
-  return h('div', { class: 'st-col' },
-    h('h3', { class: 'st-col-title' }, 'Affiner mon dossier'),
-    h('div', { class: 'st-seg', 'aria-hidden': 'true' },
-      ...Array.from({ length: 3 }, (_, i) => {
-        const debut = i / 3, fin = (i + 1) / 3
-        const rempli = Math.max(0, Math.min(1, (part - debut) / (fin - debut)))
-        return h('span', { class: 'st-seg-cell' }, h('i', { style: { width: `${rempli * 100}%` } }))
-      }),
-      h('span', { class: 'st-seg-num' }, `${Math.round(part * 100)} %`),
-    ),
-    h('ul', { class: 'st-checks' },
-      ...liste.map((i) => h('li', { class: `st-check ${i.done ? 'is-done' : ''} ${i === cinq[0] ? 'is-next' : ''}` },
-        h('button', {
-          class: 'st-check-go',
-          onClick: (e) => (i.go ? goToGap(i.go, navigate, e.currentTarget) : null),
-        },
-          h('span', { class: 'st-check-mark', 'aria-hidden': 'true' }, i.done ? '✓' : ''),
-          h('span', { class: 'st-check-label' }, i.label),
+  el.append(tete,
+    h('div', { class: 'sy-unfold' },
+      h('div', {},
+        h('div', { class: 'sy-verdict-body' },
+          h('p', {}, v.body),
+          v.figure ? h('div', { class: 'sy-verdict-fig' },
+            h('span', {}, v.figure.label),
+            h('strong', {}, v.figure.value)) : null,
         ),
-      )),
+      ),
     ),
+  )
+  return el
+}
+
+/* ─────────────────────────────── 3. Les actes ────────────────────────────── */
+
+/**
+ * Un acte : une question, sa réponse en titre, et les lectures qui la fondent.
+ *
+ * Le numéro en chasse fixe dit où l'on en est du récit ; le titre est déjà la
+ * réponse — c'est la différence entre un sommaire et une synthèse. Les
+ * lectures se rangent en colonnes séparées par un filet, sans cadre.
+ */
+function acte(a, i, total, r, s) {
+  const cartes = a.cartes.filter(Boolean)
+  const leviers = i === total - 1 ? leviersChiffres(s, r) : null
+  return h('section', { class: 'sy-act' },
+    h('div', { class: 'sy-act-no' }, `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`),
+    h('h2', { class: 'sy-act-title' }, titre(a.titre)),
+    h('p', { class: 'sy-act-say' }, titre(a.dit)),
+    h('div', { class: `sy-cards is-${Math.min(3, cartes.length)}` },
+      ...cartes.map((c, k) => carte(c, k, r))),
+    leviers,
   )
 }
 
-/** Les leviers, classés par ce qu'ils rapportent. */
-function leverCol(s, r) {
+/**
+ * Une lecture : surtitre, titre, explication, image, chiffre.
+ *
+ * Le texte est celui de la synthèse d'origine, sans une virgule de moins —
+ * c'est lui qui fait comprendre. L'image vient après, pour confirmer ce qu'on
+ * vient de lire ; le chiffre ferme la lecture, et bat quand il change.
+ */
+function carte(c, k, r) {
+  const frais = c.figure ? changed(`sy-carte-${c.kicker}`, c.figure.value) : false
+  return h('article', { class: `sy-card is-${c.tone}`, style: { '--i': String(k) } },
+    h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
+    h('h3', { class: 'sy-card-title' }, titre(c.title)),
+    h('p', { class: 'sy-card-body' }, c.body),
+    c.bars ? barres(c.bars, c.kicker) : null,
+    c.line ? courbe(c.line, r.startDate, { hauteur: 74, legende: 'Ton compte, mois par mois' }) : null,
+    c.split ? repartition(c.split, c.kicker) : null,
+    c.meter ? jauge(c.meter) : null,
+    c.figure ? h('div', { class: 'sy-card-fig' },
+      h('span', { class: 'sy-card-fig-label' }, c.figure.label),
+      h('span', { class: `sy-card-fig-val ${c.figure.good ? 'is-pos' : 'is-neg'} ${frais ? 'is-fresh' : ''}` }, c.figure.value),
+    ) : null,
+  )
+}
+
+/**
+ * Où agir, chiffré par le moteur.
+ *
+ * Le troisième acte dit quels leviers existent. Le moteur sait aussi ce que
+ * chacun rapporte, en rejouant le modèle entier : les trois meilleurs gestes
+ * ferment l'acte, avec leur gain. Le détail et l'essai se font dans Pilotage.
+ */
+function leviersChiffres(s, r) {
   let best = []
   try { best = suggestActions(s, r, { limit: 3 }).best } catch { best = [] }
-  if (!best.length) {
-    return h('div', { class: 'st-col' },
-      h('h3', { class: 'st-col-title' }, 'Leviers classés par impact'),
-      h('p', { class: 'st-empty' },
-        'Aucun levier ne déplace le modèle en l’état. Pose un prix et des volumes : le classement se remplit tout seul.'),
-    )
-  }
-  return h('div', { class: 'st-col' },
-    h('h3', { class: 'st-col-title' }, 'Leviers classés par impact'),
-    ...best.map((a, i) => {
-      const gain = -n(a.delta.fundingNeed) > 0 ? -n(a.delta.fundingNeed) : n(a.delta.ebitda)
-      const quoi = -n(a.delta.fundingNeed) > 0 ? 'Trésorerie' : 'EBITDA'
-      return h('div', { class: 'st-lever' },
-        h('span', { class: 'st-lever-no' }, String(i + 1)),
-        h('span', { class: 'spacer' },
-          h('div', { class: 'st-lever-label' }, a.label),
-          a.detail ? h('div', { class: 'st-lever-detail' }, a.detail) : null,
+  if (!best.length) return null
+  return h('div', { class: 'sy-levers' },
+    h('div', { class: 'sy-kicker' }, 'Chiffré par le moteur — les trois gestes qui rapportent le plus'),
+    h('div', { class: 'sy-levers-rows' },
+      ...best.map((a, i) => {
+        const tresor = -n(a.delta.fundingNeed) > 0
+        const gain = tresor ? -n(a.delta.fundingNeed) : n(a.delta.ebitda)
+        return h('div', { class: 'sy-lever', style: { '--i': String(i) } },
+          h('span', { class: 'sy-lever-no' }, String(i + 1)),
+          h('span', { class: 'sy-lever-txt' },
+            h('span', { class: 'sy-lever-label' }, a.label),
+            a.detail ? h('span', { class: 'sy-lever-detail' }, a.detail) : null,
+          ),
+          h('span', { class: 'sy-lever-gain' },
+            h('b', {}, `${gain >= 0 ? '+' : ''}${euro(gain)}`),
+            h('span', {}, tresor ? 'de trésorerie' : 'd’EBITDA'),
+          ),
+        )
+      }),
+    ),
+  )
+}
+
+/** La phrase qui clôt le récit, et la suite. */
+function pied(navigate, pilotage) {
+  const reste = lignesRestantes()
+  return h('div', { class: 'sy-foot' },
+    h('p', {}, RELIRE),
+    h('div', { class: 'sy-foot-go' },
+      h('button', { class: 'sy-btn is-accent is-sm', onClick: pilotage }, reste > 0
+        ? `Affiner : ${reste} ligne${reste > 1 ? 's' : ''} à poser`
+        : 'Ce qu’il me reste à poser'),
+      h('button', {
+        class: 'sy-btn is-line is-sm',
+        onClick: () => goToGap({ route: 'resultats' }, navigate),
+      }, 'Voir les états financiers'),
+    ),
+  )
+}
+
+/* ─────────────────────────── 4. Les six chiffres ─────────────────────────── */
+
+/**
+ * Les six chiffres qu'on te demandera — et ce qu'ils veulent dire.
+ *
+ * Même logique que la synthèse : un clic déplie la définition, l'usage et le
+ * piège à connaître, puis un bouton dit où le chiffre se corrige. L'exercice
+ * se choisit ici ; l'analyse détaillée, plus bas, lit le même.
+ */
+function sixChiffres(r, s, y, choisir, navigate) {
+  const figures = figureSet(r, s, y)
+  return h('section', { class: 'sy-figs' },
+    h('div', { class: 'sy-sec-head' },
+      h('div', {},
+        h('h2', { class: 'sy-sec-title' }, 'Les six chiffres qu’on te demandera'),
+        h('p', { class: 'sy-sec-say' }, 'Clique sur l’un d’eux : il dit ce qu’il signifie avant d’emmener là où il se corrige.'),
+      ),
+      anneeChips(y, choisir),
+    ),
+    // Trois piles plutôt qu'une grille : une définition dépliée n'allonge que
+    // sa colonne. Dans une grille, elle étirait toute la rangée et laissait
+    // deux grands vides à côté d'elle.
+    h('div', { class: 'sy-figs-grid' },
+      ...[0, 1, 2].map((col) => h('div', { class: 'sy-figs-col' },
+        ...figures.map((f, i) => (i % 3 === col ? chiffre(f, i, navigate) : null)))),
+    ),
+  )
+}
+
+/** Cinq pastilles, une par exercice. */
+function anneeChips(y, choisir) {
+  return h('div', { class: 'sy-years', role: 'tablist', 'aria-label': 'Exercice' },
+    ...Array.from({ length: 5 }, (_, k) => h('button', {
+      class: `sy-year ${k === y ? 'is-on' : ''}`,
+      role: 'tab',
+      'aria-selected': String(k === y),
+      onClick: () => choisir(k),
+    }, `A${k + 1}`)),
+  )
+}
+
+function chiffre(f, i, navigate) {
+  const g = lookup(f.help)
+  // Seul un chiffre qui a réellement bougé bat : changer d'année sans que le
+  // point mort change ne doit pas faire clignoter le point mort.
+  const frais = changed(`sy-fig-${f.help}`, f.value)
+  const ouvert = etat.chiffres.has(f.help)
+  const el = h('div', { class: `sy-fig is-${f.tone || 'none'} ${ouvert ? 'is-open' : ''}`, style: { '--i': String(i), order: String(i) } })
+  const tete = h('button', {
+    class: 'sy-fig-head',
+    'aria-expanded': String(ouvert),
+    onClick: () => {
+      const on = !etat.chiffres.has(f.help)
+      on ? etat.chiffres.add(f.help) : etat.chiffres.delete(f.help)
+      el.classList.toggle('is-open', on)
+      tete.setAttribute('aria-expanded', String(on))
+    },
+  },
+    h('span', { class: 'sy-fig-label' }, f.label),
+    h('span', { class: `sy-fig-val ${frais ? 'is-fresh' : ''}` }, f.value),
+    h('span', { class: 'sy-fig-note' }, f.note),
+    f.spark && f.spark.some((v) => v) ? etincelle(f.spark, TON[f.tone === 'pos' ? 'good' : f.tone === 'neg' ? 'bad' : 'watch']) : null,
+    h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' }),
+  )
+  el.append(tete,
+    h('div', { class: 'sy-unfold' },
+      h('div', {},
+        h('div', { class: 'sy-fig-body' },
+          g ? h('p', { class: 'sy-fig-what' }, g.what) : null,
+          g && g.use ? h('p', { class: 'sy-fig-use' }, g.use) : null,
+          g && g.watch ? h('p', { class: 'sy-fig-watch' }, h('b', {}, 'À surveiller — '), g.watch) : null,
+          h('button', {
+            class: 'sy-link',
+            onClick: () => goToGap({ route: f.go }, navigate),
+          }, `Aller voir — ${PAGE_NAME[f.go] || f.go} →`),
         ),
-        h('span', { class: 'st-lever-gain' },
-          h('span', { class: 'st-lever-amount' }, `${gain >= 0 ? '+' : ''} ${euro(gain)}`),
-          h('span', { class: 'st-lever-what' }, quoi),
-        ),
+      ),
+    ),
+  )
+  return el
+}
+
+/* ─────────────────────────── 5. L'analyse détaillée ──────────────────────── */
+
+/**
+ * Tout le détail, replié tant qu'on ne le demande pas.
+ *
+ * Qui demande le détail le demande en entier : une fois ouverte, l'analyse ne
+ * cache plus rien. Tant qu'elle est fermée, elle n'est même pas construite —
+ * le tableau de bord se redessine à chaque saisie, et six graphiques qu'on ne
+ * regarde pas n'ont pas à être recalculés. À l'ouverture, ses images se
+ * tracent devant le lecteur.
+ */
+function analyse(r, s, y, choisir, navigate, refresh) {
+  const neuve = etat.analyseNeuve
+  etat.analyseNeuve = false
+  return h('section', { class: `sy-deep ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}` },
+    h('button', {
+      class: 'sy-deep-head',
+      'aria-expanded': String(etat.analyse),
+      onClick: () => {
+        etat.analyse = !etat.analyse
+        etat.analyseNeuve = etat.analyse
+        refresh()
+      },
+    },
+      h('span', {},
+        h('span', { class: 'sy-sec-title' }, 'Analyse détaillée'),
+        h('span', { class: 'sy-sec-say' }, 'Les cinq exercices, la cascade du résultat, les courbes — tout, d’un coup.'),
+      ),
+      h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' }),
+    ),
+    etat.analyse ? h('div', { class: 'sy-deep-body' },
+      exercices(r, y, choisir),
+      equation(r, y),
+      h('div', { class: 'sy-pair' }, cinqAns(r, y, choisir), cascade(r, y)),
+      tresorerie(r),
+      h('div', { class: 'sy-pair' }, structure(r, y), offres(r)),
+      ratios(r, y),
+      h('div', { class: 'sy-deep-go' },
+        h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'resultats' }, navigate) }, 'Les états financiers'),
+        h('button', { class: 'sy-btn is-line is-sm', onClick: () => navigate('#/presentation') }, 'La présentation en plein écran'),
+      ),
+    ) : null,
+  )
+}
+
+/** Les cinq exercices, chacun avec son chiffre d'affaires et son résultat net. */
+function exercices(r, y, choisir) {
+  return h('div', { class: 'sy-ex' },
+    ...Array.from({ length: 5 }, (_, i) => {
+      const net = n(r.pnl.netResult[i])
+      return h('button', { class: `sy-ex-year ${i === y ? 'is-on' : ''}`, onClick: () => choisir(i) },
+        h('span', { class: 'sy-ex-no' }, `Année ${i + 1}`),
+        h('span', { class: 'sy-ex-ca' }, euro(n(r.pnl.revenue[i]), { compact: true })),
+        h('span', { class: `sy-ex-net ${net >= 0 ? 'is-pos' : 'is-neg'}` },
+          `${net >= 0 ? '+' : '−'}${euro(Math.abs(net), { compact: true })} net`),
       )
     }),
   )
 }
 
-/* ─────────────────────── 4. Cinq exercices, trois séries ─────────────────── */
-
 /**
- * Le chiffre d'affaires, l'EBITDA et le résultat net, sur cinq ans.
+ * Du chiffre d'affaires au résultat, en une soustraction.
  *
- * Trois barres par exercice, posées de part et d'autre d'une ligne de zéro :
- * une perte descend, elle ne se contente pas de disparaître. Survoler une
- * colonne donne le compte de résultat entier de l'année, du chiffre d'affaires
- * au résultat net en passant par chaque poste — c'est là que se lit le détail
- * de l'EBITDA. Cliquer choisit l'année que lisent les blocs suivants.
+ * Ce qui entre, ce qui sort, ce qui reste : l'opération se comprend sans mode
+ * d'emploi. Le détail des lignes intermédiaires vient juste en dessous.
  */
-function perfChart(r, an, choisir) {
-  const p = r.pnl
-  const series = [
-    { cle: 'ca', nom: 'Chiffre d’affaires', vals: p.revenue },
-    { cle: 'ebitda', nom: 'EBITDA', vals: p.ebitda },
-    { cle: 'net', nom: 'Résultat net', vals: p.netResult },
-  ]
-  const toutes = series.flatMap((s) => s.vals.map(n))
-  const haut = Math.max(0, ...toutes)
-  const bas = Math.min(0, ...toutes)
-  if (haut === 0 && bas === 0) return null
-  const span = haut - bas || 1
-  // La ligne de zéro est passée en fraction plutôt qu'en pourcentage : la zone
-  // des barres est plus courte que le cadre de la hauteur des étiquettes, et
-  // seule une multiplication dans le calc() retombe exactement au bon endroit.
-  const partHaut = haut / span
-
-  return h('section', { class: 'st-perf' },
-    h('div', { class: 'st-split-head' },
-      h('h3', { class: 'st-col-title' }, 'Cinq exercices, trois lignes'),
-      h('div', { class: 'st-perf-keys' },
-        ...series.map((s) => h('span', { class: `st-leg is-${s.cle}` },
-          h('i', { 'aria-hidden': 'true' }), h('span', { class: 'st-leg-name' }, s.nom))),
-      ),
+function equation(r, y) {
+  const rev = n(r.pnl.revenue[y])
+  const net = n(r.pnl.netResult[y])
+  const couts = rev - net
+  return h('div', { class: 'sy-eq' },
+    h('div', { class: 'sy-eq-term' },
+      h('span', { class: 'sy-eq-tag' }, 'Ce que tu encaisses'),
+      h('span', { class: 'sy-eq-val' }, euro(rev, { compact: true })),
+      h('span', { class: 'sy-eq-note' }, 'Chiffre d’affaires de l’exercice'),
     ),
-
-    h('div', { class: 'st-perf-plot', style: { '--zero': String(partHaut) } },
-      h('i', { class: 'st-perf-zero', 'aria-hidden': 'true' }),
-      ...Array.from({ length: 5 }, (_, y) => {
-        const col = h('div', {
-          class: `st-perf-col ${y === an ? 'is-picked' : ''}`,
-          onClick: () => choisir(y),
-          role: 'button',
-          tabindex: '0',
-          'aria-label': `Année ${y + 1}`,
-          onKeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(y) } },
-        },
-          h('div', { class: 'st-perf-bars' },
-            ...series.map((s, si) => {
-              const v = n(s.vals[y])
-              const taille = (Math.abs(v) / span) * 100
-              const pose = v >= 0
-                ? { bottom: `${((0 - bas) / span) * 100}%`, height: `${taille}%` }
-                : { top: `${partHaut * 100}%`, height: `${taille}%` }
-              return h('span', { class: 'st-perf-slot' },
-                h('i', {
-                  class: `st-perf-bar is-${s.cle} ${v < 0 ? 'is-down' : ''}`,
-                  style: { ...pose, '--i': String(y * 3 + si) },
-                }),
-              )
-            }),
-          ),
-          h('div', { class: 'st-perf-year' }, `A${y + 1}`),
-        )
-        return hot(col, `Année ${y + 1}`, () => lignesAnnee(r, y))
-      }),
+    h('span', { class: 'sy-eq-op' }, '−'),
+    h('div', { class: 'sy-eq-term' },
+      h('span', { class: 'sy-eq-tag' }, 'Ce que ça coûte'),
+      h('span', { class: 'sy-eq-val' }, euro(couts, { compact: true })),
+      h('span', { class: 'sy-eq-note' }, 'Achats, salaires, charges, impôts, amortissements'),
+    ),
+    h('span', { class: 'sy-eq-op' }, '='),
+    h('div', { class: `sy-eq-term is-result ${net >= 0 ? '' : 'is-loss'}` },
+      h('span', { class: 'sy-eq-tag' }, net >= 0 ? 'Ce qu’il reste' : 'Ce que tu perds'),
+      h('span', { class: 'sy-eq-val' }, euro(net, { compact: true })),
+      h('span', { class: 'sy-eq-note' }, `${pct(rev > 0 ? net / rev : 0, 0)} du chiffre d’affaires`),
     ),
   )
 }
 
 /**
- * Le compte de résultat d'une année, tel qu'il s'affiche au survol.
+ * Cinq exercices, trois séries, une ligne de zéro, un repère de point mort.
  *
- * L'ordre est celui du plan comptable, parce que c'est celui qu'attend la
- * personne à qui ce document sera montré. Les soldes intermédiaires — marge
- * brute, EBITDA, résultat d'exploitation, résultat net — sont mis en avant :
- * ce sont eux qu'on cherche, le reste explique comment on y arrive.
+ * Une perte descend, elle ne disparaît pas. Survoler une colonne donne le
+ * compte de résultat entier de l'année — c'est là que se lit le détail de
+ * l'EBITDA ; cliquer choisit l'exercice lu partout ailleurs.
  */
-function lignesAnnee(r, y) {
+function cinqAns(r, y, choisir) {
   const p = r.pnl
-  // Le libellé porte le signe de l'operation ; repeter un moins sur le montant
-  // donnerait « - Achats -71 647 € », qui se lit comme une double negation. Le
-  // test se fait sur le premier caractere, jamais par expression reguliere :
-  // esbuild n'echappe pas les litteraux /.../, et un signe moins typographique
-  // y corromprait le paquet.
-  const signe = (label) => label[0] === '\u2212' || label[0] === '+'
-  const l = (label, v, strong = false) => ({
-    label, strong, value: euro(signe(label) ? Math.abs(n(v)) : n(v)),
-  })
+  const k = r.kpis
+  const series = [
+    { cle: 'ca', nom: 'Chiffre d’affaires', vals: p.revenue },
+    { cle: 'ebitda', nom: 'EBITDA', vals: p.ebitda },
+    { cle: 'net', nom: 'Résultat net', vals: p.netResult },
+  ]
+  const seuils = (k.breakEven || []).map((v) => n(v))
+  const toutes = [...series.flatMap((x) => x.vals.map(n)), ...seuils]
+  const haut = Math.max(0, ...toutes)
+  const bas = Math.min(0, ...toutes)
+  if (haut === 0 && bas === 0) return null
+  const span = haut - bas || 1
+  const zero = haut / span
+
+  return h('div', { class: 'sy-block' },
+    h('div', { class: 'sy-block-head' },
+      h('h3', { class: 'sy-block-title' }, 'Chiffre d’affaires et résultat'),
+      h('div', { class: 'sy-keys' },
+        ...series.map((x) => h('span', { class: `sy-key is-${x.cle}` }, h('i', {}), x.nom)),
+        seuils.some((v) => v) ? h('span', { class: 'sy-key is-seuil' }, h('i', {}), 'Point mort') : null,
+      ),
+    ),
+    h('div', { class: 'sy-perf', style: { '--zero': String(zero) } },
+      h('i', { class: 'sy-perf-zero', 'aria-hidden': 'true' }),
+      ...Array.from({ length: 5 }, (_, a) => {
+        const col = h('div', {
+          class: `sy-perf-col ${a === y ? 'is-on' : ''}`,
+          role: 'button', tabindex: '0', 'aria-label': `Année ${a + 1}`,
+          onClick: () => choisir(a),
+          onKeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choisir(a) } },
+        },
+          h('div', { class: 'sy-perf-bars' },
+            ...series.map((x, si) => {
+              const v = n(x.vals[a])
+              const t = (Math.abs(v) / span) * 100
+              const pose = v >= 0
+                ? { bottom: `${((0 - bas) / span) * 100}%`, height: `${t}%` }
+                : { top: `${zero * 100}%`, height: `${t}%` }
+              return h('span', { class: 'sy-perf-slot' },
+                h('i', { class: `sy-perf-bar is-${x.cle} ${v < 0 ? 'is-down' : ''}`, style: { ...pose, '--i': String(a * 3 + si) } }))
+            }),
+            seuils[a] > 0
+              ? h('i', { class: 'sy-perf-seuil', style: { bottom: `${((seuils[a] - bas) / span) * 100}%` }, 'aria-hidden': 'true' })
+              : null,
+          ),
+          h('span', { class: 'sy-perf-year' }, `A${a + 1}`),
+        )
+        return hot(col, `Année ${a + 1}`, () => compteAnnee(r, a))
+      }),
+    ),
+    h('p', { class: 'sy-note' }, revenueSentence(r)),
+  )
+}
+
+/**
+ * Le compte de résultat d'une année, dans l'ordre du plan comptable.
+ *
+ * Le libellé porte le signe de l'opération ; le montant ne le répète pas,
+ * sinon « − Achats -71 647 € » se lirait comme une double négation.
+ */
+function compteAnnee(r, y) {
+  const p = r.pnl
+  const signe = (label) => label[0] === '−' || label[0] === '+'
+  const l = (label, v, strong = false) => ({ label, strong, value: euro(signe(label) ? Math.abs(n(v)) : n(v)) })
   return [
     l('Chiffre d’affaires', p.revenue[y], true),
-    l('− Achats', -Math.abs(n(p.variableCost[y]))),
+    l('− Achats', p.variableCost[y]),
     l('= Marge brute', p.grossMargin[y], true),
-    l('− Charges externes', -Math.abs(n(p.external[y]))),
-    n(p.duties[y]) ? l('− Impôts et taxes', -Math.abs(n(p.duties[y]))) : null,
+    l('− Charges externes', p.external[y]),
+    n(p.duties[y]) ? l('− Impôts et taxes', p.duties[y]) : null,
     n(p.grants[y]) ? l('+ Subventions', p.grants[y]) : null,
-    l('− Salaires et cotisations', -Math.abs(n(p.payroll[y]))),
+    l('− Salaires et cotisations', p.payroll[y]),
     l('= EBITDA', p.ebitda[y], true),
-    n(p.amortisation[y]) ? l('− Amortissements', -Math.abs(n(p.amortisation[y]))) : null,
+    n(p.amortisation[y]) ? l('− Amortissements', p.amortisation[y]) : null,
     l('= Résultat d’exploitation', p.ebit[y], true),
-    n(p.interest[y]) ? l('− Intérêts', -Math.abs(n(p.interest[y]))) : null,
-    n(p.corporateTax[y]) ? l('− Impôt sur les sociétés', -Math.abs(n(p.corporateTax[y]))) : null,
+    n(p.interest[y]) ? l('− Intérêts', p.interest[y]) : null,
+    n(p.corporateTax[y]) ? l('− Impôt sur les sociétés', p.corporateTax[y]) : null,
     n(p.credits[y]) ? l('+ Crédits d’impôt', p.credits[y]) : null,
     n(p.jeiSaving[y]) ? l('+ Économie JEI', p.jeiSaving[y]) : null,
     l('= Résultat net', p.netResult[y], true),
   ].filter(Boolean)
 }
 
-/* ─────────────────────── 5. L'échelle des soldes ─────────────────────────── */
-
 /**
  * Du chiffre d'affaires au résultat net, marche par marche.
  *
- * Le survol donne le détail ; l'échelle le donne en permanence, avec la
- * longueur de chaque marche proportionnelle au chiffre d'affaires. On y voit
- * d'un coup d'œil ce qui mange la valeur : la marche la plus longue est le
- * poste à traiter en premier.
+ * Chaque marche a la longueur de sa part du chiffre d'affaires : la plus
+ * longue est le poste à traiter en premier. La phrase dessous le nomme.
  */
-function ladder(r, an) {
+function cascade(r, y) {
   const p = r.pnl
-  const ca = n(p.revenue[an])
-  if (ca <= 0) {
-    return h('div', { class: 'st-col' },
-      h('h3', { class: 'st-col-title' }, `Du chiffre d’affaires au résultat — A${an + 1}`),
-      h('p', { class: 'st-empty' }, 'Aucun chiffre d’affaires cette année-là : l’échelle n’a rien à répartir.'),
-    )
-  }
+  const ca = n(p.revenue[y])
+  const tete = h('div', { class: 'sy-block-head' },
+    h('h3', { class: 'sy-block-title' }, 'Du chiffre d’affaires au résultat net'),
+    h('span', { class: 'sy-block-meta' }, `Soldes intermédiaires — année ${y + 1}`),
+  )
+  if (ca <= 0) return h('div', { class: 'sy-block' }, tete, h('p', { class: 'sy-note' }, moneyFlowSentence(r, y)))
 
   const marches = [
     { nom: 'Chiffre d’affaires', v: ca, solde: true },
-    { nom: 'Achats', v: -Math.abs(n(p.variableCost[an])) },
-    { nom: 'Marge brute', v: n(p.grossMargin[an]), solde: true },
-    { nom: 'Charges externes', v: -Math.abs(n(p.external[an])) },
-    { nom: 'Impôts et taxes', v: -Math.abs(n(p.duties[an])) },
-    { nom: 'Salaires et cotisations', v: -Math.abs(n(p.payroll[an])) },
-    { nom: 'EBITDA', v: n(p.ebitda[an]), solde: true },
-    { nom: 'Amortissements', v: -Math.abs(n(p.amortisation[an])) },
-    { nom: 'Intérêts', v: -Math.abs(n(p.interest[an])) },
-    { nom: 'Impôt sur les sociétés', v: -Math.abs(n(p.corporateTax[an])) },
-    { nom: 'Crédits d’impôt et JEI', v: n(p.credits[an]) + n(p.jeiSaving[an]) },
-    { nom: 'Résultat net', v: n(p.netResult[an]), solde: true },
+    { nom: 'Subventions', v: n(p.grants[y]) },
+    { nom: 'Achats', v: -Math.abs(n(p.variableCost[y])) },
+    { nom: 'Charges externes', v: -Math.abs(n(p.external[y])) },
+    { nom: 'Impôts et taxes', v: -Math.abs(n(p.duties[y])) },
+    { nom: 'Personnel', v: -Math.abs(n(p.payroll[y])) },
+    { nom: 'EBITDA', v: n(p.ebitda[y]), solde: true },
+    { nom: 'Amortissements', v: -Math.abs(n(p.amortisation[y])) },
+    { nom: 'Frais financiers', v: -Math.abs(n(p.interest[y])) },
+    { nom: 'Impôt sur les sociétés', v: -Math.abs(n(p.corporateTax[y])) },
+    { nom: 'Crédits d’impôt', v: n(p.credits[y]) },
+    { nom: 'Résultat net', v: n(p.netResult[y]), solde: true },
   ].filter((m) => m.solde || Math.abs(m.v) > 0.5)
 
-  return h('div', { class: 'st-col' },
-    h('h3', { class: 'st-col-title' }, `Du chiffre d’affaires au résultat — A${an + 1}`),
-    h('div', { class: 'st-ladder' },
+  return h('div', { class: 'sy-block' },
+    tete,
+    h('div', { class: 'sy-ladder' },
       ...marches.map((m, i) => {
-        const part = Math.min(1, Math.abs(m.v) / ca)
-        return h('div', {
-          class: `st-step ${m.solde ? 'is-solde' : ''} ${m.v < 0 ? 'is-out' : ''}`,
-          style: { '--i': String(i) },
+        const montant = m.solde ? m.v : Math.abs(m.v)
+        return hot(h('div', {
+          class: `sy-rung ${m.solde ? 'is-solde' : ''} ${m.v < 0 ? 'is-out' : ''} ${i === marches.length - 1 ? 'is-last' : ''}`,
         },
-          h('span', { class: 'st-step-nom' }, m.nom),
-          h('span', { class: 'st-step-bar' },
-            h('i', { style: { width: `${part * 100}%`, '--i': String(i) } })),
-          h('span', { class: 'st-step-val' },
-            euro(m.solde ? m.v : Math.abs(m.v), { compact: true })),
-          h('span', { class: 'st-step-pct' },
-            `${Math.round(((m.solde ? m.v : Math.abs(m.v)) / ca) * 100)} %`),
-        )
+          h('span', { class: 'sy-rung-nom' }, m.nom),
+          h('span', { class: 'sy-rung-bar' },
+            h('i', { style: { width: `${Math.min(1, Math.abs(m.v) / ca) * 100}%`, '--i': String(i) } })),
+          h('span', { class: 'sy-rung-val' }, euro(montant, { compact: true })),
+        ), m.nom, () => [
+          { label: 'Montant', value: euro(montant), strong: true },
+          { label: 'Pour 100 € facturés', value: `${num((montant / ca) * 100, 1)} €` },
+        ])
       }),
     ),
+    h('p', { class: 'sy-note' }, moneyFlowSentence(r, y)),
   )
 }
 
-/* ─────────────────────── 6. Où part l'argent encaissé ────────────────────── */
+/**
+ * Le compte en banque sur cinq ans, et ce qui le fait bouger.
+ *
+ * La courbe se trace à l'ouverture ; un repère suit le curseur et donne le
+ * mois et le solde. Deux phrases dessous : ce que dit la trésorerie, et ce que
+ * le cycle d'exploitation immobilise.
+ */
+function tresorerie(r) {
+  const vals = (r.cash?.balance || []).map(n)
+  const runway = r.kpis.runwayMonths
+  return h('div', { class: 'sy-block' },
+    h('div', { class: 'sy-block-head' },
+      h('h3', { class: 'sy-block-title' }, 'Trésorerie'),
+      h('span', { class: 'sy-block-meta' },
+        Number.isFinite(runway) && runway !== null ? `${num(runway, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas'),
+    ),
+    courbe(vals, r.startDate, { hauteur: 190, mois: true }),
+    h('p', { class: 'sy-note' }, cashSentence(r)),
+    h('p', { class: 'sy-note' }, bfrSentence(r)),
+  )
+}
+
+/** Ce que coûte l'entreprise, poste par poste, exercice par exercice. */
+function structure(r, y) {
+  const p = r.pnl
+  const postes = [
+    { nom: 'Achats', vals: p.variableCost, cle: 'a' },
+    { nom: 'Charges externes', vals: p.external, cle: 'b' },
+    { nom: 'Personnel', vals: p.payroll, cle: 'c' },
+    { nom: 'Impôts et taxes', vals: p.duties, cle: 'd' },
+    { nom: 'Amortissements', vals: p.amortisation, cle: 'e' },
+  ].filter((x) => x.vals.some((v) => Math.abs(n(v)) > 0))
+  const totaux = Array.from({ length: 5 }, (_, a) => postes.reduce((t, x) => t + Math.abs(n(x.vals[a])), 0))
+  const max = Math.max(1, ...totaux)
+  if (!postes.length) return null
+
+  return h('div', { class: 'sy-block' },
+    h('div', { class: 'sy-block-head' },
+      h('h3', { class: 'sy-block-title' }, 'Structure des charges'),
+      h('span', { class: 'sy-block-meta' }, 'Par exercice'),
+    ),
+    h('div', { class: 'sy-stack' },
+      ...Array.from({ length: 5 }, (_, a) => hot(h('div', { class: `sy-stack-col ${a === y ? 'is-on' : ''}` },
+        h('div', { class: 'sy-stack-bar', style: { height: `${(totaux[a] / max) * 100}%`, '--i': String(a) } },
+          ...postes.map((x) => h('i', {
+            class: `is-${x.cle}`,
+            style: { flexGrow: String(Math.abs(n(x.vals[a])) / Math.max(1, totaux[a])) },
+          })),
+        ),
+        h('span', { class: 'sy-perf-year' }, `A${a + 1}`),
+      ), `Charges — année ${a + 1}`, () => [
+        ...postes.map((x) => ({ label: x.nom, value: euro(Math.abs(n(x.vals[a]))) })),
+        { label: 'Total', value: euro(totaux[a]), strong: true },
+      ])),
+    ),
+    h('div', { class: 'sy-keys is-below' },
+      ...postes.map((x) => h('span', { class: `sy-key is-st-${x.cle}` }, h('i', {}), x.nom))),
+    h('p', { class: 'sy-note' }, costsSentence(r, y)),
+  )
+}
 
 /**
- * Une barre empilée, pas un camembert.
+ * D'où vient le chiffre d'affaires.
  *
- * On compare mal des angles ; on compare très bien des longueurs posées sur la
- * même ligne. La légende passe en chasse fixe et porte le pourcentage, pour
- * qu'on puisse la lire sans revenir à la barre.
+ * Une seule offre ne se répartit pas : le bloc ne s'affiche qu'à partir de
+ * deux sources de revenus, comme dans l'analyse d'origine.
  */
-function splitBar(r, an) {
-  const p = r.pnl
-  const rev = n(p.revenue[an])
-  if (rev <= 0) return null
-
-  const parts = [
-    { nom: 'Achats', v: Math.abs(n(p.variableCost[an])) },
-    { nom: 'Salaires', v: Math.abs(n(p.payroll[an])) },
-    { nom: 'Charges fixes', v: Math.abs(n(p.external[an])) + Math.abs(n(p.duties[an])) },
-    { nom: 'Amortissements', v: Math.abs(n(p.amortisation[an])) },
-    { nom: 'Impôts', v: Math.abs(n(p.corporateTax[an])) },
-  ].filter((x) => x.v > 0)
-  const reste = rev - parts.reduce((a, x) => a + x.v, 0)
-  const tout = [...parts, { nom: 'Ce qu’il reste', v: Math.max(0, reste), fin: true }]
-
-  return h('section', { class: 'st-split st-col' },
-    h('div', { class: 'st-split-head' },
-      h('h3', { class: 'st-col-title' }, 'Où part chaque euro encaissé'),
-      h('span', { class: 'st-split-year' }, `Année ${an + 1}`),
+function offres(r) {
+  const items = (r.revenue?.perActivity || [])
+    .map((a) => ({ label: a.name || 'Offre', value: somme(a.total) }))
+    .filter((a) => a.value > 0)
+    .sort((a, b) => b.value - a.value)
+  if (items.length < 2) return null
+  const tot = items.reduce((t, x) => t + x.value, 0)
+  return h('div', { class: 'sy-block' },
+    h('div', { class: 'sy-block-head' },
+      h('h3', { class: 'sy-block-title' }, 'Répartition du chiffre d’affaires'),
+      h('span', { class: 'sy-block-meta' }, 'Cumul sur cinq ans'),
     ),
-    hot(h('div', { class: 'st-bar', role: 'img', 'aria-label': 'Répartition du chiffre d’affaires' },
-      ...tout.map((x, i) => h('i', {
-        class: x.fin ? 'is-rest' : '',
-        style: { width: `${(x.v / rev) * 100}%`, '--i': String(i) },
-        title: `${x.nom} — ${euro(x.v)}`,
-      })),
-    ), `Chaque euro encaissé — A${an + 1}`, () => tout.map((x) => ({
-      label: x.nom, value: `${euro(x.v)} · ${Math.round((x.v / rev) * 100)} %`, strong: !!x.fin,
-    }))),
-    h('div', { class: 'st-legend' },
-      ...tout.map((x) => h('span', { class: `st-leg ${x.fin ? 'is-rest' : ''}` },
-        h('i', { 'aria-hidden': 'true' }),
-        h('span', { class: 'st-leg-name' }, x.nom),
-        h('span', { class: 'st-leg-pct' }, `${Math.round((x.v / rev) * 100)} %`),
+    h('div', { class: 'sy-ladder' },
+      ...items.slice(0, 8).map((o, i) => hot(h('div', { class: `sy-rung ${i === 0 ? 'is-lead' : ''}` },
+        h('span', { class: 'sy-rung-nom' }, o.label),
+        h('span', { class: 'sy-rung-bar' }, h('i', { style: { width: `${(o.value / tot) * 100}%`, '--i': String(i) } })),
+        h('span', { class: 'sy-rung-val' }, `${Math.round((o.value / tot) * 100)} %`),
+      ), o.label, () => [
+        { label: 'Sur cinq ans', value: euro(o.value), strong: true },
+        { label: 'Part du total', value: pct(o.value / tot) },
+      ])),
+    ),
+    h('p', { class: 'sy-note' }, mixSentence(items)),
+  )
+}
+
+/** Les ratios qu'un financeur calcule lui-même si on ne les lui donne pas. */
+function ratios(r, y) {
+  const k = r.kpis
+  const ca = n(r.pnl.revenue[y])
+  const rien = '—'
+  const lignes = [
+    { nom: 'Marge brute', v: ca > 0 ? pct(n(k.marginRate[y])) : rien, dit: 'Ce qui reste après les achats' },
+    { nom: 'Marge d’EBITDA', v: ca > 0 ? pct(n(k.ebitdaMargin[y])) : rien, dit: 'Ce que dégage l’exploitation' },
+    { nom: 'Marge nette', v: ca > 0 ? pct(n(k.netMargin[y])) : rien, dit: 'Ce qui reste, tout payé' },
+    { nom: 'Masse salariale', v: ca > 0 ? pct(n(k.payrollRatio[y])) : rien, dit: 'Part du CA versée en salaires' },
+    { nom: 'Point mort', v: k.breakEven[y] ? euro(n(k.breakEven[y]), { compact: true }) : rien, dit: 'CA qui couvre les charges' },
+    { nom: 'BFR au plus haut', v: euro(n(k.peakBfr), { compact: true }), dit: 'L’argent immobilisé par le cycle' },
+    { nom: 'Coût d’acquisition', v: k.cac ? euro(n(k.cac)) : rien, dit: k.cac ? 'Marketing dépensé par client gagné' : 'Aucune campagne chiffrée' },
+    {
+      nom: 'LTV / CAC',
+      v: k.ltvCacRatio ? `× ${num(n(k.ltvCacRatio), 1)}` : rien,
+      dit: k.ltvCacRatio ? (n(k.ltvCacRatio) >= 3 ? 'Au-dessus du seuil de 3 attendu' : 'Sous le seuil de 3 attendu') : 'Demande une campagne et un panier',
+    },
+  ]
+  return h('div', { class: 'sy-block' },
+    h('div', { class: 'sy-block-head' },
+      h('h3', { class: 'sy-block-title' }, 'Les ratios'),
+      h('span', { class: 'sy-block-meta' }, `Année ${y + 1}`),
+    ),
+    h('div', { class: 'sy-ratios' },
+      ...lignes.map((l, i) => h('div', { class: 'sy-ratio', style: { '--i': String(i) } },
+        h('span', { class: 'sy-ratio-nom' }, l.nom),
+        h('span', { class: 'sy-ratio-val' }, l.v),
+        h('span', { class: 'sy-ratio-dit' }, l.dit),
       )),
     ),
   )
 }
 
-/* ─────────────────────── 7. Ce qui fait le chiffre d'affaires ────────────── */
+/* ───────────────────────────── Les petites images ────────────────────────── */
 
 /**
- * La part de chaque offre dans le chiffre d'affaires de l'année.
+ * Cinq barres de part et d'autre d'un zéro.
  *
- * Un modèle qui repose à 92 % sur une seule offre ne se pilote pas comme un
- * modèle équilibré : c'est une information de structure, et elle ne se lit
- * nulle part ailleurs dans l'écran.
+ * La barre dit le sens — ça monte, ça part du rouge, ça passe au positif
+ * telle année ; le survol donne le montant exact.
  */
-function mixBar(r, an) {
-  const offres = (r.revenue?.perActivity || [])
-    .map((a) => ({ nom: a.name || 'Offre', v: somme((a.total || []).slice(an * 12, an * 12 + 12)) }))
-    .filter((a) => a.v > 0)
-    .sort((a, b) => b.v - a.v)
-  if (!offres.length) return null
-  const tot = offres.reduce((a, x) => a + x.v, 0)
-  if (tot <= 0) return null
-
-  return h('section', { class: 'st-mix' },
-    h('div', { class: 'st-split-head' },
-      h('h3', { class: 'st-col-title' }, 'Ce qui fait le chiffre d’affaires'),
-      h('span', { class: 'st-split-year' },
-        offres.length === 1 ? `Une seule offre · A${an + 1}` : `${offres.length} offres · A${an + 1}`),
-    ),
-    h('div', { class: 'st-mix-rows' },
-      ...offres.slice(0, 8).map((o, i) => hot(h('div', { class: 'st-mix-row', style: { '--i': String(i) } },
-        h('span', { class: 'st-mix-nom' }, o.nom),
-        h('span', { class: 'st-mix-bar' }, h('i', { style: { width: `${(o.v / tot) * 100}%`, '--i': String(i) } })),
-        h('span', { class: 'st-mix-val' }, euro(o.v, { compact: true })),
-        h('span', { class: 'st-mix-pct' }, `${Math.round((o.v / tot) * 100)} %`),
-      ), o.nom, () => [
-        { label: `Chiffre d’affaires A${an + 1}`, value: euro(o.v), strong: true },
-        { label: 'Part du total', value: pct(o.v / tot) },
-      ])),
-    ),
+function barres(items, nom) {
+  const haut = Math.max(0, ...items.map((i) => n(i.value)))
+  const bas = Math.min(0, ...items.map((i) => n(i.value)))
+  const span = haut - bas || 1
+  // La ligne de zéro tombe là où le zéro se trouve vraiment : une perte de
+  // 12 000 € face à un bénéfice de 800 000 € ne mérite pas la moitié du dessin.
+  // Une échelle, une seule, pour les deux sens.
+  const zero = haut / span
+  return h('div', { class: 'sy-mini', style: { '--zero': String(zero) } },
+    h('i', { class: 'sy-mini-zero', 'aria-hidden': 'true' }),
+    ...items.map((it, k) => {
+      const v = n(it.value)
+      const part = (Math.abs(v) / span) * 100
+      const pose = v >= 0
+        ? { bottom: `${(1 - zero) * 100}%`, height: `${part}%` }
+        : { top: `${zero * 100}%`, height: `${part}%` }
+      return hot(h('div', { class: 'sy-mini-col' },
+        h('div', { class: 'sy-mini-track' },
+          h('i', { class: v < 0 ? 'is-neg' : 'is-pos', style: { ...pose, '--i': String(k) } })),
+        h('span', { class: 'sy-mini-label' }, it.label),
+      ), nom, () => [{ label: it.label, value: euro(v), strong: true }])
+    }),
   )
 }
 
-/* ─────────────────────── 8. La courbe, sans cadre ────────────────────────── */
+/** Où part chaque euro : une barre, des parts, une légende en chasse fixe. */
+function repartition(parts, nom) {
+  const garde = parts.filter((p) => n(p.value) > 0)
+  const total = garde.reduce((a, p) => a + n(p.value), 0) || 100
+  return h('div', { class: 'sy-split' },
+    hot(h('div', { class: 'sy-split-bar' },
+      ...garde.map((p) => h('i', { class: `is-${p.tone}`, style: { flexGrow: String(n(p.value) / total) } }))),
+      nom, () => garde.map((p) => ({ label: p.label, value: String(p.value), strong: p.tone === 'left' }))),
+    h('div', { class: 'sy-split-keys' },
+      ...garde.map((p) => h('span', { class: `sy-split-key is-${p.tone}` },
+        h('i', { 'aria-hidden': 'true' }), p.label, h('b', {}, String(p.value))))),
+  )
+}
+
+/** Une jauge : la part d'un seuil atteinte, et le repère du seuil. */
+function jauge({ part, label }) {
+  const echelle = Math.max(1, n(part))
+  return h('div', { class: 'sy-gauge' },
+    h('div', { class: 'sy-gauge-track' },
+      h('i', {
+        class: n(part) >= 1 ? 'is-ok' : '',
+        style: { width: `${Math.min(100, Math.max(2, (n(part) / echelle) * 100))}%` },
+      }),
+      h('span', { class: 'sy-gauge-mark', style: { left: `${(1 / echelle) * 100}%` }, 'aria-hidden': 'true' }),
+    ),
+    h('span', { class: 'sy-gauge-label' }, label),
+  )
+}
+
+/** Une étincelle : la forme d'une série, sans axe, dans la couleur du verdict. */
+function etincelle(values, couleur) {
+  const vals = values.map(n)
+  const max = Math.max(...vals), min = Math.min(...vals)
+  const span = max - min || 1
+  const W = 64, H = 22
+  const pts = vals.map((v, i) => `${((i / Math.max(1, vals.length - 1)) * W).toFixed(1)},${(H - 2 - ((v - min) / span) * (H - 4)).toFixed(1)}`).join(' ')
+  return h('span', {
+    class: 'sy-spark',
+    'aria-hidden': 'true',
+    html: `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><polyline pathLength="1" points="${pts}" fill="none" stroke="${couleur}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  })
+}
 
 /**
- * Le compte en banque, vingt-quatre mois, posé à même le fond.
+ * Une courbe de trésorerie qu'on peut interroger.
  *
- * La courbe se trace à l'arrivée plutôt que d'apparaître faite, et un repère
- * suit le curseur : le mois, le solde, et le fait d'être ou non sous zéro. Une
- * courbe qu'on ne peut pas interroger ne sert qu'à décorer.
+ * Lissée sans inventer de relief, posée sur une ligne de zéro pointillée ; un
+ * repère suit le curseur, au mois près, et l'infobulle dit le solde.
  */
-function cashCurve(r) {
-  const vals = (r.cash?.balance || []).slice(0, 24).map(n)
+let courbes = 0
+function courbe(values, startDate, { hauteur = 80, legende = null, mois = false } = {}) {
+  const vals = values.map(n)
   if (vals.length < 2) return null
-  const max = Math.max(...vals, 0)
-  const min = Math.min(...vals, 0)
+  const id = `syg${++courbes}`
+  const max = Math.max(...vals, 0), min = Math.min(...vals, 0)
   const span = max - min || 1
-  const W = 1000, H = 190
+  const W = 1000, H = hauteur
   const x = (i) => (i / (vals.length - 1)) * W
-  const y = (v) => H - ((v - min) / span) * H
-
-  // Une courbe lissée : chaque segment reçoit deux points de contrôle posés à
-  // mi-distance, ce qui suffit à retirer les angles sans inventer de relief.
-  let d = `M ${x(0)} ${y(vals[0])}`
+  const yv = (v) => H - 2 - ((v - min) / span) * (H - 4)
+  let d = `M ${x(0)} ${yv(vals[0])}`
   for (let i = 1; i < vals.length; i++) {
-    const x0 = x(i - 1), x1 = x(i), xm = (x0 + x1) / 2
-    d += ` C ${xm} ${y(vals[i - 1])}, ${xm} ${y(vals[i])}, ${x1} ${y(vals[i])}`
+    const xm = (x(i - 1) + x(i)) / 2
+    d += ` C ${xm} ${yv(vals[i - 1])}, ${xm} ${yv(vals[i])}, ${x(i)} ${yv(vals[i])}`
   }
-  const zero = y(0)
+  const z = yv(0)
+  const negatif = vals.some((v) => v < 0)
 
   const boite = h('div', {
-    class: 'st-curve-box',
+    class: 'sy-curve-svg',
+    style: { height: `${hauteur}px` },
     html: `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-  <defs><linearGradient id="stfill" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="rgba(14,15,12,.16)"/>
-    <stop offset="100%" stop-color="rgba(14,15,12,0)"/>
+  <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="rgba(14,15,12,.14)"/><stop offset="100%" stop-color="rgba(14,15,12,0)"/>
   </linearGradient></defs>
-  <line x1="0" y1="${zero}" x2="${W}" y2="${zero}" stroke="rgba(14,15,12,.22)" stroke-width="1" stroke-dasharray="3 5"/>
-  <path class="st-curve-fill" d="${d} L ${W} ${H} L 0 ${H} Z" fill="url(#stfill)"/>
-  <path class="st-curve-line" pathLength="1" d="${d}" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="0" y1="${z}" x2="${W}" y2="${z}" class="sy-curve-zero"/>
+  <path class="sy-curve-fill" d="${d} L ${W} ${H} L 0 ${H} Z" fill="url(#${id})"/>
+  <path class="sy-curve-line ${negatif ? 'has-neg' : ''}" pathLength="1" d="${d}"/>
 </svg>`,
   })
 
-  // Le repère : une règle verticale et un point, déplacés en pixels plutôt
-  // qu'en pourcentage, pour qu'ils tombent exactement sur le mois survolé.
-  const regle = h('i', { class: 'st-curve-rule', 'aria-hidden': 'true' })
-  const point = h('i', { class: 'st-curve-dot', 'aria-hidden': 'true' })
-  let mois = 0
-  const zone = h('div', { class: 'st-curve-hit' }, regle, point)
+  const regle = h('i', { class: 'sy-curve-rule', 'aria-hidden': 'true' })
+  const point = h('i', { class: 'sy-curve-dot', 'aria-hidden': 'true' })
+  let m = 0
+  const zone = h('div', { class: 'sy-curve-hit' }, regle, point)
   zone.addEventListener('mousemove', (e) => {
     const b = zone.getBoundingClientRect()
     if (!b.width) return
-    const part = Math.max(0, Math.min(1, (e.clientX - b.left) / b.width))
-    mois = Math.round(part * (vals.length - 1))
-    const px = (mois / (vals.length - 1)) * b.width
-    const py = (1 - (vals[mois] - min) / span) * b.height
+    m = Math.round(Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)) * (vals.length - 1))
+    const px = (m / (vals.length - 1)) * b.width
+    const py = (yv(vals[m]) / H) * b.height
     regle.style.transform = `translateX(${px}px)`
     point.style.transform = `translate(${px}px, ${py}px)`
+    point.classList.toggle('is-neg', vals[m] < 0)
     zone.classList.add('is-on')
   })
   zone.addEventListener('mouseleave', () => zone.classList.remove('is-on'))
   hot(zone, 'Trésorerie', () => [
-    { label: monthLabel(mois, r.startDate), value: euro(vals[mois]), strong: true },
-    { label: vals[mois] < 0 ? 'Découvert' : 'Solde positif', value: vals[mois] < 0 ? 'à financer' : 'sans apport' },
+    { label: monthLabel(m, startDate), value: euro(vals[m]), strong: true },
+    { label: vals[m] < 0 ? 'Sous zéro' : 'Au-dessus de zéro', value: vals[m] < 0 ? 'à financer' : 'couvert' },
   ])
 
-  return h('section', { class: 'st-curve' },
-    h('div', { class: 'st-split-head' },
-      h('h3', { class: 'st-col-title' }, 'Ton compte en banque, mois par mois'),
-      h('span', { class: 'st-split-year' }, '24 mois'),
-    ),
-    h('div', { class: 'st-curve-wrap' }, boite, zone),
-    h('div', { class: 'st-months' },
-      ...[0, 5, 11, 17, 23].filter((m) => m < vals.length).map((m) =>
-        h('span', {}, monthLabel(m, r.startDate))),
-    ),
-  )
-}
+  const reperes = mois
+    ? [0, 12, 24, 36, 48, 59].filter((k) => k < vals.length)
+    : [0, Math.floor((vals.length - 1) / 2), vals.length - 1]
 
-/* ─────────────────────── 9. Les ratios qu'on te demandera ────────────────── */
-
-/**
- * Huit ratios, en chasse fixe, sans commentaire superflu.
- *
- * Ce sont ceux qu'un banquier ou un investisseur calcule lui-même en trente
- * secondes s'ils ne sont pas donnés. Les donner, c'est montrer qu'on sait ce
- * qui sera regardé. Chacun porte sa lecture en une ligne — précise, pas
- * pédagogique : le lecteur de cet écran sait lire un taux de marge.
- */
-function ratioRow(r, an) {
-  const k = r.kpis
-  const p = r.pnl
-  const ca = n(p.revenue[an])
-  const rien = '—'
-
-  const lignes = [
-    { nom: 'Marge brute', v: ca > 0 ? pct(n(k.marginRate[an])) : rien, dit: 'Ce qui reste après les achats' },
-    { nom: 'Marge EBITDA', v: ca > 0 ? pct(n(k.ebitdaMargin[an])) : rien, dit: 'Ce que dégage l’exploitation' },
-    { nom: 'Marge nette', v: ca > 0 ? pct(n(k.netMargin[an])) : rien, dit: 'Ce qui reste, tout payé' },
-    { nom: 'Masse salariale', v: ca > 0 ? pct(n(k.payrollRatio[an])) : rien, dit: 'Part du CA versée en salaires' },
-    { nom: 'Point mort', v: k.breakEven[an] ? euro(n(k.breakEven[an]), { compact: true }) : rien, dit: 'CA à atteindre cette année-là' },
-    { nom: 'BFR au pic', v: euro(n(k.peakBfr), { compact: true }), dit: 'Le trou à financer en permanence' },
-    {
-      nom: 'Coût d’acquisition',
-      v: k.cac ? euro(n(k.cac)) : rien,
-      dit: k.cac ? 'Dépense marketing par client gagné' : 'Aucune campagne chiffrée',
-    },
-    {
-      nom: 'LTV / CAC',
-      v: k.ltvCacRatio ? `× ${num(n(k.ltvCacRatio), 1)}` : rien,
-      dit: k.ltvCacRatio
-        ? (n(k.ltvCacRatio) >= 3 ? 'Au-dessus du seuil de 3 attendu' : 'Sous le seuil de 3 attendu')
-        : 'Demande une campagne et un panier',
-    },
-  ]
-
-  return h('section', { class: 'st-ratios' },
-    h('div', { class: 'st-split-head' },
-      h('h3', { class: 'st-col-title' }, 'Les ratios qu’on te demandera'),
-      h('span', { class: 'st-split-year' }, `Année ${an + 1}`),
-    ),
-    h('div', { class: 'st-ratio-grid' },
-      ...lignes.map((l, i) => h('div', { class: 'st-ratio', style: { '--i': String(i) } },
-        h('div', { class: 'st-ratio-nom' }, l.nom),
-        h('div', { class: 'st-ratio-val' }, l.v),
-        h('div', { class: 'st-ratio-dit' }, l.dit),
-      )),
-    ),
+  return h('div', { class: 'sy-curve' },
+    h('div', { class: 'sy-curve-wrap' }, boite, zone),
+    h('div', { class: 'sy-curve-axis' },
+      ...reperes.map((k) => h('span', {}, monthLabel(k, startDate)))),
+    legende ? h('span', { class: 'sy-curve-legend' }, legende) : null,
   )
 }

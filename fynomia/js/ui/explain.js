@@ -111,3 +111,18 @@ export function cashSentence(r) {
   }
   return `La courbe touche ${euro(low.value, { compact: true })} en ${when}. C'est ce trou, et non la perte comptable, qui détermine le montant à réunir avant de démarrer.`
 }
+
+/** Une phrase qui dit ce que le dessin montre, pour qui ne lit pas les dessins. */
+export function moneyFlowSentence(r, y) {
+  const p = r.pnl
+  const rev = p.revenue[y]
+  if (rev <= 0) return "Aucun chiffre d'affaires sur cet exercice : renseigne tes ventes pour voir la cascade se remplir."
+  const kept = p.netResult[y] / rev
+  const biggest = [
+    { label: 'les achats', v: p.variableCost[y] },
+    { label: 'les charges externes', v: p.external[y] },
+    { label: "l'équipe", v: p.payroll[y] },
+  ].sort((a, b) => b.v - a.v)[0]
+  if (biggest.v <= 0) return `Sur 100 € facturés, il t’en reste ${Math.round(kept * 100)} € après impôt.`
+  return `Sur 100 € facturés, ${biggest.label} en prennent ${Math.round((biggest.v / rev) * 100)} € et il t’en reste ${Math.round(kept * 100)} € après impôt.`
+}
