@@ -210,8 +210,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
   const secs = [
     { key: 'offre', label: "L'offre et son prix" },
     { key: 'volumes', label: 'Volumes' },
-    { key: 'paiement', label: 'Paiement' },
-    { key: 'evolution', label: 'Prix par ann\u00e9e' },
+    { key: 'affiner', label: 'Affiner' },
   ]
   const sec = secs.some((x) => x && x.key === activityCard.sec) ? activityCard.sec : 'offre'
 
@@ -392,22 +391,34 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
         volumesEditor(a, setVolumes, level, detail, refresh)
       ) : null,
 
-      sec === 'paiement' ? h('div', { class: 'view', 'data-gap': 'paiement' },
+      // Un seul onglet pour tout ce qui affine.
+      //
+      // « Paiement » et « Prix par année » occupaient deux onglets de la
+      // barre, à égalité avec le prix et les volumes — alors qu'on n'y va
+      // qu'une fois le modèle posé. Ils descendent d'un cran : un onglet
+      // « Affiner », et dedans deux volets qu'on ouvre s'il y a lieu.
+      sec === 'affiner' ? h('div', { class: 'view', 'data-gap': 'paiement' },
+        h('p', { class: 'view-intro' },
+          'Ces réglages ne changent pas ce que tu vends, mais quand l’argent entre et sort. Ils ne servent qu’une fois le prix et les volumes posés.'),
 
-        h('div', { class: 'grid grid-2' },
-          numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
-          numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
-          numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement ton besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
-          numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
-        ),
-        paymentTimeline(a),
-        h('div', { class: 'grid grid-2 mt' },
-          numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance ton activité.', onInput: (v) => set({ costPaymentLag: v }) }),
-          numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
-        )
+        refine(`offre-paiement-${a.id}`, 'Quand l’argent entre et sort',
+          h('div', {},
+            h('div', { class: 'grid grid-2' },
+              numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
+              numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
+              numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement ton besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
+              numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
+            ),
+            paymentTimeline(a),
+            h('div', { class: 'grid grid-2 mt' },
+              numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance ton activité.', onInput: (v) => set({ costPaymentLag: v }) }),
+              numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
+            ),
+          )),
+
+        refine(`offre-evolution-${a.id}`, 'Faire évoluer le prix d’une année sur l’autre',
+          h('div', { 'data-gap': 'evolution' }, priceEvolutionFields(a, set))),
       ) : null,
-
-      sec === 'evolution' ? h('div', { class: 'view', 'data-gap': 'evolution' }, priceEvolutionFields(a, set)) : null,
 
       h('div', { class: 'view-foot' },
         h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Supprimer cette offre')),

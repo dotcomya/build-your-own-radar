@@ -78,7 +78,35 @@ export function renderTeam(navigate, refresh) {
     ) : null,
 
     view === 'avantages' ? h('div', { class: 'view', 'data-gap': 'avantages' }, benefitsPanel(r, refresh)) : null,
-    view === 'masse' && r ? h('div', { class: 'view' }, payrollSummary(r, level)) : null,
+    // « Du brut au coût réel » ne se modifiait pas : c'était un onglet de
+    // lecture posé au milieu de trois onglets de saisie, sur chaque fiche de
+    // poste. Il rejoint la masse salariale, le seul endroit de la page où l'on
+    // vient pour lire — et il y détaille chaque poste, l'un sous l'autre.
+    view === 'masse' && r ? h('div', { class: 'view' },
+      payrollSummary(r, level),
+      s.team.length ? h('section', { class: 'card mt' },
+        h('div', { class: 'card-head' },
+          h('h2', {}, 'Du brut au coût réel'),
+          h('div', { class: 'tiny muted' }, 'Ce que chaque poste ajoute au brut, ligne par ligne'),
+        ),
+        h('div', { class: 'card-body' },
+          ...s.team.map((mb) => {
+            const hc = r?.payroll.headcount[Number(mb.startMonth) || 0] || 1
+            let c = null
+            try {
+              c = monthlyCost(mb, {
+                headcount: hc, jeiActive: jeiActive && (Number(mb.rdShare) || 0) > 0,
+                fiscal: s.fiscal, benefits: s.hr?.benefits,
+              })
+            } catch { return null }
+            return h('div', { class: 'costblock' },
+              h('div', { class: 'costblock-name' }, mb.role || 'Poste sans nom'),
+              costBreakdown(c, Number(mb.count) || 1, mb),
+            )
+          }).filter(Boolean),
+        ),
+      ) : null,
+    ) : null,
     view === 'jei' && r ? h('div', { class: 'view' }, jeiPanel(r)) : null,
 
     todoPanel('equipe', store.scenario, navigate),
@@ -135,7 +163,6 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
   const sections = [
     { key: 'poste', label: 'Le poste' },
     { key: 'dates', label: 'Dates et effectif' },
-    { key: 'cout', label: 'Du brut au coût réel' },
     ['cdi', 'cdd'].includes(m.contractType) ? { key: 'rd', label: 'Recherche' } : null,
   ]
   const sec = sections.some((x) => x && x.key === memberCard.sec) ? memberCard.sec : 'poste'
@@ -181,8 +208,6 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         const netValue = h('strong', { class: 'num' }, `${euro((m.contractType === 'tns' ? cost.gross : cost.net) * 12)} / an`)
         const plural = h('div', { class: 'paycard-note' },
           count > 1 ? `Pour ${count} personnes : ${euro(cost.cost * count * 12)} par an.` : '')
-        const soit = h('div', { class: 'field-hint' },
-          annual ? `Soit ${euro(m.monthlyGross)} par mois. ${contract.help}` : contract.help)
 
         const relire = (brut) => {
           const vivant = { ...m, monthlyGross: brut }
@@ -196,7 +221,6 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
           coutValue.textContent = `${euro(neuf.cost * 12)} / an`
           netValue.textContent = `${euro((m.contractType === 'tns' ? neuf.gross : neuf.net) * 12)} / an`
           plural.textContent = count > 1 ? `Pour ${count} personnes : ${euro(neuf.cost * count * 12)} par an.` : ''
-          soit.textContent = annual ? `Soit ${euro(brut)} par mois. ${contract.help}` : contract.help
         }
 
         const champSalaire = unitAmount({
@@ -222,7 +246,6 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
             }) : null,
             champSalaire,
           ),
-          soit,
           h('div', { class: 'paystrip' },
             h('div', { class: 'paystrip-cell' },
               h('span', {}, "Coût pour l’entreprise"), coutValue),
@@ -240,8 +263,6 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
           monthField({ label: 'Mois de départ', value: m.endMonth, startDate: r?.startDate, allowEmpty: true, onInput: (v) => set({ endMonth: v }) }),
         ),
       ) : null,
-
-      sec === 'cout' ? h('div', { class: 'view' }, costBreakdown(cost, count, m)) : null,
 
       sec === 'rd' ? h('div', { class: 'view' },
         h('p', { class: 'view-intro' },
