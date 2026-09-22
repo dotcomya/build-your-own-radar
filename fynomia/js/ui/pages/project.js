@@ -138,9 +138,6 @@ export function renderProject(navigate, refresh) {
         ta.addEventListener('input', () => set({ pitch: ta.value }, 'Description', { silent: true }))
         return h('div', { class: 'control' }, ta)
       })(),
-      h('div', { class: 'note plain mt' },
-        h('div', { class: 'note-title' }, 'Pas de génération magique'),
-        "Fynomia garde le fond que tu saisis. Une mise en forme viendra ensuite dans le dossier, mais le modèle financier ne dépend d’aucun texte."),
     ),
     h('section', { class: 'slab', 'data-gap': 'client' },
       h('div', { class: 'slab-head' },
