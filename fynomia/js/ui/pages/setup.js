@@ -150,7 +150,7 @@ const STEPS = [
   {
     key: 'frais', short: 'Tes frais fixes',
     question: 'Tes frais tous les mois',
-    help: 'Coche ce qui te concerne. Ces frais fixent le nombre de clients qu\'il te faut.',
+    help: 'Coche ce qui te concerne. Tu pourras en ajouter plus tard.',
     optional: true,
     render: costsScreen,
     ready: () => answered('frais'),
@@ -184,8 +184,8 @@ const STEPS = [
   },
   {
     key: 'fin', short: 'Le résultat',
-    question: 'Voilà où tu en es, pour le moment',
-    help: 'Ces chiffres sortent de tes réponses et des repères de ton métier. Ils ne sont pas un jugement : ils disent ce que ton modèle donne aujourd’hui, avec ce que tu as posé.',
+    question: 'C’est fait : ton modèle est calculé',
+    help: 'Ces chiffres sortent de tes réponses et des repères de ton métier. Ils disent où tu en es aujourd’hui — et tout se modifie ensuite, champ par champ.',
     render: doneScreen,
     ready: () => true,
     last: true,
@@ -259,10 +259,13 @@ export function renderSetup(navigate, refresh) {
   // Elle vit avec le bouton — c'est-à-dire qu'elle se met à jour à la frappe,
   // sans redessiner la question — sinon le reproche restait affiché une fois la
   // réponse donnée.
+  // « Cette réponse-là fait tourner le calcul : sans elle, la suite serait
+  // inventée. » Elle s'affichait sous chaque question obligatoire, identique à
+  // elle-même, à côté d'un bouton déjà gris : elle expliquait une évidence et
+  // faisait bouger l'écran en apparaissant. Seule reste la phrase qui apprend
+  // quelque chose — qu'on a le droit de passer.
   const hint = h('p', { class: 'setup-reassure' },
-    step.optional
-      ? 'Tu peux passer cette question et y revenir plus tard.'
-      : 'Cette réponse-là fait tourner le calcul : sans elle, la suite serait inventée.')
+    step.optional ? 'Tu peux passer cette question et y revenir plus tard.' : '')
 
   ctx.tick = () => {
     const live = store.scenario
@@ -270,7 +273,7 @@ export function renderSetup(navigate, refresh) {
     const ok = step.ready(live)
     nextBtn.disabled = !ok
     nextBtn.classList.toggle('is-waiting', !ok)
-    hint.hidden = ok && !step.optional
+    hint.hidden = !step.optional || ok
   }
   // Ajouter ou retirer une ligne change la question elle-même (une personne de
   // plus dans l'équipe, par exemple) : là, on redessine tout.
@@ -769,8 +772,6 @@ function legalScreen(ctx) {
         if (me) me.contractType = FORMS[f].contract
       }, { label: 'Forme juridique', silent: true }),
     }))),
-    h('p', { class: 'setup-note' },
-      "C'est ce choix qui décide du coût de ta rémunération, pas l'inverse."),
   )
 }
 
@@ -1043,7 +1044,7 @@ function costScreen(ctx) {
   draw(); drawSummary()
   return h('div', {}, host, summary,
     h('p', { class: 'setup-note' },
-      "Les montants proposés sont des ordres de grandeur pour ton métier. Rien ici n'est un frais fixe : le loyer et le comptable, tu viens de les saisir."))
+      "Ce ne sont pas des frais fixes. Ajuste le coût par unité (matières, packaging, commissions) pour calculer ta marge exacte."))
 }
 
 /* ───────────────────── Écran : clients et croissance ────────────────────── */
@@ -1104,22 +1105,25 @@ function salaryScreen(ctx) {
     const perks = c.benefits || 0
     // Les trois marches, au mois et à l'année : c'est à l'année qu'on compare
     // un salaire, et à l'année que le coût pour l'entreprise se négocie.
+    // Trois marches, une ligne chacune.
+    //
+    // Chaque marche portait une phrase complète sous son libellé — « le chiffre
+    // qui figure sur le contrat », « un indépendant n'a pas de cotisations
+    // salariées » — et l'écran faisait trois fois la hauteur qu'il lui fallait
+    // pour dire trois montants. Ce qui reste tient en quelques mots, sur la
+    // même ligne que le libellé : le montant des cotisations, qui est la seule
+    // chose que le lecteur ne peut pas déduire lui-même.
     const rows = [
       {
-        label: 'Ce que débourse l’entreprise', value: c.superGross, tone: 'top',
-        note: tns
-          ? `Ta rémunération plus les cotisations d'indépendant.`
-          : `Ton brut plus ${euro(c.employerCharges)} de cotisations patronales${perks > 0 ? ` et ${euro(perks)} de mutuelle obligatoire` : ''}.`,
+        label: 'Coût pour l’entreprise', value: c.superGross, tone: 'top',
+        note: tns ? 'cotisations comprises'
+          : `dont ${euro(c.employerCharges)} de cotisations${perks > 0 ? ` et ${euro(perks)} de mutuelle` : ''}`,
       },
-      {
-        label: tns ? 'Ta rémunération' : 'Ton salaire brut', value: gross,
-        note: tns ? "C'est la base sur laquelle tes cotisations sont appelées." : 'Le chiffre qui figure sur le contrat.',
-      },
+      { label: tns ? 'Ta rémunération' : 'Ton brut', value: gross },
       {
         label: 'Ce que tu touches', value: tns ? gross : c.net, tone: 'bottom',
-        note: tns
-          ? "Un indépendant n'a pas de cotisations salariées : ce montant est celui versé, avant impôt sur le revenu."
-          : `Après ${euro(c.employeeCharges)} de cotisations salariales, avant impôt sur le revenu.`,
+        note: tns ? 'avant impôt sur le revenu'
+          : `après ${euro(c.employeeCharges)} de cotisations, avant impôt`,
       },
     ]
     const ratio = gross > 0 ? c.superGross / (tns ? gross : c.net) : 0
@@ -1128,17 +1132,17 @@ function salaryScreen(ctx) {
         ...rows.map((r) => h('div', { class: `ladder-row ${r.tone || ''}` },
           h('span', { class: 'ladder-main' },
             h('span', { class: 'ladder-label' }, r.label),
-            h('span', { class: 'ladder-note' }, r.note),
+            r.note ? h('span', { class: 'ladder-note' }, r.note) : null,
           ),
           h('span', { class: 'ladder-figures' },
-            h('span', { class: 'num ladder-month' }, `${euro(r.value)} / mois`),
-            h('span', { class: 'num ladder-year' }, `${euro(r.value * 12)} par an`),
+            h('span', { class: 'num ladder-month' }, `${euro(r.value * 12)} / an`),
+            h('span', { class: 'num ladder-year' }, `${euro(r.value)} / mois`),
           ),
         )),
+        taxLine(tns ? gross : c.net),
       ),
       h('p', { class: 'setup-note' },
-        `Statut ${label()}. Pour te laisser 1 € en poche, l'entreprise doit en sortir ${ratio.toFixed(2).replace('.', ',')} € — c'est ce rapport, pas le brut, qui décide de ce que tu peux te verser.`),
-      taxNote(tns ? gross : c.net),
+        `${label()} · 1 € en poche coûte ${ratio.toFixed(2).replace('.', ',')} € à l'entreprise.`),
     )
   }
 
@@ -1221,28 +1225,28 @@ function incomeTaxOn(net) {
 }
 
 /** Ce que l'impôt prendra, et sous quelle hypothèse. */
-function taxNote(monthlyNet) {
+/**
+ * Ce qu'il reste après impôt, sur une ligne.
+ *
+ * Le calcul valait d'être montré — c'est la seule fois où le fondateur voit son
+ * revenu net d'impôt — mais il occupait trois lignes et un avertissement de
+ * quarante mots pour deux montants. La réserve tient dans la parenthèse : une
+ * part fiscale, rien d'autre.
+ */
+function taxLine(monthlyNet) {
   const yearly = Math.round(monthlyNet * 12)
   if (yearly <= 0) return null
   const tax = incomeTaxOn(yearly)
-  return h('div', { class: 'setup-tax' },
-    h('div', { class: 'setup-tax-row' },
-      h('span', {}, 'Impôt sur le revenu estimé'),
-      h('span', { class: 'num' }, `− ${euro(tax)} par an`),
+  return h('div', { class: 'ladder-row is-tax' },
+    h('span', { class: 'ladder-main' },
+      h('span', { class: 'ladder-label' }, 'Après impôt sur le revenu'),
+      h('span', { class: 'ladder-note' }, `estimé à ${euro(tax)} par an, pour une part fiscale`),
     ),
-    h('div', { class: 'setup-tax-row is-final' },
-      h('span', {}, 'Ce qu’il te reste vraiment'),
-      h('span', { class: 'num' }, `${euro(yearly - tax)} par an`),
+    h('span', { class: 'ladder-figures' },
+      h('span', { class: 'num ladder-month' }, `${euro(yearly - tax)} / an`),
     ),
-    h('p', { class: 'setup-tax-note' },
-      "Une part fiscale, aucun autre revenu, barème 2026. Un conjoint, un enfant ou un loyer perçu déplacent ce montant : c’est un ordre de grandeur, pas ta feuille d’impôt."),
   )
 }
-
-const ladderRow = (label, value, tone = '') => h('div', { class: `ladder-row ${tone}` },
-  h('span', {}, label),
-  h('span', { class: 'num' }, value),
-)
 
 /**
  * Les frais, sous forme de cases à cocher.
@@ -1323,7 +1327,7 @@ function cashScreen(ctx) {
       },
       apply: (sc, v) => { sc.financing.equityFounders = v > 0 ? [{ month: 0, amount: v }] : [] },
     }),
-    h('p', { class: 'setup-note' }, "Si tu n'as rien de côté, mets zéro : Fynomia te dira exactement combien il te manque et à quelle date."),
+    h('p', { class: 'setup-note' }, "Rien de côté ? Mets zéro : Fynomia dira combien il te manque, et quand."),
   )
 }
 
@@ -1339,59 +1343,44 @@ function doneScreen(ctx) {
   const need = k.fundingNeed > 0
   const rentable = k.firstProfitableYear !== null
 
-  return h('div', {},
-    // Le chiffre qu'on emporte en quittant le parcours, et ce qu'il veut dire.
-    //
-    // Un premier créateur qui tombe sur un bloc noir, un grand nombre et trois
-    // lignes de ratios ne comprend rien — il voit un bulletin de notes. Chaque
-    // chiffre porte donc sa phrase : ce qu'il mesure, en français, avant sa
-    // valeur.
-    keystone("Ce que tu encaisserais la première année", euro(p.revenue[0], { compact: true }),
-      'Le total de tes ventes sur douze mois, avant toute dépense.'),
+  // La fin du parcours est un moment, pas un bulletin de notes.
+  //
+  // On rendait un grand nombre, trois lignes commentées et une liste : un
+  // premier créateur y lisait un verdict, et le verdict était souvent « tu
+  // perds de l'argent ». Or à cet instant précis, ce qui est vrai pour tout le
+  // monde, c'est qu'on vient de poser douze réponses et qu'un modèle complet
+  // existe. C'est cela qu'on félicite ; les chiffres, eux, restent exacts,
+  // rangés sur une ligne, et la suite est ce qu'on met en avant.
+  const chiffres = [
+    { l: 'Chiffre d’affaires, année 1', v: euro(p.revenue[0], { compact: true }) },
+    { l: 'Point mort', v: k.breakEven[0] ? euro(k.breakEven[0], { compact: true }) : 'à calculer' },
+    { l: 'Premier exercice rentable', v: rentable ? `Année ${k.firstProfitableYear + 1}` : 'au-delà de 5 ans' },
+    { l: need ? 'À financer' : 'Trésorerie', v: need ? euro(k.fundingNeed, { compact: true }) : 'jamais négative' },
+  ]
 
-    h('div', { class: 'setup-results' },
-      resultRow('Point mort',
-        k.breakEven[0] ? euro(k.breakEven[0], { compact: true }) : 'Pas encore calculable',
-        k.breakEven[0] ? '' : 'warn',
-        k.breakEven[0]
-          ? 'Le chiffre d’affaires à atteindre pour arrêter de perdre de l’argent.'
-          : 'Il manque un prix ou un volume pour le calculer. Tu pourras y revenir.'),
-      resultRow('Premier exercice rentable',
-        rentable ? `Année ${k.firstProfitableYear + 1}` : 'Au-delà de 5 ans',
-        rentable ? 'ok' : 'warn',
-        rentable
-          ? 'L’année où ce que tu gagnes dépasse enfin ce que tu dépenses.'
-          : 'En l’état, le modèle ne devient pas rentable sur cinq ans. C’est fréquent à ce stade : un prix, un volume ou une charge suffit souvent à le changer.'),
-      resultRow(need ? 'Argent à trouver' : 'Trésorerie',
-        need ? euro(k.fundingNeed) : 'Jamais négative', need ? 'warn' : 'ok',
-        need
-          ? 'Ce qui te manquerait au pire moment, avant que les encaissements ne rattrapent les dépenses.'
-          : 'Ton compte ne passe jamais sous zéro sur cinq ans.'),
+  return h('div', { class: 'setup-done' },
+    h('section', { class: 'keystone done-hero' },
+      h('span', { class: 'keystone-arc', 'aria-hidden': 'true' }),
+      h('div', { class: 'keystone-tag' }, 'Parcours terminé'),
+      h('div', { class: 'keystone-value' }, 'Super, tu as déjà bien avancé'),
+      h('p', { class: 'keystone-note' },
+        'Voilà ce que tes réponses produisent aujourd’hui. Maintenant, allons affiner ton modèle.'),
+      h('div', { class: 'done-strip' }, ...chiffres.map((c) => h('div', { class: 'done-fig' },
+        h('span', { class: 'done-fig-label' }, c.l),
+        h('span', { class: 'done-fig-value num' }, c.v),
+      ))),
     ),
 
-    // Ce qu'il faut faire ensuite, dans l'ordre — pas la liste des
-    // fonctionnalités qui viennent de se débloquer.
-    h('div', { class: 'setup-unlocked' },
+    h('div', { class: 'setup-unlocked done-next' },
       h('div', { class: 'setup-unlocked-title' }, 'Tes trois prochaines étapes'),
       h('ol', { class: 'setup-next' },
-        nextStep('1', 'Regarde ta synthèse',
-          'Six lectures du même modèle, en français : ce que tu gagnes, ce qu’il te reste, ce qu’il te manque.'),
-        nextStep('2', 'Corrige ce qui te paraît faux',
-          'Chaque chiffre s’ouvre là où il a été saisi. Une valeur changée, et tout se recalcule.'),
-        nextStep('3', 'Complète ce que tu as passé',
-          'Les lignes encore vides sont listées dans le tableau de bord, de la plus utile à la moins urgente.'),
+        nextStep('1', 'Regarde ta synthèse', 'Ton modèle en français : ce que tu gagnes, ce qu’il te reste, ce qu’il te manque.'),
+        nextStep('2', 'Corrige ce qui te paraît faux', 'Chaque chiffre s’ouvre là où il a été saisi, et tout se recalcule.'),
+        nextStep('3', 'Complète ce que tu as passé', 'Les lignes vides sont listées, de la plus utile à la moins urgente.'),
       ),
     ),
 
     h('div', { class: 'setup-actions' },
-      // On arrive sur la synthèse, pas sur une liste de tâches.
-      //
-      // Au bout de douze questions, ce qu'on veut voir est ce qu'elles ont
-      // produit — est-ce que ça gagne de l'argent, est-ce que ça tient, ce
-      // qu'il m'en reste. La liste de ce qu'il reste à poser est à un clic,
-      // annoncée depuis cette page même : c'est une invitation, pas la
-      // première chose qu'on met sous les yeux de quelqu'un qui vient de
-      // finir.
       h('button', {
         class: 'btn btn-primary btn-lg',
         onClick: () => { resetSetup(); openSynthesis(); ctx.navigate('#/tableau-de-bord') },
@@ -1401,9 +1390,6 @@ function doneScreen(ctx) {
         onClick: () => { resetSetup(); ctx.navigate('#/business-case') },
       }, 'Exporter le dossier'),
     ),
-
-    h('p', { class: 'setup-reassure' },
-      'Rien n’est figé : tout ce que tu viens de répondre se modifie, champ par champ, dans le logiciel.'),
   )
 }
 
@@ -1415,10 +1401,3 @@ const nextStep = (no, title, body) => h('li', { class: 'setup-next-item' },
   ),
 )
 
-const resultRow = (label, value, tone = '', why = '') => h('div', { class: `setup-result ${tone}` },
-  h('div', { class: 'setup-result-line' },
-    h('span', { class: 'setup-result-label' }, label),
-    h('span', { class: 'setup-result-value num' }, value),
-  ),
-  why ? h('p', { class: 'setup-result-why' }, why) : null,
-)

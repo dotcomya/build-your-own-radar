@@ -2232,17 +2232,19 @@ i.swatch.split-margin { background: var(--gain); }
 .setup-status-why { font-size: 11.5px; color: #8E99A2; margin-left: auto; }
 
 /* L'échelle : coût employeur → brut → net. Trois marches, un seul coup d'œil. */
-.ladder { margin-top: 18px; border-top: 1px solid var(--rule); }
+/* Trois montants sur trois lignes, pas neuf. Le libellé et sa précision
+   partagent la ligne ; l'année est le chiffre qu'on lit, le mois l'accompagne. */
+.ladder { margin-top: 14px; border-top: 1px solid var(--rule); }
 .ladder-row {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
-  padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3);
 }
-.ladder-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ladder-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .ladder-label { font-weight: 500; color: var(--ink-2); }
 .ladder-note { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; }
-.ladder-figures { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+.ladder-figures { display: flex; align-items: baseline; gap: 9px; flex: none; }
 .ladder-month { font-size: 18px; font-weight: 650; letter-spacing: -.035em; color: var(--ink); white-space: nowrap; }
-.ladder-year { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; margin-top: 1px; }
+.ladder-year { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; }
 .ladder-row.top .ladder-month { color: var(--loss); }
 .ladder-row.bottom .ladder-label { color: var(--ink); font-weight: 600; }
 .ladder-row.bottom .ladder-month { color: var(--gain); font-size: 22px; }
@@ -5350,11 +5352,19 @@ details[open] > .refine-head .refine-sign {
 }
 .deckin-head h2 { margin: 0; }
 .deckin-count { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
+/* Les flèches ne bougent pas d'un écran à l'autre.
+   Centrées sur la diapositive, elles montaient et descendaient à chaque
+   changement puisque les quinze écrans n'ont pas la même hauteur : on visait
+   « suivant » et le bouton s'était déplacé. Elles se posent donc en haut, à
+   distance fixe du cadre, et la scène garde une hauteur minimale pour que le
+   cadre lui-même cesse de respirer. */
 .deckin-stage {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center; gap: 10px; padding: 18px 14px;
+  align-items: start; gap: 10px; padding: 18px 14px;
 }
-.deckin-slide { min-width: 0; }
+.deckin-arrow { margin-top: 26px; }
+.deckin-slide { min-width: 0; min-height: 560px; }
+@media (max-width: 760px) { .deckin-slide { min-height: 0; } }
 /* Le même écran que le plein écran, en plus sobre : pas de rebond à l'entrée
    ni de marge de scène, il est déjà dans un cadre. */
 .deckin-slide .slide { max-width: none; animation: none; }
@@ -5904,3 +5914,34 @@ details[open] > .refine-head .refine-sign {
   color: var(--ink-3); background: var(--surface-2); border-left: 2px solid var(--ink);
 }
 .acq-plus .num { color: var(--ink); font-weight: 650; }
+/* La ligne d'impôt ferme l'échelle : même grille, dernier barreau. */
+.ladder-row.is-tax { border-bottom: 0; color: var(--ink-4); }
+.ladder-row.is-tax .ladder-month { font-size: 15px; color: var(--ink-3); }
+
+/* ─── La fin du parcours : un moment, pas un bulletin ─── */
+/* Les chiffres rejoignent le bloc noir, sur une ligne : ils restent exacts
+   mais cessent d'être le sujet. Le sujet, c'est qu'un modèle complet existe
+   et qu'il y a trois gestes à faire ensuite. */
+.done-hero { padding: 24px 26px 20px; }
+.done-hero .keystone-value { font-size: clamp(24px, 2.8vw, 32px); }
+.done-strip {
+  position: relative; display: grid; gap: 1px; margin-top: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .14);
+}
+.done-fig { background: var(--ink); padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.done-fig-label {
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #8E9184;
+  line-height: 1.35;
+}
+.done-fig-value {
+  font-size: 17px; font-weight: 650; letter-spacing: -.03em; color: #fff; white-space: nowrap;
+}
+.done-next { margin-top: 18px; }
+.done-next .setup-next { gap: 10px; }
+@media (max-width: 720px) {
+  .done-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .done-strip { grid-template-columns: 1fr; }
+}

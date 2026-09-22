@@ -196,7 +196,7 @@ export const TRADE = {
       { label: 'Hotte et extraction', amount: 12000, years: 9 },
       { label: 'Droit au bail', amount: 60000, years: 0, note: "Ne s'amortit pas : il reste au bilan tant que tu exploites." },
     ],
-    watch: "Matière plus personnel chargé sous 65 % du chiffre d'affaires. Au-delà, aucun volume ne rattrape le loyer, l'énergie et les assurances.",
+    watch: "Matière plus personnel chargé sous 65 % du chiffre d'affaires : au-delà, aucun volume ne rattrape.",
   },
 
   glacier: {

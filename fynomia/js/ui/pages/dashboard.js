@@ -310,16 +310,22 @@ function finishBanner(s, navigate) {
   const c = checklist(s)
   if (!c.open || !c.next) return null
   const reste = c.open
+  // Le bandeau disait ce qui manque ; il dit maintenant où l'on en est.
+  //
+  // « Ton dossier n'est pas terminé » ouvrait sur un reproche, et la promesse
+  // — un dossier qu'on présente à une banque ou à un fonds — n'apparaissait
+  // nulle part. L'avancement chiffré, l'enjeu nommé, l'étape suivante et son
+  // utilité : c'est ce qui donne envie de poser la ligne suivante.
   return h('section', { class: 'finish' },
     h('div', { class: 'finish-say' },
-      h('div', { class: 'finish-kicker' }, 'Ton dossier n’est pas terminé'),
+      h('div', { class: 'finish-kicker' }, `Avancement : ${c.done} / ${c.total}`),
       h('h2', { class: 'finish-big' },
-        `Il reste ${reste} ligne${reste > 1 ? 's' : ''} à poser`),
+        `Renseigne tes ${reste} dernier${reste > 1 ? 's' : ''} paramètre${reste > 1 ? 's' : ''} de ton business`),
       h('p', { class: 'finish-body' },
-        'Partout où tu n’as pas encore répondu, les chiffres ci-dessous prennent les repères de ton métier. ',
-        'Ils tiennent debout, mais ce ne sont pas encore les tiens : chaque ligne posée les rapproche de ta réalité.'),
+        'Tes résultats actuels reposent sur des estimations génériques. ',
+        'Ajuste tes hypothèses pour obtenir un dossier prêt pour tes investisseurs et ta banque.'),
       h('div', { class: 'finish-next' },
-        h('span', { class: 'finish-next-tag' }, 'La plus utile maintenant'),
+        h('span', { class: 'finish-next-tag' }, 'Prochaine étape'),
         h('span', { class: 'finish-next-label' }, c.next.label),
         c.next.why ? h('span', { class: 'finish-next-why' }, c.next.why) : null,
       ),
@@ -328,11 +334,11 @@ function finishBanner(s, navigate) {
       h('button', {
         class: 'btn btn-primary btn-lg finish-go',
         onClick: () => goToGap(c.next.go, navigate),
-      }, `Poser « ${c.next.label} » →`),
+      }, `Renseigner « ${c.next.label} » →`),
       h('button', {
         class: 'btn btn-lg finish-list',
         onClick: () => { renderDashboard.view = 'pilotage'; navigate('#/tableau-de-bord') },
-      }, `Voir les ${reste} lignes`),
+      }, `Parcourir les ${reste} éléments restants à remplir`),
     ),
     h('div', { class: 'finish-meter', 'aria-hidden': 'true' },
       h('i', { style: { width: `${Math.round((c.done / Math.max(1, c.total)) * 100)}%` } }),

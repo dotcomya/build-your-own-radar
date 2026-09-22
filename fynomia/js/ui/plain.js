@@ -105,9 +105,9 @@ function acts(s, r) {
 
   // Le poste le plus lourd : c'est lui qui donne son verbe au troisième acte.
   const blocs = [
-    { nom: 'la masse salariale', m: Math.abs(n(p.payroll[i])), ou: 'l\u2019équipe' },
-    { nom: 'les achats', m: Math.abs(n(p.variableCost[i])), ou: 'le coût de revient' },
-    { nom: 'les charges fixes', m: Math.abs(n(p.external[i])) + Math.abs(n(p.duties[i])), ou: 'les charges' },
+    { nom: 'la masse salariale', m: Math.abs(n(p.payroll[i])), ou: 'l\u2019équipe', pluriel: false },
+    { nom: 'les achats', m: Math.abs(n(p.variableCost[i])), ou: 'le coût de revient', pluriel: true },
+    { nom: 'les charges fixes', m: Math.abs(n(p.external[i])) + Math.abs(n(p.duties[i])), ou: 'les charges', pluriel: true },
   ].sort((a, b) => b.m - a.m)
   const tete = blocs[0]
 
@@ -128,27 +128,24 @@ function acts(s, r) {
 
   const marge = n(k.netMargin?.[i])
   const tient = rentable && !manque
-    ? `Le modèle dégage un résultat dès l\u2019année ${first + 1} et la trésorerie ne passe jamais sous zéro. ` + (marge > 0.2
-        ? `Avec ${Math.round(marge * 100)} % de résultat net, la marge absorbe une erreur d\u2019hypothèse — c\u2019est rare, vérifie qu\u2019aucune charge ne manque.`
-        : `Le résultat net s\u2019établit à ${Math.round(marge * 100)} % du chiffre d\u2019affaires : ça tient, mais sans réserve.`)
+    ? `${Math.round(marge * 100)} % de résultat net, et la trésorerie ne passe jamais sous zéro.`
     : rentable && manque
-      ? `Le modèle devient rentable en année ${first + 1}, mais il manque ${euro(k.fundingNeed)} avant d\u2019y arriver. Rentable ne veut pas dire financé : c\u2019est la trésorerie qui décide si tu vois cette année-là.`
+      ? `Rentable ne veut pas dire financé : c\u2019est la trésorerie qui décide si tu vois l\u2019année ${first + 1}.`
       : manque
-        ? `Aucun exercice ne dégage de bénéfice sur cinq ans, et il manque ${euro(k.fundingNeed)} au point bas. Ce sont les deux choses à traiter avant toutes les autres.`
-        : `Aucun exercice ne dégage de bénéfice sur cinq ans. La trésorerie tient, mais elle tient sur ce que tu as mis au départ.`
+        ? `Aucun bénéfice sur cinq ans, et ${euro(k.fundingNeed)} manquent au point bas. À traiter avant tout le reste.`
+        : `Aucun bénéfice sur cinq ans. La trésorerie tient, mais sur ce que tu as mis au départ.`
 
   // Le deuxième acte nomme le poste et ce qu'il absorbe du chiffre d'affaires.
   const rev = n(p.revenue[i])
   const absorbe = rev > 0 ? Math.round((tete.m / rev) * 100) : null
   const titre2 = absorbe !== null && absorbe > 100
-    ? `${maj(tete.nom)} coûte plus que tu ne vends`
+    ? `${maj(tete.nom)} ${tete.pluriel ? 'coûtent' : 'coûte'} plus que tu ne vends`
     : absorbe !== null
       ? `${maj(tete.nom)} : ${absorbe} % de ce que tu encaisses`
       : 'D\u2019où ça vient'
-  const vient = `${maj(tete.nom)} est ton premier poste de dépense` +
-    (absorbe !== null ? `, et il absorbe ${absorbe} % de ton chiffre d\u2019affaires en année ${i + 1}. ` : '. ') + (rentable
-      ? 'Les trois cartes suivantes disent où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste une fois tout payé.'
-      : 'Les trois cartes suivantes disent où part chaque euro encaissé — c\u2019est là que se joue le retour à l\u2019équilibre, pas ailleurs.')
+  const vient = absorbe !== null
+    ? `Ton premier poste de dépense, en année ${i + 1}. Où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste.`
+    : 'Ton premier poste de dépense. Où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste.'
 
   // Le troisième acte nomme le levier, pas la catégorie.
   const seuil = n(k.breakEven?.[i])
@@ -161,10 +158,10 @@ function acts(s, r) {
         ? 'Le seuil est encore loin'
         : 'Où agir'
   const agir = rentable
-    ? `Le seuil est franchi en année ${first + 1}. Reste à savoir si la trajectoire qui y mène se défend devant quelqu\u2019un qui la lira.`
+    ? `Seuil franchi en année ${first + 1}. Reste à défendre la trajectoire qui y mène.`
     : ecart !== null && ecart > 0.8
-      ? `Tu couvres déjà ${Math.round(ecart * 100)} % de ton seuil de rentabilité. L\u2019écart se comble par le prix, par le volume, ou par ${tete.ou} — et à ce niveau, une hausse de prix de quelques pour cent suffit souvent.`
-      : `Tant que le seuil n\u2019est pas atteint, trois leviers seulement le déplacent : le prix, le volume, et ${tete.ou}. Ils ne se valent pas — le prix agit tout de suite, le volume suppose de la demande.`
+      ? `Tu couvres ${Math.round(ecart * 100)} % du seuil : quelques pour cent de prix suffisent souvent.`
+      : `Trois leviers déplacent le seuil : le prix, le volume, et ${tete.ou}. Le prix agit tout de suite.`
 
   return [
     { titre: titre1, dit: tient, cartes: [profitCard(r), cashCard(r)] },
@@ -203,21 +200,21 @@ function actsAvant(s, r) {
 
   // Le premier paragraphe nomme la situation réelle, pas un état d'attente.
   const dit = charge <= 0
-    ? 'Rien n\u2019est encore posé : ni ce que tu vends, ni ce que ça te coûte. Les deux cartes ci-dessous se rempliront dès la première charge ou le premier poste saisi.'
+    ? 'Ni ce que tu vends, ni ce que ça te coûte. Les cartes se rempliront à la première charge saisie.'
     : mise <= 0
-      ? `Ton projet coûte déjà ${euro(charge)} la première année, soit ${euro(mois)} par mois, et rien n\u2019est prévu pour le financer. C\u2019est le premier chiffre à regarder : il ne dépend pas de tes ventes, il tombe même si tu ne vends rien.`
+      ? `${euro(mois)} par mois, et rien de prévu pour le financer. Ce chiffre tombe même si tu ne vends rien.`
       : tenue > 0 && tenue < 60
-        ? `Ton projet coûte ${euro(charge)} la première année. Avec ${euro(mise)} de mise de départ, tu tiens ${Math.floor(tenue)} mois sans vendre. C\u2019est le temps que tu as pour atteindre les volumes que tu n\u2019as pas encore posés.`
-        : `Ton projet coûte ${euro(charge)} la première année, soit ${euro(mois)} par mois. Tant qu\u2019aucun prix n\u2019est posé, c\u2019est la seule moitié de l\u2019équation que le moteur peut calculer — mais elle est exacte.`
+        ? `${euro(mois)} par mois. Avec ${euro(mise)} au départ, tu tiens ${Math.floor(tenue)} mois sans vendre.`
+        : `${euro(mois)} par mois. La moitié de l\u2019équation que le moteur sait déjà calculer — exactement.`
 
   const dominant = equipe >= fixe ? 'l\u2019équipe' : 'les charges fixes'
   const vient = charge <= 0
-    ? 'Dès qu\u2019une charge ou un poste existe, cette partie dit lequel pèse le plus et ce qu\u2019il faudra couvrir en priorité.'
-    : `Sur ${euro(charge)}, c\u2019est ${dominant} qui pèse le plus. Savoir lequel de tes postes domine décide de ce qu\u2019il faudra vendre : ce n\u2019est pas la même entreprise selon que la dépense part en salaires ou en loyer.`
+    ? 'Dès qu\u2019une charge existe, on dit laquelle pèse le plus.'
+    : `Sur ${euro(charge)}, c\u2019est ${dominant} qui pèse le plus — et qui décide de ce qu\u2019il faudra vendre.`
 
   const agir = charge <= 0
-    ? 'Pose une offre, son prix et son volume : c\u2019est ce trio qui déclenche le calcul complet.'
-    : `Pour couvrir ${euro(charge)}, il faut vendre. Combien exactement dépend de ce que chaque vente te coûte — et c\u2019est la seule donnée qui manque encore.`
+    ? 'Une offre, un prix, un volume : ce trio déclenche le calcul complet.'
+    : `Couvrir ${euro(charge)} demande un chiffre d\u2019affaires. Combien, cela dépend de ce que chaque vente coûte.`
 
   return [
     { titre: charge <= 0 ? 'Le plan est encore vide' : 'Ce que ton projet coûte, avant de vendre',
