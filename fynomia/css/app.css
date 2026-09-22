@@ -5716,9 +5716,40 @@ details[open] > .refine-head .refine-sign {
    L'intitulé, le contrat, le statut et le salaire décrivent le poste : ils
    tiennent sur une ligne. Ce qu'il coûte à l'entreprise en découle, et se lit
    dessous — c'est une conséquence, pas une quatrième saisie. */
-.grid.grid-4.postline { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-@media (max-width: 1080px) { .grid.grid-4.postline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .grid.grid-4.postline { grid-template-columns: 1fr; } }
+/* Cinq cellules, larges comme ce qu'elles portent.
+   « Type de contrat » et « Statut » affichent deux mots : ils n'ont pas à
+   occuper un quart de ligne. La place rendue accueille le résultat, qui
+   cesse d'être un bandeau séparé. */
+.postline {
+  display: grid; gap: 14px; align-items: end;
+  grid-template-columns: 1.45fr .82fr .82fr 1.05fr 1.15fr;
+}
+.postline.is-short { grid-template-columns: 1.55fr .9fr 1.15fr 1.25fr; }
+@media (max-width: 1240px) {
+  .postline, .postline.is-short { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .postline, .postline.is-short { grid-template-columns: 1fr; }
+}
+.postresult {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 0 0 6px 14px; border-left: 2px solid var(--ink); min-width: 0;
+}
+.postresult-label {
+  font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-5);
+}
+.postresult > .num {
+  font-size: 20px; font-weight: 650; letter-spacing: -.03em; color: var(--ink);
+  white-space: nowrap;
+}
+/* Le net passe à la ligne plutôt que de déborder : sur un portable, la
+   cellule fait deux cents pixels et « Net avant impôt 29 952 € / an » en
+   demande davantage. */
+.postresult-net { font-size: 11.5px; color: var(--ink-5); line-height: 1.4; }
+.postresult-net .num { font-size: 11.5px; font-weight: 650; color: var(--gain); }
+@media (max-width: 1240px) {
+  .postresult { border-left: 0; border-top: 1px solid var(--rule); padding: 10px 0 0; }
+}
 .postline + .field-hint { margin-top: 8px; }
 
 .paystrip {
@@ -5832,7 +5863,6 @@ details[open] > .refine-head .refine-sign {
    dans un volet, sous elle. Les quatre tuiles qui coiffaient la page disaient
    la même chose sans la commenter. */
 .acq-macro { margin-bottom: 18px; }
-.acq-macro.is-read .acq-sum { margin-top: 0; }
 .seed-row {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   margin: 2px 0 4px; padding: 10px 14px;
@@ -5840,3 +5870,37 @@ details[open] > .refine-head .refine-sign {
 }
 .seed-row p { margin: 0; flex: 1 1 260px; font-size: 12.5px; line-height: 1.5; color: var(--ink-5); }
 .seed-row .btn { flex: none; }
+
+/* ─── Une rangée de champs aligne ses cadres, pas ses cellules ─── */
+/* Un champ qui porte une aide sous son cadre est plus haut que ses voisins.
+   Aligné par le bas, c'est son cadre qui remontait ; aligné par le haut, un
+   libellé sur deux lignes le ferait descendre. Les cellules s'étirent donc à
+   la même hauteur et le champ devient une grille de trois rangées — libellé,
+   cadre, aide — dont la dernière absorbe ce qui dépasse. Les cadres se posent
+   alors sur la même ligne, avec ou sans aide. */
+.grid-fields > .field {
+  display: grid; grid-template-rows: auto auto 1fr; gap: 5px; align-self: stretch;
+}
+
+/* L'interrupteur prend la forme d'un champ : libellé au-dessus, bascule à la
+   place du cadre, état écrit à côté. */
+.field-switch .switch-name {
+  font-size: 12px; font-weight: 500; color: var(--ink-3);
+  display: flex; align-items: center; gap: 5px;
+}
+/* Trente-huit pixels : la hauteur exacte d'un cadre de saisie. C'est ce qui
+   met la bascule et le champ voisin sur le même axe, au pixel. */
+.field-switch .switch { display: flex; align-items: center; gap: 9px; min-height: 38px; }
+.switch-state {
+  font-size: 12.5px; color: var(--ink-4); font-variant-numeric: tabular-nums;
+}
+.field-switch input:checked ~ .switch-state { color: var(--ink); font-weight: 600; }
+/* Un bouton rangé comme un champ prend la hauteur d'un cadre : sans quoi il
+   flotte quatre pixels au-dessus de ses voisins. */
+.grid-fields > .field > .btn { min-height: 38px; }
+/* Ce que les campagnes détaillées ajoutent, dit sans qu'on ait à les ouvrir. */
+.acq-plus {
+  margin: 12px 0 0; padding: 10px 14px; font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-3); background: var(--surface-2); border-left: 2px solid var(--ink);
+}
+.acq-plus .num { color: var(--ink); font-weight: 650; }

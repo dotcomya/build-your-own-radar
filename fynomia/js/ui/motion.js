@@ -119,8 +119,23 @@ export function travel(mutate, mode = 'page') {
   const cls = `is-travelling is-move-${mode}`
   const done = () => root.classList.remove('is-travelling', `is-move-${mode}`)
   root.classList.add(...cls.split(' '))
+
+  // La mutation doit avoir lieu, transition ou pas.
+  //
+  // C'est le navigateur qui appelle notre fonction, au moment qu'il juge bon.
+  // Quand une transition est encore en cours — neuf changements de page en
+  // deux secondes, et la précédente n'a pas fini de jouer — la nouvelle est
+  // ignorée, et il arrive que notre fonction ne soit jamais appelée. L'écran
+  // reste alors sur la page précédente : on clique sur « Nouveau plan » et on
+  // continue de lire les réglages. Sans erreur, sans rien.
+  //
+  // On garde donc la main : si la mutation n'a pas eu lieu au bout d'un
+  // dixième de seconde, on la joue soi-même. Elle ne peut pas se produire deux
+  // fois — c'est à cela que sert le drapeau.
+  let fait = false
+  const jouer = () => { if (fait) return; fait = true; mutate() }
   try {
-    const vt = document.startViewTransition(mutate)
+    const vt = document.startViewTransition(jouer)
     // La classe doit tenir jusqu'à la fin de l'animation, pas jusqu'à la fin
     // de la mutation.
     //
@@ -135,9 +150,10 @@ export function travel(mutate, mode = 'page') {
     // oubliée bloquerait l'outil — mais il est plus long que la plus longue
     // des animations.
     vt.finished.catch(() => {}).finally(done)
+    setTimeout(jouer, 120)
     setTimeout(done, 2600)
   } catch {
     done()
-    mutate()
+    jouer()
   }
 }

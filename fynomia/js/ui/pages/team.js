@@ -232,27 +232,37 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
 
         return [
           // Tout ce qui décrit le poste sur une ligne ; ce qu'il coûte dessous.
-          h('div', { class: 'grid grid-4 postline' },
-            textField({ label: 'Intitulé du poste', value: m.role, onInput: (v, o) => set({ role: v }, undefined, o) }),
-            selectField({
-              label: 'Type de contrat', value: m.contractType,
-              options: Object.entries(CONTRACT_TYPES).map(([k, v]) => ({ value: k, label: v.label })),
-              onInput: (v) => set({ contractType: v }),
-            }),
-            ['cdi', 'cdd'].includes(m.contractType) ? selectField({
+          // Le résultat rejoint la ligne de saisie.
+          //
+          // Il vivait sur un bandeau en dessous : on posait un salaire, puis on
+          // baissait les yeux pour lire ce qu'il coûte. Les deux choses sont la
+          // même question — ce que je paie, ce que ça pèse — et elles tiennent
+          // sur une ligne dès lors que le contrat et le statut cessent d'occuper
+          // un quart de largeur chacun pour afficher deux mots.
+          (() => {
+            const statut = ['cdi', 'cdd'].includes(m.contractType) ? selectField({
               label: 'Statut', value: m.status,
               options: Object.entries(STATUSES).map(([k, v]) => ({ value: k, label: v.label })),
               onInput: (v) => set({ status: v }),
-            }) : null,
-            champSalaire,
-          ),
-          h('div', { class: 'paystrip' },
-            h('div', { class: 'paystrip-cell' },
-              h('span', {}, "Coût pour l’entreprise"), coutValue),
-            h('div', { class: 'paystrip-cell is-net' },
-              h('span', {}, m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt'), netValue),
-            plural,
-          ),
+            }) : null
+            return h('div', { class: `postline ${statut ? '' : 'is-short'}` },
+              textField({ label: 'Intitulé du poste', value: m.role, onInput: (v, o) => set({ role: v }, undefined, o) }),
+              selectField({
+                label: 'Type de contrat', value: m.contractType,
+                options: Object.entries(CONTRACT_TYPES).map(([k, v]) => ({ value: k, label: v.label })),
+                onInput: (v) => set({ contractType: v }),
+              }),
+              statut,
+              champSalaire,
+              h('div', { class: 'postresult' },
+                h('span', { class: 'postresult-label' }, "Coût pour l’entreprise"),
+                coutValue,
+                h('span', { class: 'postresult-net' },
+                  m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt', ' ', netValue),
+              ),
+            )
+          })(),
+          plural,
         ]
       })()) : null,
 

@@ -169,11 +169,23 @@ export function selectField({ label, value, options, onInput, hint, help, fieldK
   )
 }
 
+/**
+ * Un interrupteur qui se range comme un champ.
+ *
+ * Il portait son libellé à côté de sa bascule, donc sur la rangée des
+ * libellés. Posé dans une grille à côté d'un champ chiffré, sa bascule se
+ * retrouvait vingt-trois pixels au-dessus du cadre voisin — deux choses à
+ * cocher ou à saisir sur la même ligne, et rien qui s'aligne. Le libellé monte
+ * donc là où sont les autres, et la bascule descend sur la rangée des cadres,
+ * avec l'état écrit à côté : oui ou non, lisible sans interpréter une couleur.
+ */
 export function switchField({ label, checked, onInput, hint }) {
   const input = h('input', { type: 'checkbox', checked: !!checked })
-  input.addEventListener('change', () => onInput(input.checked))
-  return h('div', { class: 'field' },
-    h('label', { class: 'switch' }, input, h('span', { class: 'track' }), h('span', {}, label)),
+  const etat = h('span', { class: 'switch-state' }, checked ? 'Oui' : 'Non')
+  input.addEventListener('change', () => { etat.textContent = input.checked ? 'Oui' : 'Non'; onInput(input.checked) })
+  return h('div', { class: 'field field-switch' },
+    h('label', { class: 'switch-name' }, label),
+    h('label', { class: 'switch' }, input, h('span', { class: 'track' }), etat),
     hint && h('div', { class: 'field-hint' }, hint),
   )
 }

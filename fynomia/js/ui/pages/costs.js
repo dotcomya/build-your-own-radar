@@ -307,14 +307,25 @@ function capexRow(c, r, level, refresh) {
   }
   return h('div', { class: 'card', style: { marginBottom: '9px' } },
     h('div', { class: 'card-body tight' },
-      h('div', { class: 'grid', style: { gridTemplateColumns: 'minmax(150px,2fr) repeat(3, minmax(110px,1fr)) auto', alignItems: 'end', gap: '10px' } },
+      // Les cadres de saisie s'alignent, pas les cellules.
+      //
+      // En alignant les cellules par le bas, le champ « Amortissement » — seul
+      // à porter une aide sous son cadre — remontait de vingt-deux pixels.
+      // Les cellules s'étirent donc à la même hauteur, l'aide occupe le bas, et
+      // les quatre cadres se posent sur la même ligne.
+      h('div', { class: 'grid grid-fields', style: { gridTemplateColumns: 'minmax(150px,2fr) repeat(3, minmax(110px,1fr)) auto', gap: '10px' } },
         textField({ label: 'Intitulé', value: c.label, onInput: (v, opt) => set({ label: v }, opt) }),
         numberField({ label: 'Montant', field: 'amount', value: c.amount, suffix: '€ HT', onInput: (v) => set({ amount: v }) }),
         monthField({ label: "Mois d'achat", value: c.month, startDate: r?.startDate, onInput: (v) => set({ month: v }) }),
         numberField({ label: 'Amortissement', field: 'amortYears', value: c.amortYears, suffix: 'ans', hint: '0 = non amortissable', onInput: (v) => set({ amortYears: v }) }),
-        h('button', { class: 'btn btn-sm btn-danger', onClick: remove, style: { marginBottom: '1px' } }, 'Retirer'),
+        // Le bouton prend la place d'un champ, libellé vide compris : c'est ce
+        // qui le pose sur la ligne des cadres et non sous eux.
+        h('div', { class: 'field' },
+          h('label', { 'aria-hidden': 'true' }, '\u00a0'),
+          h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Retirer'),
+        ),
       ),
-      level === 'advanced' && h('div', { class: 'grid grid-4 mt' },
+      level === 'advanced' && h('div', { class: 'grid grid-4 grid-fields mt' },
         switchField({ label: 'Crédit-bail', checked: c.leasing, hint: "Loyer en charges plutôt qu'immobilisation.", onInput: (v) => set({ leasing: v }) }),
         c.leasing && numberField({ label: 'Loyer mensuel', field: 'monthlyAmount', value: c.leaseMonthly, suffix: '€/mois', onInput: (v) => set({ leaseMonthly: v }) }),
         c.leasing && numberField({ label: 'Durée du bail', field: 'months', value: c.leaseMonths, suffix: 'mois', onInput: (v) => set({ leaseMonths: v }) }),

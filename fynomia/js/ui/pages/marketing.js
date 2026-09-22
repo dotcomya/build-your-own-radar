@@ -41,7 +41,7 @@ export function renderAcquisition(navigate, refresh) {
   // rapport LTV/CAC sont de vraies questions — mais pas les premières.
 
   const add = () => {
-    const c = newCampaign({ name: `Campagne ${s.marketing.length + 1}`, activityId: s.activities[0]?.id || null })
+    const c = newCampaign({ name: `Campagne ${s.marketing.length + 1}`, activityId: s.activities[0]?.id || null, simple: false })
     store.update((sc) => sc.marketing.push(c), { label: "Ajout d'une campagne" })
     open.add(c.id)
     refresh()
@@ -75,8 +75,7 @@ export function renderAcquisition(navigate, refresh) {
       // reste à un clic, pour qui a des chiffres à y mettre.
       macroAcquisition(s, r, refresh),
 
-      s.marketing.length === 0 ? null
-        : detailFold(s, r, open, refresh, add),
+      detailFold(s, r, open, refresh, add),
 
       r && s.marketing.length > 0
         ? fold('Répartition du budget', 'Ce que chaque campagne coûte et rapporte', mixPanel(r), { id: 'acq-mix' })
@@ -96,63 +95,60 @@ function vierge(c) {
 }
 
 /**
- * Ce que coûte un client, et combien on en veut : la question de départ.
+ * La ligne que pilote la carte du haut.
  *
- * Tant qu'il n'y a qu'une campagne et qu'aucun taux n'a été posé, ces deux
- * nombres pilotent directement le modèle — le budget mensuel s'en déduit. Dès
- * que le fondateur descend dans l'entonnoir, ou ouvre une deuxième campagne,
- * le bloc cesse d'écrire et se contente de lire : il dirait sinon le contraire
- * de ce qui est saisi en dessous, ou l'écraserait.
+ * Elle porte une marque, pour qu'on la retrouve d'une session à l'autre. Un
+ * plan écrit avant cette marque en a peut-être une qui lui ressemble — une
+ * campagne unique, en coût d'acquisition ou sans le moindre taux : on l'adopte
+ * plutôt que d'en créer une deuxième qui dirait la même chose.
+ */
+function ligneSimple(camps) {
+  return camps.find((c) => c.simple) ||
+    // Une campagne qu'on a demandée explicitement porte `simple: false` : elle
+    // reste dans le détail, même si elle est la seule et encore vide. Sans
+    // cela, « Ajouter une campagne » aurait fabriqué une ligne qui disparaît
+    // aussitôt du volet pour remonter dans la carte du haut.
+    (camps.length === 1 && camps[0].simple === undefined &&
+      (camps[0].model === 'cac' || vierge(camps[0])) ? camps[0] : null)
+}
+
+/**
+ * « Combien coûte un client » : un champ, toujours saisissable.
+ *
+ * Il y a deux façons de chiffrer une acquisition, et elles ne s'excluent pas.
+ * Celle qu'on a en tête quand une agence annonce un prix : cent cinquante
+ * euros le client, trente clients par mois, quatre mille cinq cents euros de
+ * budget. Et celle qu'on construit quand on pilote soi-même plusieurs canaux :
+ * un coût par clic, des taux, un entonnoir.
+ *
+ * La carte tenait la première, mais se verrouillait dès qu'une campagne
+ * détaillée existait — de peur d'écraser ce qui avait été saisi dessous. C'est
+ * l'inverse qu'il fallait faire : lui donner sa propre ligne. Elle s'ajoute aux
+ * campagnes au lieu de leur disputer la place, et le champ reste ouvert.
  */
 function macroAcquisition(s, r, refresh) {
   const camps = s.marketing || []
-  const seule = camps.length <= 1 ? camps[0] : null
-  const pilote = camps.length === 0 || (seule && (seule.model === 'cac' || vierge(seule)))
+  const simple = ligneSimple(camps)
+  const autres = camps.filter((c) => c !== simple)
 
-  const detail = r?.revenue?.campaigns || []
-  const budgetMois = detail.reduce((a, c) => a + (Number(c.totalSpend) || 0), 0) / 60
-  const clientsMois = detail.reduce((a, c) => a + (Number(c.totalClients) || 0), 0) / 60
+  const cac = simple ? Number(simple.cac) || 0 : 0
+  const parMois = simple ? Number(simple.clientsPerMonth) || 0 : 0
+  const budget = cac * parMois
   const ltv = Number(r?.kpis?.ltv) || 0
 
-  if (!pilote) {
-    const cac = Number(r?.kpis?.cac) || 0
-    return h('section', { class: 'card acq-macro is-read' },
-      h('div', { class: 'card-head' },
-        h('div', {},
-          h('h2', {}, 'Ce que te coûte un client'),
-          h('div', { class: 'tiny muted' }, `Calculé à partir de ${camps.length} campagnes détaillées ci-dessous.`),
-        ),
-      ),
-      h('div', { class: 'card-body' },
-        h('div', { class: 'acq-sum' },
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, "Coût d'acquisition moyen"),
-            h('div', { class: 'acq-sum-value num' }, cac > 0 ? euro(cac) : '—')),
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, 'Nouveaux clients par mois'),
-            h('div', { class: 'acq-sum-value num' }, num(clientsMois, 1))),
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, 'Budget mensuel'),
-            h('div', { class: 'acq-sum-value num' }, euro(budgetMois))),
-        ),
-        balance(cac, ltv),
-      ),
-    )
-  }
+  // Ce que les campagnes détaillées ajoutent, dit sans qu'on ait à les ouvrir.
+  const dets = (r?.revenue?.campaigns || []).filter((x) => autres.some((c) => c.id === x.id))
+  const budgetAutres = dets.reduce((a, c) => a + (Number(c.totalSpend) || 0), 0) / 60
+  const clientsAutres = dets.reduce((a, c) => a + (Number(c.totalClients) || 0), 0) / 60
 
-  const cac = seule ? Number(seule.cac) || 0 : 0
-  const parMois = seule ? Number(seule.clientsPerMonth) || 0 : 0
-  const budget = cac * parMois
-
-  // Écrire ici crée la campagne si elle manque, et la bascule en « CAC connu » :
-  // c'est le mode qui dit exactement ce que ces deux champs veulent dire.
   const pose = (patch) => {
     store.update((sc) => {
-      let c = sc.marketing[0]
+      let c = ligneSimple(sc.marketing)
       if (!c) {
         c = newCampaign({ name: 'Acquisition de clients', activityId: sc.activities[0]?.id || null, channel: 'ads' })
         sc.marketing.push(c)
       }
+      c.simple = true
       c.model = 'cac'
       c.durationMonths = 60
       Object.assign(c, patch)
@@ -169,10 +165,10 @@ function macroAcquisition(s, r, refresh) {
       ),
     ),
     h('div', { class: 'card-body' },
-      h('div', { class: 'grid grid-2' },
+      h('div', { class: 'grid grid-2 grid-fields' },
         numberField({
           label: 'Coût moyen pour gagner un client', field: 'cac', value: cac, suffix: '€', help: 'cac',
-          hint: "Tout ce que tu dépenses pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
+          hint: "Tout ce que tu dépenses pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons. Si une agence t'annonce un prix, c'est celui-là.",
           onInput: (v) => pose({ cac: v }),
         }),
         numberField({
@@ -192,7 +188,14 @@ function macroAcquisition(s, r, refresh) {
           h('div', { class: 'acq-sum-label' }, 'Clients gagnés en un an'),
           h('div', { class: 'acq-sum-value num' }, num(parMois * 12))),
       ),
-      balance(cac, ltv),
+      autres.length ? h('p', { class: 'acq-plus' },
+        `Plus ${autres.length} campagne${autres.length > 1 ? 's' : ''} détaillée${autres.length > 1 ? 's' : ''} ci-dessous : `,
+        h('strong', { class: 'num' }, euro(budgetAutres)),
+        ' par mois pour ',
+        h('strong', { class: 'num' }, num(clientsAutres, 1)),
+        ` client${clientsAutres >= 2 ? 's' : ''} de plus. Les deux s’additionnent dans le modèle.`,
+      ) : null,
+      balance(cac > 0 ? cac : Number(r?.kpis?.cac) || 0, ltv),
     ),
   )
 }
@@ -224,20 +227,23 @@ function balance(cac, ltv) {
 
 /** Le détail par campagne : canal, entonnoir, dates. À un clic, pas avant. */
 function detailFold(s, r, open, refresh, add) {
-  const n = s.marketing.length
-  const chiffre = s.marketing.some((c) => !vierge(c))
+  const simple = ligneSimple(s.marketing)
+  const autres = s.marketing.filter((c) => c !== simple)
+  const chiffre = autres.some((c) => !vierge(c))
   return fold(
-    n > 1 ? `Détailler par campagne — ${n} campagnes` : 'Détailler par campagne',
-    'Canal, budget, entonnoir de conversion',
+    autres.length > 1 ? `Détailler par campagne — ${autres.length} campagnes` : 'Détailler par campagne',
+    autres.length ? 'Canal, budget, entonnoir de conversion' : 'Un canal à la fois, avec son entonnoir',
     h('div', {},
-      ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh)),
+      ...autres.map((c, i) => campaignCard(c, i, r, open, refresh)),
+      autres.length ? null : h('p', { class: 'tiny muted' },
+        'Aucune campagne détaillée. Le coût par client saisi au-dessus suffit à chiffrer ton acquisition ; une campagne sert à décomposer un canal — coût par clic, taux de conversion — et vient s’ajouter.'),
       h('div', { class: 'row mt' },
-        h('span', { class: 'tiny muted' }, 'Une campagne par canal, ou par offre : le budget et les clients s’additionnent.'),
+        h('span', { class: 'tiny muted' }, 'Une campagne par canal, ou par offre : les budgets et les clients s’additionnent.'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn btn-sm', onClick: add }, 'Ajouter une campagne'),
       ),
     ),
-    { id: 'acq-detail', open: chiffre || n > 1 },
+    { id: 'acq-detail', open: chiffre },
   )
 }
 
