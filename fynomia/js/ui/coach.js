@@ -68,7 +68,7 @@ export function coach(navigate) {
       h('div', { class: 'nextstep-actions' },
         h('button', {
           class: 'btn btn-primary nextstep-go',
-          onClick: () => goToGap(c.next.go, navigate),
+          onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
         }, 'Y aller'),
         // Une ligne de moins à poser ne doit jamais coûter un renoncement :
         // on la reporte, on passe à la suivante, elle reviendra.

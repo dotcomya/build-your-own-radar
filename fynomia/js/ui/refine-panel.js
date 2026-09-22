@@ -80,7 +80,7 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
           ...visible(g, open).map((it) => h('button', {
             class: `refinery-item ${it.done ? 'is-done' : ''} ${it.later ? 'is-later' : ''}`,
             title: it.done ? 'Revoir' : it.later ? 'Remis à plus tard. Renseigner maintenant.' : 'Renseigner',
-            onClick: () => goToGap(it.go, navigate),
+            onClick: (e) => goToGap(it.go, navigate, e.currentTarget),
           },
             h('span', { class: 'refinery-mark', 'aria-hidden': 'true' }, it.done ? '✓' : ''),
             h('span', { class: 'refinery-text' },

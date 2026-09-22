@@ -333,7 +333,7 @@ function finishBanner(s, navigate) {
     h('div', { class: 'finish-acts' },
       h('button', {
         class: 'btn btn-primary btn-lg finish-go',
-        onClick: () => goToGap(c.next.go, navigate),
+        onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
       }, `Renseigner « ${c.next.label} » →`),
       h('button', {
         class: 'btn btn-lg finish-list',

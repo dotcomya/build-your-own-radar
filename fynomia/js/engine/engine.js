@@ -194,15 +194,31 @@ export function opexSeries(items, { revenue, headcount, perActivity = [] }) {
   const rdSubcontracting = zeros()
   const perItem = []
 
-  /** La série de référence d'une charge indexée : une offre, ou toutes. */
+  /**
+   * La série de référence d'une charge indexée : plusieurs offres, ou toutes.
+   *
+   * Une offre à la fois ne suffisait pas. Un carton d'expédition sert à l'offre
+   * A et à l'offre B ; un pain à burger part dans trois plats sur les cinq de
+   * la carte. Il fallait alors dupliquer la charge autant de fois qu'elle avait
+   * de destinations, et chaque changement de prix se faisait en trois endroits.
+   * La charge porte donc une liste ; vide, elle vaut pour tout ce qui se vend.
+   *
+   * `activityId` — une seule offre — reste lu : les plans écrits avant cette
+   * liste ne doivent pas changer de résultat en silence.
+   */
   const scopeOf = (item, kind) => {
+    const serie = (a) => (kind === 'units' ? a.volumes : a.total)
     const all = kind === 'units'
       ? perActivity.reduce((acc, a) => acc.map((v, m) => v + (a.volumes[m] || 0)), zeros())
       : revenue
-    if (!item.activityId) return all
-    const found = perActivity.find((a) => a.id === item.activityId)
-    if (!found) return all
-    return kind === 'units' ? found.volumes : found.total
+    const ids = Array.isArray(item.activityIds) && item.activityIds.length
+      ? item.activityIds
+      : (item.activityId ? [item.activityId] : [])
+    if (!ids.length) return all
+    const choisies = perActivity.filter((a) => ids.includes(a.id))
+    if (!choisies.length) return all
+    if (choisies.length === 1) return serie(choisies[0])
+    return choisies.reduce((acc, a) => acc.map((v, m) => v + (serie(a)[m] || 0)), zeros())
   }
 
   for (const item of items) {

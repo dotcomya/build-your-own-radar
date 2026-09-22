@@ -401,7 +401,7 @@ function progressTop(c) {
           title: it.done ? `${it.label} \u2014 pos\u00e9`
             : it.later ? `${it.label} \u2014 remis \u00e0 plus tard. ${it.why}`
               : `${it.label} \u2014 ${it.why}`,
-          onClick: () => goToGap(it.go, navigate),
+          onClick: (e) => goToGap(it.go, navigate, e.currentTarget),
         })),
       )),
     ),

@@ -41,6 +41,19 @@
   --signal-ink: #0F27C4;
   --signal-wash:#E6E9FF;
 
+  /* La quatrième couleur : ce qui se travaille.
+     L'accent dit « ici », le bleu dit « va voir là-bas », le vert et le rouge
+     disent gagné et perdu. Il manquait le registre de ce qui n'est ni un
+     verdict ni une action urgente : les réglages qu'on peut encore affiner, la
+     ligne d'équipe qu'on est en train d'ouvrir, le bloc qu'on vient
+     d'activer. Une prune sourde — assez loin du citron, du bleu vif et du
+     vert comptable pour ne se confondre avec aucun, assez calme pour tenir sur
+     une page entière sans crier. */
+  --tune:       #6C3FA0;
+  --tune-ink:   #4F2C78;
+  --tune-wash:  #F3EDFB;
+  --tune-rule:  #D9CCEE;
+
   /* Sémantique : gagné, perdu, à surveiller */
   --gain:       #157A4A;
   --gain-wash:  #DCEFE2;
@@ -323,22 +336,45 @@ input[type=checkbox] { accent-color: var(--signal); width: 15px; height: 15px; c
 
 /* ─────────────────────────────── Tableaux ────────────────────────────── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
-table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+/* ─── Un tableau financier qui ne ressemble pas à un tableur ─── */
+/* Le quadrillage, les en-têtes gris et la ligne de total sur fond gris
+   donnaient un export Excel. Ce qui fait lire un bilan, c'est la hiérarchie :
+   des libellés qui respirent, des chiffres alignés à la virgule, un filet
+   seulement là où une somme se ferme, et le total en gros, sans fond. */
+table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 table.data th, table.data td {
-  padding: 8px 11px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap;
+  padding: 11px 14px; text-align: right; white-space: nowrap; border-bottom: 0;
 }
-table.data td:not(:first-child) { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+table.data tbody td { border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent); }
+table.data td:not(:first-child) {
+  font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
 table.data th:first-child, table.data td:first-child {
   text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1;
-  font-family: var(--sans);
+  font-family: var(--sans); color: var(--ink-3);
 }
-table.data thead th { color: var(--ink-4); background: var(--surface); border-bottom: 1px solid var(--rule-strong); }
+table.data thead th {
+  color: var(--ink-5); background: var(--surface); border-bottom: 1px solid var(--ink);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 500; padding-bottom: 8px;
+}
 table.data tbody tr:hover td, table.data tbody tr:hover td:first-child { background: var(--surface-2); }
-table.data tr.section td { background: var(--ink); color: #fff; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
-table.data tr.section td:first-child { background: var(--ink); }
-table.data tr.total td, table.data tr.total td:first-child { font-weight: 600; border-top: 2px solid var(--rule-strong); background: var(--surface-2); }
-table.data tr.highlight td, table.data tr.highlight td:first-child { background: var(--signal-wash); font-weight: 600; }
-table.data td.pct { color: var(--ink-4); font-size: 11.5px; }
+/* Un intertitre n'est pas une ligne de données : il ne prend pas de fond noir,
+   il prend de l'air et de la capitale. */
+table.data tr.section td, table.data tr.section td:first-child {
+  background: none; color: var(--ink-4); font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .14em; text-transform: uppercase; border-bottom: 0;
+  padding-top: 22px; padding-bottom: 4px;
+}
+table.data tr.total td, table.data tr.total td:first-child {
+  font-weight: 700; border-top: 1px solid var(--ink); border-bottom: 0;
+  background: none; color: var(--ink); font-size: 15px; padding-top: 13px;
+}
+table.data tr.total td:first-child { font-family: var(--display); letter-spacing: -.01em; }
+table.data tr.highlight td, table.data tr.highlight td:first-child {
+  background: var(--tune-wash); font-weight: 600; color: var(--tune-ink);
+}
+table.data td.pct { color: var(--ink-5); font-size: 11.5px; }
 table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ──────────────────────── Indicateurs et mesures ─────────────────────── */
@@ -3696,50 +3732,38 @@ details[open] > .refine-head .refine-sign {
 .source-cash { padding-bottom: 14px; }
 
 /* ─── Ce qui reste à affiner ─── */
-/* Ce bloc ne demande rien : il propose. Il portait pourtant le meme trait
-   gris que les cartes de saisie et se perdait au bas de chaque page. Un
-   contour lumineux le detache — un halo jaune, doux, qui respire une fois a
-   l'arrivee puis se tient tranquille. Il reste sobre : c'est une invitation,
-   pas une alerte. */
+/* Ce bloc ne demande rien : il propose.
+   Un halo jaune autour faisait une tache et criait plus fort que la page. Ce
+   qui le distingue maintenant, c'est sa matière : un fond prune très clair, un
+   filet vertical plein à gauche, et un titre de la même couleur. Il se
+   reconnaît d'un coup d'œil parmi les cartes blanches sans rien éclairer. */
 .affine {
   position: relative;
-  border: 1px solid var(--accent-dim); border-radius: 14px; background: var(--surface);
+  border: 1px solid var(--tune-rule); border-left: 3px solid var(--tune);
+  border-radius: 0 12px 12px 0; background: var(--tune-wash);
   padding: 18px 20px; margin-top: 22px;
-  box-shadow: 0 0 0 4px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45);
-  animation: affine-glow 2.6s var(--ease-soft) 1;
 }
-@keyframes affine-glow {
-  0%   { box-shadow: 0 0 0 0 var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
-  35%  { box-shadow: 0 0 0 8px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
-  100% { box-shadow: 0 0 0 4px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
-}
-/* Un filet jaune plein largeur en tete : on voit d'ou vient le halo. */
-.affine::before {
-  content: ''; position: absolute; left: 20px; right: 20px; top: -1px; height: 3px;
-  background: var(--accent); border-radius: 0 0 3px 3px;
-}
-@media (prefers-reduced-motion: reduce) { .affine { animation: none; } }
 .affine-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-.affine-title { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; color: var(--ink); }
+.affine-title { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; color: var(--tune-ink); }
 .affine-sub { font-size: 12px; color: var(--ink-4); margin-top: 3px; }
 .affine-count {
   margin-left: auto; flex: none; font-family: var(--mono); font-size: 11px;
-  background: var(--accent); color: var(--ink); border-radius: 999px; padding: 3px 9px; font-weight: 600;
+  background: var(--tune); color: #fff; border-radius: 999px; padding: 3px 9px; font-weight: 600;
 }
 .affine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 9px; }
 .affine-item {
-  text-align: left; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+  text-align: left; border: 1px solid var(--tune-rule); border-radius: 10px; background: #fff;
   padding: 11px 13px; cursor: pointer; font: inherit;
   transition: border-color .12s, background .12s;
 }
-.affine-item:hover { border-color: var(--accent-dim); background: var(--accent-wash); }
+.affine-item:hover { border-color: var(--tune); background: #fff; }
 .affine-item-label { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
 .affine-item-why { font-size: 11px; color: var(--ink-4); margin-top: 4px; line-height: 1.45; }
 .affine-item-go {
   display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 10px;
   letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4);
 }
-.affine-item:hover .affine-item-go { color: var(--ink); }
+.affine-item:hover .affine-item-go { color: var(--tune-ink); }
 
 /* ─── L'anneau qui dit « c'est ici » ─── */
 /* Trois secondes, deux respirations, aucune secousse : l'attention se conduit,
@@ -4479,46 +4503,56 @@ details[open] > .refine-head .refine-sign {
    teinté, et le glyphe du métier en tête pour dire d'où ça vient. Il disparaît
    quand il n'a plus rien à proposer.
    ═══════════════════════════════════════════════════════════════════════════ */
-.tradetip {
-  margin-top: 18px; padding: 18px 20px;
-  border: 1px dashed var(--rule); border-radius: 16px;
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+/* ─── Les suggestions du métier : une rangée de pastilles ─── */
+/* C'était une carte — en-tête, glyphe, sous-titre, lignes à trois étages —
+   qui pesait autant qu'une offre alors qu'elle ne fait que proposer. Ce qui
+   reste est le geste : le nom, ce qu'il rapporte, un « + ». */
+.tradetip { margin: 0 0 20px; }
+.tradetip-kicker {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-4);
 }
-.tradetip-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-.tradetip-glyph {
-  width: 34px; height: 34px; flex: none; border-radius: 10px;
-  background: var(--ink); color: var(--accent);
-  display: grid; place-items: center; font-size: 16px; line-height: 1;
-}
-.tradetip-id { min-width: 0; }
-.tradetip-tag {
-  font-family: var(--display); font-weight: 700; font-size: 15px;
-  letter-spacing: -.02em; color: var(--ink);
-}
-.tradetip-sub { font-size: 12px; color: var(--ink-4); margin-top: 2px; }
-
-/* Les lignes proposées : deux colonnes sur grand écran, une sur téléphone. */
-.tradetip-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 8px; }
+.tradetip-spark { color: var(--accent-dim); font-size: 13px; line-height: 1; }
+.tradetip-items { display: flex; flex-wrap: wrap; gap: 8px; }
 .tradetip-item {
-  display: flex; align-items: flex-start; gap: 10px; text-align: left;
-  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
-  padding: 10px 12px; cursor: pointer; font: inherit; min-width: 0;
-  transition: border-color .2s var(--ease-soft), transform .18s var(--ease-soft), box-shadow .2s var(--ease-soft);
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  max-width: 100%; min-width: 0;
+  padding: 8px 15px 8px 9px; border-radius: 999px; font: inherit;
+  border: 1px solid var(--rule); background: var(--surface);
+  box-shadow: 0 1px 2px rgba(11, 14, 16, .04);
+  transition: border-color .14s var(--ease-soft), transform .14s var(--ease-soft),
+              box-shadow .14s var(--ease-soft), background .14s var(--ease-soft);
 }
-.tradetip-item:hover { border-color: var(--ink); transform: translateY(-1px); box-shadow: 0 6px 18px -12px rgba(11, 14, 16, .5); }
+.tradetip-item:hover {
+  border-color: var(--tune); background: #fff; transform: translateY(-2px);
+  box-shadow: 0 8px 20px -12px rgba(11, 14, 16, .45);
+}
+.tradetip-item:active { transform: translateY(0); }
 .tradetip-plus {
-  width: 20px; height: 20px; flex: none; margin-top: 1px; border-radius: 50%;
-  background: var(--accent); color: var(--accent-ink);
-  display: grid; place-items: center; font-size: 11px; line-height: 1;
+  width: 22px; height: 22px; flex: none; border-radius: 50%;
+  display: inline-grid; place-items: center; line-height: 0;
+  background: var(--paper); color: var(--ink-3); border: 1px solid var(--rule);
+  transition: background .14s var(--ease-soft), color .14s, border-color .14s;
 }
-.tradetip-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tradetip-label { font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
-.tradetip-amount { font-size: 11.5px; color: var(--signal-ink); }
-.tradetip-why { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; margin-top: 2px; }
-/* La phrase du métier : elle ne s'ajoute à rien, elle situe tout le reste. */
+.tradetip-item:hover .tradetip-plus { background: var(--tune); border-color: var(--tune); color: #fff; }
+.tradetip-label {
+  font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em;
+  /* Une pastille ne doit jamais pousser la page : « Assurance responsabilité
+     civile professionnelle » mesure cinq cents pixels et le téléphone en fait
+     trois cent quatre-vingt-dix. Elle se rétrécit, et sur mobile elle prend
+     toute la largeur plutôt que de couper le mot. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.tradetip-amount { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; }
+.tradetip-item:hover .tradetip-amount { color: var(--tune-ink); }
 .tradetip-watch {
-  margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--rule);
-  font-size: 12.5px; color: var(--ink-3); line-height: 1.55; max-width: 84ch;
+  margin: 11px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-4); max-width: 88ch;
+}
+@media (max-width: 760px) {
+  .tradetip-items { flex-direction: column; align-items: stretch; }
+  .tradetip-item { border-radius: 12px; justify-content: flex-start; }
+  .tradetip-label { white-space: normal; }
 }
 
 @media (max-width: 700px) {
@@ -5997,3 +6031,55 @@ details[open] > .refine-head .refine-sign {
 .grid.grid-4.offerline { grid-template-columns: 1.3fr .9fr 1fr 1.1fr; gap: 14px; }
 @media (max-width: 1100px) { .grid.grid-4.offerline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .grid.grid-4.offerline { grid-template-columns: 1fr; } }
+
+/* ─── Le « + » qui éclate au clic ─── */
+/* Un clic qui change de page sans rien confirmer laisse douter qu'il a été
+   pris. Ce signe monte de l'élément cliqué et s'efface en un tiers de seconde,
+   là où le doigt était. Il vit sur la page, hors de tout parent, pour qu'aucun
+   bloc à débordement caché ne le tronque. */
+.gappop {
+  position: fixed; z-index: 200; pointer-events: none;
+  transform: translate(-50%, -50%);
+  font-family: var(--display); font-weight: 800; font-size: 20px;
+  color: var(--tune); text-shadow: 0 1px 0 #fff, 0 0 10px var(--tune-wash);
+  animation: gappop .62s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes gappop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  22%  { opacity: 1; transform: translate(-50%, -132%) scale(1.25); }
+  55%  { opacity: 1; transform: translate(-50%, -178%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -240%) scale(.92); }
+}
+@media (prefers-reduced-motion: reduce) { .gappop { display: none; } }
+
+/* ─── La ligne ouverte se voit : on sait où l'on travaille ─── */
+/* Une liste de postes dépliée ne disait pas lequel était ouvert : le corps
+   apparaissait, mais la carte gardait le même blanc et le même trait que ses
+   voisines. Celle qu'on travaille prend la quatrième couleur — fond très
+   clair, trait de tête plein, filet à gauche — et les autres s'effacent d'un
+   cran pour que le regard sache où il est. */
+.item.open {
+  border-color: var(--tune-rule); border-top-color: var(--tune);
+  box-shadow: inset 3px 0 0 var(--tune);
+}
+.item.open > .item-head { background: var(--tune-wash); }
+.item.open > .item-head:hover { background: #EDE3F9; }
+.item.open > .item-head .item-title { color: var(--tune-ink); }
+.item.open > .item-body { background: color-mix(in srgb, var(--tune-wash) 45%, #fff); }
+.item.open .foldsign { border-color: var(--tune); color: var(--tune); }
+
+/* ─── Sur quelles offres porte une charge indexée ─── */
+/* Un menu déroulant n'acceptait qu'une réponse. Des pastilles en acceptent
+   autant qu'il y a d'offres — et « Toutes » reste le cas par défaut. */
+.cost-scope { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+.scopechip {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .02em;
+  padding: 4px 9px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-4);
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.scopechip:hover { border-color: var(--tune); color: var(--tune-ink); }
+.scopechip.on {
+  background: var(--tune); border-color: var(--tune); color: #fff; font-weight: 600;
+}

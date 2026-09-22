@@ -105,11 +105,15 @@ export function renderOffer(navigate, refresh) {
 
     view === 'offres'
       ? h('div', { class: 'view' },
-          ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate, navigate)),
+          // Les suggestions du métier ouvrent la page au lieu de la fermer.
+          //
           // Un restaurateur qui n'a saisi que ses couverts a oublié les
-          // boissons — son poste le plus rentable. On le lui dit ici, avec le
-          // mot qu'il emploie, pas dans un guide générique.
+          // boissons — son poste le plus rentable. Sous la liste, il ne le
+          // lisait qu'après avoir déroulé tout ce qu'il avait déjà posé ; en
+          // tête, c'est une rangée de pastilles qu'on prend ou qu'on laisse
+          // avant même de commencer.
           tradeSuggest('offers', navigate, refresh),
+          ...s.activities.map((a, i) => activityCard(a, i, r, level, open, refresh, duplicate, navigate)),
         )
       : view === 'acquisition'
         ? h('div', { class: 'view' }, renderAcquisition(navigate, refresh))
@@ -232,9 +236,9 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
   // son prix de l'autre, et il fallait faire l'aller-retour pour vérifier
   // qu'on parlait bien de la même chose. Ils n'en font plus qu'un.
   const secs = [
-    { key: 'offre', label: "L'offre et son prix" },
+    { key: 'offre', label: 'Paramètres de base' },
     { key: 'volumes', label: 'Volumes' },
-    { key: 'affiner', label: 'Affiner' },
+    { key: 'affiner', label: 'Hypothèses avancées' },
   ]
   const sec = secs.some((x) => x && x.key === activityCard.sec) ? activityCard.sec : 'offre'
 

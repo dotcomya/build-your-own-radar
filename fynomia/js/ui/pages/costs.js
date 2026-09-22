@@ -125,6 +125,49 @@ export function renderCosts(navigate, refresh) {
 }
 
 /**
+ * Sur quelles offres porte cette charge.
+ *
+ * Un menu déroulant n'acceptait qu'une réponse : il fallait dupliquer le
+ * carton d'expédition pour l'offre A et pour l'offre B, et le pain à burger
+ * autant de fois qu'il entre dans un plat. Chaque changement de prix se faisait
+ * alors en trois endroits, et on en oubliait un.
+ *
+ * Des pastilles, donc, qu'on allume : « Toutes » d'un côté, les offres de
+ * l'autre. Rien d'allumé vaut « toutes » — c'est le cas le plus fréquent et il
+ * n'a pas à se déclarer.
+ */
+function scopeChips(o, set, refresh) {
+  const offres = store.scenario.activities || []
+  const ids = Array.isArray(o.activityIds) && o.activityIds.length
+    ? o.activityIds
+    : (o.activityId ? [o.activityId] : [])
+  const toutes = ids.length === 0
+
+  const poser = (liste) => {
+    // On écrit les deux champs : la liste fait foi, et l'ancien champ reste
+    // juste pour qu'une version antérieure du logiciel lise la même chose.
+    set({ activityIds: liste, activityId: liste.length === 1 ? liste[0] : null })
+    refresh()
+  }
+
+  return h('div', { class: 'cost-scope', role: 'group', 'aria-label': 'Offres concernées' },
+    h('button', {
+      class: `scopechip ${toutes ? 'on' : ''}`,
+      title: 'Cette charge porte sur tout ce que tu vends',
+      onClick: () => poser([]),
+    }, 'Toutes'),
+    ...offres.map((a) => {
+      const pris = ids.includes(a.id)
+      return h('button', {
+        class: `scopechip ${pris ? 'on' : ''}`,
+        title: pris ? `Retirer ${a.name}` : `Ajouter ${a.name}`,
+        onClick: () => poser(pris ? ids.filter((x) => x !== a.id) : [...ids, a.id]),
+      }, a.name || 'Sans nom')
+    }),
+  )
+}
+
+/**
  * Une charge, sur une ligne.
  *
  * Chaque poste occupait une carte entière avec quatre champs déployés : dix
@@ -219,17 +262,7 @@ function opexRow(o, r, level, refresh) {
       // tout ce qu'on vend : elle porte sur la glace, pas sur le café servi au
       // comptoir. Le sélecteur n'apparaît que pour les charges indexées.
       ['pctRevenue', 'perUnit'].includes(o.mode) && store.scenario.activities.length
-        ? h('div', { class: 'cost-scope' },
-            (() => {
-              const sel = h('select', { 'aria-label': 'Offre concernée' },
-                h('option', { value: '', selected: !o.activityId || null }, 'toutes les offres'),
-                ...store.scenario.activities.map((a) =>
-                  h('option', { value: a.id, selected: o.activityId === a.id || null }, a.name || 'Sans nom')),
-              )
-              sel.addEventListener('change', () => { set({ activityId: sel.value || null }); refresh() })
-              return sel
-            })(),
-          )
+        ? scopeChips(o, set, refresh)
         : null,
 
       detail ? h('span', { class: 'cost-year num' }, `${euro(detail.yearly[0], { compact: true })}/an`) : null,

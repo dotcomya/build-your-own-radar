@@ -108,7 +108,7 @@ export function todoPanel(pageKey, scenario, navigate) {
         // Le clic ouvre la page, l'onglet et la carte qu'il faut, puis entoure
         // le champ. La ligne disparaît d'elle-même au rendu suivant, puisqu'elle
         // n'existe que tant que la valeur manque.
-        onClick: () => (it.go && navigate ? goToGap(it.go, navigate) : null),
+        onClick: (e) => (it.go && navigate ? goToGap(it.go, navigate, e.currentTarget) : null),
       },
         h('div', { class: 'affine-item-label' }, it.label),
         h('div', { class: 'affine-item-why' }, it.why),

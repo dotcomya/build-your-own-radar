@@ -12,7 +12,7 @@
  */
 
 const EMPTY = { route: null, view: null, sec: null, openAll: false, anchor: null }
-import { armTravel } from './motion.js'
+
 
 const intent = { ...EMPTY }
 
@@ -26,10 +26,45 @@ const intent = { ...EMPTY }
  * d'animer ce passage.
  */
 /** Poser l'intention, puis y aller. */
-export function goToGap(target, navigate) {
-  armTravel('page')
+/**
+ * Aller poser la ligne, tout de suite.
+ *
+ * Le trajet s'accompagnait d'un fondu de page : un quart de seconde d'écran
+ * gelé entre le clic et la destination, pendant lequel on ne comprenait pas ce
+ * qui se passait — on avait cliqué sur « Type de clientèle » et l'outil
+ * semblait recharger. On y va directement ; c'est l'anneau qui arrive sur le
+ * champ visé qui dit qu'on est au bon endroit, pas le voyage.
+ *
+ * `depuis` est le bouton cliqué : il crache un « + » avant qu'on parte, pour
+ * que le geste ait une réponse à l'endroit où le doigt était.
+ */
+export function goToGap(target, navigate, depuis) {
+  if (depuis) pop(depuis)
   Object.assign(intent, EMPTY, target)
-  navigate(`#/${target.route}`)
+  navigate(`#/${target.route}`, { move: false })
+}
+
+/**
+ * Le « + » qui éclate et disparaît.
+ *
+ * Un clic qui change de page sans rien confirmer laisse douter qu'il a été
+ * pris. Ce signe monte de l'élément cliqué, grossit et s'efface en un peu plus
+ * d'un tiers de seconde : le temps de voir qu'on a bien appuyé, pas assez pour
+ * attendre. Il se pose sur la page, hors de tout parent, pour qu'aucun bloc à
+ * débordement caché ne le tronque.
+ */
+export function pop(el, signe = '+') {
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const r = el.getBoundingClientRect()
+    const n = document.createElement('span')
+    n.className = 'gappop'
+    n.textContent = signe
+    n.style.left = `${r.left + r.width / 2}px`
+    n.style.top = `${r.top + 12}px`
+    document.body.appendChild(n)
+    setTimeout(() => n.remove(), 700)
+  } catch { /* un signe en moins ne casse rien */ }
 }
 
 /** Ce que la page doit ouvrir, si c'est elle qui est visée. */

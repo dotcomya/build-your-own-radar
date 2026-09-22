@@ -23,7 +23,7 @@ import { h, euro, toast, PLUS } from './dom.js'
 import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
 import { getSector, vocabulary, tradeName } from '../state/sectors.js'
-import { goToGap } from './spotlight.js'
+import { goToGap, pop } from './spotlight.js'
 import { focusOffer } from './pages/offer.js'
 import store from '../state/store.js'
 
@@ -54,29 +54,27 @@ export function tradeSuggest(kind, navigate, refresh) {
   // Tout est posé : le bloc n'a plus rien à dire, il s'efface.
   if (!items.length) return null
 
+  // Une rangée de pastilles, en tête de page.
+  //
+  // C'était une carte : un en-tête, un glyphe, un sous-titre de métier, puis
+  // des lignes à trois étages. Elle pesait autant qu'une offre alors qu'elle ne
+  // fait que proposer. Ce qui reste est le geste — le nom, ce qu'il rapporte,
+  // un « + » — sur une ligne qui se survole et se clique sans réfléchir.
   return h('section', { class: `tradetip is-${kind}`, 'data-gap': `metier-${kind}` },
-    h('header', { class: 'tradetip-head' },
-      h('span', { class: 'tradetip-glyph', 'aria-hidden': 'true' }, sector.glyph),
-      h('div', { class: 'tradetip-id' },
-        h('div', { class: 'tradetip-tag' }, HEAD[kind].tag),
-        // « Les charges d'une pizzeria », pas « d'un restaurant » : le modèle
-        // est partagé, le mot ne l'est pas.
-        h('div', { class: 'tradetip-sub' }, `${tradeName(s)} — ${HEAD[kind].sub}`),
-      ),
+    h('div', { class: 'tradetip-kicker' },
+      h('span', { class: 'tradetip-spark', 'aria-hidden': 'true' }, sector.glyph),
+      `Suggestions rapides à intégrer — ${tradeName(s)}`,
     ),
 
     h('div', { class: 'tradetip-items' },
       ...items.map((it) => h('button', {
         class: 'tradetip-item',
-        title: 'Ajouter au modèle',
-        onClick: () => { added(kind, it, vocab, navigate, refresh) },
+        title: it.why || it.note || 'Ajouter au modèle',
+        onClick: (e) => { pop(e.currentTarget); added(kind, it, vocab, navigate, refresh) },
       },
         h('span', { class: 'tradetip-plus', 'aria-hidden': 'true', html: PLUS }),
-        h('span', { class: 'tradetip-text' },
-          h('span', { class: 'tradetip-label' }, it.label),
-          h('span', { class: 'tradetip-amount num' }, amountOf(kind, it, vocab)),
-          it.why || it.note ? h('span', { class: 'tradetip-why' }, it.why || it.note) : null,
-        ),
+        h('span', { class: 'tradetip-label' }, it.label),
+        h('span', { class: 'tradetip-amount num' }, amountOf(kind, it, vocab)),
       )),
     ),
 
