@@ -3696,10 +3696,29 @@ details[open] > .refine-head .refine-sign {
 .source-cash { padding-bottom: 14px; }
 
 /* ─── Ce qui reste à affiner ─── */
+/* Ce bloc ne demande rien : il propose. Il portait pourtant le meme trait
+   gris que les cartes de saisie et se perdait au bas de chaque page. Un
+   contour lumineux le detache — un halo jaune, doux, qui respire une fois a
+   l'arrivee puis se tient tranquille. Il reste sobre : c'est une invitation,
+   pas une alerte. */
 .affine {
-  border: 1px solid var(--rule); border-radius: 14px; background: var(--surface);
-  padding: 18px 20px; margin-top: 16px;
+  position: relative;
+  border: 1px solid var(--accent-dim); border-radius: 14px; background: var(--surface);
+  padding: 18px 20px; margin-top: 22px;
+  box-shadow: 0 0 0 4px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45);
+  animation: affine-glow 2.6s var(--ease-soft) 1;
 }
+@keyframes affine-glow {
+  0%   { box-shadow: 0 0 0 0 var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
+  35%  { box-shadow: 0 0 0 8px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
+  100% { box-shadow: 0 0 0 4px var(--accent-wash), 0 10px 30px -18px rgba(11, 14, 16, .45); }
+}
+/* Un filet jaune plein largeur en tete : on voit d'ou vient le halo. */
+.affine::before {
+  content: ''; position: absolute; left: 20px; right: 20px; top: -1px; height: 3px;
+  background: var(--accent); border-radius: 0 0 3px 3px;
+}
+@media (prefers-reduced-motion: reduce) { .affine { animation: none; } }
 .affine-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .affine-title { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; color: var(--ink); }
 .affine-sub { font-size: 12px; color: var(--ink-4); margin-top: 3px; }
@@ -3713,7 +3732,7 @@ details[open] > .refine-head .refine-sign {
   padding: 11px 13px; cursor: pointer; font: inherit;
   transition: border-color .12s, background .12s;
 }
-.affine-item:hover { border-color: var(--ink); background: var(--surface-2); }
+.affine-item:hover { border-color: var(--accent-dim); background: var(--accent-wash); }
 .affine-item-label { font-size: 13px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
 .affine-item-why { font-size: 11px; color: var(--ink-4); margin-top: 4px; line-height: 1.45; }
 .affine-item-go {
@@ -4235,7 +4254,11 @@ details[open] > .refine-head .refine-sign {
    34 px quand le sujet change. Le bandeau de droite retiré, la page a la
    largeur qu'il faut pour que cet air se voie.
    ═══════════════════════════════════════════════════════════════════════════ */
-.content { padding: 30px 34px calc(var(--impact-h) + 34px); max-width: 1180px; }
+/* Le guide flotte a dix-huit pixels du bas et mesure cent vingt-huit de haut.
+   Avec quatre-vingt-seize pixels de marge basse, il recouvrait le dernier
+   bouton de la page — « Continuer », « Aller voir ». La page lui laisse sa
+   place : cent soixante pixels, mesures a l'appui. */
+.content { padding: 30px 34px 160px; max-width: 1180px; }
 .slab + .slab, .slab-pair + .slab, .slab + .slab-pair { margin-top: 18px; }
 .slab-apart { margin-top: 34px !important; }
 .slab-pair { gap: 18px; }
