@@ -65,24 +65,18 @@ export function renderAcquisition(navigate, refresh) {
     ),
 
     h('div', { class: 'view', 'data-gap': 'campagnes' },
-      r && s.marketing.length > 0 ? h('div', { class: 'grid grid-4 kpis mb' },
-        tile('Budget total', euro(totalBudget, { compact: true }), 'Sur cinq ans'),
-        tile('Clients acquis', num(Math.round(totalClients)), 'Toutes campagnes'),
-        tile('CAC moyen', r.kpis.cac ? euro(r.kpis.cac) : '—', "Coût d'acquisition", 'cac'),
-        tile('LTV / CAC', r.kpis.ltvCacRatio ? `${num(r.kpis.ltvCacRatio, 1)}×` : '—',
-          r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'Rentable' : r.kpis.ltvCacRatio >= 1 ? 'Juste' : 'Non rentable') : '—', 'ltv',
-          r.kpis.ltvCacRatio ? (r.kpis.ltvCacRatio >= 3 ? 'pos' : r.kpis.ltvCacRatio >= 1 ? 'warn' : 'neg') : ''),
-      ) : null,
+      // Le gros trait d'abord, le détail ensuite.
+      //
+      // On demandait d'emblée un canal, un coût par clic et trois taux de
+      // conversion à quelqu'un qui n'a jamais fait de publicité. Or la
+      // question de départ tient en deux nombres : combien coûte un client,
+      // combien j'en veux par mois. Le budget s'en déduit, et le rapport avec
+      // ce qu'un client rapporte se lit tout de suite. L'entonnoir complet
+      // reste à un clic, pour qui a des chiffres à y mettre.
+      macroAcquisition(s, r, refresh),
 
-      s.marketing.length === 0
-        ? h('div', { class: 'card' }, h('div', { class: 'empty' },
-            h('div', { class: 'empty-icon' }, '◎'),
-            h('h3', {}, 'Aucune campagne'),
-            h('p', { class: 'muted', style: { maxWidth: '52ch', margin: '0 auto' } },
-              "Sans campagne, tes volumes de vente reposent uniquement sur la courbe de croissance saisie dans l'onglet Offre. Ajoute une campagne pour relier un budget marketing à une acquisition de clients."),
-            h('button', { class: 'btn btn-primary mt', onClick: add }, 'Créer une campagne'),
-          ))
-        : h('div', {}, ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh))),
+      s.marketing.length === 0 ? null
+        : detailFold(s, r, open, refresh, add),
 
       r && s.marketing.length > 0
         ? fold('Répartition du budget', 'Ce que chaque campagne coûte et rapporte', mixPanel(r), { id: 'acq-mix' })
@@ -94,24 +88,65 @@ export function renderAcquisition(navigate, refresh) {
   )
 }
 
-/* ─────────────────── Mode simple : deux nombres, une réponse ─────────────── */
+/* ──────────── Niveau macro : deux nombres avant tout entonnoir ──────────── */
+
+/** Une campagne est-elle encore vierge de tout chiffre d'entonnoir ? */
+function vierge(c) {
+  return ['cpc', 'cpm', 'cpl', 'ctr', 'visitToLead', 'leadToClient'].every((k) => !(Number(c[k]) > 0))
+}
 
 /**
- * Combien coûte un client, combien j'en veux.
+ * Ce que coûte un client, et combien on en veut : la question de départ.
  *
- * Un fondateur qui démarre ne connaît ni son taux de clic ni son coût pour
- * mille impressions ; il a en revanche une idée de ce qu'il est prêt à
- * dépenser pour gagner un client. C'est la seule question posée ici : le
- * budget s'en déduit, et la comparaison avec ce que rapporte un client dit
- * immédiatement si le compte y est.
+ * Tant qu'il n'y a qu'une campagne et qu'aucun taux n'a été posé, ces deux
+ * nombres pilotent directement le modèle — le budget mensuel s'en déduit. Dès
+ * que le fondateur descend dans l'entonnoir, ou ouvre une deuxième campagne,
+ * le bloc cesse d'écrire et se contente de lire : il dirait sinon le contraire
+ * de ce qui est saisi en dessous, ou l'écraserait.
  */
-function simpleAcquisition(s, r, navigate, refresh) {
-  const camp = s.marketing[0]
-  const cac = camp ? Number(camp.cac) || 0 : 0
-  const perMonth = camp ? Number(camp.clientsPerMonth) || 0 : 0
-  const budget = cac * perMonth
+function macroAcquisition(s, r, refresh) {
+  const camps = s.marketing || []
+  const seule = camps.length <= 1 ? camps[0] : null
+  const pilote = camps.length === 0 || (seule && (seule.model === 'cac' || vierge(seule)))
 
-  const setSimple = (patch) => {
+  const detail = r?.revenue?.campaigns || []
+  const budgetMois = detail.reduce((a, c) => a + (Number(c.totalSpend) || 0), 0) / 60
+  const clientsMois = detail.reduce((a, c) => a + (Number(c.totalClients) || 0), 0) / 60
+  const ltv = Number(r?.kpis?.ltv) || 0
+
+  if (!pilote) {
+    const cac = Number(r?.kpis?.cac) || 0
+    return h('section', { class: 'card acq-macro is-read' },
+      h('div', { class: 'card-head' },
+        h('div', {},
+          h('h2', {}, 'Ce que te coûte un client'),
+          h('div', { class: 'tiny muted' }, `Calculé à partir de ${camps.length} campagnes détaillées ci-dessous.`),
+        ),
+      ),
+      h('div', { class: 'card-body' },
+        h('div', { class: 'acq-sum' },
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, "Coût d'acquisition moyen"),
+            h('div', { class: 'acq-sum-value num' }, cac > 0 ? euro(cac) : '—')),
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, 'Nouveaux clients par mois'),
+            h('div', { class: 'acq-sum-value num' }, num(clientsMois, 1))),
+          h('div', { class: 'acq-sum-cell' },
+            h('div', { class: 'acq-sum-label' }, 'Budget mensuel'),
+            h('div', { class: 'acq-sum-value num' }, euro(budgetMois))),
+        ),
+        balance(cac, ltv),
+      ),
+    )
+  }
+
+  const cac = seule ? Number(seule.cac) || 0 : 0
+  const parMois = seule ? Number(seule.clientsPerMonth) || 0 : 0
+  const budget = cac * parMois
+
+  // Écrire ici crée la campagne si elle manque, et la bascule en « CAC connu » :
+  // c'est le mode qui dit exactement ce que ces deux champs veulent dire.
+  const pose = (patch) => {
     store.update((sc) => {
       let c = sc.marketing[0]
       if (!c) {
@@ -120,82 +155,89 @@ function simpleAcquisition(s, r, navigate, refresh) {
       }
       c.model = 'cac'
       c.durationMonths = 60
-      c.startMonth = 0
       Object.assign(c, patch)
       c.monthlyBudget = (Number(c.cac) || 0) * (Number(c.clientsPerMonth) || 0)
     }, { label: 'Acquisition de clients' })
+    refresh()
   }
 
-  const ltv = r?.kpis?.ltv || 0
-  const ratio = cac > 0 && ltv > 0 ? ltv / cac : null
-
-  return h('div', { class: 'content' },
-    h('div', { class: 'card' },
-      h('div', { class: 'card-head' },
-        h('div', {},
-          h('h2', {}, 'Ce que te coûte un client'),
-          h('div', { class: 'tiny muted' }, "Deux nombres suffisent à chiffrer ton acquisition."),
-        ),
-      ),
-      h('div', { class: 'card-body' },
-        h('div', { class: 'grid grid-2' },
-          numberField({
-            label: "Coût moyen pour gagner un client", field: 'cac', value: cac, suffix: '€',
-            help: 'cac',
-            hint: "Tout ce que tu dépenses pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
-            onInput: (v) => setSimple({ cac: v }),
-          }),
-          numberField({
-            label: 'Nouveaux clients visés par mois', field: 'count', value: perMonth, suffix: 'clients',
-            hint: "En plus de ceux qui viennent seuls. Laisse à zéro si tu ne dépenses rien pour en trouver.",
-            onInput: (v) => setSimple({ clientsPerMonth: v }),
-          }),
-        ),
-
-        h('div', { class: 'acq-sum' },
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, 'Budget mensuel'),
-            h('div', { class: 'acq-sum-value num' }, euro(budget)),
-          ),
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, 'Sur un an'),
-            h('div', { class: 'acq-sum-value num' }, euro(budget * 12)),
-          ),
-          h('div', { class: 'acq-sum-cell' },
-            h('div', { class: 'acq-sum-label' }, 'Clients gagnés en un an'),
-            h('div', { class: 'acq-sum-value num' }, num(perMonth * 12)),
-          ),
-        ),
-
-        cac > 0 && ltv > 0 && h('div', { class: 'acq-scale' },
-          h('div', { class: 'acq-scale-head' },
-            h('span', {}, 'Ce qu’un client te rapporte, face à ce qu’il te coûte'),
-          ),
-          h('div', { class: 'acq-scale-row' },
-            h('span', { class: 'acq-scale-tag' }, 'Rapporte'),
-            h('span', { class: 'acq-scale-bar' },
-              h('i', { class: 'gain', style: { width: `${(ltv / Math.max(ltv, cac)) * 100}%` } })),
-            h('span', { class: 'acq-scale-num num' }, euro(ltv)),
-          ),
-          h('div', { class: 'acq-scale-row' },
-            h('span', { class: 'acq-scale-tag' }, 'Coûte'),
-            h('span', { class: 'acq-scale-bar' },
-              h('i', { class: 'loss', style: { width: `${(cac / Math.max(ltv, cac)) * 100}%` } })),
-            h('span', { class: 'acq-scale-num num' }, euro(cac)),
-          ),
-          h('p', { class: 'acq-scale-note' }, ratioAdvice(ratio)),
-        ),
-
-        cac > 0 && ltv <= 0 && h('div', { class: 'note mt' },
-          h('div', { class: 'note-title' }, 'Il manque un prix de vente'),
-          "Renseigne le prix et le coût de revient de ton offre pour que Fynomia puisse comparer ce qu'un client te rapporte à ce qu'il te coûte."),
+  return h('section', { class: 'card acq-macro', 'data-gap': 'acquisition' },
+    h('div', { class: 'card-head' },
+      h('div', {},
+        h('h2', {}, 'Ce que te coûte un client'),
+        h('div', { class: 'tiny muted' }, 'Deux nombres suffisent à chiffrer ton acquisition. Le budget s’en déduit.'),
       ),
     ),
+    h('div', { class: 'card-body' },
+      h('div', { class: 'grid grid-2' },
+        numberField({
+          label: 'Coût moyen pour gagner un client', field: 'cac', value: cac, suffix: '€', help: 'cac',
+          hint: "Tout ce que tu dépenses pour qu'un client signe, divisé par le nombre de clients : publicité, commissions, salons, échantillons.",
+          onInput: (v) => pose({ cac: v }),
+        }),
+        numberField({
+          label: 'Nouveaux clients visés par mois', field: 'count', value: parMois, suffix: 'clients',
+          hint: 'En plus de ceux qui viennent seuls. Laisse à zéro si tu ne dépenses rien pour en trouver.',
+          onInput: (v) => pose({ clientsPerMonth: v }),
+        }),
+      ),
+      h('div', { class: 'acq-sum' },
+        h('div', { class: 'acq-sum-cell' },
+          h('div', { class: 'acq-sum-label' }, 'Budget mensuel'),
+          h('div', { class: 'acq-sum-value num' }, euro(budget))),
+        h('div', { class: 'acq-sum-cell' },
+          h('div', { class: 'acq-sum-label' }, 'Sur un an'),
+          h('div', { class: 'acq-sum-value num' }, euro(budget * 12))),
+        h('div', { class: 'acq-sum-cell' },
+          h('div', { class: 'acq-sum-label' }, 'Clients gagnés en un an'),
+          h('div', { class: 'acq-sum-value num' }, num(parMois * 12))),
+      ),
+      balance(cac, ltv),
+    ),
+  )
+}
 
-    h('div', { class: 'note plain mt' },
-      h('div', { class: 'note-title' }, 'Et si je veux détailler ?'),
-      "Passe en niveau Intermédiaire ou Expert pour décomposer ton acquisition en campagnes, choisir un canal par campagne et chiffrer un entonnoir complet — impressions, clics, contacts, clients — avec le rapport entre ce qu'un client coûte et ce qu'il rapporte sur toute sa durée de vie."),
+/** Ce qu'un client rapporte, face à ce qu'il coûte. Deux barres, une phrase. */
+function balance(cac, ltv) {
+  if (!(cac > 0)) return null
+  if (!(ltv > 0)) {
+    return h('div', { class: 'note mt' },
+      h('div', { class: 'note-title' }, 'Il manque un prix de vente'),
+      "Renseigne le prix et le coût de revient de ton offre pour que Fynomia puisse comparer ce qu'un client te rapporte à ce qu'il te coûte.")
+  }
+  const haut = Math.max(ltv, cac)
+  return h('div', { class: 'acq-scale' },
+    h('div', { class: 'acq-scale-head' }, h('span', {}, 'Ce qu’un client te rapporte, face à ce qu’il te coûte')),
+    h('div', { class: 'acq-scale-row' },
+      h('span', { class: 'acq-scale-tag' }, 'Rapporte'),
+      h('span', { class: 'acq-scale-bar' }, h('i', { class: 'gain', style: { width: `${(ltv / haut) * 100}%` } })),
+      h('span', { class: 'acq-scale-num num' }, euro(ltv)),
+    ),
+    h('div', { class: 'acq-scale-row' },
+      h('span', { class: 'acq-scale-tag' }, 'Coûte'),
+      h('span', { class: 'acq-scale-bar' }, h('i', { class: 'loss', style: { width: `${(cac / haut) * 100}%` } })),
+      h('span', { class: 'acq-scale-num num' }, euro(cac)),
+    ),
+    h('p', { class: 'acq-scale-note' }, ratioAdvice(ltv / cac)),
+  )
+}
 
+/** Le détail par campagne : canal, entonnoir, dates. À un clic, pas avant. */
+function detailFold(s, r, open, refresh, add) {
+  const n = s.marketing.length
+  const chiffre = s.marketing.some((c) => !vierge(c))
+  return fold(
+    n > 1 ? `Détailler par campagne — ${n} campagnes` : 'Détailler par campagne',
+    'Canal, budget, entonnoir de conversion',
+    h('div', {},
+      ...s.marketing.map((c, i) => campaignCard(c, i, r, open, refresh)),
+      h('div', { class: 'row mt' },
+        h('span', { class: 'tiny muted' }, 'Une campagne par canal, ou par offre : le budget et les clients s’additionnent.'),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn btn-sm', onClick: add }, 'Ajouter une campagne'),
+      ),
+    ),
+    { id: 'acq-detail', open: chiffre || n > 1 },
   )
 }
 
@@ -306,6 +348,18 @@ function campaignCard(c, index, r, open, refresh) {
       foldSign(),
     ),
     isOpen && h('div', { class: 'item-body' },
+      // Une campagne naît à zéro : aucun taux inventé ne vient gonfler le
+      // chiffre d'affaires à son insu. Les ordres de grandeur du canal sont
+      // là pour qui n'a aucune idée par où commencer — mais c'est lui qui les
+      // demande. Cette proposition se lisait sous trois grilles de champs,
+      // c'est-à-dire après le moment où elle servait : elle ouvre la carte,
+      // sur une ligne, et disparaît dès qu'un chiffre est posé.
+      untouched && Object.keys(hints).length
+        ? h('div', { class: 'seed-row' },
+            h('p', {}, `Rien n'est chiffré — on peut partir des ordres de grandeur observés en ${(CHANNELS[c.channel]?.label || '').toLowerCase()}.`),
+            h('button', { class: 'btn btn-sm', onClick: seed }, 'Les utiliser'),
+          )
+        : null,
       h('div', { class: 'grid grid-3 mt' },
         textField({ label: 'Nom de la campagne', value: c.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
         selectField({
@@ -329,16 +383,6 @@ function campaignCard(c, index, r, open, refresh) {
       ),
 
       h('h4', { style: { margin: '18px 0 8px' } }, "Entonnoir de conversion"),
-      // Une campagne naît à zéro : aucun taux inventé ne vient gonfler le
-      // chiffre d'affaires à son insu. Les ordres de grandeur du canal sont
-      // là quand il n'a aucune idée par où commencer — mais c'est lui qui les
-      // demande, et la phrase dit d'où ils sortent.
-      untouched && Object.keys(hints).length
-        ? h('div', { class: 'seed-row' },
-            h('p', {}, `Tout est à zéro : c'est à toi de poser tes chiffres. Si tu n'en as aucune idée, on peut partir des ordres de grandeur observés en ${(CHANNELS[c.channel]?.label || '').toLowerCase()} — à corriger dès que tu auras les tiens.`),
-            h('button', { class: 'btn btn-sm', onClick: seed }, 'Partir des ordres de grandeur'),
-          )
-        : null,
       selectField({
         label: "Mode de calcul", value: c.model,
         options: [
@@ -457,14 +501,5 @@ function mixPanel(r) {
           : "Renseigne un prix de vente et un coût de revient dans l'onglet Offre pour que Fynomia calcule la rentabilité de ton acquisition.",
       ),
     ),
-  )
-}
-
-function tile(label, value, sub, glossaryKey, tone) {
-  return h('div', { class: `kpi ${tone || ''}` },
-    h('span', { class: 'kpi-accent' }),
-    h('div', { class: 'kpi-label' }, label, glossaryKey && helpButton(glossaryKey)),
-    h('div', { class: 'kpi-value' }, value),
-    h('div', { class: 'kpi-sub' }, sub),
   )
 }

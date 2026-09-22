@@ -5182,6 +5182,12 @@ details[open] > .refine-head .refine-sign {
    signes dessinés en SVG sont au milieu à toutes les tailles. */
 .item-act, .source-act, .byyear-clear, .tradetip-plus, .btn-sign {
   display: inline-grid; place-items: center; line-height: 0;
+  /* Le dessin était juste, la boîte ne l'était pas. Un bouton garde le
+     remplissage que le navigateur lui donne — 1px sur 6px — et la largeur
+     fixée de 22 pixels ne laissait alors que 8 pixels utiles pour un signe
+     qui en fait 14. Ce qui déborde d'une grille part vers la droite : le
+     « + » se posait trois pixels trop loin. On remet la boîte à zéro. */
+  padding: 0;
 }
 .item-act svg, .source-act svg, .byyear-clear svg, .tradetip-plus svg, .btn-sign svg {
   width: 14px; height: 14px; display: block;
@@ -5820,3 +5826,17 @@ details[open] > .refine-head .refine-sign {
 .legalline:hover .legalline-edit { color: var(--ink); border-color: var(--ink); }
 .legalline.is-empty .legalline-name { color: var(--ink-5); font-weight: 400; }
 .legalopen { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); }
+
+/* ─── Acquisition : le gros trait avant l'entonnoir ─── */
+/* La carte porte les deux nombres qui décident ; le détail par campagne vit
+   dans un volet, sous elle. Les quatre tuiles qui coiffaient la page disaient
+   la même chose sans la commenter. */
+.acq-macro { margin-bottom: 18px; }
+.acq-macro.is-read .acq-sum { margin-top: 0; }
+.seed-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 2px 0 4px; padding: 10px 14px;
+  background: var(--surface-2); border-left: 2px solid var(--rule);
+}
+.seed-row p { margin: 0; flex: 1 1 260px; font-size: 12.5px; line-height: 1.5; color: var(--ink-5); }
+.seed-row .btn { flex: none; }
