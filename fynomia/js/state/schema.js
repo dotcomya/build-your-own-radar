@@ -94,8 +94,16 @@ export function newActivity(overrides = {}) {
     // fréquent et le seul qu'on puisse poser sans rien savoir du métier. Qui
     // facture à trente jours le dira lui-même — on ne lui invente pas un
     // décalage de trésorerie dont il n'a jamais parlé.
-    deliveryLag: 0, paymentLag: 0, deposit: 1, milestone: 0, churnMonthly: 0.02,
-    unitCost: 100, recurringCost: 0, costPaymentLag: 1, costDeposit: 0,
+    // Les hypothèses avancées naissent éteintes, à zéro.
+    //
+    // Un acompte de cent pour cent, une attrition de deux pour cent et un mois
+    // de délai fournisseur étaient posés d'office : trois hypothèses que
+    // personne n'avait formulées mais qui pesaient sur la trésorerie dès la
+    // première offre. Le cas neutre est le comptant sans attrition ; ce qui
+    // s'en écarte se déclare, dans l'onglet prévu pour ça.
+    deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, churnMonthly: 0,
+    unitCost: 100, recurringCost: 0, costPaymentLag: 0, costDeposit: 0,
+    refine: { signature: false, contrat: false, paiement: false, evolution: false },
     vatRateSales: 0.2, vatRatePurchase: 0.2,
     priceByYear: [], recurringPriceByYear: [], unitCostByYear: [], recurringCostByYear: [],
     // Décélération à zéro : la croissance saisie est celle qui s'applique.
@@ -324,7 +332,60 @@ export function scenarioFromTemplate(key, name, { sample = true } = {}) {
   // Un gérant majoritaire de SARL ou d'EURL subit les cotisations TNS sur ses
   // dividendes : la case est cochée d'office pour ces formes.
   s.founder.majorityManager = ['SARL', 'EURL'].includes(s.meta.legalForm)
+  for (const a of s.activities) rangerHypotheses(a)
   return s
+}
+
+/**
+ * Les hypothèses avancées d'un plan neuf : éteintes, à zéro, mais pas perdues.
+ *
+ * Le modèle d'un métier pose des délais qui lui sont propres — un conseil
+ * encaissé à soixante jours, un restaurant payé comptant, un abonnement qui
+ * perd deux clients sur cent chaque mois. Elles sont justes, mais personne ne
+ * les a formulées : elles pesaient sur la trésorerie d'un plan dont le
+ * fondateur n'avait encore rien dit.
+ *
+ * On les met donc de côté au lieu de les appliquer. L'onglet « hypothèses
+ * avancées » s'ouvre vide et à zéro ; allumer un bloc rappelle la valeur du
+ * métier, déjà remplie. Rien n'est inventé, rien n'est imposé.
+ */
+const NEUTRE = {
+  signature: { unitPrice: 0 },
+  contrat: { contractMonths: 12, churnMonthly: 0 },
+  paiement: { deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, costPaymentLag: 0, costDeposit: 0 },
+  evolution: { priceByYear: [], recurringPriceByYear: [] },
+}
+
+export function rangerHypotheses(a) {
+  a.refine = {}
+  a.refineSaved = a.refineSaved || {}
+  for (const [cle, neutre] of Object.entries(NEUTRE)) {
+    // Un abonnement sans durée de contrat ne produit rien : ce bloc-là garde
+    // sa valeur, c'est la définition de l'offre et non une hypothèse.
+    const garde = {}
+    let bouge = false
+    for (const k of Object.keys(neutre)) {
+      garde[k] = a[k]
+      const v = Array.isArray(neutre[k]) ? (Array.isArray(a[k]) && a[k].length ? 1 : 0) : (Number(a[k]) || 0)
+      const d = Array.isArray(neutre[k]) ? 0 : (Number(neutre[k]) || 0)
+      if (v !== d) bouge = true
+    }
+    // Deux exceptions, et ce sont des définitions, pas des hypothèses : la
+    // durée d'un contrat fait exister l'abonnement — à zéro, il ne produit
+    // rien — et le prix unitaire d'une vente ferme est le prix, pas un frais
+    // de mise en route. Seule l'attrition est mise de côté dans le premier
+    // cas ; le second bloc ne s'applique tout simplement pas.
+    if (cle === 'signature' && (Number(a.recurringPrice) || 0) <= 0) { a.refine.signature = false; continue }
+    if (cle === 'contrat') {
+      if ((Number(a.churnMonthly) || 0) > 0) a.refineSaved.contrat = { contractMonths: a.contractMonths, churnMonthly: a.churnMonthly }
+      a.churnMonthly = 0
+      a.refine.contrat = false
+      continue
+    }
+    if (bouge) a.refineSaved[cle] = garde
+    for (const k of Object.keys(neutre)) a[k] = Array.isArray(neutre[k]) ? [] : neutre[k]
+    a.refine[cle] = false
+  }
 }
 
 /**

@@ -13,6 +13,7 @@ import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
+import { renderStudio } from './studio.js'
 import { storyline, gauge } from '../story.js'
 import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
@@ -75,6 +76,9 @@ export function renderDashboard(navigate, refresh) {
   // socle qu'on déplie quand on veut vérifier.
   const views = [
     { key: 'synthese', read: true, label: 'Synthèse' },
+    // Une seconde écriture de la même synthèse, mise à l'essai : mêmes séries,
+    // autre forme. Elle vit à côté de l'originale tant qu'on les compare.
+    { key: 'studio', read: true, label: 'Synthèse — essai' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
     { key: 'simulation', label: 'Simulation' },
   ]
@@ -91,6 +95,8 @@ export function renderDashboard(navigate, refresh) {
       guide: stepGuide(null, null, 'tableau-de-bord'),
       views, view, onPick: goView,
     }),
+
+    view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh)) : null,
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
       // Ce qui manque se dit avant ce qu'on a trouvé.

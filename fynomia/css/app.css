@@ -41,18 +41,17 @@
   --signal-ink: #0F27C4;
   --signal-wash:#E6E9FF;
 
-  /* La quatrième couleur : ce qui se travaille.
-     L'accent dit « ici », le bleu dit « va voir là-bas », le vert et le rouge
-     disent gagné et perdu. Il manquait le registre de ce qui n'est ni un
-     verdict ni une action urgente : les réglages qu'on peut encore affiner, la
-     ligne d'équipe qu'on est en train d'ouvrir, le bloc qu'on vient
-     d'activer. Une prune sourde — assez loin du citron, du bleu vif et du
-     vert comptable pour ne se confondre avec aucun, assez calme pour tenir sur
-     une page entière sans crier. */
-  --tune:       #6C3FA0;
-  --tune-ink:   #4F2C78;
-  --tune-wash:  #F3EDFB;
-  --tune-rule:  #D9CCEE;
+  /* Ce qui se travaille : le jaune, presque effacé.
+     Une quatrième teinte avait été essayée — une prune — pour distinguer les
+     réglages à affiner. Elle apportait un hue de plus à une palette qui en
+     vivait très bien avec trois, et elle sortait du tableau. On garde donc les
+     couleurs de la maison : le noir pour ce qui est actif, et le même jaune
+     que partout ailleurs, dilué à quelques pour cent, pour teinter un fond
+     sans jamais le colorer. */
+  --tune:       var(--ink);
+  --tune-ink:   var(--ink);
+  --tune-wash:  rgba(214, 240, 52, .16);
+  --tune-rule:  var(--rule);
 
   /* Sémantique : gagné, perdu, à surveiller */
   --gain:       #157A4A;
@@ -6063,9 +6062,9 @@ details[open] > .refine-head .refine-sign {
   box-shadow: inset 3px 0 0 var(--tune);
 }
 .item.open > .item-head { background: var(--tune-wash); }
-.item.open > .item-head:hover { background: #EDE3F9; }
+.item.open > .item-head:hover { background: rgba(214, 240, 52, .26); }
 .item.open > .item-head .item-title { color: var(--tune-ink); }
-.item.open > .item-body { background: color-mix(in srgb, var(--tune-wash) 45%, #fff); }
+.item.open > .item-body { background: rgba(214, 240, 52, .07); }
 .item.open .foldsign { border-color: var(--tune); color: var(--tune); }
 
 /* ─── Sur quelles offres porte une charge indexée ─── */
@@ -6104,3 +6103,148 @@ details[open] > .refine-head .refine-sign {
 }
 .scopepick-row.on .scopepick-box { background: var(--tune); border-color: var(--tune); color: #fff; }
 .scopepick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ═══════════ La synthèse, deuxième écriture ══════════════════════════════
+   Une métrique prend les deux tiers et le noir, le reste se range autour.
+   Les blocs secondaires n'ont pas de cadre : ils respirent sur le fond crème.
+   Tout ce qui est chiffre, ratio ou date passe en chasse fixe. */
+.st { display: flex; flex-direction: column; gap: 34px; }
+
+/* Deux tiers, un tiers. */
+.st-hero { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: stretch; }
+@media (max-width: 900px) { .st-hero { grid-template-columns: 1fr; } }
+
+.st-big {
+  background: var(--ink); color: #fff; border-radius: 18px;
+  padding: 24px 28px 26px; display: flex; flex-direction: column; min-width: 0;
+  position: relative; overflow: hidden;
+}
+.st-big-top { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+.st-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: #fff;
+}
+.st-kicker.is-dark { color: var(--ink-4); }
+.st-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none;
+  animation: st-pulse 2.4s var(--ease-soft) infinite;
+}
+@keyframes st-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
+.st-badge {
+  margin-left: auto; flex: none; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: #B7BAAE;
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: 5px; padding: 3px 8px;
+}
+.st-big-fig { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+.st-big-num {
+  font-family: var(--display); font-weight: 800; letter-spacing: -.05em; line-height: .88;
+  font-size: clamp(56px, 7.4vw, 92px);
+}
+.st-big-delta {
+  font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: -.01em;
+}
+.st-big-delta.is-off { color: #8A8D82; }
+.st-big-say {
+  margin: 18px 0 0; font-size: 13px; line-height: 1.6; color: #B7BAAE; max-width: 62ch;
+}
+
+.st-side {
+  background: var(--surface); border-radius: 18px; padding: 22px 24px 22px;
+  display: flex; flex-direction: column; min-width: 0;
+  box-shadow: 0 1px 2px rgba(11, 14, 16, .05), 0 18px 40px -30px rgba(11, 14, 16, .4);
+}
+.st-side-fig { margin-top: 14px; }
+.st-side-num {
+  font-family: var(--display); font-weight: 700; font-size: clamp(34px, 3.6vw, 48px);
+  letter-spacing: -.045em; color: var(--ink); line-height: 1;
+}
+.st-side-when { margin-top: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--ink-4); }
+.st-cta {
+  margin-top: 20px; width: 100%; padding: 13px 16px; border-radius: 10px; cursor: pointer;
+  background: var(--ink); color: #fff; border: 0; font-family: var(--sans);
+  font-size: 13px; font-weight: 600; letter-spacing: -.01em;
+  transition: transform .16s var(--ease-soft), box-shadow .16s var(--ease-soft);
+}
+.st-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -14px rgba(11, 14, 16, .7); }
+.st-cta:active { transform: translateY(0); }
+
+/* Deux colonnes, sans cadre. */
+.st-cols { display: grid; grid-template-columns: 1fr 1.35fr; gap: 34px; align-items: start; }
+@media (max-width: 900px) { .st-cols { grid-template-columns: 1fr; gap: 26px; } }
+.st-col-title {
+  margin: 0 0 14px; font-family: var(--display); font-weight: 700; font-size: 15px;
+  letter-spacing: -.02em; color: var(--ink);
+}
+.st-empty { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-4); }
+
+.st-seg { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; }
+.st-seg-cell { flex: 1; height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+.st-seg-cell > i { display: block; height: 100%; background: var(--accent); transition: width .5s var(--ease-soft); }
+.st-seg-num { flex: none; font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-left: 6px; }
+
+.st-checks { list-style: none; margin: 0; padding: 0; }
+.st-check-go {
+  display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer;
+  padding: 8px 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left;
+  transition: background .14s var(--ease-soft);
+}
+.st-check-go:hover { background: rgba(214, 240, 52, .2); }
+.st-check-mark {
+  width: 16px; height: 16px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--rule); font-size: 9px; line-height: 1; color: transparent;
+}
+.st-check.is-done .st-check-mark { border-color: var(--accent-dim); background: var(--accent); color: var(--ink); }
+.st-check-label { font-size: 13px; color: var(--ink-4); }
+.st-check.is-done .st-check-label { color: var(--ink-5); }
+.st-check.is-next .st-check-go { background: rgba(214, 240, 52, .16); }
+.st-check.is-next .st-check-label { color: var(--ink); font-weight: 650; }
+.st-check.is-next .st-check-mark { border-color: var(--ink); }
+
+.st-lever {
+  display: flex; align-items: flex-start; gap: 12px; padding: 13px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.st-lever:last-child { border-bottom: 0; }
+.st-lever-no {
+  width: 22px; height: 22px; flex: none; border-radius: 6px; display: grid; place-items: center;
+  background: var(--paper); border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 11px; color: var(--ink-4);
+}
+.st-lever-label { font-size: 13.5px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; }
+.st-lever-detail { margin-top: 2px; font-family: var(--mono); font-size: 11px; color: var(--ink-4); line-height: 1.45; }
+.st-lever-gain { flex: none; text-align: right; }
+.st-lever-amount {
+  display: block; background: var(--ink); color: var(--accent); border-radius: 6px;
+  padding: 4px 9px; font-family: var(--mono); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.st-lever-what {
+  display: block; margin-top: 4px; font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-5);
+}
+
+/* Une barre empilée plutôt qu'un camembert : on compare des longueurs. */
+.st-split-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.st-split-year { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--ink-5); }
+.st-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--rule); }
+.st-bar > i { display: block; height: 100%; background: var(--ink); border-right: 1px solid var(--paper); }
+.st-bar > i:nth-child(2) { background: #3A3D34; }
+.st-bar > i:nth-child(3) { background: #62655A; }
+.st-bar > i:nth-child(4) { background: #8E9186; }
+.st-bar > i:nth-child(5) { background: #B4B7AC; }
+.st-bar > i.is-rest { background: var(--accent); border-right: 0; }
+.st-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; }
+.st-leg { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; }
+.st-leg > i { width: 8px; height: 8px; border-radius: 2px; background: var(--ink-4); flex: none; }
+.st-leg.is-rest > i { background: var(--accent); }
+.st-leg-name { color: var(--ink-4); }
+.st-leg-pct { color: var(--ink); font-weight: 600; }
+
+/* La courbe, posée à même le fond. */
+.st-curve-box { width: 100%; height: 190px; }
+.st-curve-box svg { width: 100%; height: 100%; display: block; }
+.st-months {
+  display: flex; justify-content: space-between; margin-top: 8px;
+  font-family: var(--mono); font-size: 10px; color: var(--ink-5); letter-spacing: .04em;
+}
+@media (prefers-reduced-motion: reduce) { .st-dot { animation: none; } }
