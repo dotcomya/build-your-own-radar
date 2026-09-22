@@ -303,7 +303,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
         // L'identité de l'offre tient sur une ligne : son nom, sa TVA. Le
         // reste de l'écran est consacré à la seule chose qui compte ensuite,
         // la façon dont elle rapporte.
-        h('div', { class: 'grid grid-2', 'data-gap': 'abonnement' },
+        h('div', { class: 'grid grid-3', 'data-gap': 'abonnement' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
           selectField({
             label: 'Taux de TVA', value: a.vatRateSales,
@@ -317,24 +317,14 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
             help: 'tva',
             onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
           }),
+          selectField({
+            label: 'Comment ça rapporte', value: mode,
+            options: MODES.map((m) => ({ value: m.key, label: `${m.label} — ${m.note.toLowerCase()}` })),
+            onInput: (v) => v === mode || setMode(v),
+          }),
         ),
 
         h('div', { class: 'offer-sep' }),
-
-
-        // Le mode d'abord, le prix ensuite. Dans cet ordre, parce qu'un prix
-        // ne veut rien dire tant qu'on ne sait pas s'il est encaissé une fois,
-        // tous les mois, ou en pourcentage d'une affaire qu'on amène.
-        h('div', { class: 'pmode' },
-          ...MODES.map((m) => h('button', {
-            class: `pmode-tab ${m.key === mode ? 'is-on' : ''}`,
-            'aria-pressed': String(m.key === mode),
-            onClick: () => m.key === mode || setMode(m.key),
-          },
-            h('span', { class: 'pmode-label' }, m.label),
-            h('span', { class: 'pmode-note' }, m.note),
-          )),
-        ),
 
         mode === 'unit' ? h('section', { class: 'part' },
           // Ce qu'on encaisse et ce que ça coûte se lisent ensemble : séparés,
@@ -351,11 +341,6 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
             }),
             costLink(a, voc, navigate),
           ),
-          margin !== null && n(a.unitCost) > 0
-            ? h('div', { class: `note ${margin < 0 ? 'danger' : margin < 0.2 ? 'warn' : 'ok'}`, style: { marginTop: '12px' } },
-                h('div', { class: 'note-title' }, `Marge unitaire : ${euro(n(a.unitPrice) - n(a.unitCost))} par vente, soit ${pct(margin, 0)}`),
-                marginAdvice(margin))
-            : null,
         ) : null,
 
         mode === 'recurring' ? h('section', { class: 'part' },
