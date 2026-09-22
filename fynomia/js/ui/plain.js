@@ -36,10 +36,15 @@ const YEARS = ['année 1', 'année 2', 'année 3', 'année 4', 'année 5']
 export function plainBoard(s, r, navigate, goRefine) {
   if (!r) return null
 
-  // Un plan encore vide n'a pas de verdict à rendre. Lui en donner un —
-  // « aucune année ne dégage de bénéfice » — serait exact et inutile : ce
-  // n'est pas le modèle qui est mauvais, c'est qu'il n'y a rien dedans.
-  if (!(r.pnl.revenue || []).some((v) => n(v) > 0)) return emptyBoard(goRefine)
+  // Avant le premier euro de chiffre d'affaires, on ne renvoyait qu'une phrase
+  // fixe : « aucune synthèse n'est calculable ». Elle était exacte et fausse à
+  // la fois — le plan ne vend encore rien, mais il coûte déjà quelque chose, et
+  // ce quelque chose bougeait à chaque charge ajoutée sans que l'écran ne
+  // change d'un mot. Un fondateur qui remplit ses charges et son équipe voyait
+  // donc le même texte pendant une heure, et concluait que l'outil ne calculait
+  // rien. Il y a une synthèse à rendre dans cet état : ce que ça coûte, combien
+  // de temps la trésorerie tient, et ce qu'il faudra vendre pour couvrir.
+  const sansCA = !(r.pnl.revenue || []).some((v) => n(v) > 0)
   // Trois actes, pas six lectures.
   //
   // Les six cartes disaient quatre fois la même chose sous quatre formes : le
@@ -51,7 +56,7 @@ export function plainBoard(s, r, navigate, goRefine) {
   // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
   // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
   // dans l'ordre où on se la pose.
-  const actes = acts(s, r)
+  const actes = sansCA ? actsAvant(s, r) : acts(s, r)
 
   return h('div', { class: 'plain' },
     ...actes.map((a) => h('section', { class: 'plain-act' },
@@ -100,61 +105,300 @@ function acts(s, r) {
 
   // Le poste le plus lourd : c'est lui qui donne son verbe au troisième acte.
   const blocs = [
-    { nom: 'la masse salariale', m: Math.abs(n(p.payroll[i])), ou: 'l’équipe' },
+    { nom: 'la masse salariale', m: Math.abs(n(p.payroll[i])), ou: 'l\u2019équipe' },
     { nom: 'les achats', m: Math.abs(n(p.variableCost[i])), ou: 'le coût de revient' },
     { nom: 'les charges fixes', m: Math.abs(n(p.external[i])) + Math.abs(n(p.duties[i])), ou: 'les charges' },
   ].sort((a, b) => b.m - a.m)
   const tete = blocs[0]
 
+  // Le titre du premier acte porte la réponse ET son échéance.
+  //
+  // « Ça tient, à condition d'être financé » était vrai pour un plan rentable
+  // en année 2 avec 30 000 € à trouver comme pour un plan rentable en année 5
+  // avec deux millions. Deux situations que rien ne sépare à l'écran, alors
+  // que tout les sépare dans la vie du fondateur. Le titre nomme donc l'année
+  // et le montant : c'est ce qui rend la lecture propre à ce plan-là.
+  const titre1 = !rentable
+    ? (manque ? `Non : il manque ${euro(k.fundingNeed)}` : 'Non, pas encore')
+    : !manque
+      ? (first === 0 ? 'Oui, dès la première année' : `Oui, à partir de l\u2019année ${first + 1}`)
+      : first === 0
+        ? `Rentable tout de suite, mais ${euro(k.fundingNeed)} à avancer`
+        : `Oui en année ${first + 1}, avec ${euro(k.fundingNeed)} à trouver d\u2019ici là`
+
+  const marge = n(k.netMargin?.[i])
   const tient = rentable && !manque
-    ? `Le modèle est rentable dès l’année ${first + 1} et la trésorerie ne passe jamais sous zéro. Ces deux cartes disent à quelles conditions ça tient.`
+    ? `Le modèle dégage un résultat dès l\u2019année ${first + 1} et la trésorerie ne passe jamais sous zéro. ` + (marge > 0.2
+        ? `Avec ${Math.round(marge * 100)} % de résultat net, la marge absorbe une erreur d\u2019hypothèse — c\u2019est rare, vérifie qu\u2019aucune charge ne manque.`
+        : `Le résultat net s\u2019établit à ${Math.round(marge * 100)} % du chiffre d\u2019affaires : ça tient, mais sans réserve.`)
     : rentable && manque
-      ? `Le modèle devient rentable en année ${first + 1}, mais il manque ${euro(k.fundingNeed)} avant d’y arriver. Rentable ne veut pas dire financé : c’est la trésorerie qui décide si tu vois cette année-là.`
+      ? `Le modèle devient rentable en année ${first + 1}, mais il manque ${euro(k.fundingNeed)} avant d\u2019y arriver. Rentable ne veut pas dire financé : c\u2019est la trésorerie qui décide si tu vois cette année-là.`
       : manque
         ? `Aucun exercice ne dégage de bénéfice sur cinq ans, et il manque ${euro(k.fundingNeed)} au point bas. Ce sont les deux choses à traiter avant toutes les autres.`
         : `Aucun exercice ne dégage de bénéfice sur cinq ans. La trésorerie tient, mais elle tient sur ce que tu as mis au départ.`
 
-  const vient = `${tete.nom.charAt(0).toUpperCase()}${tete.nom.slice(1)} est ton premier poste de dépense. ` + (rentable
-    ? 'Les trois cartes suivantes disent où part chaque euro encaissé, et ce qu’il t’en reste une fois tout payé.'
-    : 'Les trois cartes suivantes disent où part chaque euro encaissé — c’est là que se joue le retour à l’équilibre, pas ailleurs.')
+  // Le deuxième acte nomme le poste et ce qu'il absorbe du chiffre d'affaires.
+  const rev = n(p.revenue[i])
+  const absorbe = rev > 0 ? Math.round((tete.m / rev) * 100) : null
+  const titre2 = absorbe !== null && absorbe > 100
+    ? `${maj(tete.nom)} coûte plus que tu ne vends`
+    : absorbe !== null
+      ? `${maj(tete.nom)} : ${absorbe} % de ce que tu encaisses`
+      : 'D\u2019où ça vient'
+  const vient = `${maj(tete.nom)} est ton premier poste de dépense` +
+    (absorbe !== null ? `, et il absorbe ${absorbe} % de ton chiffre d\u2019affaires en année ${i + 1}. ` : '. ') + (rentable
+      ? 'Les trois cartes suivantes disent où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste une fois tout payé.'
+      : 'Les trois cartes suivantes disent où part chaque euro encaissé — c\u2019est là que se joue le retour à l\u2019équilibre, pas ailleurs.')
 
+  // Le troisième acte nomme le levier, pas la catégorie.
+  const seuil = n(k.breakEven?.[i])
+  const ecart = seuil > 0 && rev > 0 ? rev / seuil : null
+  const titre3 = rentable
+    ? 'Ce qu\u2019il reste à défendre'
+    : ecart !== null && ecart > 0.8
+      ? 'Tu n\u2019es pas loin du seuil'
+      : ecart !== null && ecart < 0.4
+        ? 'Le seuil est encore loin'
+        : 'Où agir'
   const agir = rentable
-    ? `Le seuil est franchi en année ${first + 1}. Reste à savoir si la trajectoire qui y mène se défend devant quelqu’un qui la lira.`
-    : `Tant que le seuil n’est pas atteint, trois leviers seulement le déplacent : le prix, le volume, et ${tete.ou}. Ils ne se valent pas — le prix agit tout de suite, le volume suppose de la demande.`
+    ? `Le seuil est franchi en année ${first + 1}. Reste à savoir si la trajectoire qui y mène se défend devant quelqu\u2019un qui la lira.`
+    : ecart !== null && ecart > 0.8
+      ? `Tu couvres déjà ${Math.round(ecart * 100)} % de ton seuil de rentabilité. L\u2019écart se comble par le prix, par le volume, ou par ${tete.ou} — et à ce niveau, une hausse de prix de quelques pour cent suffit souvent.`
+      : `Tant que le seuil n\u2019est pas atteint, trois leviers seulement le déplacent : le prix, le volume, et ${tete.ou}. Ils ne se valent pas — le prix agit tout de suite, le volume suppose de la demande.`
 
   return [
-    { titre: rentable && !manque ? 'Oui, ça tient' : rentable ? 'Ça tient, à condition d’être financé' : 'Non, pas encore',
-      dit: tient,
-      cartes: [profitCard(r), cashCard(r)] },
-    { titre: 'D’où ça vient',
-      dit: vient,
-      cartes: [causeCard(r), keepCard(r), takeCard(s, r)] },
-    { titre: rentable ? 'Ce qu’il reste à défendre' : 'Où agir',
-      dit: agir,
-      cartes: [breakEvenCard(s, r), growthCard(r)] },
+    { titre: titre1, dit: tient, cartes: [profitCard(r), cashCard(r)] },
+    { titre: titre2, dit: vient, cartes: [causeCard(r), keepCard(r), takeCard(s, r)] },
+    { titre: titre3, dit: agir, cartes: [breakEvenCard(s, r), growthCard(r)] },
   ]
 }
 
-/** Rien à lire encore : on dit quoi poser, et où. */
-function emptyBoard(goRefine) {
-  return h('div', { class: 'plain' },
-    h('p', { class: 'plain-lede' },
-      'Aucune synthèse n’est calculable : le modèle ne comporte pas encore de chiffre d’affaires.'),
-    h('section', { class: 'plaincard is-watch' },
-      h('header', { class: 'plaincard-head' },
-        h('span', { class: 'plaincard-ico', html: icon('idee') }),
-        h('div', {},
-          h('div', { class: 'plaincard-kicker' }, 'Par où commencer'),
-          h('h3', { class: 'plaincard-title' }, 'Un prix et un volume suffisent à démarrer'),
-        ),
-      ),
-      h('p', { class: 'plaincard-body' },
-        'Trois données déclenchent l’ensemble des calculs : la nature de l’offre, son prix unitaire et le volume mensuel vendu. Les charges, la masse salariale et la trésorerie se construisent ensuite sur cette base.'),
-      goRefine ? h('div', { class: 'plain-foot-go' },
-        h('button', { class: 'btn btn-primary btn-sm', onClick: goRefine }, 'Ce qu’il me reste à poser'),
-      ) : null,
-    ),
-  )
+/** Première lettre en capitale — sans jamais toucher au reste. */
+const maj = (t) => `${t.charAt(0).toUpperCase()}${t.slice(1)}`
+
+/**
+ * Les trois actes d'un plan qui ne vend pas encore.
+ *
+ * Tant qu'aucune offre n'a de prix ni de volume, le moteur ne peut pas rendre
+ * de verdict — mais il a déjà tout le reste : les charges, l'équipe, les
+ * investissements, l'apport. Ces chiffres-là sont vrais, ils sont à lui, et ils
+ * changent à chaque saisie. Les lui rendre, c'est la différence entre un outil
+ * qui calcule et un outil qui attend.
+ *
+ * L'ordre est le même que pour un plan complet : ce que ça donne, d'où ça
+ * vient, où agir. Ici la première question devient « combien ça coûte et
+ * combien de temps ça tient », et la dernière « combien faut-il vendre ».
+ */
+function actsAvant(s, r) {
+  const p = r.pnl, k = r.kpis
+  const charge = charges(r, 0)
+  const mois = charge / 12
+  const equipe = Math.abs(n(p.payroll[0]))
+  const fixe = Math.abs(n(p.external[0])) + Math.abs(n(p.duties[0]))
+  const invest = somme(r.capex?.spendMonthly, 12)
+  const mise = somme(r.financing?.equity) + somme(r.financing?.investors) +
+    somme(r.financing?.grants) + somme(r.financing?.shareholderLoans) + somme(r.financing?.loanDrawdown) +
+    n(r.financing?.openingCash)
+  const tenue = n(k.runwayMonths)
+
+  // Le premier paragraphe nomme la situation réelle, pas un état d'attente.
+  const dit = charge <= 0
+    ? 'Rien n\u2019est encore posé : ni ce que tu vends, ni ce que ça te coûte. Les deux cartes ci-dessous se rempliront dès la première charge ou le premier poste saisi.'
+    : mise <= 0
+      ? `Ton projet coûte déjà ${euro(charge)} la première année, soit ${euro(mois)} par mois, et rien n\u2019est prévu pour le financer. C\u2019est le premier chiffre à regarder : il ne dépend pas de tes ventes, il tombe même si tu ne vends rien.`
+      : tenue > 0 && tenue < 60
+        ? `Ton projet coûte ${euro(charge)} la première année. Avec ${euro(mise)} de mise de départ, tu tiens ${Math.floor(tenue)} mois sans vendre. C\u2019est le temps que tu as pour atteindre les volumes que tu n\u2019as pas encore posés.`
+        : `Ton projet coûte ${euro(charge)} la première année, soit ${euro(mois)} par mois. Tant qu\u2019aucun prix n\u2019est posé, c\u2019est la seule moitié de l\u2019équation que le moteur peut calculer — mais elle est exacte.`
+
+  const dominant = equipe >= fixe ? 'l\u2019équipe' : 'les charges fixes'
+  const vient = charge <= 0
+    ? 'Dès qu\u2019une charge ou un poste existe, cette partie dit lequel pèse le plus et ce qu\u2019il faudra couvrir en priorité.'
+    : `Sur ${euro(charge)}, c\u2019est ${dominant} qui pèse le plus. Savoir lequel de tes postes domine décide de ce qu\u2019il faudra vendre : ce n\u2019est pas la même entreprise selon que la dépense part en salaires ou en loyer.`
+
+  const agir = charge <= 0
+    ? 'Pose une offre, son prix et son volume : c\u2019est ce trio qui déclenche le calcul complet.'
+    : `Pour couvrir ${euro(charge)}, il faut vendre. Combien exactement dépend de ce que chaque vente te coûte — et c\u2019est la seule donnée qui manque encore.`
+
+  return [
+    { titre: charge <= 0 ? 'Le plan est encore vide' : 'Ce que ton projet coûte, avant de vendre',
+      dit,
+      cartes: [coutCard(r), tenueCard(r)] },
+    { titre: 'D\u2019où vient la dépense',
+      dit: vient,
+      cartes: [causeCard(r), investCard(r)] },
+    { titre: 'Ce qu\u2019il faudra vendre',
+      dit: agir,
+      cartes: [objectifCard(r), manqueCard(s)] },
+  ]
+}
+
+/** Les charges totales d'un exercice : ce que l'entreprise dépense pour exister. */
+function charges(r, y) {
+  const f = n(r.kpis?.fixedCosts?.[y])
+  if (f > 0) return f
+  const p = r.pnl
+  return Math.abs(n(p.payroll[y])) + Math.abs(n(p.external[y])) + Math.abs(n(p.duties[y])) +
+    Math.abs(n(p.amortisation[y])) + Math.abs(n(p.variableCost[y]))
+}
+
+/** Somme d'une série mensuelle, éventuellement bornée aux premiers mois. */
+function somme(serie, jusqua) {
+  if (!Array.isArray(serie)) return 0
+  const fin = jusqua == null ? serie.length : Math.min(jusqua, serie.length)
+  let t = 0
+  for (let i = 0; i < fin; i++) t += n(serie[i])
+  return t
+}
+
+/** Ce que ça coûte : le seul chiffre certain d'un plan qui ne vend pas encore. */
+function coutCard(r) {
+  const p = r.pnl
+  const a1 = charges(r, 0)
+  if (a1 <= 0) {
+    return card({
+      tone: 'watch', kicker: 'Charges', ico: 'argent',
+      title: 'Aucune dépense saisie',
+      body: 'Ni charge fixe, ni salaire, ni investissement n\u2019est encore entré dans le modèle. Le loyer, l\u2019assurance, le comptable, les logiciels : ce sont eux qui donnent la première marche à franchir.',
+      figure: { label: 'Charges \u2014 année 1', value: euro(0), good: false },
+    })
+  }
+  const equipe = Math.abs(n(p.payroll[0]))
+  const fixe = Math.abs(n(p.external[0])) + Math.abs(n(p.duties[0]))
+  const amort = Math.abs(n(p.amortisation[0]))
+  const variable = Math.abs(n(p.variableCost[0]))
+  const bloc = [
+    { cle: 'team', nom: 'salaires', v: equipe },
+    { cle: 'other', nom: 'charges fixes', v: fixe },
+    { cle: 'buys', nom: 'amortissements', v: amort + variable },
+  ].filter((b) => b.v > 0)
+  const part = (v) => Math.round((v / a1) * 100)
+
+  return card({
+    tone: 'watch', kicker: 'Charges', ico: 'argent',
+    title: `${euro(a1)} de charges la première année`,
+    body: `Soit ${euro(a1 / 12)} par mois, avant d\u2019avoir vendu quoi que ce soit. ` + (equipe > 0
+      ? `La masse salariale en représente ${part(equipe)} % — elle inclut les cotisations patronales, pas seulement les salaires affichés. `
+      : 'Aucun salaire n\u2019est encore prévu : ce montant ne couvre donc pas ton propre travail. ') +
+      `Ces charges tombent chaque mois, que tu vendes ou non.`,
+    bars: [0, 1, 2, 3, 4].map((y) => ({ label: `A${y + 1}`, value: -charges(r, y) })),
+    split: bloc.length > 1 ? bloc.map((b) => ({ label: b.nom, value: part(b.v), tone: b.cle })) : null,
+    figure: { label: 'Par mois', value: euro(a1 / 12), good: false },
+  })
+}
+
+/** Combien de temps la mise de départ absorbe la dépense. */
+function tenueCard(r) {
+  const k = r.kpis
+  const brule = Math.abs(n(k.burnRate))
+  const mise = somme(r.financing?.equity) + somme(r.financing?.investors) +
+    somme(r.financing?.grants) + somme(r.financing?.shareholderLoans) +
+    somme(r.financing?.loanDrawdown) + n(r.financing?.openingCash)
+  const bas = k.cashLow
+  const quand = bas && bas.month != null ? monthLabel(bas.month, r.startDate) : null
+  const mois = brule > 0 ? mise / brule : 0
+  const trésor = (r.cash?.balance || []).slice(0, 24).map((v) => n(v))
+
+  if (mise <= 0) {
+    return card({
+      tone: 'bad', kicker: 'Trésorerie', ico: 'depart',
+      title: brule > 0 ? 'Rien n\u2019est prévu pour financer le démarrage' : 'Aucun financement saisi',
+      body: brule > 0
+        ? `Le modèle sort ${euro(brule)} par mois et n\u2019entre rien : ni apport, ni prêt, ni subvention. Le compte passe sous zéro dès le premier mois. Pose ce que tu mets au départ dans « Financement » — c\u2019est ce montant qui décide du temps dont tu disposes.`
+        : 'Ni apport, ni prêt, ni subvention n\u2019est encore saisi. Rien ne sort non plus : le plan est à zéro des deux côtés.',
+      line: trésor.length ? trésor : null,
+      figure: { label: 'Sortie par mois', value: euro(brule), good: false },
+    })
+  }
+
+  return card({
+    tone: mois >= 18 ? 'good' : mois >= 9 ? 'watch' : 'bad',
+    kicker: 'Trésorerie', ico: 'depart',
+    title: brule > 0
+      ? `${euro(mise)} au départ : ${Math.floor(mois)} mois devant toi`
+      : `${euro(mise)} au départ, aucune dépense en face`,
+    body: brule > 0
+      ? `À ${euro(brule)} de sortie par mois, la mise de départ est consommée en ${Math.floor(mois)} mois${quand ? `, et le point bas tombe en ${quand}` : ''}. C\u2019est le délai réel pour atteindre un chiffre d\u2019affaires — pas une estimation de confort : ` + (mois < 9
+        ? 'moins de neuf mois laisse peu de place à un démarrage lent.'
+        : mois < 18
+          ? 'c\u2019est court pour une activité qui met un an à trouver ses clients.'
+          : 'de quoi encaisser un démarrage plus lent que prévu.')
+      : 'Aucune charge n\u2019est encore saisie en face : ce montant reste intact, faute de dépenses à absorber.',
+    line: trésor.length ? trésor : null,
+    figure: { label: 'Sortie par mois', value: euro(brule), good: false },
+  })
+}
+
+/** Ce que l'ouverture coûte, une fois pour toutes. */
+function investCard(r) {
+  const invest = somme(r.capex?.spendMonthly)
+  if (invest <= 0) return null
+  const an1 = somme(r.capex?.spendMonthly, 12)
+  const amort = Math.abs(n(r.pnl.amortisation[0]))
+  const lignes = (r.capex?.perItem || []).filter((x) => n(x.amount ?? x.value ?? x.cost) > 0)
+  const gros = lignes.slice().sort((a, b) => n(b.amount ?? b.value ?? b.cost) - n(a.amount ?? a.value ?? a.cost))[0]
+
+  return card({
+    tone: 'watch', kicker: 'Investissements', ico: 'savoir',
+    title: `Ouvrir coûte ${euro(an1)}`,
+    body: `${an1 === invest ? 'La totalité' : `${euro(an1)} sur ${euro(invest)}`} est dépensée la première année` +
+      (gros && gros.label ? `, dont ${gros.label} pour ${euro(n(gros.amount ?? gros.value ?? gros.cost))}` : '') +
+      `. Cet argent sort du compte tout de suite, mais ne pèse au résultat que par l\u2019amortissement — ${euro(amort)} la première année. C\u2019est ce décalage qui fait qu\u2019une entreprise rentable peut manquer de trésorerie.`,
+    figure: { label: 'Sortie immédiate', value: euro(an1), good: false },
+  })
+}
+
+/**
+ * Le chiffre d'affaires à atteindre, calculé sans connaître l'offre.
+ *
+ * C'est la seule chose utile à dire à ce stade, et elle se calcule : couvrir
+ * les charges demande un chiffre d'affaires d'autant plus grand que chaque
+ * vente coûte cher. Trois taux de marge encadrent la réponse, et le fondateur
+ * reconnaît le sien. Chaque charge ajoutée déplace les trois.
+ */
+function objectifCard(r) {
+  const a1 = charges(r, 0)
+  if (a1 <= 0) {
+    return card({
+      tone: 'watch', kicker: 'Objectif', ico: 'argent',
+      title: 'Rien à couvrir pour l\u2019instant',
+      body: 'Sans charge saisie, il n\u2019y a pas de seuil à franchir. Pose ce que coûte ton activité — même approximativement — et cette carte dira ce qu\u2019il faut encaisser pour l\u2019absorber.',
+    })
+  }
+  const a = (taux) => a1 / taux
+  return card({
+    tone: 'watch', kicker: 'Objectif', ico: 'argent',
+    title: `Il faut encaisser au moins ${euro(a1)} la première année`,
+    body: `C\u2019est le montant qui couvre exactement tes charges, si chaque euro encaissé restait dans l\u2019entreprise. Il en faut davantage dès que tes ventes ont un coût : ` +
+      `${euro(a(0.7))} avec 70 % de marge, ${euro(a(0.5))} avec 50 %, ${euro(a(0.3))} avec 30 %. ` +
+      `Pose le prix et le volume de ton offre : le moteur remplacera ces trois repères par ton seuil réel, au mois près.`,
+    bars: [
+      { label: '70 %', value: a(0.7) },
+      { label: '50 %', value: a(0.5) },
+      { label: '30 %', value: a(0.3) },
+    ],
+    figure: { label: 'Par mois, à 50 % de marge', value: euro(a(0.5) / 12), good: false },
+  })
+}
+
+/** Ce qui manque pour que le calcul complet démarre. */
+function manqueCard(s) {
+  let c
+  try { c = checklist(s) } catch { return null }
+  const reste = (c.items || []).filter((i) => !i.done && i.tier === 'fondation')
+  const suite = reste.length ? reste : (c.items || []).filter((i) => !i.done)
+  if (!suite.length) return null
+  const trois = suite.slice(0, 3)
+
+  return card({
+    tone: 'watch', kicker: 'Ce qui manque', ico: 'idee',
+    title: trois.length === 1
+      ? `Une seule ligne manque : ${trois[0].label.toLowerCase()}`
+      : `${suite.length} lignes manquent pour calculer ton chiffre d\u2019affaires`,
+    body: trois.map((i) => `${i.label} \u2014 ${i.why}`).join(' ') +
+      (suite.length > trois.length ? ` Et ${suite.length - trois.length} autre${suite.length - trois.length > 1 ? 's' : ''}.` : ''),
+    meter: { part: c.done / Math.max(1, c.total), label: `${c.done} lignes posées sur ${c.total}` },
+    figure: { label: 'Dossier rempli', value: `${Math.round((c.done / Math.max(1, c.total)) * 100)} %`, good: c.done / Math.max(1, c.total) > 0.6 },
+  })
 }
 
 /* ────────────────────────────── 1. Rentabilité ───────────────────────────── */

@@ -175,7 +175,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         store.update((sc) => { const t = sc.team.find((x) => x.id === m.id); if (t) t.enabled = v },
           { label: v ? 'Poste réactivé' : 'Poste en pause' })
         refresh()
-      }),
+      }, `poste-${m.id}`),
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, m.role || 'Poste sans nom', count > 1 ? h('span', { class: 'chip', style: { marginLeft: '7px' } }, `× ${count}`) : null),
         h('div', { class: 'item-meta' },
@@ -363,7 +363,7 @@ function benefitsPanel(r, refresh) {
       const amount = Number(chosen[key]) || 0
       const on = amount > 0
       return h('div', { class: `perk ${on ? 'on' : ''} ${def.legal ? 'is-legal' : ''}` },
-        enableToggle(on, (v) => { setBenefit(key, v ? def.suggested : 0); refresh() }),
+        enableToggle(on, (v) => { setBenefit(key, v ? def.suggested : 0); refresh() }, `perk-${key}`),
         h('div', { class: 'spacer' },
           h('div', { class: 'perk-name' }, def.label,
             h('span', { class: `chip ${def.legal ? 'chip-warn' : 'chip-quiet'}` }, def.short)),

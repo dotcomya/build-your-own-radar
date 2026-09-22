@@ -206,43 +206,59 @@ export function setPanelHost(fn) { panelHost = fn }
 export function openPanel(spec) { if (panelHost) panelHost(spec) }
 
 /**
- * L'interrupteur d'une ligne : actif / en pause.
+ * L'interrupteur bascule tout de suite ; le glissement continue sur le nouveau
+ * nœud.
  *
- * Désactiver plutôt que supprimer est ce qui rend un prévisionnel utilisable
- * pour réfléchir : on met une embauche en pause, on regarde ce que ça change,
- * on la remet. La saisie n'est jamais perdue. Posé dans l'en-tête, il agit sans
- * ouvrir la ligne.
+ * Basculer recalcule le modèle et reconstruit la page : l'ancien bouton meurt,
+ * le nouveau naît déjà dans sa position finale. On différait donc la validation
+ * le temps du mouvement — et on payait ce répit par une latence : le chiffre
+ * n'arrivait qu'après, et deux clics rapprochés se marchaient dessus.
+ *
+ * On commet maintenant sans attendre, et c'est le mouvement qui traverse le
+ * rendu : avant de valider on note l'ancienne position ; le bouton reconstruit
+ * naît dedans, puis rejoint la nouvelle à l'image suivante. Le glissement est
+ * le même, la valeur est déjà là.
+ *
+ * @param {boolean} on
+ * @param {(next:boolean)=>void} onChange
+ * @param {string} [key] identité stable de la ligne, pour retrouver le
+ *   mouvement en cours d'un rendu à l'autre. Sans elle, pas de glissement.
  */
-export function enableToggle(on, onChange) {
+const enCours = new Map()
+
+export function enableToggle(on, onChange, key) {
+  const repris = key ? enCours.get(key) : null
+  if (repris) enCours.delete(key)
+  const depart = repris ? repris.from : on
+
   const btn = h('button', {
-    class: `onoff ${on ? 'on' : ''}`,
+    class: `onoff ${depart ? 'on' : ''} ${repris ? 'is-switching' : ''}`,
     role: 'switch', 'aria-checked': String(!!on),
     title: on ? 'Mettre en pause — la ligne reste, elle cesse de compter' : 'Réactiver cette ligne',
     onClick: (e) => {
       e.stopPropagation()
-      // Basculer l'état recalcule le modèle et reconstruit la page : la ligne
-      // disparaissait et revenait dans la même image, ce qui se lit comme un
-      // défaut plutôt que comme une action.
-      //
-      // On bascule donc l'apparence tout de suite — l'interrupteur glisse, la
-      // ligne s'éteint — et on ne commet la valeur qu'une fois le mouvement
-      // terminé. Le rendu qui suit produit exactement ce qui est déjà à
-      // l'écran : il ne se voit pas.
       const next = !on
+      // L'apparence part devant : le rendu qui suit la rattrape.
       btn.classList.toggle('on', next)
       btn.setAttribute('aria-checked', String(next))
-      const row = btn.closest('.item, .card, .opex-line, li, tr')
+      const row = btn.closest('.item, .card, .opex-line, .cost-row, li, tr')
       if (row) row.classList.toggle('is-off', !next)
-      if (reducedMotion()) { onChange(next); return }
-      btn.classList.add('is-switching')
-      // On attendait la fin du mouvement, puis on fondait toute la page pour
-      // masquer le rendu. Le fondu était pire que ce qu'il cachait : tout
-      // l'écran clignotait pour une case cochée. Le rendu ne se voit plus
-      // parce qu'il ne produit plus d'animation du tout — il refabrique les
-      // mêmes nœuds avec les mêmes styles, et seuls les chiffres changent.
-      setTimeout(() => onChange(next), 340)
+      if (key && !reducedMotion()) enCours.set(key, { from: on })
+      onChange(next)
     },
   }, h('i'))
+
+  // Le nouveau bouton naît dans l'ancienne position, puis glisse. Lire une
+  // dimension force le style à se poser : sans cette lecture, les deux classes
+  // seraient appliquées dans la même image et il n'y aurait aucun mouvement.
+  if (repris) {
+    requestAnimationFrame(() => {
+      void btn.offsetWidth
+      btn.classList.toggle('on', !!on)
+      setTimeout(() => btn.classList.remove('is-switching'), 300)
+    })
+  }
+
   return btn
 }
 

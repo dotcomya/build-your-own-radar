@@ -150,7 +150,7 @@ function opexRow(o, r, level, refresh) {
 
   return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''}` },
     h('div', { class: 'cost-line' },
-      enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }),
+      enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }, `opex-${o.id}`),
 
       h('input', {
         class: 'cost-label', value: o.label, 'aria-label': 'Nom de la charge',

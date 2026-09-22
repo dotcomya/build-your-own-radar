@@ -292,7 +292,7 @@ function campaignCard(c, index, r, open, refresh) {
         store.update((sc) => { const x = sc.marketing.find((y) => y.id === c.id); if (x) x.enabled = v },
           { label: v ? 'Campagne réactivée' : 'Campagne en pause' })
         refresh()
-      }),
+      }, `canal-${c.id}`),
       h('span', { class: 'swatch', style: { background: PALETTE[index % PALETTE.length], width: '10px', height: '10px' } }),
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, c.name),

@@ -4681,9 +4681,12 @@ details[open] > .refine-head .refine-sign {
 
 /* ─── L'interrupteur : une vraie bascule, pas un rechargement ─── */
 /* La pastille glisse, la piste change de couleur, la ligne s'éteint — le tout
-   sur la même durée, pour que ce soit un seul mouvement et pas trois. */
-.onoff { transition: background .18s var(--ease-soft), border-color .18s var(--ease-soft); }
-.onoff > i { transition: transform .18s var(--ease-soft), background .18s var(--ease-soft); }
+   sur la même durée, pour que ce soit un seul mouvement et pas trois.
+   Trois dixièmes : le mouvement se voit sans se faire attendre. Ce n'est plus
+   lui qui retardait le chiffre — la valeur est validée au clic, et c'est le
+   glissement qui traverse le rendu, pas l'inverse. */
+.onoff { transition: background .3s var(--ease-soft), border-color .3s var(--ease-soft); }
+.onoff > i { transition: transform .3s var(--ease-soft), background .3s var(--ease-soft); }
 .onoff.is-switching { box-shadow: 0 0 0 4px var(--accent-wash); }
 .onoff:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
@@ -5772,3 +5775,48 @@ details[open] > .refine-head .refine-sign {
   .pickdone { gap: 6px 10px; }
   .pickdone-note { flex: 1 1 100%; }
 }
+
+/* ─── Le calcul a échoué : on ne laisse pas croire que les chiffres suivent ─── */
+/* Un écran qui ne bouge plus pendant qu'on saisit est le pire signal qu'un
+   outil de calcul puisse donner. S'il ne calcule plus, il le dit. */
+.calcfail {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 0 0 18px; padding: 14px 18px;
+  background: var(--loss-wash); border: 1px solid var(--loss);
+  border-left: 4px solid var(--loss);
+}
+.calcfail strong {
+  font-family: var(--display); font-weight: 700; font-size: 14px;
+  color: var(--loss); letter-spacing: -0.01em;
+}
+.calcfail span { flex: 1 1 380px; font-size: 13px; line-height: 1.55; color: var(--ink); }
+.calcfail .btn { flex: none; }
+
+/* ─── Le cadre juridique : une ligne, à côté du nom et de la date ─── */
+/* Sept cartes dépliées en bas de page pour une réponse qui tient en quatre
+   lettres. La réponse remonte ; la grille attend qu'on la demande. */
+.control-bare { padding: 0; border: 0; background: none; }
+.legalline {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 0 12px; height: 40px; cursor: pointer; text-align: left;
+  border: 1px solid var(--rule); background: var(--surface);
+  font: inherit; color: var(--ink);
+  transition: border-color .16s var(--ease-soft), background .16s var(--ease-soft);
+}
+.legalline:hover { border-color: var(--ink); }
+.legalline.is-open { border-color: var(--ink); background: var(--surface-2); }
+.legalline-name {
+  font-family: var(--display); font-weight: 700; font-size: 14px;
+  letter-spacing: -0.01em; flex: none;
+}
+.legalline-note {
+  font-size: 11.5px; color: var(--ink-5); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.legalline-edit {
+  flex: none; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-5); border-bottom: 1px solid var(--rule); padding-bottom: 1px;
+}
+.legalline:hover .legalline-edit { color: var(--ink); border-color: var(--ink); }
+.legalline.is-empty .legalline-name { color: var(--ink-5); font-weight: 400; }
+.legalopen { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); }

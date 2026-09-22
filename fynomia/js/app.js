@@ -161,12 +161,47 @@ if (typeof document !== 'undefined') {
     holding = true
     clearTimeout(release)
     // Un geste qui ne se termine jamais ne doit pas geler l'écran.
-    release = setTimeout(flush, 1200)
+    release = setTimeout(flush, 600)
   }, true)
   // On relâche après le clic, pas au relâchement du doigt : c'est le clic qui
   // porte l'action, et il doit trouver les nœuds encore en place.
   document.addEventListener('click', flush, false)
+  // Ce filet-là est le seul qui ne puisse pas être coupé.
+  //
+  // L'écoute ci-dessus est en phase de remontée : un gestionnaire qui appelle
+  // `stopPropagation` — l'interrupteur d'une ligne, une carte cliquable —
+  // empêche le clic d'atteindre le document, et le redessin restait suspendu
+  // jusqu'au délai de secours. Une seconde et demie pendant laquelle les
+  // chiffres ne bougeaient plus : exactement ce qu'on reprochait à l'outil.
+  //
+  // Le relâchement du pointeur, lui, est capté à la descente : personne ne
+  // l'intercepte. On y programme une tâche qui s'exécutera après la fin du
+  // clic, quoi qu'il arrive en chemin.
+  document.addEventListener('pointerup', () => setTimeout(flush, 0), true)
+  // Au clavier, il n'y a pas de pointeur : le relâchement d'une touche joue
+  // le même rôle.
+  document.addEventListener('keyup', () => setTimeout(flush, 0), true)
   document.addEventListener('pointercancel', flush, true)
+}
+
+/**
+ * Le calcul a échoué : il faut le dire, fort.
+ *
+ * Quand le moteur lève, le résultat précédent reste en mémoire — sans quoi
+ * l'écran se viderait d'un coup. Mais il reste aussi à l'écran, inchangé, et
+ * l'outil donne alors le pire des signaux : des chiffres qui ne bougent plus
+ * alors qu'on saisit. Ce bandeau dit que ce qu'on lit ne correspond plus à ce
+ * qu'on a tapé, ce qui est la seule chose honnête à afficher dans cet état.
+ */
+function calcFail() {
+  if (!store.computeError) return null
+  return h('div', { class: 'calcfail', role: 'alert' },
+    h('strong', {}, 'Les chiffres affichés ne sont plus à jour.'),
+    h('span', {}, `Le calcul a échoué sur ta dernière saisie : ${String(store.computeError.message || store.computeError)}. Ce que tu vois date de la dernière version qui tenait. Annule la dernière modification, ou corrige la valeur en cause.`),
+    h('button', {
+      class: 'btn btn-sm', onClick: () => { if (store.undo()) render() },
+    }, 'Annuler la dernière modification'),
+  )
 }
 
 function render({ preserveScroll = false } = {}) {
@@ -234,7 +269,7 @@ function render({ preserveScroll = false } = {}) {
   // de page, on perd l'endroit où l'on travaillait. Seule une vraie navigation
   // remet l'écran à zéro.
   const refresh = (opts) => render({ preserveScroll: true, ...(opts || {}) })
-  const main = h('div', { class: 'main' }, topbar(page, key), page.render(navigate, refresh))
+  const main = h('div', { class: 'main' }, topbar(page, key), calcFail(), page.render(navigate, refresh))
   // Construire d'abord, remplacer ensuite : la transition de vue photographie
   // l'écran actuel, et tout ce qui se calcule pendant qu'elle est ouverte
   // allonge le figement.

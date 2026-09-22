@@ -83,7 +83,7 @@ export function renderProject(navigate, refresh) {
           h('span', { class: 'slab-tag' }, 'Parcours'),
         ),
       ),
-      h('div', { class: 'grid grid-2' },
+      h('div', { class: 'grid grid-3' },
         textField({
           label: 'Nom du projet', value: s.meta.company || s.meta.name,
           placeholder: 'Ton projet',
@@ -98,7 +98,14 @@ export function renderProject(navigate, refresh) {
             h('div', { class: 'field-hint' }, 'Décale tout le calendrier : volumes, salaires, échéances.'),
           )
         })(),
+        // Le cadre juridique tenait un chapitre entier en bas de page, avec son
+        // titre, son sous-titre et sept cartes dépliées. Or c'est une réponse
+        // d'une ligne — SASU — qu'on relit vingt fois et qu'on change une.
+        // Il rejoint donc le nom et la date : les trois choses qui cadrent le
+        // projet, sur la même ligne. La grille complète est à un clic.
+        legalLine(s, refresh),
       ),
+      legalOpen(s) ? legalBlock(s, sector, set, refresh) : null,
 
       h('div', { class: 'mt', 'data-gap': 'secteur' }, sectorPicks(s, set, refresh)),
 
@@ -163,64 +170,75 @@ export function renderProject(navigate, refresh) {
     ),
     ),
 
-    // Le cadre juridique change de sujet : il ne parle plus du marché mais de
-    // la structure. Il lui faut donc l'espace qui sépare deux chapitres, pas
-    // celui qui sépare deux paragraphes.
-    h('section', { class: 'slab slab-apart', 'data-gap': 'juridique' },
-      h('div', { class: 'slab-head' },
-        h('div', {},
-          h('div', { class: 'slab-title' }, 'Le cadre juridique et fiscal'),
-          h('div', { class: 'slab-sub' }, "C’est lui qui décide de ton statut social, donc du coût de ta rémunération."),
-        ),
-        h('div', { class: 'slab-tags' },
-          h('span', { class: 'slab-tag' }, 'Statut'),
-          h('span', { class: 'slab-tag' }, 'Fiscalité'),
-        ),
-      ),
-      (() => {
-        const forme = LEGAL_FORMS[s.meta.legalForm]
-        return pickSet({
-          id: 'forme', chosen: !!forme, nom: forme?.label, note: forme?.short, refresh,
-          cartes: legalChoices(sector).map((k) => h('button', {
-            class: `pick ${s.meta.legalForm === k ? 'active' : ''}`,
-            onClick: () => { applyLegal(k); ouverts.delete('forme'); refresh() },
-          },
-            h('div', { class: 'pick-name' }, LEGAL_FORMS[k].label),
-            h('div', { class: 'pick-note' }, LEGAL_FORMS[k].short),
-          )),
-        })
-      })(),
-      h('p', { class: 'field-hint mt' }, LEGAL_FORMS[s.meta.legalForm]?.note || ''),
-
-      refine('projet-fiscal', 'Affiner le régime fiscal',
-        h('div', { class: 'grid grid-2' },
-          switchField({
-            label: "Taux réduit d’impôt sur les sociétés",
-            checked: s.meta.reducedCorporateTax !== false,
-            hint: "15 % jusqu’à 42 500 € de bénéfice, sous conditions de capital et de chiffre d’affaires.",
-            onInput: (v) => set({ reducedCorporateTax: v }, 'Régime IS'),
-          }),
-          switchField({
-            label: 'Jeune entreprise innovante',
-            checked: !!s.meta.jeiClaimed,
-            hint: "Exonération de cotisations patronales sur les postes affectés à la recherche.",
-            onInput: (v) => set({ jeiClaimed: v }, 'Statut JEI'),
-          }),
-          switchField({
-            label: 'Franchise en base de TVA',
-            checked: !!s.meta.vatExempt,
-            hint: "Tu ne factures pas la TVA et ne la récupères pas. Sous les seuils de chiffre d’affaires.",
-            onInput: (v) => set({ vatExempt: v }, 'Régime de TVA'),
-          }),
-        ),
-      ),
-    ),
-
     todoPanel('projet', store.scenario, navigate),
 
     h('div', { class: 'row mt', style: { justifyContent: 'space-between' } },
       h('span', { class: 'tiny muted' }, 'Toutes les valeurs restent modifiables plus tard.'),
       h('button', { class: 'btn btn-go', onClick: () => navigate('#/offre') }, 'Continuer →'),
+    ),
+  )
+}
+
+/** La grille des formes est-elle ouverte ? Tant qu'on n'a pas choisi, oui. */
+function legalOpen(s) { return !LEGAL_FORMS[s.meta.legalForm] || ouverts.has('forme') }
+
+/** Le cadre juridique en une ligne, à côté du nom et de la date. */
+function legalLine(s, refresh) {
+  const forme = LEGAL_FORMS[s.meta.legalForm]
+  const ouvert = legalOpen(s)
+  const bascule = () => { ouverts.has('forme') ? ouverts.delete('forme') : ouverts.add('forme'); refresh() }
+
+  return h('div', { class: 'field', 'data-gap': 'juridique' },
+    h('label', {}, 'Cadre juridique et fiscal'),
+    h('div', { class: 'control control-bare' },
+      h('button', {
+        class: `legalline ${forme ? '' : 'is-empty'} ${ouvert ? 'is-open' : ''}`,
+        onClick: bascule,
+        title: forme ? 'Changer de forme juridique' : 'Choisir une forme juridique',
+      },
+        h('span', { class: 'legalline-name' }, forme ? forme.label : 'À choisir'),
+        forme ? h('span', { class: 'legalline-note' }, forme.short) : null,
+        h('span', { class: 'spacer' }),
+        h('span', { class: 'legalline-edit' }, ouvert ? 'Fermer' : forme ? 'Modifier' : 'Choisir'),
+      ),
+    ),
+    h('div', { class: 'field-hint' }, 'Décide de ton statut social, donc du coût de ta rémunération.'),
+  )
+}
+
+/** Tout ce que « Modifier » rouvre : les formes, leur note, le régime fiscal. */
+function legalBlock(s, sector, set, refresh) {
+  return h('div', { class: 'legalopen' },
+    h('div', { class: 'picks' }, ...legalChoices(sector).map((k) => h('button', {
+      class: `pick ${s.meta.legalForm === k ? 'active' : ''}`,
+      onClick: () => { applyLegal(k); ouverts.delete('forme'); refresh() },
+    },
+      h('div', { class: 'pick-name' }, LEGAL_FORMS[k].label),
+      h('div', { class: 'pick-note' }, LEGAL_FORMS[k].short),
+    ))),
+    h('p', { class: 'field-hint mt' }, LEGAL_FORMS[s.meta.legalForm]?.note || ''),
+
+    refine('projet-fiscal', 'Affiner le régime fiscal',
+      h('div', { class: 'grid grid-2' },
+        switchField({
+          label: "Taux réduit d\u2019impôt sur les sociétés",
+          checked: s.meta.reducedCorporateTax !== false,
+          hint: "15 % jusqu\u2019à 42 500 € de bénéfice, sous conditions de capital et de chiffre d\u2019affaires.",
+          onInput: (v) => set({ reducedCorporateTax: v }, 'Régime IS'),
+        }),
+        switchField({
+          label: 'Jeune entreprise innovante',
+          checked: !!s.meta.jeiClaimed,
+          hint: "Exonération de cotisations patronales sur les postes affectés à la recherche.",
+          onInput: (v) => set({ jeiClaimed: v }, 'Statut JEI'),
+        }),
+        switchField({
+          label: 'Franchise en base de TVA',
+          checked: !!s.meta.vatExempt,
+          hint: "Tu ne factures pas la TVA et ne la récupères pas. Sous les seuils de chiffre d\u2019affaires.",
+          onInput: (v) => set({ vatExempt: v }, 'Régime de TVA'),
+        }),
+      ),
     ),
   )
 }
