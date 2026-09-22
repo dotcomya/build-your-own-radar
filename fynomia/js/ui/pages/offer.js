@@ -1,12 +1,36 @@
 /** Offre et clients : ce que tu vends, à qui, à quel rythme. */
 
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, MINUS, CROSS, COPY, foldSign } from '../dom.js'
+/**
+ * Mensuel ou hebdomadaire : une conversion, pas un second modèle.
+ *
+ * Le montant stocké reste mensuel — c'est l'unité de tout le moteur. Seule la
+ * saisie change d'échelle, et l'offre retient laquelle, pour que la carte, la
+ * marge unitaire et le résumé parlent la même langue que le champ.
+ */
+const SEMAINES_PAR_MOIS = 52 / 12
+
+const ABO_UNITS = [
+  { key: 'mois', label: '€ / mois', title: 'Un prix par mois' },
+  {
+    key: 'semaine', label: '€ / sem.', title: 'Un prix par semaine',
+    toDisplay: (v) => (Number(v) || 0) / SEMAINES_PAR_MOIS,
+    fromDisplay: (v) => (Number(v) || 0) * SEMAINES_PAR_MOIS,
+  },
+]
+
+const perKey = (a) => (a.recurringPeriod === 'semaine' ? 'semaine' : 'mois')
+const perLabel = (a) => (perKey(a) === 'semaine' ? 'hebdomadaire' : 'mensuel')
+const perOf = (a, v) => (perKey(a) === 'semaine' ? (Number(v) || 0) / SEMAINES_PAR_MOIS : Number(v) || 0)
+
+
+import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
 import { newActivity, BOUNDS } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { valueForYear } from '../../engine/revenue.js'
+import { enableToggle } from '../dom.js'
 import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
 import { claim, goToGap } from '../spotlight.js'
@@ -273,7 +297,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
             mode === 'commission' && n(a.commissionRate) > 0
               ? `${pct(a.commissionRate, 1)} de ${euro(a.dealValue)}, soit ${euro(a.unitPrice)} par affaire`
               : mode === 'recurring' && n(a.recurringPrice) > 0
-                ? `${euro(a.recurringPrice)}/mois pendant ${a.contractMonths} mois`
+                ? `${euro(perOf(a, a.recurringPrice))}/${perKey(a) === 'semaine' ? 'sem.' : 'mois'} pendant ${a.contractMonths} mois`
                 : n(a.unitPrice) > 0 ? `${euro(a.unitPrice)} l'unité` : null,
             margin !== null && n(a.unitCost) > 0 ? `${pct(margin, 0)} de marge` : null,
           ].filter(Boolean).join(' · ')),
@@ -297,13 +321,37 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
     isOpen && h('div', { class: 'item-body' },
       tabs(secs, sec, (k) => { activityCard.sec = k; refresh() }),
 
+      // Une ligne, quatre cases, rien d'autre.
+      //
+      // L'onglet empilait l'identite, le prix, le cout recurrent, les frais de
+      // mise en route, une barre de marge et un volet « affiner » : six sujets
+      // pour une offre qui tient en une phrase. Ce qui permet de decider — le
+      // nom, la facon dont elle rapporte, son prix, sa TVA — occupe la ligne.
+      // Tout le reste descend dans « Affiner », ou chaque bloc s'allume.
       sec === 'offre' ? h('div', { class: 'view', 'data-gap': 'prix' },
-
-        // L'identité de l'offre tient sur une ligne : son nom, sa TVA. Le
-        // reste de l'écran est consacré à la seule chose qui compte ensuite,
-        // la façon dont elle rapporte.
-        h('div', { class: 'grid grid-3', 'data-gap': 'abonnement' },
+        h('div', { class: 'grid grid-4 offerline', 'data-gap': 'abonnement' },
           textField({ label: "Nom de l'offre", value: a.name, onInput: (v, o) => set({ name: v }, undefined, o) }),
+          selectField({
+            label: 'Type de vente', value: mode,
+            options: MODES.map((m) => ({ value: m.key, label: m.label })),
+            onInput: (v) => v === mode || setMode(v),
+          }),
+          mode === 'recurring'
+            ? unitAmount({
+                label: `Abonnement ${perLabel(a)}`, value: a.recurringPrice,
+                units: ABO_UNITS, unit: perKey(a),
+                onUnit: (k) => set({ recurringPeriod: k }),
+                onInput: (v) => set({ recurringPrice: v }),
+              })
+            : mode === 'commission'
+              ? numberField({
+                  label: 'Ta commission', field: 'commissionRate', value: a.commissionRate, percent: true,
+                  onInput: (v, o) => setCommission({ commissionRate: v }, o),
+                })
+              : numberField({
+                  label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
+                  onInput: (v) => set({ unitPrice: v }),
+                }),
           selectField({
             label: 'Taux de TVA', value: a.vatRateSales,
             options: [
@@ -316,74 +364,22 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
             help: 'tva',
             onInput: (v) => set({ vatRateSales: Number(v), vatRatePurchase: Number(v) === 0 ? 0.2 : Number(v) }),
           }),
-          selectField({
-            label: 'Comment ça rapporte', value: mode,
-            options: MODES.map((m) => ({ value: m.key, label: `${m.label} — ${m.note.toLowerCase()}` })),
-            onInput: (v) => v === mode || setMode(v),
-          }),
         ),
 
-        h('div', { class: 'offer-sep' }),
-
-        mode === 'unit' ? h('section', { class: 'part' },
-          // Ce qu'on encaisse et ce que ça coûte se lisent ensemble : séparés,
-          // ils obligeaient à retenir le premier pour comprendre le second.
-          //
-          // Le coût de revient ne se saisit pas ici : posé à deux endroits, il
-          // sortait deux fois du résultat. Il vit en charge par vente, et ce
-          // lien y emmène en affichant la valeur en cours.
-          h('div', { class: 'priceline' },
-            numberField({
-              label: `Prix par ${voc.one}`, field: 'unitPrice', value: a.unitPrice, suffix: '€ HT',
-              hint: 'Ce que paie le client, une fois, hors taxes.',
-              onInput: (v) => set({ unitPrice: v }),
-            }),
-            costLink(a, voc, navigate),
-          ),
-        ) : null,
-
-        mode === 'recurring' ? h('section', { class: 'part' },
-          h('div', { class: 'grid grid-2' },
-            numberField({ label: 'Abonnement mensuel', field: 'recurringPrice', value: a.recurringPrice, suffix: '\u20ac HT', onInput: (v) => set({ recurringPrice: v }) }),
-            numberField({ label: 'Co\u00fbt mensuel r\u00e9current', field: 'recurringPrice', value: a.recurringCost, suffix: '\u20ac HT', hint: 'H\u00e9bergement, licence, support.', onInput: (v) => set({ recurringCost: v }) }),
-          ),
-          // \u00ab Les deux \u00bb n'est pas un quatri\u00e8me mode : c'est un abonnement qui
-          // porte en plus un montant encaiss\u00e9 \u00e0 la signature. Un plan qui en a un
-          // doit pouvoir le voir \u2014 sinon il compte dans le chiffre d'affaires
-          // depuis un champ que plus personne n'affiche.
-          h('div', { class: 'grid grid-2' },
-            numberField({
-              label: '\u00c0 la signature', field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
-              hint: 'Frais de mise en route, encaiss\u00e9s une fois. Laisse \u00e0 z\u00e9ro s\u2019il n\u2019y en a pas.',
-              onInput: (v) => set({ unitPrice: v }),
-            }),
-          ),
-          unitEconomics("Un mois d'abonnement", a.recurringPrice, a.recurringCost),
-          refine(`${a.id}-abo`, 'Affiner : dur\u00e9e de contrat, attrition, valeur vie client',
-            h('div', { class: 'grid grid-2' },
-              numberField({ label: 'Dur\u00e9e du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
-              numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c\u2019est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
-            ),
-            lifetimeValue(a),
-          ),
-        ) : null,
-
-        mode === 'commission' ? h('section', { class: 'part' },
-          h('div', { class: 'grid grid-2' },
-            numberField({
-              label: "Montant moyen de l'affaire", field: 'dealValue', value: a.dealValue, suffix: '\u20ac HT',
-              hint: "Ce que paie le client final \u2014 tu n'encaisses pas cette somme, tu en prends une part.",
-              onInput: (v, o) => setCommission({ dealValue: v }, o),
-            }),
-            numberField({
-              label: 'Ta commission', field: 'commissionRate', value: a.commissionRate, percent: true,
-              hint: "La part de l'affaire qui te revient.",
-              onInput: (v, o) => setCommission({ commissionRate: v }, o),
-            }),
-          ),
+        // La commission a besoin d'un second nombre pour que le premier veuille
+        // dire quelque chose : c'est le montant de l'affaire, pas un reglage.
+        mode === 'commission' ? h('div', { class: 'grid grid-2 mt' },
+          numberField({
+            label: "Montant moyen de l'affaire", field: 'dealValue', value: a.dealValue, suffix: '\u20ac HT',
+            hint: "Ce que paie le client final — tu n'encaisses pas cette somme, tu en prends une part.",
+            onInput: (v, o) => setCommission({ dealValue: v }, o),
+          }),
           commissionRead(a, voc),
-          costLink(a, voc, navigate),
         ) : null,
+
+        // Les couts ne se saisissent pas ici : ils vivent tous au meme endroit,
+        // avec le loyer et les salaires. Le bouton y emmene.
+        costLink(a, voc, navigate),
       ) : null,
 
       sec === 'volumes' ? h('div', { class: 'view', 'data-gap': 'volumes' },
@@ -397,12 +393,52 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
       // barre, à égalité avec le prix et les volumes — alors qu'on n'y va
       // qu'une fois le modèle posé. Ils descendent d'un cran : un onglet
       // « Affiner », et dedans deux volets qu'on ouvre s'il y a lieu.
+      // Un affinement s'allume, et seulement alors il compte.
+      //
+      // Ces blocs etaient de simples volets : replies, leurs valeurs pesaient
+      // quand meme sur le calcul, et personne ne pouvait savoir qu'un delai de
+      // paiement a soixante jours dormait la. Chacun porte maintenant un
+      // interrupteur : eteint, ses valeurs sont mises de cote et remplacees par
+      // le cas neutre — comptant, sans attrition, prix constant. Rallume, elles
+      // reviennent telles quelles.
       sec === 'affiner' ? h('div', { class: 'view', 'data-gap': 'paiement' },
         h('p', { class: 'view-intro' },
-          'Ces réglages ne changent pas ce que tu vends, mais quand l’argent entre et sort. Ils ne servent qu’une fois le prix et les volumes posés.'),
+          'Chaque réglage compte dans le calcul quand il est allumé, et pas avant. Éteint, Fynomia prend le cas le plus simple.'),
 
-        refine(`offre-paiement-${a.id}`, 'Quand l’argent entre et sort',
-          h('div', {},
+        mode === 'recurring' ? switchBlock({
+          a, cle: 'signature', refresh,
+          titre: 'Frais à la signature',
+          sous: 'Un montant encaissé une fois, en plus de l’abonnement',
+          neutre: { unitPrice: 0 },
+          corps: () => h('div', { class: 'grid grid-2' },
+            numberField({
+              label: 'À la signature', field: 'unitPrice', value: a.unitPrice, suffix: '€ HT',
+              hint: 'Frais de mise en route, encaissés une fois.',
+              onInput: (v) => set({ unitPrice: v }),
+            }),
+          ),
+        }) : null,
+
+        mode === 'recurring' ? switchBlock({
+          a, cle: 'contrat', refresh,
+          titre: 'Durée d’engagement et attrition',
+          sous: 'Combien de temps un client reste, et combien partent chaque mois',
+          neutre: { contractMonths: 12, churnMonthly: 0 },
+          corps: () => h('div', {},
+            h('div', { class: 'grid grid-2' },
+              numberField({ label: 'Durée du contrat', field: 'contractMonths', value: a.contractMonths, suffix: 'mois', onInput: (v) => set({ contractMonths: v }) }),
+              numberField({ label: 'Attrition mensuelle', field: 'churnMonthly', value: a.churnMonthly, percent: true, hint: '2 % par mois, c’est un quart de la base perdu en un an.', onInput: (v) => set({ churnMonthly: v }) }),
+            ),
+            lifetimeValue(a),
+          ),
+        }) : null,
+
+        switchBlock({
+          a, cle: 'paiement', refresh,
+          titre: 'Quand l’argent entre et sort',
+          sous: 'Délais, acomptes — côté client et côté fournisseur',
+          neutre: { deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, costPaymentLag: 0, costDeposit: 0 },
+          corps: () => h('div', {},
             h('div', { class: 'grid grid-2' },
               numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
               numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
@@ -414,10 +450,16 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
               numberField({ label: 'Délai de paiement fournisseur', field: 'paymentLag', value: a.costPaymentLag, suffix: 'mois', hint: 'Un délai long finance ton activité.', onInput: (v) => set({ costPaymentLag: v }) }),
               numberField({ label: 'Acompte versé au fournisseur', field: 'deposit', value: a.costDeposit, percent: true, onInput: (v) => set({ costDeposit: v }) }),
             ),
-          )),
+          ),
+        }),
 
-        refine(`offre-evolution-${a.id}`, 'Faire évoluer le prix d’une année sur l’autre',
-          h('div', { 'data-gap': 'evolution' }, priceEvolutionFields(a, set))),
+        switchBlock({
+          a, cle: 'evolution', refresh,
+          titre: 'Faire évoluer le prix d’une année sur l’autre',
+          sous: 'Sans ça, le prix de l’année 1 vaut pour les cinq ans',
+          neutre: { priceByYear: [], recurringPriceByYear: [] },
+          corps: () => h('div', { 'data-gap': 'evolution' }, priceEvolutionFields(a, set)),
+        }),
       ) : null,
 
       h('div', { class: 'view-foot' },
@@ -427,38 +469,58 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
 }
 
 /**
- * L'économie d'une vente, en une barre.
+ * Un affinement qu'on allume, et qui seulement alors compte.
  *
- * Un prix et un coût de revient côte à côte dans deux champs ne disent pas
- * grand-chose ; la même chose en proportions se lit d'un coup d'œil, et rend
- * visible le moment où le coût dépasse le prix.
+ * Replié, un volet gardait ses valeurs actives : un délai de paiement à
+ * soixante jours saisi un jour pesait sur la trésorerie pour toujours, sans que
+ * rien à l'écran ne le dise. L'interrupteur tranche — éteint, les valeurs sont
+ * mises de côté et remplacées par le cas neutre : comptant, sans attrition,
+ * prix constant. Rallumé, elles reviennent telles qu'elles étaient.
+ *
+ * Un plan écrit avant cet interrupteur n'a pas de drapeau : on le déduit alors
+ * de ses chiffres. Un délai déjà posé allume son bloc, sinon rien ne compterait
+ * plus du jour au lendemain.
  */
-function unitEconomics(title, price, cost) {
-  const p = Math.max(0, Number(price) || 0)
-  const c = Math.max(0, Number(cost) || 0)
-  const margin = p - c
-  const span = Math.max(p, c) || 1
-  const rate = p > 0 ? margin / p : null
-  const tone = margin < 0 ? 'bad' : rate !== null && rate < 0.2 ? 'thin' : 'ok'
-  return h('div', { class: `ueco ueco-${tone}` },
-    h('div', { class: 'ueco-head' },
-      h('span', { class: 'ueco-title' }, title),
-      h('span', { class: 'spacer' }),
-      h('span', { class: 'ueco-price num' }, euro(p)),
+function switchBlock({ a, cle, titre, sous, neutre, corps, refresh }) {
+  const pose = Object.keys(neutre).some((k) => {
+    const v = a[k], d = neutre[k]
+    if (Array.isArray(d)) return Array.isArray(v) && v.some((x) => x !== undefined && x !== null && x !== '')
+    return (Number(v) || 0) !== (Number(d) || 0)
+  })
+  const on = a.refine && a.refine[cle] !== undefined ? !!a.refine[cle] : pose
+
+  const bascule = (v) => {
+    store.update((sc) => {
+      const act = sc.activities.find((x) => x.id === a.id)
+      if (!act) return
+      act.refine = { ...(act.refine || {}) }
+      act.refineSaved = { ...(act.refineSaved || {}) }
+      if (v) {
+        const garde = act.refineSaved[cle]
+        if (garde) for (const k of Object.keys(garde)) act[k] = garde[k]
+      } else {
+        const garde = {}
+        for (const k of Object.keys(neutre)) garde[k] = act[k]
+        act.refineSaved[cle] = garde
+        for (const k of Object.keys(neutre)) act[k] = Array.isArray(neutre[k]) ? [] : neutre[k]
+      }
+      act.refine[cle] = v
+    }, { label: v ? 'Réglage activé' : 'Réglage désactivé' })
+    refresh()
+  }
+
+  return h('section', { class: `tuneblock ${on ? 'is-on' : ''}` },
+    h('div', { class: 'tuneblock-head' },
+      enableToggle(on, bascule, `tune-${a.id}-${cle}`),
+      h('div', { class: 'spacer' },
+        h('div', { class: 'tuneblock-title' }, titre),
+        h('div', { class: 'tuneblock-sub' }, on ? sous : `${sous}. Éteint : Fynomia prend le cas simple.`),
+      ),
     ),
-    h('div', { class: 'ueco-bar' },
-      h('span', { class: 'ueco-cost', style: { width: `${(Math.min(c, span) / span) * 100}%` } }),
-      h('span', { class: 'ueco-margin', style: { width: `${(Math.max(0, margin) / span) * 100}%` } }),
-      margin < 0 && h('span', { class: 'ueco-loss', style: { width: `${(Math.min(-margin, span) / span) * 100}%` } }),
-    ),
-    h('div', { class: 'ueco-legend' },
-      h('span', {}, h('i', { class: 'ueco-dot cost' }), 'Coût de revient ', h('b', { class: 'num' }, euro(c))),
-      h('span', {}, h('i', { class: `ueco-dot ${margin < 0 ? 'loss' : 'margin'}` }),
-        margin < 0 ? 'Perte ' : 'Marge ', h('b', { class: 'num' }, euro(margin)),
-        rate !== null ? h('span', { class: 'muted' }, ` · ${pct(rate, 0)}`) : null),
-    ),
+    on ? h('div', { class: 'tuneblock-body' }, corps()) : null,
   )
 }
+
 
 /**
  * Ce que rapporte un abonné sur toute sa durée de vie.

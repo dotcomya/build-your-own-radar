@@ -87,6 +87,9 @@ export function newActivity(overrides = {}) {
     // pourcentage retenu, donc le moteur n'a rien de spécial à savoir.
     priceMode: 'unit', dealValue: 0, commissionRate: 0,
     unitPrice: 500, recurringPrice: 0, contractMonths: 12,
+    // Le rythme de l'abonnement ne concerne que la saisie : le montant reste
+    // mensuel pour le moteur, qui compte en mois de bout en bout.
+    recurringPeriod: 'mois',
     // Payé en une fois à la commande, et rien d'autre : c'est le cas le plus
     // fréquent et le seul qu'on puisse poser sans rien savoir du métier. Qui
     // facture à trente jours le dira lui-même — on ne lui invente pas un

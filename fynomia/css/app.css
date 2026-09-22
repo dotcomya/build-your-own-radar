@@ -1738,8 +1738,17 @@ i.swatch.split-margin { background: var(--gain); }
 
 /* Une seule colonne : le récapitulatif de droite a été retiré, la place qu'il
    réservait aussi. Le parcours tient dans la hauteur de l'écran. */
-.setup-main { display: block; padding: 4vh 30px 44px; }
-.setup-card { max-width: 660px; }
+/* L'écran de question occupait le coin haut-gauche d'une page vide.
+   La carte faisait trois cent quarante pixels dans une fenêtre de neuf
+   cents : quatre cent trente pixels de blanc dessous, sans raison lisible.
+   Le contenu se centre donc dans la hauteur disponible et s'élargit : le vide
+   se répartit au lieu de tomber d'un bloc, et les réponses se rangent sur
+   deux colonnes au lieu d'une file. */
+.setup-main {
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: calc(100vh - 4px); padding: 4vh 40px 5vh;
+}
+.setup-card { max-width: 780px; width: 100%; }
 
 /* Le compteur : même signature que l'en-tête des modules. */
 .setup-tag { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
@@ -1780,15 +1789,6 @@ i.swatch.split-margin { background: var(--gain); }
 
 .setup-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .setup-reassure { margin: 12px 0 0; font-size: 12px; color: var(--ink-5); }
-/* Le bandeau qui désamorce : lu une fois, il reste là sans se faire remarquer. */
-.setup-banner {
-  display: flex; align-items: flex-start; gap: 10px;
-  max-width: 660px; margin-bottom: 26px; padding: 12px 15px;
-  border: 1px dashed var(--rule); border-radius: 12px; background: var(--surface-2);
-  font-size: 12.5px; line-height: 1.55; color: var(--ink-3);
-}
-.setup-banner strong { color: var(--ink); font-weight: 650; }
-.setup-banner-mark { font-family: var(--mono); color: var(--accent-dim); font-size: 14px; flex: none; margin-top: 1px; }
 .setup-hint { font-size: 12px; color: var(--ink-5); }
 
 /* Le champ : grand, seul, déjà au focus. */
@@ -1837,7 +1837,7 @@ i.swatch.split-margin { background: var(--gain); }
 .stagepick.active .stagepick-then { color: var(--accent); }
 .stagepick.active .stagepick-mark { background: var(--accent); border-color: var(--accent); color: var(--ink); }
 
-.setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.setup-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 18px; }
 .setup-choice {
   display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
   padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
@@ -2018,7 +2018,7 @@ i.swatch.split-margin { background: var(--gain); }
   .setup-step { width: auto; flex: none; padding: 5px 8px; }
   .setup-step-label { display: none; }
   .setup-step.current .setup-step-label { display: inline; }
-  .setup-main { padding: 20px 18px 44px; }
+  .setup-main { padding: 20px 18px 44px; min-height: 0; justify-content: flex-start; }
   .setup-echo {
     position: static; border-left: 0; border-top: 1px solid var(--rule);
     padding: 16px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px;
@@ -4142,8 +4142,13 @@ details[open] > .refine-head .refine-sign {
    Une seule chose à faire, posée en bas à droite, à demeure. Pas une fenêtre
    qu'on ferme pour continuer : un repère qu'on regarde quand on ne sait plus.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* Le guide se posait au-dessus d'une barre qui n'existe plus.
+   `--impact-h` reserve soixante-deux pixels pour un bandeau d'impact retire
+   depuis : la carte flottait donc a mi-hauteur du champ qu'on remplissait.
+   Elle descend au ras du bas de fenetre. La pastille fermee, elle, garde sa
+   hauteur : c'est la qu'on la cherche du regard. */
 .nextstep {
-  position: fixed; right: 22px; bottom: calc(var(--impact-h) + 18px); z-index: 60;
+  position: fixed; right: 22px; bottom: 18px; z-index: 60;
   display: flex; align-items: flex-start; gap: 14px;
   background: var(--ink); color: #fff; border-radius: 16px;
   padding: 13px 15px 13px 13px; max-width: min(430px, calc(100vw - 32px));
@@ -4215,7 +4220,8 @@ details[open] > .refine-head .refine-sign {
 .nextstep-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 
 @media (max-width: 860px) {
-  .nextstep, .nextstep-tab { right: 12px; left: 12px; bottom: calc(var(--impact-h) + 66px); }
+  .nextstep-tab { right: 12px; left: 12px; bottom: calc(var(--impact-h) + 66px); }
+  .nextstep { right: 12px; left: 12px; bottom: 66px; }
   .nextstep { max-width: none; }
   .nextstep-tab { left: auto; }
 }
@@ -5945,3 +5951,26 @@ details[open] > .refine-head .refine-sign {
 @media (max-width: 420px) {
   .done-strip { grid-template-columns: 1fr; }
 }
+/* « Je ne sais pas encore » : une issue, pas une réponse. Elle se distingue
+   des choix — trait interrompu — pour qu'on ne la coche pas par erreur. */
+.setup-choice.is-unsure {
+  border-style: dashed; background: none;
+}
+.setup-choice.is-unsure .setup-choice-label { color: var(--ink-3); font-weight: 600; }
+.setup-choice.is-unsure:hover { border-color: var(--ink-3); background: var(--surface-2); }
+
+/* ─── Un réglage d'offre qu'on allume ─── */
+/* Replié, un volet gardait ses valeurs actives sans le dire. L'interrupteur
+   tranche : éteint, le bloc ne compte pas et le corps disparaît. */
+.tuneblock { border: 1px solid var(--rule); margin-bottom: 10px; background: var(--surface); }
+.tuneblock.is-on { border-color: var(--ink); }
+.tuneblock-head { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; }
+.tuneblock-title {
+  font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink);
+  letter-spacing: -.01em;
+}
+.tuneblock-sub { font-size: 12px; color: var(--ink-4); line-height: 1.45; margin-top: 2px; }
+.tuneblock-body { padding: 0 16px 16px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.grid.grid-4.offerline { grid-template-columns: 1.3fr .9fr 1fr 1.1fr; gap: 14px; }
+@media (max-width: 1100px) { .grid.grid-4.offerline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .grid.grid-4.offerline { grid-template-columns: 1fr; } }

@@ -77,7 +77,7 @@ const STEPS = [
   {
     key: 'metier', short: 'Ton métier',
     question: 'Tu fais quoi ?',
-    help: "Ce choix commande la TVA, ton statut et les repères de marge du reste du parcours.",
+    help: "Il fixe ta TVA, ton statut, et les repères chiffrés de la suite.",
     render: sectorPicker,
     // « Autre chose » est une réponse : elle ne pose pas de secteur mais elle
     // engage le fondateur autant qu'un métier de la liste.
@@ -86,7 +86,7 @@ const STEPS = [
   {
     key: 'stade', short: 'Où tu en es',
     question: 'Où en est ton projet, aujourd’hui ?',
-    help: 'Ça ne change aucun chiffre — seulement l’ordre de la suite. Modifiable à tout moment.',
+    help: 'Ça ne change aucun chiffre, seulement l’ordre des questions.',
     render: stageScreen,
     ready: (s) => !!s?.meta?.stage,
   },
@@ -104,7 +104,7 @@ const STEPS = [
   {
     key: 'forme', short: 'La forme juridique',
     question: 'Sous quelle forme ?',
-    help: "Elle fixe ton statut social, donc le coût de ta rémunération. Modifiable ensuite.",
+    help: "Elle décide de ce que te coûte ta propre rémunération.",
     render: legalScreen,
     // Une forme est posée par défaut dans tout scénario pour que le moteur
     // tourne. Elle n'est pas un choix : il faut que le fondateur en désigne une.
@@ -113,7 +113,7 @@ const STEPS = [
   {
     key: 'depart', short: 'La mise de départ',
     question: 'Tu démarres avec combien ?',
-    help: "L'argent déjà disponible : ton apport et celui de tes associés.",
+    help: "Ce que tu mets sur la table : ton apport et celui de tes associés.",
     optional: true,
     render: cashScreen,
     ready: () => answered('depart'),
@@ -142,7 +142,7 @@ const STEPS = [
   {
     key: 'salaire', short: 'Ta rémunération',
     question: 'Tu te paies combien ?',
-    help: "Un plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Fynomia calcule ce que ça coûte à l'entreprise.",
+    help: "Un plan où tu ne te paies pas n'est pas prudent, il est faux. Fynomia chiffre ce que ça coûte.",
     optional: true,
     render: salaryScreen,
     ready: () => answered('salaire'),
@@ -158,7 +158,7 @@ const STEPS = [
   {
     key: 'clients', short: 'Tes premiers clients',
     question: 'Combien de clients le premier mois ?',
-    help: "Ce que tu peux livrer et facturer dès le début, pas une ambition. C'est le chiffre le plus discuté d'un business plan.",
+    help: "Ce que tu peux livrer et facturer dès le début, pas une ambition.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
@@ -169,7 +169,7 @@ const STEPS = [
     // quelqu'un qui n'a jamais tenu de comptabilité — et la confusion la plus
     // fréquente est justement d'y ranger le loyer ou le comptable.
     question: 'Et chaque vente, elle te coûte quoi ?',
-    help: "Uniquement ce qui augmente quand tu vends une unité de plus. Pas le loyer ni le comptable : tu viens de les saisir.",
+    help: "Ce qui augmente quand tu vends une unité de plus. Ni le loyer, ni le comptable.",
     optional: true,
     render: costScreen,
     ready: () => answered('cout'),
@@ -177,7 +177,7 @@ const STEPS = [
   {
     key: 'croissance', short: 'La croissance',
     question: 'Ça grandit à quelle vitesse ?',
-    help: 'Aucune croissance ne tient cinq ans au même rythme : Fynomia freine la courbe dans la durée.',
+    help: 'Aucune croissance ne tient cinq ans au même rythme : Fynomia freine la courbe.',
     optional: true,
     render: growthScreen,
     ready: () => answered('croissance'),
@@ -185,7 +185,7 @@ const STEPS = [
   {
     key: 'fin', short: 'Le résultat',
     question: 'C’est fait : ton modèle est calculé',
-    help: 'Ces chiffres sortent de tes réponses et des repères de ton métier. Ils disent où tu en es aujourd’hui — et tout se modifie ensuite, champ par champ.',
+    help: 'Ces chiffres sortent de tes réponses. Tout se modifie ensuite, champ par champ.',
     render: doneScreen,
     ready: () => true,
     last: true,
@@ -221,6 +221,14 @@ export function renderSetup(navigate, refresh) {
     flow.reach = Math.max(flow.reach, next)
     refresh()
   }
+
+  // « Je ne sais pas encore » avance sans répondre.
+  //
+  // Le modèle du métier a déjà posé une valeur pour que le moteur tourne ; on
+  // la garde, on n'enregistre aucun choix, et la ligne reste dans ce qu'il y a
+  // à confirmer plus tard. C'est la différence entre une hypothèse assumée et
+  // une réponse donnée — et c'est ce que le tableau de bord compte.
+  ctx.later = () => go(1)
 
   /**
    * La liste de gauche revient en arrière, elle n'avance pas.
@@ -293,25 +301,18 @@ export function renderSetup(navigate, refresh) {
       stepList(s, jump, navigate),
 
       h('div', { class: 'setup-main' },
-        // Le bandeau rassurant.
+        // Le bandeau « Rien n'est définitif » est parti.
         //
-        // En test, les gens s'arrêtaient sur chaque question comme s'ils
-        // signaient : « et si je me trompe ? ». Ils ne se trompent pas, ils
-        // commencent. Le dire une fois, en haut, à demeure, vaut mieux que de
-        // le répéter sous chaque bouton.
-        !step.last && !step.bare ? h('div', { class: 'setup-banner' },
-          h('span', { class: 'setup-banner-mark' }, '\u21BA'),
-          h('div', {},
-            h('strong', {}, 'Rien n’est définitif.'),
-            h('span', {}, ' Ces questions servent à poser un premier chiffrage. Tout se modifie ensuite, champ par champ, dans le logiciel.'),
-          ),
-        ) : null,
+        // Il répétait, en trois lignes et sur chaque écran, ce que la colonne
+        // de gauche annonce déjà d'un trait : « 12 questions · tout reste
+        // modifiable ». Deux fois la même promesse, dont l'une occupait le
+        // haut de la page à chaque question.
 
         // L'ouverture n'est pas une question.
         //
         // Elle portait pourtant tout l'attirail : « Question 01 / 12 », un
-        // titre, le bandeau rassurant, et un « Continuer » sous le bouton
-        // « Commencer » qui faisait exactement la même chose. Quatre façons de
+        // titre, et un « Continuer » sous le bouton
+        // « Commencer » qui faisait exactement la même chose. Trois façons de
         // dire la même chose sur le premier écran qu'on voit du produit. Un
         // écran marqué `bare` n'en garde aucune : il se présente seul.
         h('div', {
@@ -462,16 +463,32 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
   )
 }
 
-/** Choix parmi des options, en grandes cartes cliquables. */
-function choice(ctx, options) {
+/**
+ * Choix parmi des options, en grandes cartes cliquables.
+ *
+ * Le dernier argument ajoute une issue : « Je ne sais pas encore ». Elle ne
+ * choisit rien — elle passe à la suite en laissant l'hypothèse du métier en
+ * place, et dit laquelle. Sans elle, un fondateur qui ignore encore sa forme
+ * juridique devait cocher au hasard pour avancer.
+ */
+function choice(ctx, options, incertain) {
   const host = h('div', { class: 'setup-choices' })
-  const draw = () => host.replaceChildren(...options.map((o) => h('button', {
-    class: `setup-choice ${o.active() ? 'active' : ''}`,
-    onClick: () => { flow.touched.add(ctx.step.key); o.pick(); draw(); ctx.tick(); ctx.onChoice?.() },
-  },
-    h('span', { class: 'setup-choice-label' }, o.label),
-    o.note ? h('span', { class: 'setup-choice-note' }, o.note) : null,
-  )))
+  const draw = () => host.replaceChildren(
+    ...options.map((o) => h('button', {
+      class: `setup-choice ${o.active() ? 'active' : ''}`,
+      onClick: () => { flow.touched.add(ctx.step.key); o.pick(); draw(); ctx.tick(); ctx.onChoice?.() },
+    },
+      h('span', { class: 'setup-choice-label' }, o.label),
+      o.note ? h('span', { class: 'setup-choice-note' }, o.note) : null,
+    )),
+    incertain ? h('button', {
+      class: 'setup-choice is-unsure',
+      onClick: () => ctx.later?.(),
+    },
+      h('span', { class: 'setup-choice-label' }, 'Je ne sais pas encore'),
+      h('span', { class: 'setup-choice-note' }, incertain()),
+    ) : null,
+  )
   draw()
   return host
 }
@@ -771,7 +788,8 @@ function legalScreen(ctx) {
         const me = sc.team?.find((x) => ME.test(x.role || ''))
         if (me) me.contractType = FORMS[f].contract
       }, { label: 'Forme juridique', silent: true }),
-    }))),
+    })),
+    () => `On garde ${FORMS[current()]?.label || 'la forme la plus courante'} pour l\u2019instant, la plus fréquente dans ton métier.`),
   )
 }
 
@@ -902,7 +920,10 @@ function priceScreen(ctx) {
         a.unitPrice = Math.round((sc.meta.commissionBasket || 0) * (sc.meta.commissionRate || 0))
       }),
     },
-  ])
+  ], () => {
+    const noms = { unitaire: 'la vente à l\u2019unité', abonnement: 'l\u2019abonnement', commission: 'la commission', mixte: 'le modèle mixte' }
+    return `On garde ${noms[mode()] || 'la vente à l\u2019unité'} pour l\u2019instant, le modèle courant dans ton métier.`
+  })
 
   drawField()
   return h('div', {}, picker, fieldHost)
@@ -1076,7 +1097,7 @@ function growthScreen(ctx) {
     { label: 'Doucement', note: '+3 % par mois — le bouche-à-oreille', active: () => chosen() && g() > 0 && g() <= 0.04, pick: () => pick(0.03) },
     { label: 'Normalement', note: '+8 % par mois — tu prospectes', active: () => chosen() && g() > 0.04 && g() <= 0.10, pick: () => pick(0.08) },
     { label: 'Vite', note: '+15 % par mois — il faudra le démontrer', active: () => chosen() && g() > 0.10, pick: () => pick(0.15) },
-  ])
+  ], () => `On garde ${Math.round((g() || 0.08) * 100)} % par mois pour l\u2019instant, le rythme courant dans ton métier.`)
 }
 
 /* ──────────────────── Écran : rémunération et frais ─────────────────────── */
