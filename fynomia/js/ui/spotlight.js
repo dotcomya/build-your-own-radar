@@ -41,7 +41,11 @@ export function goToGap(target, navigate, depuis) {
   // sous les yeux, là où elle se corrige, c'est ce qu'on demandait.
   if (target.confirme) {
     try {
-      store.update((sc) => { sc.meta.confirmes = { ...(sc.meta.confirmes || {}), [target.confirme]: true } }, { label: 'Relu', silent: true })
+      // Rien à recalculer, rien à redessiner : la page d'arrivée lira la
+      // validation. Ne pas la laisser « en attente » — sinon un second rendu
+      // partirait au changement de page et couperait le voyage.
+      store.update((sc) => { sc.meta.confirmes = { ...(sc.meta.confirmes || {}), [target.confirme]: true } }, { label: 'Relu', silent: true, recompute: false })
+      store.silentPending = false
     } catch { /* la navigation passe avant */ }
   }
   Object.assign(intent, EMPTY, target)
