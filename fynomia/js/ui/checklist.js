@@ -50,7 +50,7 @@ const ITEMS = [
     go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' } },
   { key: 'prix', tier: 'fondation', label: 'Le prix de vente', why: 'Sans prix, aucun revenu n’est calculable.',
     done: (s) => any(s.activities, (a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0),
-    go: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' } },
+    go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' } },
   { key: 'volumes', tier: 'fondation', label: 'Les volumes de vente', why: 'Le chiffre le plus discuté d’un business plan.',
     done: (s) => any(s.activities, (a) => n(a.volumes?.startUnits) > 0 || (a.volumes?.manual || []).some((v) => n(v) > 0)),
     go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
@@ -75,7 +75,7 @@ const ITEMS = [
     go: { route: 'financement', view: 'sources', anchor: 'sources' } },
   { key: 'delai', tier: 'credibilite', label: 'Les délais de paiement', why: 'Ils créent le besoin en fonds de roulement.',
     done: (s) => any(s.activities, (a) => n(a.paymentLag) > 0 || n(a.deposit) > 0),
-    go: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' } },
+    go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' } },
   { key: 'equipe', tier: 'credibilite', label: 'Les postes à recruter', why: 'Une croissance sans embauche se remarque.',
     done: (s) => (s.team || []).length > 1,
     go: { route: 'equipe', view: 'postes', anchor: 'equipe' } },
@@ -86,13 +86,14 @@ const ITEMS = [
     go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
   { key: 'demarrage', tier: 'credibilite', label: 'Ta date de démarrage', why: 'Un plan qui commence en janvier par défaut se voit.',
     done: (s) => !!s.meta?.startDate && s.meta.startDate !== '2026-01-01',
-    go: { route: 'projet', anchor: 'calendrier' } },
+    go: { route: 'projet', anchor: 'demarrage' } },
   { key: 'tresorerie', tier: 'credibilite', label: 'Ta trésorerie de départ',
     why: 'Ce qu’il y a sur le compte le premier jour, avant la première vente.',
     done: (s) => n(s.financing?.openingCash) > 0 || has(s.financing?.equityFounders),
     go: { route: 'financement', view: 'sources', anchor: 'sources' } },
   { key: 'stock', tier: 'credibilite', label: 'Ton stock', why: 'Du stock, c’est de la trésorerie immobilisée, pas une charge.',
     done: (s) => n(s.assumptions?.stockDays) > 0 || !needsStock(s),
+    na: (s) => !needsStock(s) && !(n(s.assumptions?.stockDays) > 0),
     go: { route: 'achats', view: 'invest', anchor: 'capex' } },
 
   // ── Finition ─────────────────────────────────────────────────────────────
@@ -107,14 +108,16 @@ const ITEMS = [
     go: { route: 'achats', view: 'invest', anchor: 'capex' } },
   { key: 'churn', tier: 'finition', label: 'L’attrition des abonnements', why: 'Un abonnement sans attrition surestime le revenu.',
     done: (s) => !any(s.activities, (a) => n(a.recurringPrice) > 0 && n(a.churnMonthly) === 0),
-    go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' } },
+    na: (s) => !any(s.activities, (a) => n(a.recurringPrice) > 0),
+    go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-contrat' } },
   { key: 'avantages', tier: 'finition', label: 'Les avantages salariés', why: 'Mutuelle et transport sont obligatoires dès le premier salarié.',
     done: (s) => !any(s.team, (m) => ['cdi', 'cdd'].includes(m.contractType)) || n(s.hr?.benefits?.transport) > 0,
+    na: (s) => !any(s.team, (m) => ['cdi', 'cdd'].includes(m.contractType)),
     go: { route: 'equipe', view: 'avantages', anchor: 'avantages' } },
   { key: 'prixAnnee', tier: 'finition', label: 'L’évolution des prix', why: 'Un prix figé cinq ans se remarque aussi.',
     done: (s) => any(s.activities, (a) => (a.priceByYear || []).some((v) => v !== '' && v !== null && v !== undefined)
       || (a.recurringPriceByYear || []).some((v) => v !== '' && v !== null && v !== undefined)),
-    go: { route: 'offre', view: 'offres', sec: 'evolution', openAll: true, anchor: 'evolution' } },
+    go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-evolution' } },
   { key: 'emprunt', tier: 'finition', label: 'Un emprunt ou une subvention', why: 'Rarement absent d’un plan de création.',
     done: (s) => has(s.financing?.loans) || has(s.financing?.grants),
     go: { route: 'financement', view: 'sources', anchor: 'sources' } },
@@ -136,11 +139,11 @@ const ITEMS = [
   { key: 'coutannee', tier: 'finition', label: 'L’évolution de tes coûts',
     why: 'Les achats montent aussi, pas seulement les prix de vente.',
     done: (s) => any(s.activities, (a) => (a.unitCostByYear || []).some((v) => v !== '' && v !== null && v !== undefined)),
-    go: { route: 'offre', view: 'offres', sec: 'evolution', openAll: true, anchor: 'evolution' } },
+    go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-evolution' } },
   { key: 'paiefournisseur', tier: 'finition', label: 'Tes délais fournisseurs',
     why: 'Payer à trente jours finance ton exploitation gratuitement.',
     done: (s) => any(s.activities, (a) => n(a.costPaymentLag) > 0),
-    go: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' } },
+    go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' } },
   { key: 'dividendes', tier: 'finition', label: 'Ce que tu te distribues',
     why: 'Le salaire n’est pas le seul chemin vers ta poche.',
     done: (s) => n(s.founder?.dividendPayout) > 0,
@@ -195,7 +198,11 @@ export function checklist(scenario) {
   const items = ITEMS.map((it, rank) => {
     let ok = false
     try { ok = !!it.done(s) } catch { ok = false }
-    return { ...it, done: ok, weight: weightOf(it.tier), rank, lift: liftRank(stage, it.key) }
+    // Une ligne qui ne concerne pas l'activité — pas de stock, pas
+    // d'abonnement, pas de salarié — compte comme posée, mais se dit telle.
+    let na = false
+    try { na = ok && !!it.na?.(s) } catch { na = false }
+    return { ...it, done: ok, na, weight: weightOf(it.tier), rank, lift: liftRank(stage, it.key) }
   }).sort((a, b) => (a.lift - b.lift) || (a.rank - b.rank))
 
   const groups = TIERS.map((t) => {
@@ -231,4 +238,56 @@ export function checklist(scenario) {
     later: later.length,
     ratio: max > 0 ? got / max : 0,
   }
+}
+
+/* ───────────────────────── Par axe, et où ça mène ─────────────────────────
+   Les paliers disent ce qu'une ligne pèse ; le fondateur, lui, pense en
+   pages : « mon offre », « mon équipe », « mes charges ». Les mêmes lignes se
+   rangent donc aussi par axe, et chacune dit où elle emmène, en toutes
+   lettres — pas « Crédibilité », mais « Offre et revenus › Volumes ». */
+
+/** Les axes du dossier, dans l'ordre des pages. */
+export const AXES = [
+  { key: 'projet', label: 'Mon projet', court: 'Projet', dit: 'Le métier, la forme, le calendrier' },
+  { key: 'offre', label: 'Offre et revenus', court: 'Offre', dit: 'Ce que tu vends, à quel prix, à combien' },
+  { key: 'achats', label: 'Achats et coûts', court: 'Achats', dit: 'Ce que tu dépenses, et ce qui dure' },
+  { key: 'equipe', label: 'Équipe et rémunération', court: 'Équipe', dit: 'Qui travaille, combien ça coûte' },
+  { key: 'financement', label: 'Financement', court: 'Financement', dit: 'D’où vient l’argent du départ' },
+]
+
+const PAGE = { projet: 'Mon projet', offre: 'Offre et revenus', achats: 'Achats et coûts', equipe: 'Équipe', financement: 'Financement', resultats: 'États financiers' }
+const VUE = {
+  offres: null, acquisition: 'Acquisition', charges: 'Charges', invest: 'Investissements',
+  postes: 'Postes', avantages: 'Avantages', sources: 'Sources', revenu: 'Ce que tu touches',
+}
+const SOUS = { offre: 'Paramètres de base', volumes: 'Volumes', affiner: 'Hypothèses avancées' }
+const REPERE = {
+  secteur: 'Type d’activité', juridique: 'Cadre juridique et fiscal', pitch: 'Décris ce que tu vends', client: 'Le client',
+  demarrage: 'Début d’activité', prix: 'Prix', abonnement: 'Prix', 'tune-paiement': 'Quand l’argent entre et sort',
+  'tune-evolution': 'Évolution des prix', 'tune-contrat': 'Engagement et attrition', dividendes: 'Dividendes',
+}
+
+/** L'axe d'une ligne : la page où elle se remplit (la rémunération rejoint l'équipe). */
+export function axeDe(item) {
+  const r = item?.go?.route
+  return r === 'resultats' ? 'equipe' : (AXES.some((a) => a.key === r) ? r : 'projet')
+}
+
+/** Où une ligne emmène, en clair : « Offre et revenus › Hypothèses avancées › Quand l’argent entre et sort ». */
+export function destination(item) {
+  const g = item?.go || {}
+  const morceaux = [PAGE[g.route] || g.route]
+  if (g.view && VUE[g.view]) morceaux.push(VUE[g.view])
+  if (g.sec && SOUS[g.sec]) morceaux.push(SOUS[g.sec])
+  if (g.anchor && REPERE[g.anchor] && !morceaux.includes(REPERE[g.anchor])) morceaux.push(REPERE[g.anchor])
+  return morceaux.filter(Boolean).join(' › ')
+}
+
+/** Les lignes rangées par axe, avec l'avancement de chacun. */
+export function parAxe(c) {
+  return AXES.map((a) => {
+    const lignes = c.items.filter((i) => axeDe(i) === a.key)
+    const faites = lignes.filter((i) => i.done)
+    return { ...a, lignes, faites, reste: lignes.filter((i) => !i.done), part: lignes.length ? faites.length / lignes.length : 1 }
+  }).filter((a) => a.lignes.length)
 }

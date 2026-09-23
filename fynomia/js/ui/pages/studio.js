@@ -25,7 +25,7 @@
 
 import { h, euro, num, pct, monthLabel } from '../dom.js'
 import { hot, STATUS } from '../charts.js'
-import { checklist } from '../checklist.js'
+import { checklist, parAxe, destination } from '../checklist.js'
 import { goToGap } from '../spotlight.js'
 import { lookup } from '../glossary.js'
 import { changed } from '../motion.js'
@@ -149,6 +149,7 @@ export function renderStudio(navigate, refresh, goView) {
     // quelque chose. Un dossier complet ouvre directement sur son verdict.
     guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), 'hero'),
     complet ? null : guet(verdictLigne(v), 'verdict'),
+    complet ? null : guet(dossierParAxe(c, navigate), 'dossier'),
     ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA)),
     pied(navigate, pilotage),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
@@ -170,9 +171,8 @@ export function renderStudio(navigate, refresh, goView) {
 function heroAvancement(c, navigate, pilotage) {
   const t = avancement(c)
   const part = c.done / Math.max(1, c.total)
-  const ouvertes = c.items.filter((i) => !i.done)
-  const suite = [c.next, ...ouvertes.filter((i) => i !== c.next && !i.later)].slice(0, 4)
-  const faites = c.items.filter((i) => i.done).slice(-2)
+  const axes = parAxe(c)
+  const suivante = c.next
 
   return h('section', { class: 'sy-hero' },
     h('div', { class: 'sy-ink' },
@@ -183,68 +183,138 @@ function heroAvancement(c, navigate, pilotage) {
       h('h2', { class: 'sy-ink-title' }, t.titre),
       h('p', { class: 'sy-ink-text' }, t.texte),
 
-      // Une case par ligne du dossier : on voit ce qui est fait et ce qui
-      // reste, sans avoir à lire un pourcentage. Chaque case se survole — elle
-      // dit ce qu'elle est et pourquoi elle compte — et se clique : elle
-      // emmène à l'endroit où elle se pose.
+      // Une case par ligne du dossier, rangée par page : on voit d'un coup
+      // d'œil que l'offre est presque finie et que le financement attend.
+      // Chaque case se survole — ce qu'elle est, fait ou non, et la page où
+      // elle se remplit — et se clique : on y va.
       h('div', { class: 'sy-cells', role: 'list', 'aria-label': `${c.done} lignes posées sur ${c.total}` },
-        ...c.items.map((i, k) => {
-          const palier = (c.groups.find((g) => g.key === i.tier) || {}).label || ''
-          const etatCase = i.done ? 'Déjà posé' : i === c.next ? 'Prochaine étape' : 'À poser'
-          return hot(h('button', {
-            class: `sy-cell ${i.done ? 'is-done' : i === c.next ? 'is-next' : ''}`,
-            style: { '--i': String(k) },
-            role: 'listitem',
-            'aria-label': `${i.label} — ${etatCase}`,
-            onClick: (e) => (i.go ? goToGap(i.go, navigate, e.currentTarget) : null),
-          }, h('i', { 'aria-hidden': 'true' })), i.label, () => [
-            { label: etatCase, value: palier, strong: true },
-            i.why ? { label: i.why, value: '' } : null,
-            { label: i.done ? 'Clique pour le revoir' : 'Clique pour le renseigner', value: '→' },
-          ])
-        }),
-      ),
-      h('div', { class: 'sy-cells-legend' },
-        ...c.groups.map((g) => h('span', {},
-          h('b', {}, `${g.done}/${g.total}`), ` ${g.label.toLowerCase()}`)),
+        ...axes.map((ax) => h('div', { class: 'sy-cells-axe', style: { flexGrow: String(ax.lignes.length) } },
+          h('div', { class: 'sy-cells-row' },
+            ...ax.lignes.map((i, k) => hot(h('button', {
+              class: `sy-cell ${i.done ? 'is-done' : i === suivante ? 'is-next' : ''}`,
+              style: { '--i': String(k) },
+              role: 'listitem',
+              'aria-label': `${i.label} — ${i.done ? 'fait' : 'à faire'} — ${destination(i)}`,
+              onClick: (e) => (i.go ? goToGap(i.go, navigate, e.currentTarget) : null),
+            }, h('i', { 'aria-hidden': 'true' })), i.label, () => [
+              { label: i.done ? '✓ Fait' : (i === suivante ? '→ Prochaine étape' : '○ À faire'), value: '', strong: true },
+              { label: `Clique pour aller à : ${destination(i)}`, value: '' },
+              i.why ? { label: i.why, value: '' } : null,
+            ])),
+          ),
+          h('span', { class: 'sy-cells-cap' }, h('b', {}, `${ax.faites.length}/${ax.lignes.length}`), ` ${ax.court || ax.label}`),
+        )),
       ),
 
       h('div', { class: 'sy-ink-acts' },
         h('button', {
           class: 'sy-btn is-accent',
-          onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
-        }, `Renseigner « ${c.next.label} » →`),
+          onClick: (e) => goToGap(suivante.go, navigate, e.currentTarget),
+        }, `Renseigner « ${suivante.label} » →`),
         h('button', { class: 'sy-btn is-ghost', onClick: pilotage }, t.parcourir),
       ),
       h('div', { class: 'sy-ink-meter', 'aria-hidden': 'true' },
         h('i', { style: { width: `${Math.round(part * 100)}%` } })),
     ),
 
+    // La colonne claire : la prochaine étape, en clair — ce qu'elle est, où
+    // elle mène, pourquoi elle compte — puis l'avancement de chaque page, qui
+    // emmène à ce qu'il y reste à faire.
     h('aside', { class: 'sy-next' },
-      h('div', { class: 'sy-kicker' }, 'Tes prochaines étapes'),
-      h('ol', { class: 'sy-steps' },
-        ...faites.map((i) => h('li', { class: 'sy-step is-done' },
-          h('button', { class: 'sy-step-go', onClick: (e) => goToGap(i.go, navigate, e.currentTarget) },
-            h('span', { class: 'sy-step-mark', 'aria-hidden': 'true' }, '✓'),
-            h('span', { class: 'sy-step-txt' }, h('span', { class: 'sy-step-label' }, i.label)),
-          ))),
-        ...suite.map((i, k) => h('li', { class: `sy-step ${k === 0 ? 'is-next' : ''}` },
-          h('button', { class: 'sy-step-go', onClick: (e) => goToGap(i.go, navigate, e.currentTarget) },
-            h('span', { class: 'sy-step-mark', 'aria-hidden': 'true' }, k === 0 ? '→' : String(k + 1)),
-            h('span', { class: 'sy-step-txt' },
-              k === 0 ? h('span', { class: 'sy-step-tag' }, 'Prochaine étape') : null,
-              h('span', { class: 'sy-step-label' }, i.label),
-              i.why ? h('span', { class: 'sy-step-why' }, i.why) : null,
-            ),
-          ))),
+      h('div', { class: 'sy-kicker' }, 'Prochaine étape'),
+      h('button', { class: 'sy-nextstep', onClick: (e) => goToGap(suivante.go, navigate, e.currentTarget) },
+        h('span', { class: 'sy-nextstep-label' }, suivante.label),
+        h('span', { class: 'sy-nextstep-where' }, destination(suivante)),
+        suivante.why ? h('span', { class: 'sy-nextstep-why' }, suivante.why) : null,
+        h('span', { class: 'sy-nextstep-go' }, 'Y aller →'),
       ),
-      c.open > suite.length
-        ? h('button', { class: 'sy-link', onClick: pilotage },
-            `+ ${c.open - suite.length} autre${c.open - suite.length > 1 ? 's' : ''} à poser`)
-        : null,
+      h('div', { class: 'sy-kicker sy-axes-kicker' }, 'Par page'),
+      h('ul', { class: 'sy-axes' },
+        ...axes.map((ax) => {
+          const cible = ax.reste[0]
+          return h('li', {},
+            h('button', {
+              class: `sy-axe ${ax.reste.length ? '' : 'is-complete'}`,
+              disabled: cible ? null : true,
+              onClick: (e) => (cible ? goToGap(cible.go, navigate, e.currentTarget) : null),
+              title: cible ? `Prochaine chose à faire ici : ${cible.label}` : 'Tout est fait ici',
+            },
+              h('span', { class: 'sy-axe-nom' }, ax.label),
+              h('span', { class: 'sy-axe-bar', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(ax.part * 100)}%` } })),
+              h('span', { class: 'sy-axe-num' }, ax.reste.length ? `${ax.faites.length}/${ax.lignes.length}` : '✓'),
+            ),
+          )
+        }),
+      ),
     ),
   )
 }
+
+/**
+ * Ce que tu as fait, ce qu'il te reste — page par page.
+ *
+ * Quatre prochaines étapes ne disaient pas tout : on ne voyait ni ce qui
+ * était déjà acquis, ni que l'équipe ou les charges méritaient d'être
+ * reprises. Chaque page a ici sa colonne : ce qui est fait, coché ; ce qui
+ * reste, avec l'endroit exact où ça se remplit. Un clic y emmène.
+ */
+function dossierParAxe(c, navigate) {
+  const axes = parAxe(c)
+  const aller = (i) => (e) => goToGap(i.go, navigate, e.currentTarget)
+  // Une colonne de douze lignes écrase les autres : on en montre cinq, et le
+  // reste se déplie sur place. Ce qui est déplié le reste d'un rendu à l'autre.
+  const liste = (cle, lignes, max, rendre) => {
+    const tout = dossierDeplie.has(cle) || lignes.length <= max + 1
+    return [
+      ...(tout ? lignes : lignes.slice(0, max)).map(rendre),
+      tout ? null : h('button', {
+        class: 'sy-dossier-more',
+        onClick: (e) => {
+          dossierDeplie.add(cle)
+          const bloc = e.currentTarget.parentElement
+          e.currentTarget.remove()
+          lignes.slice(max).forEach((i) => bloc.appendChild(rendre(i)))
+        },
+      }, `+ ${lignes.length - max} autre${lignes.length - max > 1 ? 's' : ''}`),
+    ]
+  }
+  const aFaire = (i) => h('button', { class: `sy-todo ${i === c.next ? 'is-next' : ''}`, onClick: aller(i) },
+    h('span', { class: 'sy-todo-label' }, i.label),
+    h('span', { class: 'sy-todo-where' }, destination(i).split(' › ').slice(1).join(' › ') || destination(i)),
+  )
+  const fait = (i) => h('button', { class: `sy-done ${i.na ? 'is-na' : ''}`, onClick: aller(i), title: i.na ? 'Ne concerne pas ton activité pour l’instant' : 'Revoir' },
+    h('i', { 'aria-hidden': 'true' }, i.na ? '–' : '✓'),
+    h('span', {}, i.label, i.na ? h('em', {}, 'Sans objet pour ton activité') : null))
+
+  return h('section', { class: 'sy-dossier' },
+    h('div', { class: 'sy-sec-head' },
+      h('div', {},
+        h('h2', { class: 'sy-sec-title' }, 'Ce que tu as fait, ce qu’il te reste'),
+        h('p', { class: 'sy-sec-say' }, 'Page par page. Chaque ligne emmène à l’endroit exact où elle se remplit.'),
+      ),
+    ),
+    h('div', { class: 'sy-dossier-grid' },
+      ...axes.map((ax, k) => h('article', { class: `sy-dossier-col ${ax.reste.length ? '' : 'is-complete'}`, style: { '--i': String(k) } },
+        h('header', { class: 'sy-dossier-head' },
+          h('span', { class: 'sy-dossier-nom' }, ax.label),
+          h('span', { class: 'sy-dossier-num' }, `${ax.faites.length}/${ax.lignes.length}`),
+        ),
+        h('div', { class: 'sy-axe-bar', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(ax.part * 100)}%` } })),
+        ax.reste.length
+          ? h('div', { class: 'sy-dossier-bloc' },
+              h('div', { class: 'sy-dossier-tag' }, `À faire · ${ax.reste.length}`),
+              ...liste(`${ax.key}:reste`, ax.reste, 5, aFaire))
+          : h('p', { class: 'sy-dossier-ok' }, 'Tout est posé ici.'),
+        ax.faites.length
+          ? h('div', { class: 'sy-dossier-bloc is-done' },
+              h('div', { class: 'sy-dossier-tag' }, `Fait · ${ax.faites.length}`),
+              ...liste(`${ax.key}:faites`, ax.faites, 4, fait))
+          : null,
+      )),
+    ),
+  )
+}
+const dossierDeplie = new Set()
 
 /**
  * Quand tout est posé, le noir revient au verdict.
@@ -337,9 +407,11 @@ function verdictLigne(v) {
  * faut en retenir, puis le détail pour qui le veut. Le texte reste celui de la
  * synthèse d'origine ; c'est l'ordre et la taille qui ont changé.
  */
+// Le nom de chaque partie est la question à laquelle elle répond : on doit
+// savoir de quoi elle parle avant d'en lire le titre.
 const SECTIONS = {
-  plein: ['Rentabilité et trésorerie', 'Structure des coûts', 'Où agir'],
-  avant: ['Ce que coûte le démarrage', 'Structure de la dépense', 'Ce qu’il faudra vendre'],
+  plein: ['Gagnes-tu de l’argent, et quand ?', 'Où part chaque euro encaissé', 'Combien vendre pour être rentable'],
+  avant: ['Ce que ton projet coûte chaque mois', 'Ce qui pèse le plus dans tes dépenses', 'Combien il faudra vendre'],
 }
 
 function acte(a, i, total, r, s, sansCA) {
@@ -502,7 +574,7 @@ function bande(cartes, r, leviers) {
 }
 
 /**
- * Où agir, chiffré par le moteur.
+ * Les leviers, chiffrés par le moteur.
  *
  * Le troisième acte dit quels leviers existent. Le moteur sait aussi ce que
  * chacun rapporte, en rejouant le modèle entier : les trois meilleurs gestes

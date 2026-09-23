@@ -141,13 +141,16 @@ export function textField({ label, value, placeholder, onInput, hint, help, fiel
   // complète de l'interface a lieu à la sortie du champ.
   // Même règle que pour les nombres : une sortie de champ sans modification
   // n'enregistre rien, et ne fait donc pas disparaître le bouton qu'on visait.
+  // `last` est la dernière valeur annoncée à toute l'interface, pas la
+  // dernière tapée : la mettre à jour pendant la frappe rendait la sortie de
+  // champ muette, et la saisie n'était jamais annoncée.
   let last = value ?? ''
   const commit = () => {
     if (String(input.value) === String(last)) return
     last = input.value
     onInput(input.value)
   }
-  input.addEventListener('input', () => { last = input.value; onInput(input.value, { silent: true }) })
+  input.addEventListener('input', () => { onInput(input.value, { silent: true }) })
   input.addEventListener('change', commit)
   input.addEventListener('blur', commit)
   return h('div', { class: 'field' },

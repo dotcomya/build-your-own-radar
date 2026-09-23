@@ -103,7 +103,7 @@ export function renderProject(navigate, refresh) {
         (() => {
           const input = h('input', { type: 'date', value: s.meta.startDate })
           input.addEventListener('change', () => set({ startDate: input.value }, 'Date de démarrage'))
-          return h('div', { class: 'field' },
+          return h('div', { class: 'field', 'data-gap': 'demarrage' },
             h('label', {}, "Début d’activité"),
             h('div', { class: 'control' }, input),
             h('div', { class: 'field-hint' }, 'Décale tout le calendrier : volumes, salaires, échéances.'),

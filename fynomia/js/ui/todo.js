@@ -41,10 +41,10 @@ const CHECKS = {
   offre: [
     { key: 'cout', label: 'Coût de revient', why: 'Sans lui, la marge affichée est le prix entier.',
       missing: (s) => has(s.activities, (a) => n(a.unitPrice) > 0 && n(a.unitCost) === 0),
-      go: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' } },
+      go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' } },
     { key: 'delai', label: 'Délai de paiement client', why: 'C’est lui qui crée le besoin en fonds de roulement.',
       missing: (s) => has(s.activities, (a) => n(a.paymentLag) === 0 && n(a.deposit) === 0),
-      go: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' } },
+      go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' } },
     { key: 'churn', label: 'Attrition des abonnements', why: 'Un abonnement sans attrition surestime le revenu récurrent.',
       missing: (s) => has(s.activities, (a) => n(a.recurringPrice) > 0 && n(a.churnMonthly) === 0),
       go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' } },

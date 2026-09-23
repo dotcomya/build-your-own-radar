@@ -8,6 +8,7 @@ import { stepGuide } from '../tutorial.js'
 import { founderIncome } from '../../engine/founder.js'
 import { bfrSentence } from '../explain.js'
 import { refine } from '../dom.js'
+import { claim } from '../spotlight.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -22,6 +23,9 @@ export function renderResults(navigate, refresh) {
   const level = store.level
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
   const available = Object.entries(TABS)
+  // Une étape du dossier qui vise « ce que tu touches » ouvre cet onglet.
+  const want = claim('resultats')
+  if (want && want.view) renderResults.tab = want.view
   const current = available.some(([k]) => k === renderResults.tab) ? renderResults.tab : 'resultat'
 
   const views = [

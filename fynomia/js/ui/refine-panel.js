@@ -85,6 +85,7 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
             h('span', { class: 'refinery-mark', 'aria-hidden': 'true' }, it.done ? '✓' : ''),
             h('span', { class: 'refinery-text' },
               h('span', { class: 'refinery-label' }, it.label),
+              it.na ? h('span', { class: 'refinery-why' }, 'Sans objet pour ton activité') : null,
               it.done ? null : h('span', { class: 'refinery-why' },
                 it.later ? h('b', { class: 'refinery-latertag' }, 'Plus tard · ') : null, it.why),
             ),

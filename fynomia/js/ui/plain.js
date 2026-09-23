@@ -161,23 +161,29 @@ function acts(s, r) {
     ? `${maj(tete.nom)} ${tete.pluriel ? 'coûtent' : 'coûte'} plus que tu ne vends`
     : absorbe !== null
       ? `${maj(tete.nom)} : ${absorbe} % de ce que tu encaisses`
-      : 'D\u2019où ça vient'
+      : `${maj(tete.nom)}, ton premier poste de dépense`
   const vient = absorbe !== null
     ? `Ton premier poste de dépense, en année ${i + 1}. Où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste.`
     : 'Ton premier poste de dépense. Où part chaque euro encaissé, et ce qu\u2019il t\u2019en reste.'
 
-  // Le troisième acte nomme le levier, pas la catégorie.
+  // Le troisième acte dit la distance au seuil, en euros ou en multiple :
+  // « où agir » ne se lisait pas, « encore 40 000 € de ventes » se lit.
   const seuil = n(k.breakEven?.[i])
   const ecart = seuil > 0 && rev > 0 ? rev / seuil : null
+  const fois = ecart ? (1 / ecart).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : null
   const titre3 = rentable
-    ? 'Ce qu\u2019il reste à défendre'
-    : ecart !== null && ecart > 0.8
-      ? 'Tu n\u2019es pas loin du seuil'
-      : ecart !== null && ecart < 0.4
-        ? 'Le seuil est encore loin'
-        : 'Où agir'
+    ? (seuil > 0 ? `Au-delà de ${euro(seuil)} de ventes en année ${i + 1}, tu gagnes de l\u2019argent` : 'Chaque vente couvre déjà tes coûts')
+    : ecart !== null && ecart >= 0.5
+      ? `Encore ${euro(seuil - rev)} de ventes par an pour être rentable`
+      : ecart !== null
+        ? `Il faut vendre ${fois} fois plus pour être rentable`
+        : rev > 0
+          ? 'Aucun volume de ventes ne couvre tes coûts aujourd\u2019hui'
+          : 'Ce qu\u2019il faudra vendre pour être rentable'
   const agir = rentable
-    ? `Seuil franchi en année ${first + 1}. Reste à défendre la trajectoire qui y mène.`
+    ? `Seuil franchi en année ${first + 1}. Tout ce qui passe au-dessus est du bénéfice ; en dessous, tu perds de l\u2019argent.`
+    : ecart === null && rev > 0
+      ? 'Chaque vente coûte plus qu\u2019elle ne rapporte : vendre davantage creuse la perte. Le prix ou le coût de revient d\u2019abord.'
     : ecart !== null && ecart > 0.8
       ? `Tu couvres ${Math.round(ecart * 100)} % du seuil : quelques pour cent de prix suffisent souvent.`
       : `Trois leviers déplacent le seuil : le prix, le volume, et ${tete.ou}. Le prix agit tout de suite.`
@@ -239,10 +245,11 @@ function actsAvant(s, r) {
     { titre: charge <= 0 ? 'Le plan est encore vide' : 'Ce que ton projet coûte, avant de vendre',
       dit,
       cartes: [coutCard(r), tenueCard(r)] },
-    { titre: 'D\u2019où vient la dépense',
+    { titre: charge <= 0 ? 'Aucune dépense saisie pour l\u2019instant'
+        : `${maj(dominant)} : ${euro(Math.max(equipe, fixe))} sur ${euro(charge)}`,
       dit: vient,
       cartes: [causeCard(r), investCard(r)] },
-    { titre: 'Ce qu\u2019il faudra vendre',
+    { titre: charge <= 0 ? 'Rien à couvrir pour l\u2019instant' : `Au moins ${euro(charge)} de ventes la première année`,
       dit: agir,
       cartes: [objectifCard(r), manqueCard(s)] },
   ]

@@ -78,7 +78,7 @@ export function renderCosts(navigate, refresh) {
           ) : null),
 
       s.opex.length === 0
-        ? h('div', { class: 'card' }, h('div', { class: 'empty' },
+        ? h('div', { class: 'card', 'data-gap': 'charges' }, h('div', { class: 'empty' },
             h('div', { class: 'empty-icon' }, '▦'),
             h('h3', {}, 'Aucune charge saisie'),
             h('p', { class: 'muted', style: { maxWidth: '54ch', margin: '0 auto 4px' } },

@@ -6287,7 +6287,15 @@ details[open] > .refine-head .refine-sign {
 /* Une case par ligne du dossier — et chaque case est un bouton : elle se
    survole (ce qu'elle est, pourquoi elle compte) et se clique (on y va). La
    zone cliquable est plus haute que le trait, pour que le doigt la trouve. */
-.sy-cells { display: flex; gap: 3px; margin-top: 26px; }
+.sy-cells { display: flex; gap: 14px; margin-top: 26px; }
+.sy-cells-axe { flex: 1 1 0; min-width: 104px; display: flex; flex-direction: column; gap: 6px; }
+.sy-cells-row { display: flex; gap: 3px; }
+.sy-cells-cap {
+  display: block; padding-top: 7px; border-top: 1px solid rgba(255, 255, 255, .14);
+  font-family: var(--mono); font-size: 10.5px; color: #8E9186;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sy-cells-cap b { color: #E9EBE3; font-weight: 600; }
 .sy-cell {
   flex: 1; min-width: 0; height: 22px; padding: 7px 0; border: 0; background: none; cursor: pointer;
   display: flex; align-items: center;
@@ -6302,11 +6310,6 @@ details[open] > .refine-head .refine-sign {
 .sy-cell.is-done:hover > i, .sy-cell.is-done:focus-visible > i { background: #EDFF7A; box-shadow: 0 0 12px rgba(214, 240, 52, .7); }
 .sy-cell:focus-visible { outline: none; }
 @keyframes sy-next { 50% { box-shadow: inset 0 0 0 1.5px rgba(214, 240, 52, .35); } }
-.sy-cells-legend {
-  display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 10px;
-  font-family: var(--mono); font-size: 10.5px; color: #8E9186;
-}
-.sy-cells-legend b { color: #E9EBE3; font-weight: 600; }
 .sy-ink-acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
 .sy-ink-meter { display: none; }
 
@@ -6315,26 +6318,43 @@ details[open] > .refine-head .refine-sign {
   background: var(--surface); border-radius: 20px; padding: 28px 26px 24px;
   display: flex; flex-direction: column; box-shadow: 0 1px 0 var(--rule), 0 24px 48px -36px rgba(14, 15, 12, .35);
 }
-.sy-steps { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.sy-step-go {
-  width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left; cursor: pointer;
-  background: none; border: 0; padding: 10px 10px; border-radius: 10px; font: inherit; color: inherit;
+.sy-nextstep {
+  margin-top: 12px; width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 7px;
+  text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px 15px;
+  box-shadow: 0 1px 0 rgba(14, 15, 12, .04);
+  transition: transform .2s var(--ease-soft), box-shadow .2s var(--ease-soft), border-color .2s;
+}
+.sy-nextstep:hover, .sy-nextstep:focus-visible {
+  outline: none; transform: translateY(-2px); border-color: var(--ink);
+  box-shadow: 0 2px 0 rgba(14, 15, 12, .06), 0 18px 34px -22px rgba(14, 15, 12, .5);
+}
+.sy-nextstep-label { font-family: var(--display); font-weight: 700; font-size: 19px; line-height: 1.2; letter-spacing: -.02em; color: var(--ink); }
+.sy-nextstep-where {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  font-family: var(--mono); font-size: 10.5px; line-height: 1.45; color: var(--ink-3);
+  background: var(--surface-2); border-radius: 6px; padding: 4px 8px;
+}
+.sy-nextstep-why { font-size: 12.5px; line-height: 1.5; color: var(--ink-4); }
+.sy-nextstep-go { margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.sy-nextstep:hover .sy-nextstep-go { text-decoration: underline; text-underline-offset: 4px; }
+.sy-axes-kicker { margin-top: 24px; }
+.sy-axes { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.sy-axe {
+  width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 64px 34px; align-items: center; gap: 12px;
+  text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: none; border: 0; border-radius: 10px; padding: 9px 10px; margin: 0 -10px; width: calc(100% + 20px);
   transition: background .16s var(--ease-soft);
 }
-.sy-step-go:hover { background: var(--surface-2); }
-.sy-step-mark {
-  flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
-  font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); border: 1px solid var(--rule); margin-top: 1px;
-}
-.sy-step-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.sy-step-label { font-size: 13.5px; font-weight: 600; color: var(--ink-2); letter-spacing: -.01em; }
-.sy-step-why { font-size: 12px; line-height: 1.45; color: var(--ink-4); }
-.sy-step-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
-.sy-step.is-done .sy-step-mark { background: var(--accent); border-color: var(--accent-dim); color: var(--ink); }
-.sy-step.is-done .sy-step-label { color: var(--ink-5); font-weight: 500; text-decoration: line-through; text-decoration-color: var(--rule); }
-.sy-step.is-next .sy-step-go { background: var(--accent-wash); }
-.sy-step.is-next .sy-step-mark { background: var(--ink); border-color: var(--ink); color: var(--accent); }
-.sy-step.is-next .sy-step-label { color: var(--ink); font-size: 14.5px; }
+.sy-axe:hover, .sy-axe:focus-visible { outline: none; background: var(--surface-2); }
+.sy-axe[disabled] { cursor: default; background: none; }
+.sy-axe-nom { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sy-axe-bar { display: block; height: 5px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+.sy-axe-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--ink); transition: width .5s var(--ease-soft); }
+.sy-axe-num { font-family: var(--mono); font-size: 11px; color: var(--ink-4); text-align: right; }
+.sy-axe.is-complete .sy-axe-nom { color: var(--ink-4); font-weight: 500; }
+.sy-axe.is-complete .sy-axe-bar > i, .sy-dossier-col.is-complete .sy-axe-bar > i { background: var(--gain); }
+.sy-axe.is-complete .sy-axe-num { color: var(--gain); font-weight: 600; }
 .sy-next > .sy-link { margin-top: 14px; padding-left: 10px; }
 .sy-side-num {
   margin-top: 14px; font-family: var(--mono); font-weight: 600; font-size: 40px;
@@ -6382,6 +6402,63 @@ details[open] > .refine-head .refine-sign {
 .sy-verdict-fig { text-align: right; }
 .sy-verdict-fig span { display: block; font-size: 11.5px; color: var(--ink-4); }
 .sy-verdict-fig strong { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--ink); }
+
+/* ─── 2 bis. Ce qui est fait, ce qui reste — une colonne par page ─── */
+.sy-dossier-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 24px; align-items: start; }
+.sy-dossier-col {
+  background: var(--surface); border-radius: 16px; padding: 18px 18px 16px;
+  box-shadow: 0 1px 0 var(--rule), 0 22px 44px -38px rgba(14, 15, 12, .45);
+}
+.sy-dossier-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sy-dossier-nom { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; color: var(--ink); line-height: 1.2; }
+.sy-dossier-num { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-4); }
+.sy-dossier-col.is-complete .sy-dossier-num { color: var(--gain); }
+.sy-dossier-col > .sy-axe-bar { margin: 12px 0 14px; }
+.sy-dossier-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 4px;
+}
+.sy-dossier-bloc.is-done { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+.sy-todo {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+  width: calc(100% + 16px); margin: 0 -8px; padding: 7px 8px; background: none; border: 0; border-radius: 9px;
+  transition: background .16s var(--ease-soft), box-shadow .16s var(--ease-soft);
+}
+.sy-todo:hover, .sy-todo:focus-visible { outline: none; background: var(--surface-2); }
+.sy-todo-label { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.sy-todo-where { font-size: 11.5px; color: var(--ink-4); line-height: 1.4; }
+.sy-todo:hover .sy-todo-where { color: var(--ink-3); }
+.sy-todo.is-next { box-shadow: inset 2px 0 0 var(--ink); border-radius: 0 9px 9px 0; }
+.sy-todo.is-next .sy-todo-label::after {
+  content: 'Prochaine'; margin-left: 8px; vertical-align: 1px;
+  font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); background: var(--ink); border-radius: 999px; padding: 2px 7px;
+}
+.sy-done {
+  display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; cursor: pointer;
+  font: inherit; font-size: 12.5px; line-height: 1.4; color: var(--ink-4);
+  background: none; border: 0; padding: 4px 0;
+  transition: color .16s;
+}
+.sy-done:hover, .sy-done:focus-visible { outline: none; color: var(--ink); }
+.sy-done > i {
+  flex: none; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center;
+  font-style: normal; font-size: 9px; font-weight: 700; background: var(--accent); color: var(--ink);
+}
+.sy-done.is-na { color: var(--ink-5); }
+.sy-done.is-na > i { background: var(--surface-2); color: var(--ink-4); box-shadow: inset 0 0 0 1px var(--rule); }
+.sy-done em { display: block; font-style: normal; font-size: 11px; color: var(--ink-5); }
+.sy-dossier-more {
+  margin-top: 4px; background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font: 600 12px/1.4 var(--sans); color: var(--ink-3);
+  text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 4px;
+}
+.sy-dossier-more:hover { color: var(--ink); text-decoration-color: var(--ink); }
+.sy-dossier-ok { margin: 0; font-size: 13px; color: var(--gain); font-weight: 600; }
+.sy-watch:not(.is-seen) .sy-dossier-col { opacity: 0; }
+.is-play .sy-dossier-col { animation: sy-rise .55s var(--ease-soft) both; animation-delay: calc(.08s + var(--i) * .07s); }
+.sy-watch:not(.is-seen) .sy-dossier-col > .sy-axe-bar > i { transform: scaleX(0); }
+.is-play .sy-dossier-col > .sy-axe-bar > i { animation: sy-widen .7s var(--ease-soft) both; animation-delay: calc(.35s + var(--i) * .07s); transform-origin: left; }
 
 /* ─── 3. Les actes : trois formes, une même hiérarchie ─── */
 /* Ce que l'on mesure, combien, ce qu'il faut en retenir, le détail. Chaque
@@ -6817,8 +6894,12 @@ details[open] > .refine-head .refine-sign {
 .is-play .sy-spark polyline { animation: sy-draw 1s var(--ease-soft) both; animation-delay: .5s; }
 
 /* ─── Petits écrans ─── */
+@media (max-width: 1240px) {
+  .sy-dossier-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 980px) {
   .sy-hero { grid-template-columns: minmax(0, 1fr); }
+  .sy-dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sy-cards.is-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sy-cards.is-3 > .sy-card:nth-child(3) { grid-column: 1 / -1; }
   .sy-feature, .sy-band, .sy-band-row { grid-template-columns: minmax(0, 1fr); gap: 26px; }
@@ -6834,6 +6915,9 @@ details[open] > .refine-head .refine-sign {
   .sy { gap: 48px; }
   .sy-ink { padding: 26px 22px 24px; border-radius: 16px; }
   .sy-ink-acts .sy-btn { width: 100%; }
+  .sy-cells { flex-wrap: wrap; gap: 12px 10px; }
+  .sy-cells-axe { flex-basis: calc(50% - 5px); }
+  .sy-dossier-grid { grid-template-columns: minmax(0, 1fr); }
   .sy-verdict-head { grid-template-columns: 1fr; gap: 10px; }
   .sy-verdict-body { grid-template-columns: 1fr; gap: 12px; }
   .sy-verdict-fig { text-align: left; }

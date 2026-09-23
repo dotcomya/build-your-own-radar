@@ -181,7 +181,54 @@ if (typeof document !== 'undefined') {
   // Au clavier, il n'y a pas de pointeur : le relâchement d'une touche joue
   // le même rôle.
   document.addEventListener('keyup', () => setTimeout(flush, 0), true)
+  // Tab déplace le focus : un redessin qui tombe pendant ce déplacement —
+  // la sortie d'un champ modifié en déclenche un — remplace le champ de
+  // départ avant que le navigateur ait trouvé le suivant, et le curseur
+  // tombe dans le vide. On retient le redessin jusqu'au relâchement, comme
+  // pour un clic ; le focus est alors posé, et on sait où le rendre.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return
+    holding = true
+    clearTimeout(release)
+    release = setTimeout(flush, 600)
+  }, true)
   document.addEventListener('pointercancel', flush, true)
+  // La sortie d'un champ annonce ce qui y a été tapé en silence.
+  //
+  // Après le passage du focus, pas avant : au moment de « focusout », le
+  // champ suivant n'a pas encore le focus, et le redessin ne saurait pas où
+  // le rendre. Si un doigt est posé sur un bouton, le rendu attend son clic
+  // comme n'importe quel autre.
+  document.addEventListener('focusout', () => setTimeout(() => store.flushSilent(), 0), true)
+}
+
+/**
+ * Où était le curseur, pour l'y remettre après un redessin.
+ *
+ * Seuls les champs portant un `data-field-key` retrouvaient leur focus ; les
+ * autres le perdaient à chaque redessin — passer d'un champ au suivant avec
+ * Tab renvoyait le curseur nulle part. On retient aussi sa position parmi les
+ * champs de la page, et la sélection du texte.
+ */
+const CHAMPS = 'input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])'
+function curseur() {
+  const el = document.activeElement
+  // Tab peut poser le focus sur un bouton (« Modifier ») autant que sur un
+  // champ : on retient l'un comme l'autre, par sa place dans la page.
+  if (!el || !el.matches || !el.matches(CHAMPS) || !root.contains(el)) return null
+  const tous = [...root.querySelectorAll(CHAMPS)]
+  let sel = null
+  try { sel = [el.selectionStart, el.selectionEnd] } catch { sel = null }
+  return { index: tous.indexOf(el), tag: el.tagName, sel }
+}
+function rendreCurseur(c) {
+  if (!c || c.index < 0) return
+  const el = [...root.querySelectorAll(CHAMPS)][c.index]
+  if (!el || el.tagName !== c.tag || document.activeElement === el) return
+  try {
+    el.focus({ preventScroll: true })
+    if (c.sel && c.sel[0] !== null && typeof el.setSelectionRange === 'function') el.setSelectionRange(c.sel[0], c.sel[1])
+  } catch { /* un champ qui refuse la sélection (nombre) garde au moins le focus */ }
 }
 
 /**
@@ -215,6 +262,7 @@ function render({ preserveScroll = false } = {}) {
   currentKey = key
   const scrollY = preserveScroll ? window.scrollY : 0
   const activeId = preserveScroll ? document.activeElement?.dataset?.fieldKey : null
+  const place = preserveScroll ? curseur() : null
   currentRoute = key
 
   // On n'impose l'accueil que s'il n'y a rien à montrer : avec un scénario
@@ -292,7 +340,7 @@ function render({ preserveScroll = false } = {}) {
       if (activeId) {
         const next = document.querySelector(`[data-field-key="${CSS.escape(activeId)}"]`)
         if (next) next.focus()
-      }
+      } else rendreCurseur(place)
     } else {
       window.scrollTo(0, 0)
     }

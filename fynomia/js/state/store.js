@@ -195,7 +195,27 @@ class Store {
     this.scheduleSave()
     // `silent` sert aux saisies caractère par caractère : l'état est à jour,
     // mais on n'impose pas un redessin qui ferait perdre le focus.
+    //
+    // Une saisie silencieuse reste due à l'interface : tant qu'on ne l'a pas
+    // annoncée, l'avancement, le guide et le pilotage lisent l'état d'avant.
+    // On la note ; la sortie du champ la rend (voir flushSilent).
+    this.silentPending = !!silent
     if (!silent) this.emit('data')
+  }
+
+  /**
+   * Annoncer ce qui a été saisi en silence.
+   *
+   * Une description tapée dans Mon projet était enregistrée mais jamais
+   * annoncée : l'étape restait « à poser » dans le pilotage, le compteur ne
+   * bougeait pas, le guide continuait de la réclamer — jusqu'au changement de
+   * page. L'application appelle ceci à la sortie de chaque champ.
+   */
+  flushSilent() {
+    if (!this.silentPending) return false
+    this.silentPending = false
+    this.emit('data')
+    return true
   }
 
   undo() {

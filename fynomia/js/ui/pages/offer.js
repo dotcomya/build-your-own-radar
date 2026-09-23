@@ -522,7 +522,9 @@ function switchBlock({ a, cle, titre, sous, neutre, corps, refresh }) {
     refresh()
   }
 
-  return h('section', { class: `tuneblock ${on ? 'is-on' : ''}` },
+  // Chaque réglage a son repère, allumé ou non : une étape du dossier qui y
+  // mène doit pouvoir l'entourer même quand l'interrupteur est éteint.
+  return h('section', { class: `tuneblock ${on ? 'is-on' : ''}`, 'data-gap': `tune-${cle}` },
     h('div', { class: 'tuneblock-head' },
       enableToggle(on, bascule, `tune-${a.id}-${cle}`),
       h('div', { class: 'spacer' },

@@ -1,0 +1,13 @@
+{
+  "name": "fynomia-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tous les contrôles de Fynomia : paquet, comptabilité, interface.",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:rapide": "node run.mjs --rapide"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

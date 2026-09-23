@@ -306,3 +306,18 @@ dans un moteur de rendu et livré en image. Pour l'avoir ici, il faudrait :
 
 Tant que ces quatre points ne sont pas tranchés, le SVG dessiné est le meilleur
 compromis : moderne, cohérent, gratuit, et sans dépendance.
+
+## Les contrôles avant toute mise en ligne
+
+Une seule commande rejoue tout — la construction du fichier livré, les
+contrôles comptables et fiscaux, et les suites d'interface dans un vrai
+navigateur (rendus sur quatorze métiers et trois formats, onglets,
+défilement, propagation d'un changement jusqu'aux états financiers, paie en
+direct, synthèses, interactions, fichier livré) :
+
+```bash
+cd fynomia/tests && npm install && npm test
+```
+
+Le détail est dans `tests/README.md`. Une seule croix doit suffire à arrêter
+une mise en ligne.

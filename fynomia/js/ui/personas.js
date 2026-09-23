@@ -53,7 +53,7 @@ const opexTotalField = () => (s) => {
  */
 export const LEVERS = {
   price: {
-    gap: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' },
+    gap: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' },
     group: 'vendre', page: 'offre',
     label: 'Prix de vente unitaire', unit: '€ HT', field: 'unitPrice',
     target: activityField('unitPrice'), min: 0, max: 5000, step: 1,
@@ -63,7 +63,7 @@ export const LEVERS = {
     why: "Le levier le plus direct sur la marge : il n'augmente aucun coût.",
   },
   subscription: {
-    gap: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' },
+    gap: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' },
     group: 'vendre', page: 'offre',
     label: 'Abonnement mensuel', unit: '€ HT/mois', field: 'recurringPrice',
     target: activityField('recurringPrice'), min: 0, max: 2000, step: 1,
@@ -73,7 +73,7 @@ export const LEVERS = {
     why: "Chaque euro d'abonnement se cumule sur toute la durée du contrat.",
   },
   unitCost: {
-    gap: { route: 'offre', view: 'offres', sec: 'prix', openAll: true, anchor: 'prix' },
+    gap: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' },
     group: 'couter', page: 'offre',
     label: 'Coût de revient unitaire', unit: '€ HT', field: 'unitPrice',
     target: activityField('unitCost'), min: 0, max: 5000, step: 1,
@@ -110,7 +110,7 @@ export const LEVERS = {
     why: 'Le point de départ de toute la trajectoire.',
   },
   paymentLag: {
-    gap: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' },
+    gap: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' },
     group: 'caisse', page: 'offre',
     label: 'Délai de paiement client', unit: 'mois', field: 'paymentLag',
     target: activityField('paymentLag'), min: 0, max: 6, step: 1,
@@ -118,7 +118,7 @@ export const LEVERS = {
     why: "Sans effet sur le résultat, décisif sur la trésorerie.",
   },
   deposit: {
-    gap: { route: 'offre', view: 'offres', sec: 'paiement', openAll: true, anchor: 'paiement' },
+    gap: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' },
     group: 'caisse', page: 'offre',
     label: 'Acompte à la commande', unit: '%', field: 'deposit',
     target: activityField('deposit'), min: 0, max: 1, step: 0.05, percent: true,

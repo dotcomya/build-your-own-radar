@@ -204,7 +204,7 @@ function settingsPanel(s, income, set, refresh) {
             h('div', { class: 'note-title' }, "Aucun poste n'est défini"),
             "Ajoute ton poste dans l'onglet Équipe pour que ta rémunération entre dans le calcul."),
 
-      h('div', { class: 'grid grid-2' },
+      h('div', { class: 'grid grid-2', 'data-gap': 'dividendes' },
         numberField({ label: 'Ta part du capital', field: 'rdShare', value: f.equityShare, percent: true,
           hint: 'Détermine la part des dividendes qui te revient.', onInput: (v) => set({ equityShare: v }) }),
         numberField({ label: 'Part du résultat distribuée', field: 'rdShare', value: f.dividendPayout, percent: true,
