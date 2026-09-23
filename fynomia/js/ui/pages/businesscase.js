@@ -12,6 +12,7 @@ import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 import { pickYear } from './dashboard.js'
+import { lignesBanquier, banquierVerifie, tableauBanquier } from '../banquier.js'
 
 export function renderBusinessCase(navigate, refresh) {
   const s = store.scenario
@@ -66,6 +67,11 @@ export function renderBusinessCase(navigate, refresh) {
     readiness(s, r, y),
 
     h('div', { class: 'card mb' },
+      h('div', { class: 'card-body' }, banquierVerifie(r)),
+      h('div', { class: 'table-wrap' }, tableauBanquier(r, yearLabel)),
+    ),
+
+    h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Exporter'), h('span', { class: 'spacer' })),
       h('div', { class: 'card-body' },
         h('div', { class: 'grid grid-3' },
@@ -81,7 +87,7 @@ export function renderBusinessCase(navigate, refresh) {
       h('div', { class: 'card-body' },
         h('div', { class: 'grid grid-4 kpis mb' },
           stat("Chiffre d'affaires", euro(r.pnl.revenue[y], { compact: true }), yearLabel(y)),
-          stat('EBITDA', euro(r.pnl.ebitda[y], { compact: true }), pct(k.ebitdaMargin[y]) + ' du CA'),
+          stat('EBE', euro(r.pnl.ebitda[y], { compact: true }), pct(k.ebitdaMargin[y]) + ' du CA'),
           stat('Point mort', k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '—', 'Seuil de rentabilité'),
           stat('Financement', k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Couvert', 'Besoin identifié'),
         ),
@@ -97,7 +103,7 @@ export function renderBusinessCase(navigate, refresh) {
             categories: YEAR_CATEGORIES,
             series: [
               { label: "Chiffre d'affaires", values: r.pnl.revenue, color: PALETTE[0] },
-              { label: 'EBITDA', values: r.pnl.ebitda, color: PALETTE[1] },
+              { label: 'EBE', values: r.pnl.ebitda, color: PALETTE[1] },
               { label: 'Résultat net', values: r.pnl.netResult, color: PALETTE[2] },
             ],
           })),
@@ -170,8 +176,8 @@ function narrative(s, r, y) {
 
   paras.push([
     k.firstEbitdaPositiveYear !== null
-      ? `L'exploitation dégage un EBITDA positif dès ${theYear(k.firstEbitdaPositiveYear)} (${euro(p.ebitda[k.firstEbitdaPositiveYear])}). `
-      : `L'EBITDA reste négatif sur l'ensemble de l'horizon modélisé. `,
+      ? `L'exploitation dégage un EBE positif dès ${theYear(k.firstEbitdaPositiveYear)} (${euro(p.ebitda[k.firstEbitdaPositiveYear])}). `
+      : `L'EBE reste négatif sur l'ensemble de l'horizon modélisé. `,
     k.firstProfitableYear !== null
       ? `Le résultat net devient positif en ${yearLabel(k.firstProfitableYear).toLowerCase()}, à ${euro(p.netResult[k.firstProfitableYear])}, `
       : `Le résultat net demeure négatif sur les cinq exercices, `,
@@ -271,42 +277,24 @@ function readiness(s, r, y) {
   const f = s.financing || {}
   const equity = [...(f.equityFounders || []), ...(f.equityInvestors || [])]
     .reduce((a, x) => a + (Number(x.amount) || 0), 0)
-  const debt = (f.loans || []).reduce((a, x) => a + (Number(x.amount) || 0), 0)
   const revenue5 = p.revenue[4] || 0
   const growth = p.revenue[0] > 0 && p.revenue[2] > 0 ? Math.pow(p.revenue[2] / p.revenue[0], 1 / 2) - 1 : null
-  const ebitdaY = p.ebitda[y] || 0
-  const annuity = debt > 0 ? debt / 7 : 0
+
+  // La banque lit les ratios de l'échéancier réel : apport, couverture des
+  // échéances par la CAF, endettement en années de CAF, trésorerie, point
+  // mort. Ce qui est sans objet — pas de prêt, pas d'échéance — ne compte pas.
+  const banque = lignesBanquier(r).filter((l) => l.etat !== 'na')
 
   const audiences = [
     {
       key: 'banque', label: 'Banque', glyph: '▤',
       brief: "Elle prête contre une capacité de remboursement et un apport, pas contre une idée.",
-      checks: [
-        {
-          label: 'Apport personnel',
-          ok: debt === 0 || equity >= debt * 0.8,
-          value: debt > 0 ? `${euro(equity, { compact: true })} pour ${euro(debt, { compact: true })} empruntés` : euro(equity, { compact: true }),
-          need: "Une banque suit rarement au-delà de un pour un. Prévois un apport au moins égal au prêt demandé.",
-        },
-        {
-          label: 'Capacité de remboursement',
-          ok: annuity === 0 || ebitdaY > annuity * 1.3,
-          value: annuity > 0 ? `${euro(ebitdaY, { compact: true })} d'EBITDA pour ${euro(annuity, { compact: true })} d'annuité` : 'Aucun emprunt',
-          need: "L'EBITDA doit couvrir l'annuité avec de la marge. Réduis le montant, allonge la durée, ou remonte la rentabilité.",
-        },
-        {
-          label: 'Trésorerie jamais négative',
-          ok: k.fundingNeed === 0,
-          value: k.fundingNeed > 0 ? `${euro(k.fundingNeed)} manquants` : 'Couverte sur cinq ans',
-          need: "Un plan qui passe sous zéro n'est pas finançable en l'état : le trou doit être comblé avant de présenter.",
-        },
-        {
-          label: 'Point mort atteint',
-          ok: !!k.breakEven[y] && p.revenue[y] >= k.breakEven[y],
-          value: k.breakEven[y] ? `Seuil à ${euro(k.breakEven[y], { compact: true })}` : 'Incalculable',
-          need: "Montre l'exercice où le chiffre d'affaires dépasse les charges, et à quel mois.",
-        },
-      ],
+      checks: banque.map((l) => ({
+        label: l.titre,
+        ok: l.etat === 'ok',
+        value: l.valeur,
+        need: [l.lu, l.faire].filter(Boolean).join(' '),
+      })),
     },
     {
       key: 'angel', label: 'Business angel', glyph: '◈',
@@ -444,7 +432,7 @@ function buildCsv(r) {
   push('Impôts et taxes', p.duties)
   push('Subventions', p.grants)
   push('Charges de personnel', p.payroll)
-  push('EBITDA', p.ebitda)
+  push('EBE', p.ebitda)
   push('Amortissements', p.amortisation)
   push("Résultat d'exploitation", p.ebit)
   push('Charges financières', p.interest)

@@ -139,6 +139,7 @@ function fiscalPanel(refresh) {
       h('div', {}, h('h2', {}, `Paramètres fiscaux et sociaux — France ${FISCAL_YEAR}`),
         h('div', { class: 'tiny muted' }, overridden > 0 ? `${overridden} paramètre(s) personnalisé(s)` : 'Valeurs par défaut')),
       h('span', { class: 'spacer' }),
+      h('a', { class: 'btn btn-sm btn-quiet', href: '#/methode' }, 'La méthode et les sources →'),
       overridden > 0 && h('button', { class: 'btn btn-sm', onClick: () => { store.update((sc) => { sc.fiscal = {} }, { label: 'Réinitialisation fiscale' }); toast('Paramètres réinitialisés.', 'ok'); refresh() } }, 'Réinitialiser'),
     ),
     h('div', { class: 'card-body' },

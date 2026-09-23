@@ -13,6 +13,7 @@
  * ce qu'on lui demandera d'expliquer.
  */
 
+import { mentionCourte } from '../../state/reperes.js'
 import { h, svg, euro, pct, num, monthLabel, narrow } from '../dom.js'
 import { barChart, entree } from '../charts.js'
 import { storyline } from '../story.js'
@@ -248,7 +249,7 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
         })),
         grandsChiffres([
           { cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none', note: () => croissance(p.revenue) },
-          { cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
+          { cle: 'ebitda', label: 'EBE', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
             note: (y) => (taux(n(p.ebitda[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebitda[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.') },
           { cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
             note: () => (aPremier ? `Premier bénéfice en année ${premier + 1}.` : 'Pas de bénéfice sur cinq ans.') },
@@ -565,7 +566,7 @@ function modele(s, r) {
     ltv > 0 && cac > 0 ? fait('Valeur d’un client / coût pour le trouver', `${num(ltv / cac, 1)} ×`,
       `Un client rapporte ${euro(ltv)} sur toute sa durée de vie et coûte ${euro(cac)} à acquérir. En dessous de 3, la croissance coûte plus qu’elle ne rapporte.`,
       ltv / cac >= 3 ? 'is-good' : 'is-bad') : null,
-    fait('Marge d’EBITDA, année 3', taux(k.ebitdaMargin?.[y], p.revenue[y]),
+    fait('Marge d’EBE, année 3', taux(k.ebitdaMargin?.[y], p.revenue[y]),
       tauxDit(k.ebitdaMargin?.[y], p.revenue[y], 'La part du chiffre d’affaires que l’activité garde une fois l’équipe et les frais payés. C’est elle qui dit si le modèle devient rentable en grandissant.'),
       taux(k.ebitdaMargin?.[y], p.revenue[y]) === '—' ? '' : n(k.ebitdaMargin?.[y]) > 0 ? 'is-good' : 'is-bad'),
   )
@@ -640,7 +641,7 @@ function ratios(s, r) {
     ['Chiffre d’affaires en année 3', euro(n(p.revenue[2])), 'La taille de l’affaire à moyen terme.'],
     ['Croissance moyenne par an', (() => { const a = n(p.revenue[0]), b = n(p.revenue[4]); return a > 0 && b > 0 && b / a <= 1000 ? pct(Math.pow(b / a, 1 / 4) - 1, 0) : '—' })(), 'Le rythme auquel l’entreprise grandit, de l’année 1 à l’année 5.'],
     ['Marge brute', taux(k.marginRate?.[2], p.revenue[2]), 'Ce que rapporte chaque vente avant les frais fixes.'],
-    ['Marge d’EBITDA en année 3', taux(k.ebitdaMargin?.[2], p.revenue[2]), 'Ce que l’activité garde une fois tout le fonctionnement payé.'],
+    ['Marge d’EBE en année 3', taux(k.ebitdaMargin?.[2], p.revenue[2]), 'Ce que l’activité garde une fois tout le fonctionnement payé.'],
     ['Premier bénéfice', k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Année ${k.firstProfitableYear + 1}` : 'Pas sur cinq ans', 'Quand l’entreprise arrête de consommer l’argent investi.'],
     ['Besoin de financement', n(k.fundingNeed) > 0 ? euro(n(k.fundingNeed)) : 'Aucun', 'Le plus bas que touche le compte : le minimum à lever.'],
     ['Autonomie', k.runwayMonths === null || k.runwayMonths === undefined ? 'Illimitée' : `${num(n(k.runwayMonths), 0)} mois`, 'Combien de temps la trésorerie tient sans nouvelle rentrée.'],
@@ -780,7 +781,7 @@ function avis(s, r) {
             : L.inv ? `+${pct(Math.max(0, cagr), 0)} par an : lent pour un investisseur` : `+${pct(Math.max(0, cagr), 0)} par an : une croissance prudente, qui rassure`,
         points: [
           { v: `${eur(a1)} → ${eur(a5)}`, t: 'de chiffre d’affaires, de l’année 1 à l’année 5.' },
-          n(p.revenue[4]) > 0 && Math.abs(em5) <= 10 ? { v: pct(em5, 0), t: 'de marge d’EBITDA en année 5 : ce que l’activité garde une fois tout payé.' } : null,
+          n(p.revenue[4]) > 0 && Math.abs(em5) <= 10 ? { v: pct(em5, 0), t: 'de marge d’EBE en année 5 : ce que l’activité garde une fois tout payé.' } : null,
         ].filter(Boolean),
         question: cagr > 1 ? 'D’où viennent ces clients, mois par mois, et combien coûte chacun ?' : L.inv ? 'Qu’est-ce qui ferait passer ta croissance à la vitesse supérieure ?' : 'Tes volumes tiennent-ils avec l’équipe et le local prévus ?',
         action: cagr > 1 && !(s.marketing || []).length ? { label: 'Chiffrer ce que coûte un nouveau client', go: { route: 'offre', view: 'acquisition', anchor: 'campagnes' } } : null,
@@ -794,7 +795,7 @@ function avis(s, r) {
     ton: !margeOk || marge <= 0 || (ratio !== null && ratio < 1) ? 'bad' : sousRepere || (ratio !== null && ratio < 3) || mois < 0 ? 'watch' : 'good',
     titre: margeOk && marge > 0 ? `Chaque euro vendu t’en laisse ${Math.round(marge * 100)} centimes` : 'Tes ventes ne couvrent pas ce qu’elles coûtent',
     points: [
-      margeOk ? { v: pct(marge, 0), t: bm.grossMargin ? `de marge brute en année 3, pour ${pct(bm.grossMargin[0], 0)} à ${pct(bm.grossMargin[1], 0)} dans ton métier.` : 'de marge brute en année 3.' } : null,
+      margeOk ? { v: pct(marge, 0), t: bm.grossMargin ? `de marge brute en année 3, pour ${pct(bm.grossMargin[0], 0)} à ${pct(bm.grossMargin[1], 0)} dans ton métier.` : 'de marge brute en année 3.', src: !!bm.grossMargin } : null,
       { v: mois >= 0 ? `Année ${mois + 1}` : 'Pas atteint', t: mois >= 0 ? 'le point mort : les ventes de l’année couvrent tous les frais.' : 'le point mort : sur cinq ans, les ventes ne couvrent jamais tous les frais.' },
       ratio !== null ? { v: `${num(ratio, 1)} ×`, t: 'ce qu’un client rapporte face à ce qu’il coûte à trouver (3 × au moins).' } : null,
     ].filter(Boolean),
@@ -848,7 +849,7 @@ function avis(s, r) {
       : seul ? 'Tu portes le projet seul'
         : `${team.length} postes, ${eur(masse1)} de salaires la première année`,
     points: [
-      ratioMasse !== null && ratioMasse <= 10 ? { v: pct(ratioMasse, 0), t: bm.payrollRatio ? `du chiffre d’affaires part en salaires en année 3, pour ${pct(bm.payrollRatio[0], 0)} à ${pct(bm.payrollRatio[1], 0)} dans ton métier.` : 'du chiffre d’affaires part en salaires en année 3.' } : null,
+      ratioMasse !== null && ratioMasse <= 10 ? { v: pct(ratioMasse, 0), t: bm.payrollRatio ? `du chiffre d’affaires part en salaires en année 3, pour ${pct(bm.payrollRatio[0], 0)} à ${pct(bm.payrollRatio[1], 0)} dans ton métier.` : 'du chiffre d’affaires part en salaires en année 3.', src: !!bm.payrollRatio } : null,
       moi && n(moi.monthlyGross) > 0 ? { v: `${eur(n(moi.monthlyGross) * 12)}`, t: 'brut par an pour toi : un plan où le fondateur ne vit pas n’est pas crédible.' } : null,
     ].filter(Boolean),
     question: L.inv ? 'Qui, dans l’équipe, sait vendre, et qui sait livrer ?' : 'Qui fait tourner l’affaire si tu t’arrêtes deux semaines ?',
@@ -889,6 +890,15 @@ const UNITE = new RegExp(' (\\u20AC|%|mois|\\u00D7)', 'g')
 const insecable = (t) => String(t ?? '').replace(UNITE, '\u00a0$1')
 
 /**
+ * La source d'un repère, à côté du repère : l'éditeur et l'année des
+ * données, et la page qui explique la méthode.
+ */
+export function sourceRepere(sectorKey = store.scenario?.meta?.sectorKey) {
+  return h('a', { class: 'repere-src', href: '#/methode', title: 'D’où vient cette fourchette' },
+    `Repère ${mentionCourte(sectorKey)} · méthode`)
+}
+
+/**
  * L'avis, mis en page comme une note d'associé : qui parle, le verdict, les
  * chiffres qui le fondent, la question qu'on te posera, et le geste suivant.
  */
@@ -904,7 +914,8 @@ function conseil(a, { cote = false, court = false } = {}) {
     ),
     h('h4', { class: 'avis-titre' }, insecable(a.titre)),
     points.length ? h('ul', { class: 'avis-points' },
-      ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, insecable(x.t))))) : null,
+      ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, insecable(x.t)),
+        x.src ? [' ', sourceRepere()] : null))) : null,
     a.question ? h('div', { class: 'avis-question' },
       h('span', {}, 'On te demandera'),
       h('p', {}, `« ${a.question} »`),

@@ -49,7 +49,7 @@ export const PART_GUIDES = {
   resultats: {
     role: "Les états financiers normalisés : compte de résultat, trésorerie, bilan, fiscalité — et ce qui te reste personnellement, une fois tout payé.",
     why: "C'est le format que comprennent un expert-comptable, une banque et un investisseur. Rien n'est à saisir ici : tout est calculé à partir de tes pages de saisie, ce qui garantit qu'aucune ligne ne se contredit.",
-    first: "Le passage de l'EBITDA au résultat net. C'est là qu'on voit ce que coûtent vraiment les amortissements, les intérêts et l'impôt.",
+    first: "Le passage de l'EBE au résultat net. C'est là qu'on voit ce que coûtent vraiment les amortissements, les intérêts et l'impôt.",
   },
   'business-case': {
     role: "Le dossier prêt à envoyer : ton projet, les chiffres qui le soutiennent, et l'export en PowerPoint ou en tableur.",

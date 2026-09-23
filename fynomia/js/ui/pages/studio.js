@@ -711,7 +711,7 @@ function leviersChiffres(s, r) {
           ),
           h('span', { class: 'sy-lever-gain' },
             h('b', {}, `${gain >= 0 ? '+' : ''}${euro(gain)}`),
-            h('span', {}, tresor ? 'de trésorerie' : 'd’EBITDA'),
+            h('span', {}, tresor ? 'de trésorerie' : 'd’EBE'),
           ),
         )
       }),
@@ -760,7 +760,7 @@ function sixChiffres(r, s, y, choisir, navigate) {
     h('div', { class: 'sy-sec-head' },
       h('div', {},
         h('h2', { class: 'sy-act-title' }, 'Les six chiffres qu’un banquier te demandera'),
-        h('p', { class: 'sy-act-say' }, 'EBITDA, point mort, trésorerie au plus bas, montant à financer, marge brute, autonomie : clique sur chacun pour savoir ce qu’il veut dire, pourquoi on te le demande, et où le corriger.'),
+        h('p', { class: 'sy-act-say' }, 'EBE, point mort, trésorerie au plus bas, montant à financer, marge brute, autonomie : clique sur chacun pour savoir ce qu’il veut dire, pourquoi on te le demande, et où le corriger.'),
       ),
       anneeChips(y, choisir),
     ),
@@ -926,14 +926,14 @@ function equation(r, y) {
  *
  * Une perte descend, elle ne disparaît pas. Survoler une colonne donne le
  * compte de résultat entier de l'année — c'est là que se lit le détail de
- * l'EBITDA ; cliquer choisit l'exercice lu partout ailleurs.
+ * l'EBE ; cliquer choisit l'exercice lu partout ailleurs.
  */
 function cinqAns(r, y, choisir) {
   const p = r.pnl
   const k = r.kpis
   const series = [
     { cle: 'ca', nom: 'Chiffre d’affaires', vals: p.revenue },
-    { cle: 'ebitda', nom: 'EBITDA', vals: p.ebitda },
+    { cle: 'ebitda', nom: 'EBE', vals: p.ebitda },
     { cle: 'net', nom: 'Résultat net', vals: p.netResult },
   ]
   const seuils = (k.breakEven || []).map((v) => n(v))
@@ -1002,7 +1002,7 @@ function compteAnnee(r, y) {
     n(p.duties[y]) ? l('− Impôts et taxes', p.duties[y]) : null,
     n(p.grants[y]) ? l('+ Subventions', p.grants[y]) : null,
     l('− Salaires et cotisations', p.payroll[y]),
-    l('= EBITDA', p.ebitda[y], true),
+    l('= EBE', p.ebitda[y], true),
     n(p.amortisation[y]) ? l('− Amortissements', p.amortisation[y]) : null,
     l('= Résultat d’exploitation', p.ebit[y], true),
     n(p.interest[y]) ? l('− Intérêts', p.interest[y]) : null,
@@ -1035,7 +1035,7 @@ function cascade(r, y) {
     { nom: 'Charges externes', v: -Math.abs(n(p.external[y])) },
     { nom: 'Impôts et taxes', v: -Math.abs(n(p.duties[y])) },
     { nom: 'Personnel', v: -Math.abs(n(p.payroll[y])) },
-    { nom: 'EBITDA', v: n(p.ebitda[y]), solde: true },
+    { nom: 'EBE', v: n(p.ebitda[y]), solde: true },
     { nom: 'Amortissements', v: -Math.abs(n(p.amortisation[y])) },
     { nom: 'Frais financiers', v: -Math.abs(n(p.interest[y])) },
     { nom: 'Impôt sur les sociétés', v: -Math.abs(n(p.corporateTax[y])) },
@@ -1165,7 +1165,7 @@ function ratios(r, y) {
   const rien = '—'
   const lignes = [
     { nom: 'Marge brute', v: ca > 0 ? pct(n(k.marginRate[y])) : rien, dit: 'Ce qui reste après les achats' },
-    { nom: 'Marge d’EBITDA', v: ca > 0 ? pct(n(k.ebitdaMargin[y])) : rien, dit: 'Ce que dégage l’exploitation' },
+    { nom: 'Marge d’EBE', v: ca > 0 ? pct(n(k.ebitdaMargin[y])) : rien, dit: 'Ce que dégage l’exploitation' },
     { nom: 'Marge nette', v: ca > 0 ? pct(n(k.netMargin[y])) : rien, dit: 'Ce qui reste, tout payé' },
     { nom: 'Masse salariale', v: ca > 0 ? pct(n(k.payrollRatio[y])) : rien, dit: 'Part du CA versée en salaires' },
     { nom: 'Point mort', v: k.breakEven[y] ? euro(n(k.breakEven[y]), { compact: true }) : rien, dit: 'CA qui couvre les charges' },

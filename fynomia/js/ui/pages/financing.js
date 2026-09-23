@@ -10,6 +10,7 @@ import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 import { gardePage } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
+import { banquierVerifie, tableauBanquier } from '../banquier.js'
 
 /**
  * Les sources de financement.
@@ -279,6 +280,9 @@ export function renderFinancing(navigate, refresh) {
         }),
       ),
       source && (f[source.key] || []).length ? sourceDetail(source, f[source.key], r, { add, drop, setField }) : null,
+      // Ce que le banquier recalculera de son côté, avec l'échéancier réel :
+      // on le lit ici, là où l'on règle l'apport et le prêt.
+      r ? h('div', { class: 'card mb' }, h('div', { class: 'card-body' }, banquierVerifie(r))) : null,
     ) : null,
 
     view === 'tresorerie' && r ? h('div', { class: 'view' },
@@ -305,6 +309,10 @@ export function renderFinancing(navigate, refresh) {
       h('div', { class: 'card' },
         h('div', { class: 'card-head' }, h('h2', {}, 'Plan de financement'), helpButton('planFinancement')),
         h('div', { class: 'table-wrap' }, financingPlanTable(r)),
+      ),
+      h('div', { class: 'card mt' },
+        h('div', { class: 'card-head' }, h('h2', {}, 'Les chiffres du banquier'), helpButton('caf')),
+        h('div', { class: 'table-wrap' }, tableauBanquier(r)),
       ),
     ) : null,
 

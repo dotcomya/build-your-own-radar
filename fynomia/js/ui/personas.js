@@ -3,7 +3,7 @@
  *
  * Chaque persona ne se contente pas de masquer des pages : il possède des
  * leviers — des champs réels du modèle qu'il peut bouger — et il lit l'effet de
- * ses décisions dans une monnaie commune, l'euro d'EBITDA. C'est ce qui fait la
+ * ses décisions dans une monnaie commune, l'euro d'EBE. C'est ce qui fait la
  * différence entre être propriétaire d'un sujet et le regarder.
  *
  * Un levier décrit où écrire dans le scénario, dans quelles bornes, et comment
@@ -201,12 +201,12 @@ export const LEVERS = {
  */
 export const METRICS = {
   revenue: { label: "Chiffre d'affaires", read: (r, y) => r.pnl.revenue[y], format: money, glossary: null, higher: true },
-  ebitda: { label: 'EBITDA', read: (r, y) => r.pnl.ebitda[y], format: money, glossary: 'ebitda', higher: true },
+  ebitda: { label: 'EBE', read: (r, y) => r.pnl.ebitda[y], format: money, glossary: 'ebitda', higher: true },
   netResult: { label: 'Résultat net', read: (r, y) => r.pnl.netResult[y], format: money, higher: true },
   breakEven: { label: 'Point mort', read: (r, y) => r.kpis.breakEven[y], format: money, glossary: 'pointMort', higher: false },
   grossMargin: { label: 'Marge brute', read: (r, y) => r.pnl.grossMargin[y], format: money, glossary: 'margeBrute', higher: true },
   marginRate: { label: 'Taux de marge', read: (r, y) => r.kpis.marginRate[y], format: (v) => pct(v), glossary: 'marginRate', higher: true },
-  ebitdaMargin: { label: "Marge d'EBITDA", read: (r, y) => r.kpis.ebitdaMargin[y], format: (v) => pct(v), higher: true },
+  ebitdaMargin: { label: "Marge d'EBE", read: (r, y) => r.kpis.ebitdaMargin[y], format: (v) => pct(v), higher: true },
   fundingNeed: { label: 'Besoin de financement', read: (r) => r.kpis.fundingNeed, format: money, glossary: 'tresorerie', higher: false },
   runway: { label: 'Autonomie', read: (r) => r.kpis.runwayMonths, format: (v) => (v === null ? '—' : `${num(v, 0)} mois`), glossary: 'runway', higher: true },
   cashLow: { label: 'Point bas de trésorerie', read: (r) => r.kpis.cashLow.value, format: money, higher: true },

@@ -51,7 +51,8 @@ export function gardeBloc(liste, navigate, { classe = '', ouvert = false, court 
     h('div', { class: 'garde-body' },
       h('p', { class: 'garde-say' }, alertes
         ? 'Ces chiffres sont très loin de ce qu’on voit dans ton métier. Souvent, c’est un zéro de trop ou une unité confondue. Corrige-les, ou valide-les si c’est voulu.'
-        : 'Ces chiffres sortent de l’ordinaire pour ton métier. Si c’est voulu, valide-les : on n’en parlera plus.'),
+        : 'Ces chiffres sortent de l’ordinaire pour ton métier. Si c’est voulu, valide-les : on n’en parlera plus.',
+        ' ', h('a', { class: 'repere-src', href: '#/methode' }, 'D’où viennent ces repères')),
       h('ul', { class: 'garde-list' },
         ...liste.map((x) => h('li', { class: `garde-item is-${x.niveau}` },
           h('div', { class: 'garde-item-txt' },

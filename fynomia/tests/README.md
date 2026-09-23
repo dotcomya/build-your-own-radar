@@ -38,6 +38,9 @@ mise en ligne.
 | `15-pitch` | l'onglet pitch investisseur : huit parties dans l'ordre, titre et phrase sur une ligne, l'avis à droite, les courbes et le récit de la trajectoire, le besoin affiché est celui du moteur, les trois mises en page (récit, tableau, diapos), le dossier aligné, au téléphone sans débordement |
 | `16-parcours` | le parcours d'accueil : aucune question pré-remplie ni cochée, « ton business prend forme » vu une seule fois puis le pitch, un seul ordre de recommandations (relire d'abord, jamais les délais ni la hausse des prix en tête), partagé par le guide et le pilotage |
 | `17-createurs` | la micro-entreprise se choisit sous le statut et règle sa nature d'activité, son versement libératoire et sa franchise ; pas d'IS ni de TVA ; le fondateur devient un prélèvement ; l'ACRE allège la première année ; le prêt d'honneur, avec son réseau, entre en trésorerie ; « Ce que je touche » descend de ce qu'il encaisse à ce qui lui reste |
+| `18-banquier` | le dossier parle d'EBE et de CAF ; « ce que ton banquier va vérifier » tient en cinq lignes validées, justes ou à revoir ; la couverture vient de l'échéancier réel, pas d'une dette divisée par sept ; le tableau du banquier ; un prêt d'honneur améliore l'apport |
+| `19-effet` | la saisie dit ce qu'elle déplace, sous le champ : « +… € de résultat en année N » en vert, en rouge à la baisse, à la frappe pour un salaire ; un autre champ ou une autre page l'efface |
+| `20-methode` | chaque repère du métier cite sa source et son année ; la page Méthode donne les fourchettes, leur calcul, leur construction, leurs limites et toutes les sources avec lien |
 
 ## Options
 

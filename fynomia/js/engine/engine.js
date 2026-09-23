@@ -14,6 +14,7 @@ import { payrollSeries } from './payroll.js'
 import { vatModel, taxesAndDuties, jeiStatus, researchCredits, corporateTax } from './taxes.js'
 import { fiscalContext } from './fiscal-fr-2026.js'
 import { isMicro, microSeries, acreMonths } from './micro.js'
+import { bankRatios } from './bank.js'
 import { SECTORS } from '../state/sectors.js'
 
 export { MONTHS, YEARS }
@@ -157,8 +158,11 @@ export function compute(scenario) {
     ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing,
   })
 
+  // ─── 15. Ce que le banquier va vérifier ───────────────────────────────
+  const bank = bankRatios({ scenario, financing, netResultY, amortisationY, balance, kpis })
+
   return {
-    months: MONTHS, years: YEARS,
+    months: MONTHS, years: YEARS, bank,
     startDate: scenario.meta?.startDate || `${new Date().getFullYear()}-01-01`,
     revenue: { monthly: revenueMonthly, yearly: revenueY, cash: revenueCash, perActivity: rev.perActivity, campaigns: rev.campaigns, units: rev.totals.units },
     variableCost: { monthly: rev.totals.variableCost, yearly: variableCostY },

@@ -201,6 +201,9 @@ class Store {
     // On la note ; la sortie du champ la rend (voir flushSilent).
     this.silentPending = !!silent
     if (!silent) this.emit('data')
+    // Après le redessin éventuel : ce qui suit une saisie — l'effet affiché à
+    // côté du champ — trouve la page telle qu'elle est désormais.
+    if (recompute) this.emit('saisie')
   }
 
   /**

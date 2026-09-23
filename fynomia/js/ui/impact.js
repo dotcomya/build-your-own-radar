@@ -18,7 +18,7 @@ import store from '../state/store.js'
 /** Indicateurs suivis par le rail, dans cet ordre. */
 const TRACKED = [
   { key: 'revenue', label: "CA", higher: true },
-  { key: 'ebitda', label: 'EBITDA', higher: true },
+  { key: 'ebitda', label: 'EBE', higher: true },
   { key: 'breakEven', label: 'Point mort', higher: false },
   { key: 'fundingNeed', label: 'Financement', higher: false },
 ]
@@ -141,20 +141,20 @@ export function resetLiveNumbers() { lastSeen.clear() }
  * Sert à répondre « pourquoi ce chiffre bouge-t-il ? » sans quitter la page.
  */
 export const CAUSAL_CHAINS = {
-  unitPrice: ["Prix", "Chiffre d'affaires", 'Marge brute', 'EBITDA', 'Impôt', 'Trésorerie'],
-  recurringPrice: ['Abonnement', 'CA récurrent', 'Marge brute', 'EBITDA', 'Trésorerie'],
-  unitCost: ['Coût de revient', 'Marge brute', 'EBITDA', 'Point mort'],
-  churnMonthly: ['Attrition', 'Base installée', 'CA récurrent', 'EBITDA'],
-  monthlyGrowth: ['Croissance', 'Volumes', "Chiffre d'affaires", 'EBITDA'],
-  startUnits: ['Volumes', "Chiffre d'affaires", 'Marge brute', 'EBITDA'],
-  monthlyBudget: ['Budget', 'Clients acquis', "Chiffre d'affaires", 'EBITDA'],
+  unitPrice: ["Prix", "Chiffre d'affaires", 'Marge brute', 'EBE', 'Impôt', 'Trésorerie'],
+  recurringPrice: ['Abonnement', 'CA récurrent', 'Marge brute', 'EBE', 'Trésorerie'],
+  unitCost: ['Coût de revient', 'Marge brute', 'EBE', 'Point mort'],
+  churnMonthly: ['Attrition', 'Base installée', 'CA récurrent', 'EBE'],
+  monthlyGrowth: ['Croissance', 'Volumes', "Chiffre d'affaires", 'EBE'],
+  startUnits: ['Volumes', "Chiffre d'affaires", 'Marge brute', 'EBE'],
+  monthlyBudget: ['Budget', 'Clients acquis', "Chiffre d'affaires", 'EBE'],
   leadToClient: ['Conversion', 'Clients acquis', 'CAC', "Chiffre d'affaires"],
-  monthlyGross: ['Brut', 'Coût employeur', 'Point mort', 'EBITDA', 'Trésorerie'],
+  monthlyGross: ['Brut', 'Coût employeur', 'Point mort', 'EBE', 'Trésorerie'],
   count: ['Effectif', 'Masse salariale', 'Point mort', 'Trésorerie'],
   startMonth: ['Date d\'embauche', 'Masse salariale', 'Trésorerie', 'Besoin de financement'],
   paymentLag: ['Délai de paiement', 'Créances clients', 'BFR', 'Trésorerie'],
   deposit: ['Acompte', 'Encaissements', 'BFR', 'Besoin de financement'],
-  monthlyAmount: ['Charge fixe', 'Point mort', 'EBITDA'],
+  monthlyAmount: ['Charge fixe', 'Point mort', 'EBE'],
   openingCash: ['Trésorerie de départ', 'Point bas', 'Besoin de financement'],
 }
 

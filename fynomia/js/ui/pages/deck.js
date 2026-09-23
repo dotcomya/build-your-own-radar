@@ -220,7 +220,7 @@ function build(s, r) {
           h('tbody', {},
             row("Chiffre d'affaires", p.revenue),
             row('Marge brute', p.grossMargin),
-            row('EBITDA', p.ebitda),
+            row('EBE', p.ebitda),
             row('Résultat net', p.netResult, 'total'),
           ),
         ),

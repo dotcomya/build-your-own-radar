@@ -39,7 +39,7 @@ export function figureSet(r, s, y) {
   const runway = Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? k.runwayMonths : null
   const marginRate = p.revenue[y] > 0 ? k.marginRate[y] : null
   return [
-    { label: 'EBITDA', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du chiffre d'affaires`,
+    { label: 'EBE', value: euro(p.ebitda[y], { compact: true }), note: `${pct(k.ebitdaMargin[y], 0)} du chiffre d'affaires`,
       tone: p.ebitda[y] >= 0 ? 'pos' : 'neg', spark: p.ebitda, go: 'resultats', help: 'ebitda', ico: 'entreprises' },
     { label: 'Point mort', value: k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '\u2014',
       note: reached ? 'franchi cette ann\u00e9e' : 'pas encore franchi',

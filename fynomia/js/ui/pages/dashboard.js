@@ -25,6 +25,7 @@ import { vocabulary } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
+import { mentionCourte } from '../../state/reperes.js'
 import { verdict } from '../../engine/verdict.js'
 import { lookup } from '../glossary.js'
 import { icon } from '../icons.js'
@@ -387,7 +388,7 @@ function verdictCard(health, navigate) {
  *
  * C'étaient des tuiles qui emmenaient ailleurs d'un clic. Deux défauts : on
  * quittait la page sans savoir ce qu'on allait y faire, et celui qui ne
- * connaît pas le mot « EBITDA » n'avait qu'un « ? » à survoler pour
+ * connaît pas le mot « EBE » n'avait qu'un « ? » à survoler pour
  * l'apprendre. Un clic déplie maintenant la définition, ce à quoi le chiffre
  * sert et le piège à connaître ; le déplacement vient après, par un bouton
  * qui dit où il mène.
@@ -456,7 +457,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
       categories: YEAR_CATEGORIES,
       series: [
         { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
-        { label: 'EBITDA', values: p.ebitda, color: PALETTE[2] },
+        { label: 'EBE', values: p.ebitda, color: PALETTE[2] },
         { label: 'Résultat net', values: p.netResult, color: PALETTE[5] },
       ],
       line: k.breakEven.some((v) => v)
@@ -578,7 +579,7 @@ function moneyFlow(r, y) {
   if (p.external[y]) items.push({ label: 'Charges externes', value: -p.external[y] })
   if (p.duties[y]) items.push({ label: 'Impôts et taxes', value: -p.duties[y] })
   if (p.payroll[y]) items.push({ label: 'Personnel', value: -p.payroll[y] })
-  items.push({ label: 'EBITDA', value: p.ebitda[y], total: true })
+  items.push({ label: 'EBE', value: p.ebitda[y], total: true })
   if (p.amortisation[y]) items.push({ label: 'Amortis.', value: -p.amortisation[y] })
   if (p.interest[y]) items.push({ label: 'Frais fin.', value: -p.interest[y] })
   if (p.corporateTax[y]) items.push({ label: 'Impôt sociétés', value: -p.corporateTax[y] })
@@ -611,7 +612,7 @@ function actionsPanel(r, s, navigate, refresh) {
         h('div', { class: 'tiny muted' },
           suggestion.shortOfCash
             ? 'Classé par ce que cela libère en trésorerie'
-            : "Classé par ce que cela ajoute à l'EBITDA"),
+            : "Classé par ce que cela ajoute à l'EBE"),
       ),
     ),
     h('div', { class: 'actions' },
@@ -623,7 +624,7 @@ function actionsPanel(r, s, navigate, refresh) {
           h('p', { class: 'action-why' }, a.rationale),
         ),
         h('div', { class: 'action-gains' },
-          gainRow('EBITDA', a.delta.ebitda, true),
+          gainRow('EBE', a.delta.ebitda, true),
           a.delta.fundingNeed !== 0 && gainRow('Financement', a.delta.fundingNeed, false),
           a.delta.breakEven !== null && a.delta.breakEven !== 0 && gainRow('Point mort', a.delta.breakEven, false),
           a.delta.founderMonthly !== 0 && gainRow('Pour toi', a.delta.founderMonthly, true, '/mois'),
@@ -687,7 +688,8 @@ function gaugePanel(r, s, sector, y) {
     h('div', { class: 'card-head' },
       h('div', {},
         h('h2', {}, 'Position dans le métier'),
-        h('div', { class: 'tiny muted' }, `Comparé aux ordres de grandeur observés — ${sector.label.toLowerCase()}`),
+        h('div', { class: 'tiny muted' }, `Comparé aux ordres de grandeur observés — ${sector.label.toLowerCase()}. `,
+          h('a', { class: 'repere-src', href: '#/methode' }, `Repères ${mentionCourte(s.meta?.sectorKey)} · méthode`)),
       ),
     ),
     h('div', { class: 'gauges' }, ...gauges),

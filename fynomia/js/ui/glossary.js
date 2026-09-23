@@ -14,13 +14,13 @@ export const GLOSSARY = {
     formula: "Chiffre d'affaires = Σ (prix de vente × volumes vendus)",
     how: "Fynomia additionne, mois par mois, les ventes à l'unité et les abonnements en cours de chaque offre, au prix de l'année concernée.",
     use: "C'est la première ligne du compte de résultat et la taille de ton entreprise vue de l'extérieur. Un investisseur le regarde pour situer l'échelle, jamais pour juger la santé.",
-    watch: "Un chiffre d'affaires en forte hausse avec une marge négative accélère la faillite. Regarde-le toujours avec l'EBITDA à côté.",
+    watch: "Un chiffre d'affaires en forte hausse avec une marge négative accélère la faillite. Regarde-le toujours avec l'EBE à côté.",
   },
   resultatNet: {
     title: 'Résultat net',
     what: "Ce qui reste à l'entreprise une fois tout payé : achats, salaires, charges, amortissements, intérêts et impôt sur les sociétés. C'est le bénéfice au sens strict.",
     formula: "Résultat net = Résultat avant impôt − Impôt sur les sociétés + Crédits d'impôt",
-    how: "Fynomia part de l'EBITDA, retire les amortissements et les frais financiers, applique l'impôt sur les sociétés au barème en vigueur, puis ajoute les crédits d'impôt recherche et innovation auxquels tu as droit.",
+    how: "Fynomia part de l'EBE, retire les amortissements et les frais financiers, applique l'impôt sur les sociétés au barème en vigueur, puis ajoute les crédits d'impôt recherche et innovation auxquels tu as droit.",
     use: "C'est lui qui décide de ce que tu peux distribuer en dividendes et de ce qui vient grossir tes fonds propres. Une banque regarde sa progression sur trois exercices.",
     watch: "Un résultat net positif ne garantit pas que tu aies de l'argent en banque : l'amortissement ne sort pas de trésorerie, les délais clients, si.",
   },
@@ -41,19 +41,34 @@ export const GLOSSARY = {
     watch: "Certaines charges fixes de Fynomia sont calculées en pourcentage du chiffre d'affaires. Le point mort varie donc légèrement d'une année sur l'autre : retiens l'ordre de grandeur, pas la décimale.",
   },
   ebitda: {
-    title: "EBITDA — Excédent brut d'exploitation",
+    title: "EBE — Excédent brut d'exploitation",
     what: "Ce que ton activité génère réellement, avant de tenir compte de la façon dont tu l'as financée, de tes investissements passés et de l'impôt. C'est la mesure la plus proche de « est-ce que mon métier gagne de l'argent ? ».",
-    formula: "EBITDA = Valeur ajoutée + Subventions − Impôts et taxes − Charges de personnel",
+    formula: "EBE = Valeur ajoutée + Subventions − Impôts et taxes − Charges de personnel",
     how: "Fynomia part du chiffre d'affaires, retire les achats directement liés aux ventes (marge brute), puis les charges externes (valeur ajoutée), puis les impôts de production et la masse salariale chargée.",
-    use: "L'EBITDA sert à comparer deux entreprises indépendamment de leur structure financière. C'est aussi la base de la plupart des valorisations : une société se négocie souvent en multiple de son EBITDA.",
-    watch: "EBITDA n'est pas trésorerie. Tu peux afficher un EBITDA positif et manquer d'argent en banque si tes clients paient à 60 jours. Regarde toujours les deux ensemble.",
+    use: "L'EBE sert à comparer deux entreprises indépendamment de leur structure financière. C'est aussi la base de la plupart des valorisations : une société se négocie souvent en multiple de son EBE. Les investisseurs anglo-saxons disent EBITDA : c'est, à quelques retraitements près, le même chiffre.",
+    watch: "L'EBE n'est pas de la trésorerie. Tu peux afficher un EBE positif et manquer d'argent en banque si tes clients paient à 60 jours. Regarde toujours les deux ensemble.",
+  },
+  caf: {
+    title: "CAF — Capacité d'autofinancement",
+    what: "L'argent que ton activité laisse chaque année, une fois tout payé — fournisseurs, salaires, intérêts, impôt — pour rembourser tes emprunts, investir ou constituer une réserve.",
+    formula: 'CAF = Résultat net + Dotations aux amortissements',
+    how: "Fynomia part du résultat net et y rajoute les amortissements : une charge qui figure dans les comptes mais qui ne sort pas de la banque, puisque l'investissement a déjà été payé.",
+    use: "C'est le chiffre qu'un banquier compare à tes remboursements. Une CAF qui couvre 1,3 fois le capital à rembourser chaque année laisse une marge de sécurité ; en dessous de 1, les échéances se paient avec la trésorerie, jusqu'à ce qu'il n'y en ait plus.",
+    watch: "La CAF est annuelle et ignore le calendrier des encaissements : une CAF confortable peut cacher un mois difficile. Regarde aussi le point bas de trésorerie.",
+  },
+  capaciteRemboursement: {
+    title: 'Capacité de remboursement',
+    what: "Le nombre d'années de CAF qu'il faudrait pour rembourser toutes tes dettes bancaires, si tu y consacrais tout.",
+    formula: 'Capacité de remboursement = Dettes financières ÷ CAF',
+    how: "Fynomia divise, à la clôture de chaque exercice, le capital restant dû sur tes prêts bancaires par la CAF de l'année. Les prêts d'honneur, remboursés par toi personnellement, n'y entrent pas.",
+    use: "Un banquier est à l'aise sous trois à quatre ans. Au-delà, il demandera plus d'apport, un prêt plus court ou une garantie.",
   },
   ebit: {
     title: "Résultat d'exploitation (EBIT)",
-    what: "L'EBITDA diminué des amortissements. Autrement dit : ce que gagne l'activité une fois pris en compte l'usure de ce que tu as acheté.",
-    formula: "EBIT = EBITDA − Dotations aux amortissements",
+    what: "L'EBE diminué des amortissements. Autrement dit : ce que gagne l'activité une fois pris en compte l'usure de ce que tu as acheté.",
+    formula: "Résultat d'exploitation = EBE − Dotations aux amortissements",
     how: "Chaque investissement est étalé sur sa durée d'amortissement. Un ordinateur à 1 800 € amorti sur 3 ans pèse 50 € par mois dans tes comptes, même si tu l'as payé en une fois.",
-    use: "L'EBIT montre si ton modèle supporte le renouvellement de son outil de production. Un EBITDA positif mais un EBIT négatif signale une activité trop gourmande en capital.",
+    use: "L'EBIT montre si ton modèle supporte le renouvellement de son outil de production. Un EBE positif mais un EBIT négatif signale une activité trop gourmande en capital.",
   },
   margeBrute: {
     title: 'Marge brute',
@@ -151,13 +166,6 @@ export const GLOSSARY = {
     use: "Pour une équipe de recherche, l'économie atteint fréquemment plusieurs dizaines de milliers d'euros par an.",
     watch: "L'exonération d'impôt sur les sociétés attachée au statut JEI a été supprimée pour les entreprises créées depuis 2024. Seule subsiste l'exonération de cotisations. Le seuil de dépenses de R&D a par ailleurs été relevé pour les créations les plus récentes.",
   },
-  capaciteAutofinancement: {
-    title: "CAF — Capacité d'autofinancement",
-    what: "L'argent que l'activité dégage réellement sur l'année, avant décisions d'investissement et de financement.",
-    formula: 'CAF = Résultat net + Dotations aux amortissements',
-    how: "Les amortissements sont une charge comptable qui ne sort pas de la caisse : on les réintègre au résultat.",
-    use: "La CAF mesure ton capacité à rembourser tes emprunts et à financer ta croissance sans lever d'argent. Les banques la comparent aux annuités de remboursement.",
-  },
   bilan: {
     title: 'Bilan',
     what: "Une photographie du patrimoine de l'entreprise à la clôture : ce qu'elle possède à gauche, ce qu'elle doit et ce qui appartient aux associés à droite.",
@@ -180,5 +188,8 @@ export const GLOSSARY = {
     use: "C'est le multiplicateur du point mort. Passer de 40 % à 50 % de marge réduit ton point mort d'un cinquième, sans vendre une unité de plus.",
   },
 }
+
+// L'ancien nom de la même notion : les renvois qui l'utilisent lisent la fiche à jour.
+GLOSSARY.capaciteAutofinancement = GLOSSARY.caf
 
 export function lookup(key) { return GLOSSARY[key] || null }

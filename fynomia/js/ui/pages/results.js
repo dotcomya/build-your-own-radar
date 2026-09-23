@@ -95,7 +95,7 @@ const VUES = {
 /**
  * L'exercice en quatre chiffres.
  *
- * Chiffre d'affaires, EBITDA, résultat net, trésorerie à la clôture : les
+ * Chiffre d'affaires, EBE, résultat net, trésorerie à la clôture : les
  * quatre montants qu'un banquier lit avant tout le reste. Chacun dit ce qu'il
  * vaut par rapport à ce qui compte — le point mort, le chiffre d'affaires, le
  * point bas du compte — et ses cinq exercices se cliquent.
@@ -119,7 +119,7 @@ function quatreChiffres(r, an, choisir) {
         : 'Hors taxes. Aucun point mort calculable sans marge positive.'),
     },
     {
-      cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton,
+      cle: 'ebitda', label: 'EBE', valeurs: p.ebitda, ton,
       pourquoi: 'Ce que ton activité gagne vraiment, avant les choix de financement et la fiscalité. C’est le chiffre qu’un investisseur compare d’une entreprise à l’autre.',
       note: (y) => `${part(p.ebitda[y], y) ? `${part(p.ebitda[y], y)}, ` : ''}avant amortissements, intérêts et impôts.`,
     },
@@ -225,7 +225,7 @@ function pnlView(r, level) {
         h('tbody', {},
           line("Chiffre d'affaires", p.revenue, { cls: 'highlight' }),
           line('Marge brute', p.grossMargin, { help: 'margeBrute' }),
-          line("EBITDA", p.ebitda, { help: 'ebitda' }),
+          line("EBE", p.ebitda, { help: 'ebitda' }),
           line('Résultat net', p.netResult, { cls: 'total' }),
           rate('marge nette', k.netMargin),
         ),
@@ -250,8 +250,8 @@ function pnlView(r, level) {
             line('Impôts et taxes', p.duties, { negate: true }),
             ...(p.grants.some((v) => v) ? [line("Subventions d'exploitation", p.grants)] : []),
             line('Charges de personnel', p.payroll, { negate: true, help: 'superBrut' }),
-            line("EBITDA — Excédent brut d'exploitation", p.ebitda, { cls: 'highlight', help: 'ebitda' }),
-            rate('marge d\'EBITDA', k.ebitdaMargin),
+            line("EBE — Excédent brut d'exploitation", p.ebitda, { cls: 'highlight', help: 'ebitda' }),
+            rate('marge d\'EBE', k.ebitdaMargin),
             line('Dotations aux amortissements', p.amortisation, { negate: true }),
             line("Résultat d'exploitation", p.ebit, { help: 'ebit' }),
             line('Charges financières', p.interest, { negate: true }),
@@ -274,7 +274,7 @@ function pnlView(r, level) {
             series: [
               { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
               { label: 'Marge brute', values: p.grossMargin, color: PALETTE[1] },
-              { label: 'EBITDA', values: p.ebitda, color: PALETTE[3] },
+              { label: 'EBE', values: p.ebitda, color: PALETTE[3] },
               { label: 'Résultat net', values: p.netResult, color: PALETTE[2] },
             ],
           }),

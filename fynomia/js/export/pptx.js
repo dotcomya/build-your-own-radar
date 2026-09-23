@@ -382,7 +382,7 @@ export function buildDeck(scenario, result, profile) {
     ...slideHeader('Les chiffres clés', `Exercice de référence : ${YEARS[refYear].toLowerCase()}`),
     ...kpiRow([
       { label: "CHIFFRE D'AFFAIRES", value: eurC(p.revenue[refYear]), sub: YEARS[refYear] },
-      { label: 'EBITDA', value: eurC(p.ebitda[refYear]), sub: `${formatPct(k.ebitdaMargin[refYear])} du CA`, color: p.ebitda[refYear] >= 0 ? MINT : ROSE },
+      { label: 'EBE', value: eurC(p.ebitda[refYear]), sub: `${formatPct(k.ebitdaMargin[refYear])} du CA`, color: p.ebitda[refYear] >= 0 ? MINT : ROSE },
       { label: 'RÉSULTAT NET', value: eurC(p.netResult[refYear]), sub: `${formatPct(k.netMargin[refYear])} du CA`, color: p.netResult[refYear] >= 0 ? MINT : ROSE },
       { label: 'POINT MORT', value: k.breakEven[refYear] ? eurC(k.breakEven[refYear]) : '—', sub: k.breakEven[refYear] && p.revenue[refYear] >= k.breakEven[refYear] ? 'Atteint' : 'Non atteint', color: AMBER },
     ], 1650000),
@@ -397,12 +397,12 @@ export function buildDeck(scenario, result, profile) {
 
   // 3 — Trajectoire
   slides.push(slideXml([
-    ...slideHeader('Trajectoire financière', "Chiffre d'affaires, EBITDA et résultat net sur cinq exercices"),
+    ...slideHeader('Trajectoire financière', "Chiffre d'affaires, EBE et résultat net sur cinq exercices"),
     ...barChartShapes({
       x: M, y: 1600000, w: CONTENT_W, h: 2900000, categories: YEARS.map((y) => y.replace('Année ', 'A')),
       series: [
         { label: "Chiffre d'affaires", values: p.revenue, color: BRAND },
-        { label: 'EBITDA', values: p.ebitda, color: MINT },
+        { label: 'EBE', values: p.ebitda, color: MINT },
         { label: 'Résultat net', values: p.netResult, color: AMBER },
       ],
     }),
@@ -420,7 +420,7 @@ export function buildDeck(scenario, result, profile) {
       { cells: ['Charges externes', ...p.external.map((v) => eur(-v))] },
       { cells: ['Charges de personnel', ...p.payroll.map((v) => eur(-v))] },
       { cells: ['Impôts et taxes', ...p.duties.map((v) => eur(-v))] },
-      { cells: ['EBITDA', ...p.ebitda.map(eur)], emphasis: true },
+      { cells: ['EBE', ...p.ebitda.map(eur)], emphasis: true },
       { cells: ['Amortissements', ...p.amortisation.map((v) => eur(-v))] },
       { cells: ["Résultat d'exploitation", ...p.ebit.map(eur)] },
       ...(p.credits.some((v) => v) ? [{ cells: ["Crédits d'impôt", ...p.credits.map(eur)] }] : []),
@@ -589,7 +589,7 @@ export function buildDeck(scenario, result, profile) {
     const cards = suggestions.best.flatMap((a, i) => {
       const y = 1700000 + i * (cardH + 220000)
       const gains = [
-        a.delta.ebitda ? { label: 'EBITDA', value: eur(a.delta.ebitda), good: a.delta.ebitda > 0 } : null,
+        a.delta.ebitda ? { label: 'EBE', value: eur(a.delta.ebitda), good: a.delta.ebitda > 0 } : null,
         a.delta.fundingNeed ? { label: 'FINANCEMENT', value: eur(a.delta.fundingNeed), good: a.delta.fundingNeed < 0 } : null,
         a.delta.breakEven ? { label: 'POINT MORT', value: eur(a.delta.breakEven), good: a.delta.breakEven < 0 } : null,
       ].filter(Boolean).slice(0, 3)
@@ -612,7 +612,7 @@ export function buildDeck(scenario, result, profile) {
     slides.push(slideXml([
       ...slideHeader('Ce qui changerait le plus', suggestions.shortOfCash
         ? 'Classé par ce que cela libère en trésorerie'
-        : "Classé par ce que cela ajoute à l'EBITDA"),
+        : "Classé par ce que cela ajoute à l'EBE"),
       ...cards,
       textBox({ x: M, y: 5750000, w: CONTENT_W, h: 300000,
         text: `Chaque estimation rejoue le modèle entier avec la modification, sur l'exercice de référence (${YEARS[suggestions.year].toLowerCase()}).`,
@@ -633,7 +633,7 @@ export function buildDeck(scenario, result, profile) {
     // nommé. Trois lignes suffiraient à donner le résultat, mais c'est le
     // chemin qui explique pourquoi l'écart est si grand.
     const steps = [
-      { label: "EBITDA de l'entreprise", value: p.ebitda[refYear], kind: 'start' },
+      { label: "EBE de l'entreprise", value: p.ebitda[refYear], kind: 'start' },
       // Ta rémunération est déjà déduite au-dessus : la rappeler en gris
       // évite de croire, trois lignes plus bas, qu'elle sort du résultat net.
       ...(incomeRow.employerCost > 0 ? [{ label: 'dont ta rémunération chargée', value: -incomeRow.employerCost, kind: 'info',

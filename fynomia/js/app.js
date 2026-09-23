@@ -8,6 +8,8 @@
 
 import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
+import { installEffet, reposerEffet } from './ui/effet.js'
+import { renderMethode } from './ui/pages/methode.js'
 import store from './state/store.js'
 import { PERSONAS, getPersona } from './ui/personas.js'
 import { resetLiveNumbers } from './ui/impact.js'
@@ -58,6 +60,8 @@ const PAGES = {
   resultats: { no: '07', label: 'États financiers', render: renderResults },
   'business-case': { no: '08', label: 'Business case', render: renderBusinessCase },
   reglages: { no: '09', label: 'Réglages', render: renderSettings },
+  // Hors du rail : on y arrive depuis chaque repère « dans ton métier ».
+  methode: { no: '—', label: 'Méthode', render: renderMethode },
 }
 
 // Les anciennes adresses restent valides : un lien enregistré ou un signet ne
@@ -106,7 +110,7 @@ function navigate(to, { move = true } = {}) {
   // Tout déplacement vers un autre module est un voyage.
   //
   // Seul « Y aller » l'armait, parce que lui seul passait par `goToGap`. Un
-  // clic sur l'EBITDA, sur le rail, sur « Les comptes » changeait d'écran
+  // clic sur l'EBE, sur le rail, sur « Les comptes » changeait d'écran
   // sans rien montrer du trajet — la même action se sentait ou non selon le
   // bouton qui la déclenchait. C'est armé ici, une fois, pour tous.
   if (move) armTravel('page'); else plain = true
@@ -356,6 +360,7 @@ function render({ preserveScroll = false } = {}) {
       window.scrollTo(0, 0)
     }
     settle()
+    reposerEffet()
   }
   const mode = takeTravel()
   if (mode) travel(swap, mode); else swap()
@@ -499,7 +504,7 @@ const shortLabel = (l) => ({ 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle
 /**
  * Le panneau latéral, une seule mécanique pour deux usages.
  *
- * Il servait au glossaire — « c'est quoi, l'EBITDA ». La note de chaque module
+ * Il servait au glossaire — « c'est quoi, l'EBE ». La note de chaque module
  * y entre maintenant aussi : c'est le même geste, au même endroit, avec la même
  * façon d'en sortir. Une explication ne pousse plus jamais la page.
  */
@@ -632,6 +637,7 @@ store.subscribe((_, reason) => {
 
 markJourney()
 installMotion()
+installEffet()
 // Le guide se redessine tout seul quand on le masque ou le rouvre.
 setCoachHost(() => render({ preserveScroll: true }))
 if (!location.hash) location.hash = store.scenario ? '#/tableau-de-bord' : '#/accueil'
