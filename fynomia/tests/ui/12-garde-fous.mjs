@@ -78,7 +78,7 @@ export default async function (t) {
   t.verifie(await p.locator('.sy-garde').count() === 1, 'plan sans ventes : la synthèse essai affiche déjà le garde-fou')
 
   // 4. Un plan qui vend : l'exemple, avec un abonnement à 490 000 € par mois.
-  const q = await t.page('bureau')
+  let q = await t.page('bureau')
   await t.exemple(q)
   await t.aller(q, 'offre', 900)
   await carteOuverte(q)
@@ -136,6 +136,12 @@ export default async function (t) {
 
   // 7. Une charge hors de proportion se dit sur sa ligne ; « Je valide » la
   // fait oublier, tant que le montant ne change pas.
+  // Sur un exemple neuf : l'abonnement à 490 000 € ci-dessus rendrait
+  // n'importe quelle charge raisonnable.
+  t.verifie(q.erreurs.length === 0, 'aucune erreur JavaScript (exemple)', q.erreurs.slice(0, 2))
+  await q.fermer()
+  q = await t.page('bureau')
+  await t.exemple(q)
   await t.aller(q, 'achats', 900)
   const montant = q.locator('.cost-row .cost-amount input').first()
   await montant.fill('900000')

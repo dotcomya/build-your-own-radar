@@ -191,7 +191,9 @@ export default async function (t, { rapide } = {}) {
   if (!rapide) {
     const q = await t.page('telephone')
     await t.exemple(q)
-    await t.aller(q, 'offre', 900)
+    // Les pages de saisie replient leurs cartes dans le bandeau : les états
+    // financiers, eux, les empilent.
+    await t.aller(q, 'resultats', 900)
     const barres = q.locator('.sx-bars.ch').nth(2)
     const avant = await barres.evaluate((x) => ({ vu: x.classList.contains('is-seen'), haut: x.getBoundingClientRect().top, vh: window.innerHeight }))
     t.verifie(avant.haut > avant.vh && !avant.vu, 'téléphone : les barres de la troisième carte attendent sous l’écran', avant)
