@@ -38,15 +38,38 @@ export default async function (t, { rapide } = {}) {
   const apres = await p.locator('.pitch .sx-card .sx-big-val').first().innerText()
   t.verifie(avant !== apres, 'choisir A4 change la trajectoire affichée', `${avant} → ${apres}`)
 
+  // La même tête que la synthèse essai, pour comparer les deux onglets.
+  t.verifie(await p.locator('.pitch-dossier .sy-hero').count() === 1, 'l’avancement du dossier est en tête, comme dans l’essai')
+  t.verifie(await p.locator('.pitch-dossier .sy-dossier').count() === 1, 'ce qui est fait et ce qui reste, page par page')
+  // L'avis d'un consultant sous chaque partie.
+  const avis = await p.$$eval('.pitch-avis p', (e) => e.map((x) => x.textContent.trim()))
+  t.verifie(avis.length === 7 && avis.every((x) => x.length > 40), 'l’avis de Fynomia sous chacune des sept parties', avis.length)
+  // Aucun pourcentage absurde.
+  const absurdes = await p.evaluate(() => (document.querySelector('.pitch').innerText.match(/-?\d[\d \u00a0\u202f]{3,}[ \u00a0]?%/g) || []).filter((x) => Math.abs(Number(x.replace(/[^\d-]/g, ''))) > 1000))
+  t.verifie(absurdes.length === 0, 'aucun pourcentage au-delà de 1 000 %', absurdes)
   t.verifie(await p.locator('.pitch-offre').count() >= 1, 'les offres sont listées avec leur prix')
   t.verifie(await p.locator('.pitch-poste').count() >= 1, 'l’équipe est listée')
   t.verifie(await p.locator('.pitch-risques > li').count() >= 2, 'les risques sont nommés')
   t.verifie(await p.locator('.pitch-ratio').count() === 7, 'les sept ratios qu’on te demandera')
   // Sans phrase d'accroche, la couverture le dit et y emmène.
   t.verifie(await p.locator('.pitch-cover .pitch-manque').count() === 1, 'sans description, la couverture propose de l’écrire')
+  // Le voyage : la page s'ouvre en haut (on lit son titre), puis la zone
+  // s'éclaire d'un reflet qui la traverse.
   await p.locator('.pitch-cover .pitch-manque').click()
-  await p.waitForTimeout(1200)
+  let vu = { haut: false, reflet: false, anneau: false }
+  for (let k = 0; k < 30 && !(vu.reflet && vu.anneau); k++) {
+    await p.waitForTimeout(100)
+    const e = await p.evaluate(() => {
+      const z = document.querySelector('[data-gap="pitch"]')
+      return { hash: location.hash, y: window.scrollY, reflet: !!z && z.classList.contains('is-shine'), anneau: !!z && z.classList.contains('spotlit') }
+    })
+    if (e.hash === '#/projet' && e.y === 0 && !e.reflet) vu.haut = true
+    if (e.reflet) vu.reflet = true
+    if (e.anneau) vu.anneau = true
+  }
   t.verifie(await p.evaluate(() => location.hash) === '#/projet', 'et emmène à Mon projet')
+  t.verifie(vu.haut, 'la page s’ouvre d’abord en haut, sur son titre')
+  t.verifie(vu.reflet && vu.anneau, 'puis la zone s’éclaire d’un reflet et de l’anneau')
   t.verifie(p.erreurs.length === 0, 'aucune erreur JavaScript', p.erreurs.slice(0, 2))
   await p.fermer()
 
