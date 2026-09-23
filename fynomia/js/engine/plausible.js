@@ -242,12 +242,12 @@ export function vraisemblance(scenario, result) {
     const nom = a.name ? `« ${a.name} »` : 'une offre'
     push(`prix:${a.id}`, gardePrix(s, a.unitPrice, { principale: k === 0 }), `Le prix de ${nom}`, GO.prix, { valeur: n(a.unitPrice) })
     push(`abo:${a.id}`, gardeAbonnement(s, a.recurringPrice), `L’abonnement de ${nom}`, GO.prix, { valeur: n(a.recurringPrice) })
-    if (a.volumes?.mode !== 'manual') push(`crois:${a.id}`, gardeCroissance(s, a.volumes?.monthlyGrowth), `La croissance de ${nom}`, GO.volumes)
+    if (a.volumes?.mode !== 'manual') push(`crois:${a.id}`, gardeCroissance(s, a.volumes?.monthlyGrowth), `La croissance de ${nom}`, GO.volumes, { valeur: n(a.volumes?.monthlyGrowth) })
   }
 
   for (const m of s.team || []) {
     const g = gardeSalaire(n(m.monthlyGross) * 12, m.contractType)
-    push(`salaire:${m.id}`, g, `Le salaire de « ${m.role || 'ce poste'} »`, GO.equipe)
+    push(`salaire:${m.id}`, g, `Le salaire de « ${m.role || 'ce poste'} »`, GO.equipe, { valeur: `${n(m.monthlyGross)}:${m.contractType || ''}` })
   }
 
   if (result && R) {
@@ -257,14 +257,14 @@ export function vraisemblance(scenario, result) {
     const e = ecart(ca, R.ca1)
     if (e && e.sens === 'haut' && niveau(e.fois)) {
       out.push({
-        cle: 'ca1', sortie: true, niveau: niveau(e.fois), sujet: 'Le chiffre d’affaires de la première année', go: GO.volumes,
+        cle: 'ca1', sortie: true, niveau: niveau(e.fois), valeur: Math.round(e.fois), sujet: 'Le chiffre d’affaires de la première année', go: GO.volumes,
         texte: `${euro(ca)} la première année, c’est ${fois(e.fois)} ce que font les plus grosses affaires de ton métier dès le départ (jusqu’à ${euro(R.ca1[1])}). Vérifie le prix et les volumes.`,
       })
     }
     if (net > 0 && R.ca1[1] > 0 && net / R.ca1[1] >= SEUILS.attention) {
       const f = net / R.ca1[1]
       out.push({
-        cle: 'net1', sortie: true, niveau: niveau(f), sujet: 'Le résultat de la première année', go: GO.prix,
+        cle: 'net1', sortie: true, niveau: niveau(f), valeur: Math.round(f), sujet: 'Le résultat de la première année', go: GO.prix,
         texte: `${euro(net)} de résultat net la première année : ${fois(f)} le chiffre d’affaires annuel des plus grosses affaires de ton métier. Un prix ou un volume a sans doute un zéro de trop.`,
       })
     }
@@ -284,7 +284,7 @@ export function vraisemblance(scenario, result) {
       if (!prixFaux && part < typ[0] / SEUILS.attention) {
         const f = part > 0 ? typ[0] / part : Infinity
         out.push({
-          cle: 'marge', niveau: 'attention', sujet: 'Le coût de revient', go: GO.charges,
+          cle: 'marge', niveau: 'attention', sujet: 'Le coût de revient', go: GO.charges, valeur: aucun ? 'aucun' : 'faible',
           texte: !aucun
             ? `Tes achats ne pèsent que ${pct(part, part < 0.01 ? 2 : 1)} du prix, ${fois(f)} moins que dans ton métier (en général ${pct(typ[0], 0)} à ${pct(typ[1], 0)}). Un coût de revient oublié ?`
             : `Aucun achat en face des ventes, alors que ton métier y consacre en général ${pct(typ[0], 0)} à ${pct(typ[1], 0)} du prix. Un coût de revient oublié ?`,
@@ -302,14 +302,63 @@ export function vraisemblance(scenario, result) {
     if (manque > 0 && prevu > 0 && manque / prevu >= SEUILS.alerte) {
       const x = manque / prevu
       out.push({
-        cle: 'financement', niveau: 'attention', sujet: 'Le financement', go: GO.sources,
+        cle: 'financement', niveau: 'attention', sujet: 'Le financement', go: GO.sources, valeur: Math.round(x),
         texte: `Tu prévois ${euro(prevu)} de financement, et il manque encore ${euro(manque)} au point bas : ${fois(x)} plus que prévu. Un montant sans ses zéros ?`,
       })
     }
   }
 
+  if (result) {
+    // Les charges : une ligne qui pèse à elle seule plusieurs fois ce que
+    // l'affaire vend dans sa meilleure année. Un loyer tapé à l'année dans un
+    // champ mensuel, un pourcentage saisi en entier (« 15 » pour 15 %), un
+    // coût par unité avec trois zéros de trop : le résultat plonge de
+    // plusieurs centaines de millions et rien ne le disait.
+    const caMax = Math.max(0, ...(result.pnl?.revenue || []).map(n))
+    for (const o of s.opex || []) {
+      if (o.enabled === false) continue
+      const ligne = (result.opex?.perItem || []).find((x) => x.id === o.id)
+      if (!ligne) continue
+      const an = Math.max(0, ...(ligne.yearly || []).map(n))
+      const k = (ligne.yearly || []).map(n).indexOf(an)
+      const nom = o.label ? `« ${o.label} »` : 'Une charge'
+      const valeur = `${o.mode}:${n(o.monthlyAmount)}:${n(o.pctRevenue)}:${n(o.perUnit)}:${n(o.perEmployee)}`
+      const go = { ...GO.charges, row: o.id }
+      if (o.mode === 'pctRevenue' && n(o.pctRevenue) > 1) {
+        out.push({
+          cle: `charge:${o.id}`, niveau: 'alerte', sujet: `La charge ${nom}`, go, valeur,
+          texte: `${pct(n(o.pctRevenue), 0)} des ventes : cette charge coûterait plus que tout ce que tu vends. As-tu voulu écrire ${pct(n(o.pctRevenue) / 100, 1)} ?`,
+        })
+        continue
+      }
+      // En dessous de cinquante mille euros par an, une charge ne met pas un
+      // plan à terre : on ne dit rien, même si les ventes sont encore nulles.
+      const plafond = Math.max(caMax, (R?.ca1?.[1] || 0) / 4, 50000)
+      if (an >= 50000 && an / plafond >= SEUILS.attention) {
+        const f = an / plafond
+        out.push({
+          cle: `charge:${o.id}`, niveau: niveau(f), sujet: `La charge ${nom}`, go, valeur,
+          texte: caMax > 0
+            ? `${euro(an)} en année ${k + 1}, c’est ${fois(an / caMax)} ce que l’affaire vend dans sa meilleure année (${euro(caMax)}). Un montant annuel saisi comme mensuel, ou un zéro de trop ?`
+            : `${euro(an)} en année ${k + 1}, sans aucune vente en face : un montant annuel saisi comme mensuel, ou un zéro de trop ?`,
+        })
+      }
+    }
+  }
+
+  // Ce que le fondateur a validé ne se redit pas — tant que la valeur ne
+  // bouge pas. S'il la change, l'avertissement peut revenir.
+  const valides = s.meta?.gardesValidees || {}
   const rang = { alerte: 0, attention: 1 }
-  return out.sort((a, b) => rang[a.niveau] - rang[b.niveau])
+  return out.filter((x) => valides[x.cle] !== signature(x)).sort((a, b) => rang[a.niveau] - rang[b.niveau])
+}
+
+/**
+ * Ce qui identifie un avertissement validé : la clé, et la valeur qui l'a
+ * déclenché. Une charge validée à 9 000 € qui passe à 900 000 € se redit.
+ */
+export function signature(x) {
+  return String(x?.valeur ?? x?.texte ?? '')
 }
 
 /** Les alertes qui doivent empêcher un verdict favorable. */

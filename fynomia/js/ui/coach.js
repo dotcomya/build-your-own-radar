@@ -20,7 +20,7 @@
  */
 
 import { h } from './dom.js'
-import { checklist, defer, resumeAll } from './checklist.js'
+import { checklist, defer, resumeAll, confirmer } from './checklist.js'
 import { goToGap } from './spotlight.js'
 import { changed } from './motion.js'
 import store from '../state/store.js'
@@ -61,8 +61,8 @@ export function coach(navigate) {
     h('div', { class: 'nextstep-body' },
       // Reproposer une ligne reportée sans le dire donnerait l'impression que
       // le guide n'écoute pas. Il le dit.
-      h('div', { class: `nextstep-tag ${c.again ? 'is-again' : ''}` },
-        c.again ? 'Tu l’avais remis à plus tard' : 'À poser maintenant'),
+      h('div', { class: `nextstep-tag ${c.again ? 'is-again' : ''} ${c.next.relire ? 'is-relire' : ''}` },
+        c.again ? 'Tu l’avais remis à plus tard' : c.next.relire ? 'À relire' : 'À poser maintenant'),
       h('div', { class: 'nextstep-do' }, c.next.label),
       h('div', { class: 'nextstep-unlock' }, c.next.why),
       h('div', { class: 'nextstep-actions' },
@@ -70,13 +70,20 @@ export function coach(navigate) {
           class: 'btn btn-primary nextstep-go',
           onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
         }, 'Y aller'),
-        // Une ligne de moins à poser ne doit jamais coûter un renoncement :
-        // on la reporte, on passe à la suivante, elle reviendra.
-        h('button', {
-          class: 'nextstep-later',
-          title: 'Passer à la suivante. Celle-ci reviendra.',
-          onClick: () => { defer(c.next.key); render() },
-        }, 'Plus tard'),
+        // Une réponse du parcours qu'on sait juste se valide sans y aller.
+        c.next.relire
+          ? h('button', {
+              class: 'nextstep-later',
+              title: 'Ce chiffre est bon : passer à la suite.',
+              onClick: () => confirmer(c.next.key, { silent: false }),
+            }, 'C’est bon')
+          // Une ligne de moins à poser ne doit jamais coûter un renoncement :
+          // on la reporte, on passe à la suivante, elle reviendra.
+          : h('button', {
+              class: 'nextstep-later',
+              title: 'Passer à la suivante. Celle-ci reviendra.',
+              onClick: () => { defer(c.next.key); render() },
+            }, 'Plus tard'),
       ),
       c.later > 0 ? h('button', {
         class: 'nextstep-back',

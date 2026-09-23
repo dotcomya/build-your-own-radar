@@ -9,7 +9,7 @@ import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 import { gardePage } from '../garde.js'
-import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
+import { chiffresDePage } from '../chiffres-pages.js'
 
 /**
  * Les sources de financement.
@@ -155,15 +155,15 @@ export function renderFinancing(navigate, refresh) {
   const view = views.some((v) => v && v.key === renderFinancing.view) ? renderFinancing.view : 'sources'
   renderFinancing.view = view
 
-  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('financement', refresh, navigate, { forme: 'cartes' })
+  // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
+  const chiffres = chiffresDePage('financement', refresh, navigate)
 
   return h('div', { class: 'content' },
 
     moduleShell({
       no: '05', title: 'Financement',
       lede: "Ce que tu réunis, et ce qu’il manque au point bas de trésorerie.",
-      figure: {
+      figure: chiffres ? null : {
         value: euro(totalRaised, { compact: true }),
         note: r && r.kpis.fundingNeed > 0
           ? `réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
@@ -174,9 +174,7 @@ export function renderFinancing(navigate, refresh) {
       actions: [view === 'sources' && source && (f[source.key] || []).length
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],
     }),
-    chiffres ? null : gardePage('financement', navigate),
-    chiffres,
-    partieTravail('financement', view, !!chiffres),
+    chiffres || gardePage('financement', navigate),
 
     view === 'sources' ? h('div', { class: 'view' },
       h('div', { class: 'sources', 'data-gap': 'sources' },

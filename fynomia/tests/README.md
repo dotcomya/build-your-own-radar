@@ -32,10 +32,11 @@ mise en ligne.
 | `09-livre` | le fichier livré fonctionne seul |
 | `10-pilotage` | une saisie (la description) fait avancer le compteur et coche le pilotage sans changer de page ; Tab garde le curseur |
 | `11-etapes` | chacune des trente lignes du dossier, cliquée, mène à sa page, trouve son champ et l'entoure (métier neuf et exemple) |
-| `12-garde-fous` | un chiffre hors de proportion se dit sous le champ, en tête de page et des synthèses ; le verdict passe à « À vérifier » ; aucun garde-fou sur un plan neuf |
+| `12-garde-fous` | un chiffre hors de proportion se dit sous le champ, en tête de page et des synthèses ; le verdict passe à « À vérifier » ; aucun garde-fou sur un plan neuf ; une charge démesurée se dit sur sa ligne et « Je valide » la fait oublier tant que le montant ne change pas |
 | `13-ajouts` | charge, investissement, poste, offre : l'ajout fait jaillir ses icônes, la ligne créée arrive éclairée ; la carte ouverte est soulevée, sans halo coloré ni animation en boucle |
-| `14-graphiques` | tout ce qui se révèle se révèle, et seulement à l'arrivée (ni au chargement, ni quand seul le bord dépasse) ; parties propres à chaque onglet des états financiers ; exercice partagé ; zoom mois par mois ; survol ; rien ne déborde au téléphone |
-| `15-pitch` | l'onglet pitch investisseur : sept parties dans l'ordre, chacune dit pourquoi elle compte, le besoin affiché est celui du moteur, la trajectoire suit l'exercice, au téléphone sans débordement |
+| `14-graphiques` | tout ce qui se révèle se révèle, et seulement à l'arrivée (ni au chargement, ni quand seul le bord dépasse) ; parties propres à chaque onglet des états financiers ; exercice partagé ; chiffres des pages de saisie en bandeau d'une ligne, titre à gauche, « i » sans texte ; zoom mois par mois ; survol ; rien ne déborde au téléphone |
+| `15-pitch` | l'onglet pitch investisseur : huit parties dans l'ordre, titre et phrase sur une ligne, l'avis à droite, les courbes et le récit de la trajectoire, le besoin affiché est celui du moteur, les trois mises en page (récit, tableau, diapos), le dossier aligné, au téléphone sans débordement |
+| `16-parcours` | le parcours d'accueil : aucune question pré-remplie ni cochée, « ton business prend forme » vu une seule fois puis le pitch, un seul ordre de recommandations (relire d'abord, jamais les délais ni la hausse des prix en tête), partagé par le guide et le pilotage |
 
 ## Options
 

@@ -16,7 +16,7 @@
 import { h } from './dom.js'
 import { goToGap } from './spotlight.js'
 import store from '../state/store.js'
-import { vraisemblance } from '../engine/plausible.js'
+import { vraisemblance, signature } from '../engine/plausible.js'
 
 /** Tout ce qui sort de l'ordinaire dans le plan courant. */
 export function gardesDuPlan(s = store.scenario, r = store.result) {
@@ -32,33 +32,38 @@ export function gardesDuPlan(s = store.scenario, r = store.result) {
  * combien, et le bouton qui mène au champ. On sait qu'il y a quelque chose
  * sans que ça prenne la place du travail.
  */
-export function gardeBloc(liste, navigate, { classe = '', ouvert = false } = {}) {
+export function gardeBloc(liste, navigate, { classe = '', ouvert = false, court = false } = {}) {
   if (!liste || !liste.length) return null
   const alertes = liste.filter((x) => x.niveau === 'alerte').length
   const d = h('details', {
-    class: `garde ${alertes ? 'is-alerte' : 'is-attention'} ${classe}`,
+    class: `garde ${alertes ? 'is-alerte' : 'is-attention'} ${court ? 'is-court' : ''} ${classe}`,
     open: ouvert || gardeOuverts.has(classe) || null, 'data-garde': String(liste.length),
   },
     h('summary', { class: 'garde-pill' },
       h('span', { class: 'garde-sign', 'aria-hidden': 'true' }),
-      h('span', { class: 'garde-pill-txt' }, liste.length > 1
-        ? `${liste.length} chiffres à vérifier`
-        : `${liste[0].sujet} est à vérifier`),
-      h('span', { class: 'garde-pill-more' }, 'Voir pourquoi'),
+      h('span', { class: 'garde-pill-txt' }, court
+        ? `${liste.length} à vérifier`
+        : liste.length > 1
+          ? `${liste.length} chiffres à vérifier`
+          : `${liste[0].sujet} est à vérifier`),
+      court ? null : h('span', { class: 'garde-pill-more' }, 'Voir pourquoi'),
     ),
     h('div', { class: 'garde-body' },
       h('p', { class: 'garde-say' }, alertes
-        ? 'Ces chiffres sont très loin de ce qu’on voit dans ton métier. Souvent, c’est un zéro de trop ou une unité confondue. Les résultats en dépendent : vérifie-les d’abord.'
-        : 'Ces chiffres sortent de l’ordinaire pour ton métier. Si c’est voulu, rien à faire.'),
+        ? 'Ces chiffres sont très loin de ce qu’on voit dans ton métier. Souvent, c’est un zéro de trop ou une unité confondue. Corrige-les, ou valide-les si c’est voulu.'
+        : 'Ces chiffres sortent de l’ordinaire pour ton métier. Si c’est voulu, valide-les : on n’en parlera plus.'),
       h('ul', { class: 'garde-list' },
         ...liste.map((x) => h('li', { class: `garde-item is-${x.niveau}` },
           h('div', { class: 'garde-item-txt' },
             h('b', {}, x.sujet),
             h('span', {}, x.texte),
           ),
-          x.go && navigate
-            ? h('button', { class: 'garde-go', onClick: (e) => goToGap(x.go, navigate, e.currentTarget) }, 'Corriger →')
-            : null,
+          h('div', { class: 'garde-acts' },
+            h('button', { class: 'garde-ok', onClick: () => valider(x) }, 'Je valide'),
+            x.go && navigate
+              ? h('button', { class: 'garde-go', onClick: (e) => goToGap(x.go, navigate, e.currentTarget) }, 'Corriger →')
+              : null,
+          ),
         )),
       ),
     ),
@@ -71,7 +76,32 @@ export function gardeBloc(liste, navigate, { classe = '', ouvert = false } = {})
 const gardeOuverts = new Set()
 
 /** Le bloc d'une page de saisie : seulement ce qui s'y corrige. */
-export function gardePage(route, navigate) {
+export function gardePage(route, navigate, { court = false } = {}) {
   const liste = gardesDuPlan().filter((x) => x.go?.route === route)
-  return gardeBloc(liste, navigate, { classe: 'is-page' })
+  return gardeBloc(liste, navigate, { classe: 'is-page', court })
+}
+
+/**
+ * « Je valide » : le chiffre est voulu, on n'en parle plus.
+ *
+ * Un loyer de 12 000 € par mois à Paris n'est pas une faute de frappe ; le
+ * redire à chaque page finirait par faire ignorer les vrais avertissements.
+ * Le fondateur le valide, et il disparaît partout — tant que la valeur ne
+ * change pas.
+ */
+export function valider(x) {
+  store.update((sc) => {
+    sc.meta.gardesValidees = { ...(sc.meta.gardesValidees || {}), [x.cle]: signature(x) }
+  }, { label: `${x.sujet} validé` })
+}
+
+/** L'avertissement d'une ligne précise (une charge, un poste), sous elle. */
+export function gardeLigne(cle) {
+  const x = gardesDuPlan().find((g) => g.cle === cle)
+  if (!x) return null
+  return h('div', { class: `garde-ligne is-${x.niveau}`, role: 'status' },
+    h('span', { class: 'garde-sign', 'aria-hidden': 'true' }),
+    h('span', { class: 'garde-ligne-txt' }, x.texte),
+    h('button', { class: 'garde-ok', onClick: () => valider(x) }, 'Je valide'),
+  )
 }

@@ -19,7 +19,7 @@ import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
-import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
+import { chiffresDePage } from '../chiffres-pages.js'
 import { gardeSalaire } from '../../engine/plausible.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
@@ -60,24 +60,22 @@ export function renderTeam(navigate, refresh) {
 
   const payrollY = r ? yearly(r.payroll.cost)[0] : 0
 
-  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('equipe', refresh, navigate, { forme: 'cartes' })
+  // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
+  const chiffres = chiffresDePage('equipe', refresh, navigate)
 
   return h('div', { class: 'content' },
 
     moduleShell({
       no: '04', title: 'Équipe',
       lede: "Les postes salariés, leur brut annuel et ce qu’ils coûtent vraiment.",
-      figure: r && s.team.length
+      figure: !chiffres && r && s.team.length
         ? { value: euro(payrollY), note: 'la première année, avantages compris' }
         : null,
       guide: stepGuide('equipe', journey(store.scenario, store.result)),
       views, view, onPick: (k) => { renderTeam.view = k; refresh() },
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),
-    chiffres ? null : gardePage('equipe', navigate),
-    chiffres,
-    partieTravail('equipe', view, !!chiffres),
+    chiffres || gardePage('equipe', navigate),
 
     view === 'postes' ? h('div', { class: 'view', 'data-gap': 'equipe' },
       s.team.length === 0

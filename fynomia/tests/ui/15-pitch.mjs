@@ -17,11 +17,29 @@ export default async function (t, { rapide } = {}) {
   await t.aller(p, 'tableau-de-bord', 800)
   await t.onglet(p, 'Pitch investisseur', 1200)
 
-  const parties = await p.$$eval('.pitch .sx > .sx-head .sx-no > span', (e) => e.map((x) => x.textContent))
-  t.verifie(parties.length === 7, 'sept parties, dans l’ordre où un investisseur les lit', parties)
-  t.verifie(/vends/.test(parties[0] || '') && /financer/.test(parties[3] || '') && /demandera/.test(parties[6] || ''), 'l’offre d’abord, le besoin au milieu, les ratios à la fin', parties)
-  const dits = await p.$$eval('.pitch .sx-say', (e) => e.map((x) => x.textContent.trim()))
-  t.verifie(dits.length === 7 && dits.every((d) => d.length > 40), 'chaque partie dit pourquoi elle compte', dits.map((d) => d.length))
+  // Mise en page « Récit » (celle par défaut) : huit parties, le titre et
+  // sa phrase sur une même ligne, l'avis de Fynomia à droite de chacune.
+  t.verifie(await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).count() === 1, 'le récit est la mise en page par défaut')
+  const parties = await p.$$eval('.pitch .sx > .sx-head .sx-no > .sx-name', (e) => e.map((x) => x.textContent))
+  t.verifie(parties.length === 8, 'huit parties, dans l’ordre où un investisseur les lit', parties)
+  t.verifie(/trajectoire/i.test(parties[0] || '') && /vends/.test(parties[1] || '') && /demandera/.test(parties[7] || ''), 'la trajectoire d’abord, l’offre ensuite, les ratios à la fin', parties)
+  const lignes = await p.$$eval('.pitch .sx > .sx-head .sx-no', (e) => e.map((x) => {
+    const n = x.querySelector('.sx-name'), d = x.querySelector('.sx-say')
+    return { dit: d ? d.textContent.trim().length : 0, meme: !!n && !!d && d.getBoundingClientRect().top < n.getBoundingClientRect().bottom }
+  }))
+  t.verifie(lignes.every((l) => l.dit > 30), 'chaque partie dit pourquoi elle compte', lignes.map((l) => l.dit))
+  t.verifie(lignes.every((l) => l.meme), 'le titre et sa phrase sont sur la même ligne')
+  const cote = await p.$$eval('.pitch-ligne-corps', (e) => e.map((x) => {
+    const m = x.querySelector('.pitch-ligne-main'), a = x.querySelector('.pitch-avis')
+    return !!m && !!a && a.getBoundingClientRect().left >= m.getBoundingClientRect().right - 1
+  }))
+  t.verifie(cote.length === 8 && cote.every(Boolean), 'l’avis de Fynomia est un bloc à droite de chaque partie', cote)
+  // Des courbes : la trésorerie et ses jalons, le chiffre d'affaires et le
+  // résultat ; et le récit de la trajectoire, en toutes lettres.
+  t.verifie(await p.locator('.pitch .pitch-traj svg').count() >= 1, 'la trajectoire de trésorerie est tracée, avec ses jalons')
+  t.verifie(await p.locator('.pitch .pitch-croiss .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
+  const recitTraj = await p.locator('.pitch-traj-dit').innerText().catch(() => '')
+  t.verifie(/année 5/i.test(recitTraj) && /exercice bénéficiaire|trésorerie/i.test(recitTraj), 'la trajectoire se raconte en toutes lettres', recitTraj.slice(0, 90))
 
   // Le besoin de la couverture est celui du moteur.
   const besoin = await p.evaluate(async () => {
@@ -41,9 +59,17 @@ export default async function (t, { rapide } = {}) {
   // La même tête que la synthèse essai, pour comparer les deux onglets.
   t.verifie(await p.locator('.pitch-dossier .sy-hero').count() === 1, 'l’avancement du dossier est en tête, comme dans l’essai')
   t.verifie(await p.locator('.pitch-dossier .sy-dossier').count() === 1, 'ce qui est fait et ce qui reste, page par page')
-  // L'avis d'un consultant sous chaque partie.
+  // L'avis d'un consultant pour chaque partie.
   const avis = await p.$$eval('.pitch-avis p', (e) => e.map((x) => x.textContent.trim()))
-  t.verifie(avis.length === 7 && avis.every((x) => x.length > 40), 'l’avis de Fynomia sous chacune des sept parties', avis.length)
+  t.verifie(avis.length === 8 && avis.every((x) => x.length > 40), 'l’avis de Fynomia pour chacune des huit parties', avis.length)
+  // Ce qui reste à faire : les colonnes alignées, et un bouton pour voir le reste.
+  const dossier = await p.evaluate(() => {
+    const cols = [...document.querySelectorAll('.pitch-dossier .sy-dossier-col')]
+    const hauts = cols.map((c) => c.querySelector('.sy-dossier-bloc, .sy-dossier-ok')?.getBoundingClientRect().top).filter((x) => x !== undefined)
+    return { ecart: hauts.length ? Math.max(...hauts) - Math.min(...hauts) : 0, plus: document.querySelectorAll('.pitch-dossier .sy-dossier-more').length }
+  })
+  t.verifie(dossier.ecart < 2, 'ce qui reste commence à la même hauteur dans chaque colonne', `${Math.round(dossier.ecart)} px`)
+  t.verifie(dossier.plus >= 1, 'un bouton « Voir les autres » ouvre ce qui n’est pas affiché', String(dossier.plus))
   // Aucun pourcentage absurde.
   const absurdes = await p.evaluate(() => (document.querySelector('.pitch').innerText.match(/-?\d[\d \u00a0\u202f]{3,}[ \u00a0]?%/g) || []).filter((x) => Math.abs(Number(x.replace(/[^\d-]/g, ''))) > 1000))
   t.verifie(absurdes.length === 0, 'aucun pourcentage au-delà de 1 000 %', absurdes)
@@ -53,6 +79,20 @@ export default async function (t, { rapide } = {}) {
   t.verifie(await p.locator('.pitch-ratio').count() === 7, 'les sept ratios qu’on te demandera')
   // Sans phrase d'accroche, la couverture le dit et y emmène.
   t.verifie(await p.locator('.pitch-cover .pitch-manque').count() === 1, 'sans description, la couverture propose de l’écrire')
+
+  // Les deux autres mises en page portent le même contenu.
+  await p.locator('.pitch-mise', { hasText: 'Tableau' }).click()
+  await p.waitForTimeout(800)
+  const tuiles = await p.$$eval('.pitch-bento .pitch-tuile', (e) => e.map((x) => ({ titre: x.querySelector('h3')?.textContent, avis: !!x.querySelector('.pitch-avis') })))
+  t.verifie(tuiles.length === 8 && tuiles.every((x) => x.avis), 'tableau : huit tuiles, chacune avec son avis', tuiles.length)
+  await p.locator('.pitch-mise', { hasText: 'Diapos' }).click()
+  await p.waitForTimeout(800)
+  t.verifie(await p.locator('.pitch-deck .pitch-diapo').count() === 8, 'diapos : huit diapositives')
+  await p.locator('.pitch-fleche[aria-label="Diapositive suivante"]').click()
+  await p.waitForTimeout(900)
+  t.verifie((await p.locator('.pitch-compteur').innerText()).startsWith('2'), 'diapos : la flèche passe à la suivante')
+  await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
+  await p.waitForTimeout(700)
   // Le voyage : la page s'ouvre en haut (on lit son titre), puis la zone
   // s'éclaire d'un reflet qui la traverse.
   await p.locator('.pitch-cover .pitch-manque').click()

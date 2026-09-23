@@ -3,17 +3,17 @@
  *
  * Les pages de saisie ne montraient que des champs : on posait un loyer, un
  * salaire, un prix, et il fallait aller au tableau de bord pour savoir ce que
- * ça changeait. Chacune s'ouvre maintenant comme la synthèse — une partie
- * numérotée, des cartes où le montant s'écrit en grand avec sa valeur exacte,
- * ses cinq exercices en barres — et la zone de travail vient ensuite, en
- * partie 02. Tout est lu dans le moteur, rien n'est recalculé ici.
+ * ça changeait. Chacune s'ouvre maintenant sur une ligne de chiffres, qui se
+ * déplie en cartes avec leurs cinq exercices en barres ; la zone de travail
+ * vient juste dessous. Tout est lu dans le moteur, rien n'est recalculé ici.
  */
 
-import { h, euro, pct, num, monthLabel } from './dom.js'
+import { h, euro, pct, num, monthLabel, infoPoint } from './dom.js'
 import store from '../state/store.js'
 import { SECTORS } from '../state/schema.js'
 import { getActivity } from '../state/activities.js'
-import { section, entete, exercices, grandsChiffres, anneeLue, lireAnnee, EUROS } from './sections.js'
+import { exercices, grandsChiffres, anneeLue, lireAnnee, EUROS } from './sections.js'
+import { entree } from './charts.js'
 import { gardePage } from './garde.js'
 
 const n = (v) => Number(v) || 0
@@ -103,7 +103,7 @@ const CARTES = {
 }
 
 const DIT = {
-  offre: 'Ce que tes prix et tes volumes rapportent, année par année. Modifie un prix ou un volume dans la partie 02 : ces chiffres suivent aussitôt.',
+  offre: 'Ce que tes prix et tes volumes rapportent, année par année. Modifie un prix ou un volume plus bas : ces chiffres suivent aussitôt.',
   achats: 'Ce que coûte l’activité avant même de payer l’équipe. Plus ces charges sont basses, plus vite tu es rentable.',
   equipe: 'Ce que coûte l’équipe à l’entreprise, cotisations comprises — pas seulement les salaires bruts.',
   financement: 'Ce que tu apportes et empruntes au départ, et ce que devient le compte de la société ensuite.',
@@ -116,33 +116,22 @@ const NOMS = {
   financement: 'L’argent du départ, et ce qu’il devient',
 }
 
-/** Le nom de la zone de travail, selon l'onglet ouvert. */
-const VUES = {
-  offre: { offres: 'Tes offres', acquisition: 'Comment tu trouves tes clients', compare: 'Tes offres, comparées' },
-  achats: { charges: 'Tes charges', invest: 'Tes investissements', repartition: 'Où part l’argent' },
-  equipe: { postes: 'Les postes', avantages: 'Les avantages', masse: 'La masse salariale', jei: 'Recherche et JEI' },
-  financement: { sources: 'Tes sources de financement', plan: 'Le plan de financement' },
-}
-
 /**
- * Les chiffres d'une page de saisie, sous l'une de trois formes.
+ * Les chiffres d'une page de saisie, en une ligne.
  *
- *   « cartes »  — une rangée de cartes compactes en tête de page (Équipe,
- *                 Financement) ;
- *   « cote »    — une colonne à droite, qui reste en vue pendant qu'on saisit
- *                 (Offre et revenus) ;
- *   « bandeau » — une seule ligne de chiffres, qui se déplie en cartes au
- *                 clic (Achats et coûts).
+ * Deux formes ont été essayées — une colonne à droite qui restait en vue, un
+ * bandeau d'une ligne qui se déplie — et le bandeau l'a emporté : il laisse
+ * toute la largeur aux champs et se lit pareil sur un téléphone.
  *
- * Deux essais pour une même question — comment garder les chiffres sous les
- * yeux sans qu'ils repoussent les champs — et le fondateur choisira. Dans
- * les trois, l'avertissement d'un chiffre hors de proportion se pose sur la
- * même ligne que l'exercice, et s'ouvre par-dessus au lieu de pousser.
+ * Le titre se pose à gauche des chiffres qu'il nomme, sur la même ligne ; la
+ * phrase qui l'explique passe dans le « i » à côté de lui. À droite, dans
+ * cet ordre : l'avertissement (s'il y en a un), l'exercice lu, et le bouton
+ * qui déplie les cartes et leurs graphiques. Rien ne s'empile.
  *
- * Rien si la page est encore vide : des cartes à zéro partout ne diraient
+ * Rien si la page est encore vide : des chiffres à zéro partout ne diraient
  * rien.
  */
-export function chiffresDePage(route, refresh, navigate, { forme = 'cartes' } = {}) {
+export function chiffresDePage(route, refresh, navigate) {
   const r = store.result
   const s = store.scenario
   if (!r || !CARTES[route]) return null
@@ -151,52 +140,49 @@ export function chiffresDePage(route, refresh, navigate, { forme = 'cartes' } = 
   if (!cartes.some((c) => (c.valeurs || []).some((v) => Math.abs(n(v)) >= 1))) return null
   const an = anneeLue(r)
   const choisir = (k) => { lireAnnee(k); refresh() }
-  const garde = navigate ? gardePage(route, navigate) : null
-  const tete = h('div', { class: 'sx-right-row' }, garde, exercices(an, choisir))
-
-  if (forme === 'bandeau') return bandeau(route, cartes, an, choisir, r, tete, refresh)
-  if (forme === 'cote') {
-    return section({ no: null, nom: NOMS[route], droite: tete, cle: `page-${route}`, classe: 'is-compact is-cote' },
-      h('p', { class: 'sx-say' }, DIT[route]),
-      grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }))
-  }
-  return section({ no: 1, nom: NOMS[route], dit: DIT[route], droite: tete, cle: `page-${route}`, classe: 'is-compact' },
-    grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }))
+  const garde = navigate ? gardePage(route, navigate, { court: true }) : null
+  return bandeau(route, cartes, an, choisir, r, garde, refresh)
 }
 
 /** Le bandeau : une ligne de chiffres ; « Détail » déplie les cartes. */
 const bandeauxOuverts = new Set()
-function bandeau(route, cartes, an, choisir, r, tete, refresh) {
+function bandeau(route, cartes, an, choisir, r, garde, refresh) {
   const ouvert = bandeauxOuverts.has(route)
-  return section({ no: 1, nom: NOMS[route], droite: tete, cle: `page-${route}`, classe: `is-compact is-bandeau ${ouvert ? 'is-open' : ''}` },
+  const el = h('section', { class: `sx is-compact is-bandeau ${ouvert ? 'is-open' : ''}`, 'data-chiffres': route },
     h('div', { class: 'sx-ribbon' },
-      ...cartes.map((c) => {
-        const vals = (c.valeurs || []).map(n)
-        const v = vals[an] || 0
-        const f = (c.format || EUROS)(v)
-        const prev = an > 0 ? vals[an - 1] : null
-        const d = prev === null ? null : v - prev
-        const bien = c.baisseBonne ? d <= 0 : d >= 0
-        return h('div', { class: 'sx-ribbon-item', title: [c.note ? c.note(an) : '', c.pourquoi || ''].filter(Boolean).join(' — ') },
-          h('span', { class: 'sx-ribbon-label' }, c.label),
-          h('b', { class: 'sx-ribbon-val' }, f.court),
-          d !== null && Math.abs(d) >= 1
-            ? h('span', { class: `sx-ribbon-delta ${c.neutre ? '' : bien ? 'is-up' : 'is-down'}` }, `${d >= 0 ? '+' : '−'}${c.format ? (c.format)(Math.abs(d)).court : euro(Math.abs(d), { compact: true })}`)
-            : null,
-        )
-      }),
-      h('button', {
-        class: 'sx-ribbon-more', 'aria-expanded': String(ouvert),
-        onClick: () => { ouvert ? bandeauxOuverts.delete(route) : bandeauxOuverts.add(route); refresh() },
-      }, ouvert ? 'Replier ↑' : 'Détail ↓'),
+      h('div', { class: 'sx-ribbon-head' },
+        h('h2', { class: 'sx-ribbon-title' }, NOMS[route]),
+        infoPoint(DIT[route]),
+      ),
+      h('div', { class: 'sx-ribbon-items' },
+        ...cartes.map((c) => {
+          const vals = (c.valeurs || []).map(n)
+          const v = vals[an] || 0
+          const f = (c.format || EUROS)(v)
+          const prev = an > 0 ? vals[an - 1] : null
+          const d = prev === null ? null : v - prev
+          const bien = c.baisseBonne ? d <= 0 : d >= 0
+          return h('div', { class: 'sx-ribbon-item', title: [c.note ? c.note(an) : '', c.pourquoi || ''].filter(Boolean).join(' — ') },
+            h('span', { class: 'sx-ribbon-label' }, c.label),
+            h('span', { class: 'sx-ribbon-line' },
+              h('b', { class: `sx-ribbon-val ${c.ton ? `is-${c.ton(v, an)}` : ''}` }, f.court),
+              d !== null && Math.abs(d) >= 1
+                ? h('span', { class: `sx-ribbon-delta ${c.neutre ? '' : bien ? 'is-up' : 'is-down'}` }, `${d >= 0 ? '+' : '−'}${c.format ? (c.format)(Math.abs(d)).court : euro(Math.abs(d), { compact: true })}`)
+                : null,
+            ),
+          )
+        }),
+      ),
+      h('div', { class: 'sx-ribbon-ctrl' },
+        garde,
+        exercices(an, choisir),
+        h('button', {
+          class: 'sx-ribbon-more', 'aria-expanded': String(ouvert),
+          onClick: () => { ouvert ? bandeauxOuverts.delete(route) : bandeauxOuverts.add(route); refresh() },
+        }, ouvert ? 'Replier' : 'Détail'),
+      ),
     ),
     ouvert ? grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }) : null,
   )
-}
-
-/** La tête de la zone de travail : 02 si les chiffres la précèdent, 01 sinon. */
-export function partieTravail(route, view, avecChiffres) {
-  const nom = VUES[route]?.[view]
-  if (!nom) return null
-  return entete({ no: avecChiffres ? 2 : 1, nom })
+  return entree(el, `sx:page-${route}`, { classe: 'rv', min: 0.12 })
 }

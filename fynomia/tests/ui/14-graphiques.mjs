@@ -122,39 +122,41 @@ export default async function (t, { rapide } = {}) {
   await p.waitForTimeout(600)
   t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, 'cliquer une barre choisit son exercice')
 
-  // L'exercice choisi suit sur les pages de saisie, qui ont leurs chiffres.
-  // Trois formes à l'essai : Offre en colonne à droite, Achats en bandeau
-  // d'une ligne, Équipe et Financement en cartes compactes.
+  // L'exercice choisi suit sur les pages de saisie, qui ont leurs chiffres —
+  // en bandeau d'une ligne partout : le titre à gauche, les chiffres, puis
+  // l'exercice et « Détail », qui déplie les cartes.
   for (const route of ['offre', 'achats', 'equipe', 'financement']) {
     await t.aller(p, route, 900)
-    const n = route === 'achats' ? await p.locator('.sx-ribbon-item').count() : await p.locator('.sx-card').count()
-    t.verifie(n >= 3, `${route} : la page montre ses chiffres`, String(n))
+    const n = await p.locator('.sx-ribbon-item').count()
+    t.verifie(n >= 3, `${route} : la page montre ses chiffres en bandeau`, String(n))
     t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, `${route} : l’exercice choisi a suivi`)
-    const parts = await p.$$eval('.sx-no > b', (e) => e.map((x) => x.textContent))
-    if (route === 'offre') {
-      t.verifie(parts[0] === '01', 'offre : la zone de travail en 01, les chiffres à côté', parts)
-      const cote = await p.evaluate(() => {
-        const a = document.querySelector('.saisie-aside'), m = document.querySelector('.saisie-main')
-        return a && m ? a.getBoundingClientRect().left > m.getBoundingClientRect().right - 1 && getComputedStyle(a).position === 'sticky' : false
-      })
-      t.verifie(cote, 'offre : les chiffres sont dans une colonne à droite qui reste en vue')
-      const champ = await p.evaluate(() => Math.min(...[...document.querySelectorAll('.saisie-main .item.open .control input')].map((i) => i.getBoundingClientRect().width)))
-      t.verifie(!Number.isFinite(champ) || champ >= 60, 'offre : aucun champ écrasé par la colonne', String(Math.round(champ)))
-    } else {
-      t.verifie(parts[0] === '01' && parts[1] === '02', `${route} : chiffres en 01, zone de travail en 02`, parts)
-    }
-    if (route === 'achats') {
-      const haut = await p.locator('.sx.is-bandeau').evaluate((x) => x.getBoundingClientRect().height)
-      t.verifie(haut < 150, 'achats : les chiffres tiennent sur une ligne tant qu’on ne les déplie pas', `${Math.round(haut)} px`)
-      await p.locator('.sx-ribbon-more').click()
-      await p.waitForTimeout(600)
-      t.verifie(await p.locator('.sx.is-bandeau .sx-card').count() >= 3, 'achats : « Détail » déplie les cartes')
-    }
+    const forme = await p.evaluate(() => {
+      const r = document.querySelector('.sx-ribbon')
+      const t = r?.querySelector('.sx-ribbon-title'), i = r?.querySelector('.sx-ribbon-item')
+      return {
+        haut: r ? r.getBoundingClientRect().height : 0,
+        titreAGauche: !!t && !!i && t.getBoundingClientRect().right <= i.getBoundingClientRect().left + 1 && Math.abs(t.getBoundingClientRect().top - i.getBoundingClientRect().top) < 40,
+        pastille: !!document.querySelector('.module-figure'),
+        info: !!document.querySelector('.module-top .info-point'),
+        texteInfo: !!document.querySelector('.module-why-text'),
+        cote: !!document.querySelector('.saisie-aside'),
+      }
+    })
+    t.verifie(forme.haut < 120, `${route} : les chiffres tiennent sur une ligne`, `${Math.round(forme.haut)} px`)
+    t.verifie(forme.titreAGauche, `${route} : le titre est à gauche des chiffres, sur la même ligne`)
+    t.verifie(!forme.pastille && !forme.cote, `${route} : ni pastille de total répétée, ni colonne à droite`)
+    t.verifie(forme.info && !forme.texteInfo, `${route} : l’explication du module est un « i », sans texte à côté du titre`)
   }
+  await t.aller(p, 'achats', 900)
+  await p.locator('.sx-ribbon-more').click()
+  await p.waitForTimeout(600)
+  t.verifie(await p.locator('.sx.is-bandeau .sx-card').count() >= 3, 'achats : « Détail » déplie les cartes')
 
   // Cliquer une année d'une carte descend dans ses douze mois ; « ← 5 ans »
   // remonte. Les mois additionnés redonnent l'année.
   await t.aller(p, 'offre', 900)
+  await p.locator('.sx-ribbon-more').click()
+  await p.waitForTimeout(700)
   const carte = p.locator('.sx-card').first()
   await carte.scrollIntoViewIfNeeded()
   await p.waitForTimeout(800)

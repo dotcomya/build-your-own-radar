@@ -588,26 +588,36 @@ export function refine(id, label, ...children) {
  * sort par le haut, l'en-tête est collé. Un écouteur de défilement ferait le
  * même travail en s'exécutant à chaque pixel parcouru.
  */
+/**
+ * Un « i » qui se voit, sans texte à côté.
+ *
+ * Une explication posée en toutes lettres à côté d'un titre coûte une ligne à
+ * qui l'a déjà lue. Ce point la garde sous la main : elle s'affiche en bulle
+ * au survol ou au focus, et un clic la laisse ouverte (ou ouvre le tiroir,
+ * si on lui en donne un).
+ */
+export function infoPoint(texte, { onClick = null, classe = '' } = {}) {
+  if (!texte) return null
+  const b = h('button', {
+    class: `info-point ${classe}`, type: 'button', 'data-tip': texte, 'aria-label': texte,
+    onClick: (e) => { e.stopPropagation(); if (onClick) onClick(e); else b.classList.toggle('is-open') },
+    onMouseleave: () => b.classList.remove('is-open'),
+  }, 'i')
+  return b
+}
+
 export function moduleShell({ no, title, lede, figure, guide, views, view, onPick, actions = [] }) {
   const acts = (actions || []).filter(Boolean)
   const nav = views ? tabs(views, view, onPick) : null
 
-  // La note du module passe à côté du titre, et son contenu part au tiroir.
+  // La note du module devient un « i », sans texte à côté.
   //
-  // Elle occupait une bande encadrée sous le titre, avec un « + » qui la
-  // dépliait en poussant la page vers le bas. Deux défauts : la bande coûtait
-  // une ligne d'écran à qui l'avait déjà lue, et l'ouverture déplaçait tout ce
-  // qui était dessous. Désormais la phrase se pose au bout du titre, en gris,
-  // et le clic ouvre le panneau latéral — celui qui explique l'EBITDA.
+  // La phrase se posait au bout du titre, en gris : elle prenait la ligne, se
+  // coupait sur un écran moyen, et se lisait mal. Il reste un point bleu bien
+  // visible : la phrase apparaît au survol, et le clic ouvre le tiroir qui
+  // explique le module en entier.
   const note = lede
-    ? h('button', {
-        class: 'module-why', type: 'button',
-        title: `${lede} \u2014 en savoir plus`,
-        onClick: () => openPanel({ title, lede, body: guide }),
-      },
-        h('span', { class: 'module-why-ico', 'aria-hidden': 'true', html: INFO }),
-        h('span', { class: 'module-why-text' }, lede),
-      )
+    ? infoPoint(lede, { classe: 'is-module', onClick: () => openPanel({ title, lede, body: guide }) })
     : null
 
   // Le titre ne bouge plus, et c'est tout le sujet.

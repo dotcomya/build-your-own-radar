@@ -12,8 +12,8 @@ import { claim } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
 import { celebrate } from '../burst.js'
 import store from '../../state/store.js'
-import { gardePage } from '../garde.js'
-import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
+import { gardePage, gardeLigne } from '../garde.js'
+import { chiffresDePage } from '../chiffres-pages.js'
 
 export function renderCosts(navigate, refresh) {
   const s = store.scenario
@@ -76,15 +76,15 @@ export function renderCosts(navigate, refresh) {
   }
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
-  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('achats', refresh, navigate, { forme: 'bandeau' })
+  // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
+  const chiffres = chiffresDePage('achats', refresh, navigate)
 
   return h('div', { class: 'content' },
 
     moduleShell({
       no: '03', title: 'Achats et coûts',
       lede: "Les charges qui tombent chaque mois, et le matériel amorti sur sa durée d’usage.",
-      figure: monthlyTotal > 0
+      figure: !chiffres && monthlyTotal > 0
         ? { value: `${euro(monthlyTotal)}/mois`, note: `soit ${euro(monthlyTotal * 12)} par an` }
         : null,
       guide: stepGuide('charges', journey(store.scenario, store.result), 'achats'),
@@ -94,9 +94,7 @@ export function renderCosts(navigate, refresh) {
         view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
       ],
     }),
-    chiffres ? null : gardePage('achats', navigate),
-    chiffres,
-    partieTravail('achats', view, !!chiffres),
+    chiffres || gardePage('achats', navigate),
 
     view === 'charges' ? h('div', { class: 'view' },
       // Les suggestions du métier ouvrent la vue, comme dans Offre et revenus :
@@ -319,6 +317,9 @@ function opexRow(o, r, level, refresh) {
         class: 'cost-more cost-drop', title: 'Supprimer cette charge', onClick: remove,
       }, '\u00d7'),
     ),
+    // Une charge hors de proportion se dit sur sa ligne : c'est là qu'on
+    // corrige, ou qu'on valide si le montant est voulu.
+    on ? gardeLigne(`charge:${o.id}`) : null,
 
     isOpen && h('div', { class: 'cost-detail' },
       h('div', { class: 'grid grid-3' },

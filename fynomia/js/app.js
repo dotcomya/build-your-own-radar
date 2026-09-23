@@ -31,6 +31,7 @@ import { renderSettings } from './ui/pages/settings.js'
 import { renderFounder } from './ui/pages/founder.js'
 import { renderProject } from './ui/pages/project.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
+import { renderReveal, revelationPermise } from './ui/pages/reveal.js'
 import { journey, points } from './engine/journey.js'
 import { buildState } from './engine/build.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
@@ -272,6 +273,16 @@ function render({ preserveScroll = false } = {}) {
   if (key === 'creer') {
     clear(root).appendChild(renderSetup(navigate, render))
     document.title = 'Fynomia — Ton business plan'
+    return
+  }
+
+  // Au sortir du parcours, une page plein écran, vue une seule fois : le
+  // business qui prend forme. Y revenir ensuite mène au tableau de bord.
+  if (key === 'ton-business' && store.scenario) {
+    if (!revelationPermise()) { navigate('#/tableau-de-bord'); return }
+    clear(root).appendChild(renderReveal(navigate))
+    document.title = `${store.scenario.meta.company || store.scenario.meta.name} — prend forme`
+    window.scrollTo(0, 0)
     return
   }
 

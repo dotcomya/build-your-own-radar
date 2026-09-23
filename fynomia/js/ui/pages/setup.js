@@ -28,6 +28,7 @@ import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
 import { STAGES } from '../stages.js'
+import { aConfirmerDepuis } from '../checklist.js'
 import { openSynthesis } from './dashboard.js'
 import { changed } from '../motion.js'
 import { FAMILIES, activitiesOf, searchActivities, familyOf } from '../../state/activities.js'
@@ -45,12 +46,60 @@ const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
  * valeur qu'il a saisie ne l'est plus, pour qu'il puisse la corriger sans la
  * perdre.
  */
-const flow = { index: 0, reach: 0, touched: new Set(), way: 'fwd' }
+const flow = { index: 0, reach: 0, touched: new Set(), way: 'fwd', vides: new Set(), reperes: {} }
 
 /** Où en est le choix du métier : la famille ouverte, et ce qui est tapé. */
 const pick = { family: null, query: '' }
 
-export function resetSetup() { flow.index = 0; flow.reach = 0; flow.touched = new Set(); pick.family = null; pick.query = '' }
+export function resetSetup() { flow.index = 0; flow.reach = 0; flow.touched = new Set(); flow.vides = new Set(); flow.reperes = {}; pick.family = null; pick.query = '' }
+
+/**
+ * La fin du parcours.
+ *
+ * Ce qui a été répondu est noté pour être relu : le guide et le pilotage le
+ * proposeront en premier (voir checklist.js). Puis la page qui montre le
+ * business prendre forme.
+ */
+function finirParcours(navigate) {
+  const relire = aConfirmerDepuis(flow.touched)
+  store.update((sc) => {
+    sc.meta.onboardedAt = Date.now()
+    sc.meta.aConfirmer = relire
+    sc.meta.confirmes = {}
+  }, { label: 'Parcours terminé', silent: true })
+  resetSetup()
+  navigate('#/ton-business')
+}
+
+/**
+ * Rien de pré-rempli : la réponse est celle du fondateur.
+ *
+ * Le modèle du métier pose un prix, des volumes, des frais cochés — il le
+ * faut, pour qu'un plan existe dès qu'on a choisi son activité. Mais dans le
+ * parcours, un champ déjà rempli se lit comme une réponse déjà donnée : on
+ * clique « Continuer » sur un prix qu'on n'a jamais choisi. À la première
+ * arrivée sur une question, on efface donc ce que le modèle y avait mis, et
+ * on garde sa valeur en repère, écrite sous le champ — une indication, pas
+ * une réponse.
+ */
+function vider(key, lire, effacer) {
+  // Seulement pour un plan né dans ce parcours, et une seule fois par
+  // question : ce qui a été effacé est noté dans le plan, pour qu'un
+  // rechargement de page n'efface pas une réponse déjà donnée.
+  const m = store.scenario?.meta || {}
+  if (!m.parcours || m.onboardedAt) return
+  if (flow.touched.has(key) || flow.vides.has(key) || (m.parcoursVides || []).includes(key)) return
+  flow.vides.add(key)
+  let v = null
+  try { v = lire(store.scenario) || null } catch { v = null }
+  if (v) flow.reperes[key] = v
+  store.update((sc) => {
+    effacer(sc)
+    sc.meta.parcoursVides = [...(sc.meta.parcoursVides || []), key]
+    if (v) sc.meta.parcoursReperes = { ...(sc.meta.parcoursReperes || {}), [key]: v }
+  }, { label: 'Parcours', silent: true })
+}
+const repere = (key) => flow.reperes[key] || store.scenario?.meta?.parcoursReperes?.[key] || null
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -122,11 +171,15 @@ const STEPS = [
     key: 'offre', short: 'Ce que tu vends',
     question: 'Tu vends quoi ?',
     help: (s) => `Le nom que tu emploies devant un client. Une ${vocabulary(s).one}, un forfait, un abonnement.`,
-    render: (ctx) => field(ctx, {
-      type: 'text', placeholder: (s) => vocabulary(s).one,
-      value: (s) => (s.activities[0]?.name === 'À définir' ? '' : s.activities[0]?.name || ''),
-      apply: (s, v) => { if (s.activities[0]) s.activities[0].name = v.trim() || 'Mon offre' },
-    }),
+    render: (ctx) => {
+      vider('offre', (sc) => (sc.activities[0]?.name && sc.activities[0].name !== 'À définir' ? sc.activities[0].name : null), (sc) => { if (sc.activities[0]) sc.activities[0].name = 'À définir' })
+      return field(ctx, {
+        type: 'text', placeholder: (s) => vocabulary(s).one,
+        value: (s) => (s.activities[0]?.name === 'À définir' ? '' : s.activities[0]?.name || ''),
+        apply: (s, v) => { if (s.activities[0]) s.activities[0].name = v.trim() || 'Mon offre' },
+        repere: repere('offre') ? `Dans ton métier, on dit souvent « ${repere('offre')} ».` : null,
+      })
+    },
     ready: (s) => {
       const n = (s?.activities?.[0]?.name || '').trim()
       return !!n && n !== 'À définir'
@@ -216,6 +269,9 @@ export function renderSetup(navigate, refresh) {
   const go = (delta) => {
     const next = flow.index + delta
     if (next < 0 || next >= STEPS.length) { if (next >= STEPS.length) navigate('#/parcours'); return }
+    // La dernière réponse donnée, on ne montre pas un écran de résultat de
+    // plus : on emmène voir le business prendre forme.
+    if (delta > 0 && STEPS[next].last) { finirParcours(navigate); return }
     flow.way = delta >= 0 ? 'fwd' : 'back'
     flow.index = next
     flow.reach = Math.max(flow.reach, next)
@@ -257,7 +313,7 @@ export function renderSetup(navigate, refresh) {
   const nextBtn = h('button', {
     class: 'btn btn-primary btn-lg',
     onClick: () => go(1),
-  }, flow.index === STEPS.length - 2 ? 'Voir le résultat' : 'Continuer')
+  }, flow.index === STEPS.length - 2 ? 'Voir mon business prendre forme' : 'Continuer')
 
   // Le récapitulatif qui s'affichait à droite est parti : il montrait des
   // chiffres que l'utilisateur n'avait pas encore donnés — des valeurs de
@@ -397,7 +453,7 @@ function resumeLinks(navigate) {
  * rien d'autre. Un champ recréé à chaque touche perd le curseur — et s'il est
  * resélectionné au passage, chaque lettre efface la précédente.
  */
-function field(ctx, { type, placeholder, value, apply, suffix }) {
+function field(ctx, { type, placeholder, value, apply, suffix, repere: indice = null }) {
   const initial = value(ctx.scenario)
   const input = h('input', {
     class: 'setup-input',
@@ -433,23 +489,13 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
       e.preventDefault()
       if (ctx.step.ready(store.scenario)) ctx.go(1)
     },
-    // Tant que la valeur n'est qu'une suggestion, tout retour dans le champ la
-    // resélectionne : cliquer dessus veut dire « je vais mettre la mienne »,
-    // pas « je veux ajouter des chiffres derrière ».
-    onFocus: (e) => { if (!flow.touched.has(ctx.step.key)) e.target.select() },
-    onMouseUp: (e) => { if (!flow.touched.has(ctx.step.key)) { e.preventDefault(); e.target.select() } },
   })
 
-  // Le focus est posé une fois, à l'arrivée sur la question. Une suggestion du
-  // métier est sélectionnée — la première touche la remplace ; une réponse déjà
-  // donnée ne l'est pas — on vient la corriger, pas la refaire.
-  const suggested = !flow.touched.has(ctx.step.key) && String(initial ?? '') !== ''
+  // Le focus est posé une fois, à l'arrivée sur la question ; une réponse
+  // déjà donnée ne se sélectionne pas — on vient la corriger, pas la refaire.
   requestAnimationFrame(() => {
     input.focus({ preventScroll: true })
-    try {
-      if (suggested) input.select()
-      else input.setSelectionRange(input.value.length, input.value.length)
-    } catch { /* champ sans sélection */ }
+    try { input.setSelectionRange(input.value.length, input.value.length) } catch { /* champ sans sélection */ }
   })
 
   return h('div', {},
@@ -457,9 +503,7 @@ function field(ctx, { type, placeholder, value, apply, suffix }) {
       input,
       suffix ? h('span', { class: 'setup-suffix' }, suffix) : null,
     ),
-    suggested
-      ? h('p', { class: 'setup-suggested' }, 'Valeur courante dans ton métier. Écris la tienne par-dessus.')
-      : null,
+    indice ? h('p', { class: 'setup-suggested' }, indice) : null,
   )
 }
 
@@ -552,6 +596,8 @@ function sectorPicker(ctx) {
       // Le mot du métier quand il diffère de celui du modèle : une auto-école
       // vend des heures de conduite, pas des sessions de formation.
       d.meta.unit = activity?.unit || null
+      // Né dans le parcours : ses questions s'ouvriront vides (voir vider).
+      d.meta.parcours = true
     })
     flow.touched.add('metier')
     ctx.refresh()
@@ -812,6 +858,10 @@ function legalScreen(ctx) {
  * fausse tout le reste.
  */
 function priceScreen(ctx) {
+  vider('prix', (sc) => {
+    const a = sc.activities[0]
+    return Number(a?.recurringPrice) > 0 ? `${euro(a.recurringPrice)} par mois` : Number(a?.unitPrice) > 0 ? euro(a.unitPrice) : null
+  }, (sc) => { const a = sc.activities[0]; if (a) { a.unitPrice = 0; a.recurringPrice = 0 } })
   const act = () => store.scenario.activities[0]
   /**
    * Le modèle retenu.
@@ -843,6 +893,7 @@ function priceScreen(ctx) {
         type: 'number', placeholder: '500', suffix: m === 'mixte' ? '\u20AC à la signature' : '\u20AC',
         value: (sc) => (Number(sc.activities[0].unitPrice) > 0 ? sc.activities[0].unitPrice : ''),
         apply: (sc, v) => { sc.activities[0].unitPrice = v },
+        repere: repere('prix') ? `Repère dans ton métier : ${repere('prix')}.` : null,
       }))
     }
     if (recurring) {
@@ -850,6 +901,7 @@ function priceScreen(ctx) {
         type: 'number', placeholder: '49', suffix: '\u20AC par mois',
         value: (sc) => (Number(sc.activities[0].recurringPrice) > 0 ? sc.activities[0].recurringPrice : ''),
         apply: (sc, v) => { sc.activities[0].recurringPrice = v },
+        repere: m !== 'mixte' && repere('prix') ? `Repère dans ton métier : ${repere('prix')}.` : null,
       }))
     }
     fieldHost.replaceChildren(...nodes)
@@ -994,6 +1046,11 @@ function costFamily(sector) {
 }
 
 function costScreen(ctx) {
+  vider('cout', () => null, (sc) => {
+    const a0 = sc.activities[0]
+    if (a0) { a0.unitCost = 0; a0.recurringCost = 0 }
+    sc.meta.costParts = {}
+  })
   const sector = getSector(store.scenario.meta.sectorKey)
   const a = () => store.scenario.activities[0]
   const recurring = () => (Number(a().recurringPrice) || 0) > 0 && !(Number(a().unitPrice) > 0)
@@ -1071,8 +1128,13 @@ function costScreen(ctx) {
 /* ───────────────────── Écran : clients et croissance ────────────────────── */
 
 function clientsScreen(ctx) {
+  vider('clients', (sc) => {
+    const v = Number(sc.activities[0]?.volumes?.startUnits) || 0
+    return v > 0 ? `${num(v, 0)} ${vocabulary(sc).many} le premier mois` : null
+  }, (sc) => { if (sc.activities[0]?.volumes) sc.activities[0].volumes.startUnits = 0 })
   const voc = vocabulary(ctx.scenario)
   return field(ctx, {
+    repere: repere('clients') ? `Repère dans ton métier : ${repere('clients')}.` : null,
     type: 'number', placeholder: '3', suffix: voc.many,
     value: (sc) => {
       const v = sc.activities[0].volumes.startUnits
@@ -1084,7 +1146,7 @@ function clientsScreen(ctx) {
 
 function growthScreen(ctx) {
   const g = () => Number(store.scenario.activities[0].volumes.monthlyGrowth) || 0
-  const pick = (value) => store.update((sc) => { sc.activities[0].volumes.monthlyGrowth = value },
+  const pick = (value) => store.update((sc) => { sc.activities[0].volumes.monthlyGrowth = value; sc.meta.croissanceChoisie = true },
     { label: 'Croissance', silent: true })
   // Aucune carte n'est allumée tant que le fondateur n'a pas choisi.
   //
@@ -1110,6 +1172,10 @@ function growthScreen(ctx) {
  * même brut ne coûte pas la même chose selon la société qu'il a créée.
  */
 function salaryScreen(ctx) {
+  vider('salaire', () => null, (sc) => {
+    const m = sc.team?.find((x) => ME.test(x.role || ''))
+    if (m) m.monthlyGross = 0
+  })
   const me = () => store.scenario.team?.find((x) => ME.test(x.role || ''))
   const type = () => me()?.contractType || (['SARL', 'EURL', 'EI', 'BNC', 'SELARL'].includes(store.scenario.meta.legalForm) ? 'tns' : 'dirigeant')
   const label = () => (type() === 'tns' ? 'Dirigeant TNS' : 'Dirigeant assimilé salarié')
@@ -1290,6 +1356,9 @@ function costsScreen(ctx) {
     { label: 'Publicité', amount: 300 },
   ]
 
+  // Aucune case cochée d'avance : les frais du modèle de métier s'effacent à
+  // la première arrivée, et ne reviennent que ceux que le fondateur coche.
+  vider('frais', () => null, (sc) => { sc.opex = [] })
   const find = (label) => (store.scenario.opex || []).find((o) => o.label === label)
   const host = h('div', { class: 'setup-costs' })
 
@@ -1339,6 +1408,7 @@ function costsScreen(ctx) {
 }
 
 function cashScreen(ctx) {
+  vider('depart', () => null, (sc) => { sc.financing.equityFounders = [] })
   return h('div', {},
     field(ctx, {
       type: 'number', placeholder: '10 000', suffix: '€',

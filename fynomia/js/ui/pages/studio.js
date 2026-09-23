@@ -229,7 +229,7 @@ function heroAvancement(c, navigate, pilotage) {
               i.why ? { label: i.why, value: '' } : null,
             ])),
           ),
-          h('span', { class: 'sy-cells-cap' }, h('b', {}, `${ax.faites.length}/${ax.lignes.length}`), ` ${ax.court || ax.label}`),
+          h('span', { class: 'sy-cells-cap' }, h('b', {}, `${ax.posees}/${ax.lignes.length}`), ` ${ax.court || ax.label}`),
         )),
       ),
 
@@ -268,7 +268,7 @@ function heroAvancement(c, navigate, pilotage) {
             },
               h('span', { class: 'sy-axe-nom' }, ax.label),
               h('span', { class: 'sy-axe-bar', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(ax.part * 100)}%` } })),
-              h('span', { class: 'sy-axe-num' }, ax.reste.length ? `${ax.faites.length}/${ax.lignes.length}` : '✓'),
+              h('span', { class: 'sy-axe-num' }, ax.reste.length ? `${ax.posees}/${ax.lignes.length}` : '✓'),
             ),
           )
         }),
@@ -302,12 +302,14 @@ function dossierParAxe(c, navigate) {
           e.currentTarget.remove()
           lignes.slice(max).forEach((i) => bloc.appendChild(rendre(i)))
         },
-      }, `+ ${lignes.length - max} autre${lignes.length - max > 1 ? 's' : ''}`),
+      }, `Voir ${lignes.length - max > 1 ? `les ${lignes.length - max} autres` : 'l’autre'}`),
     ]
   }
-  const aFaire = (i) => h('button', { class: `sy-todo ${i === c.next ? 'is-next' : ''}`, onClick: aller(i) },
+  const aFaire = (i) => h('button', { class: `sy-todo ${i === c.next ? 'is-next' : ''} ${i.relire ? 'is-relire' : ''} ${i.optionnel ? 'is-option' : ''}`, onClick: aller(i) },
     h('span', { class: 'sy-todo-label' }, i.label),
-    h('span', { class: 'sy-todo-where' }, destination(i).split(' › ').slice(1).join(' › ') || destination(i)),
+    h('span', { class: 'sy-todo-where' },
+      i.relire ? h('b', {}, 'À relire · ') : i.optionnel ? h('b', {}, 'Facultatif · ') : null,
+      destination(i).split(' › ').slice(1).join(' › ') || destination(i)),
   )
   const fait = (i) => h('button', { class: `sy-done ${i.na ? 'is-na' : ''}`, onClick: aller(i), title: i.na ? 'Ne concerne pas ton activité pour l’instant' : 'Revoir' },
     h('i', { 'aria-hidden': 'true' }, i.na ? '–' : '✓'),
@@ -324,18 +326,18 @@ function dossierParAxe(c, navigate) {
       ...axes.map((ax, k) => h('article', { class: `sy-dossier-col ${ax.reste.length ? '' : 'is-complete'}`, style: { '--i': String(k) } },
         h('header', { class: 'sy-dossier-head' },
           h('span', { class: 'sy-dossier-nom' }, ax.label),
-          h('span', { class: 'sy-dossier-num' }, `${ax.faites.length}/${ax.lignes.length}`),
+          h('span', { class: 'sy-dossier-num' }, `${ax.posees}/${ax.lignes.length}`),
         ),
         h('div', { class: 'sy-axe-bar', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(ax.part * 100)}%` } })),
         ax.reste.length
           ? h('div', { class: 'sy-dossier-bloc' },
               h('div', { class: 'sy-dossier-tag' }, `À faire · ${ax.reste.length}`),
-              ...liste(`${ax.key}:reste`, ax.reste, 5, aFaire))
+              ...liste(`${ax.key}:reste`, ax.reste, 3, aFaire))
           : h('p', { class: 'sy-dossier-ok' }, 'Tout est posé ici.'),
         ax.faites.length
           ? h('div', { class: 'sy-dossier-bloc is-done' },
               h('div', { class: 'sy-dossier-tag' }, `Fait · ${ax.faites.length}`),
-              ...liste(`${ax.key}:faites`, ax.faites, 4, fait))
+              ...liste(`${ax.key}:faites`, ax.faites, 3, fait))
           : null,
       )),
     ),

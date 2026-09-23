@@ -11,7 +11,9 @@
  * l'intention est oubliée — elle ne vaut que pour ce clic.
  */
 
-const EMPTY = { route: null, view: null, sec: null, openAll: false, anchor: null }
+import store from '../state/store.js'
+
+const EMPTY = { route: null, view: null, sec: null, openAll: false, anchor: null, confirme: null }
 
 
 const intent = { ...EMPTY }
@@ -35,6 +37,13 @@ const intent = { ...EMPTY }
  */
 export function goToGap(target, navigate, depuis) {
   if (depuis) pop(depuis)
+  // Une réponse du parcours qu'on va relire est validée en y allant : l'avoir
+  // sous les yeux, là où elle se corrige, c'est ce qu'on demandait.
+  if (target.confirme) {
+    try {
+      store.update((sc) => { sc.meta.confirmes = { ...(sc.meta.confirmes || {}), [target.confirme]: true } }, { label: 'Relu', silent: true })
+    } catch { /* la navigation passe avant */ }
+  }
   Object.assign(intent, EMPTY, target)
   navigate(`#/${target.route}`)
 }

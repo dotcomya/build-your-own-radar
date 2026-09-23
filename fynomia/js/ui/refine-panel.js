@@ -77,20 +77,26 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
           h('span', { class: 'refinery-group-count num' }, `${g.done}/${g.total}`),
         ),
         h('div', { class: 'refinery-items' },
-          ...visible(g, open).map((it) => h('button', {
-            class: `refinery-item ${it.done ? 'is-done' : ''} ${it.later ? 'is-later' : ''}`,
-            title: it.done ? 'Revoir' : it.later ? 'Remis à plus tard. Renseigner maintenant.' : 'Renseigner',
-            onClick: (e) => goToGap(it.go, navigate, e.currentTarget),
-          },
-            h('span', { class: 'refinery-mark', 'aria-hidden': 'true' }, it.done ? '✓' : ''),
-            h('span', { class: 'refinery-text' },
-              h('span', { class: 'refinery-label' }, it.label),
-              it.na ? h('span', { class: 'refinery-why' }, 'Sans objet pour ton activité') : null,
-              it.done ? null : h('span', { class: 'refinery-why' },
-                it.later ? h('b', { class: 'refinery-latertag' }, 'Plus tard · ') : null, it.why),
-            ),
-            it.done ? null : h('span', { class: 'refinery-go' }, '→'),
-          )),
+          ...visible(g, open).map((it) => {
+            const aFaire = !it.done || it.relire
+            return h('button', {
+              class: `refinery-item ${aFaire ? '' : 'is-done'} ${it.relire ? 'is-relire' : ''} ${it.later ? 'is-later' : ''} ${it === c.next ? 'is-next' : ''}`,
+              title: !aFaire ? 'Revoir' : it.later ? 'Remis à plus tard. Renseigner maintenant.' : it.relire ? 'Relire' : 'Renseigner',
+              onClick: (e) => goToGap(it.go, navigate, e.currentTarget),
+            },
+              h('span', { class: 'refinery-mark', 'aria-hidden': 'true' }, it.relire ? '↻' : it.done ? '✓' : ''),
+              h('span', { class: 'refinery-text' },
+                h('span', { class: 'refinery-label' }, it.label),
+                it.na ? h('span', { class: 'refinery-why' }, 'Sans objet pour ton activité') : null,
+                aFaire ? h('span', { class: 'refinery-why' },
+                  it.later ? h('b', { class: 'refinery-latertag' }, 'Plus tard · ')
+                    : it.relire ? h('b', { class: 'refinery-latertag' }, 'À relire · ')
+                      : it.optionnel ? h('b', { class: 'refinery-latertag' }, 'Facultatif · ') : null,
+                  it.why) : null,
+              ),
+              aFaire ? h('span', { class: 'refinery-go' }, '→') : null,
+            )
+          }),
         ),
       )),
     ),
@@ -110,8 +116,10 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
 const SHOWN = 3
 function visible(group, open) {
   if (open) return group.items
-  const todo = group.items.filter((i) => !i.done)
-  const done = group.items.filter((i) => i.done)
+  // Le même ordre que le guide : les réponses à relire d'abord, puis ce qui
+  // manque ; le facultatif ne se montre que déplié.
+  const todo = [...group.items.filter((i) => i.relire), ...group.items.filter((i) => !i.done && !i.optionnel)]
+  const done = group.items.filter((i) => i.done && !i.relire)
   return [...done, ...todo.slice(0, SHOWN)]
 }
 

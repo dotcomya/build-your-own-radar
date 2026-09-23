@@ -13,7 +13,10 @@
  * ce qu'on lui demandera d'expliquer.
  */
 
-import { h, euro, pct, num, monthLabel } from '../dom.js'
+import { h, euro, pct, num, monthLabel, narrow } from '../dom.js'
+import { barChart } from '../charts.js'
+import { storyline } from '../story.js'
+import { trajectorySentence } from '../explain.js'
 import store from '../../state/store.js'
 import { SECTORS } from '../../state/schema.js'
 import { goToGap } from '../spotlight.js'
@@ -37,73 +40,196 @@ const tauxDit = (v, ca, dit) => (n(ca) <= 0 || Math.abs(n(v)) > 10
 
 const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des entreprises qui revendent à des particuliers' }
 
+/**
+ * Trois mises en page à l'essai, pour le même contenu.
+ *
+ *   « Récit »   — une partie par ligne : le titre et sa phrase sur une ligne,
+ *                 le contenu à gauche, l'avis de Fynomia en bloc final à
+ *                 droite ;
+ *   « Tableau » — tout le pitch en tuiles, sur un ou deux écrans ;
+ *   « Diapos »  — une idée par diapositive, comme le deck qu'on présentera.
+ *
+ * Le fondateur choisit ; on gardera celle qu'il préfère. Le choix est retenu
+ * sur cet appareil.
+ */
+const MISES = [
+  { key: 'recit', label: 'Récit', dit: 'une partie par ligne, l’avis à droite' },
+  { key: 'tableau', label: 'Tableau', dit: 'tout en tuiles, presque sans défiler' },
+  { key: 'diapos', label: 'Diapos', dit: 'une idée par diapositive' },
+]
+const CLE_MISE = 'fynomia:pitch-mise'
+let mise = (() => { try { return localStorage.getItem(CLE_MISE) || 'recit' } catch { return 'recit' } })()
+const choisirMise = (k) => { mise = k; try { localStorage.setItem(CLE_MISE, k) } catch { /* rien à retenir */ } }
+
 export function renderPitch(navigate, refresh, goView) {
   const s = store.scenario
   const r = store.result
   if (!r) return h('p', {}, 'Aucun résultat.')
-  const p = r.pnl
-  const k = r.kpis
   const an = anneeLue(r)
   const choisir = (x) => { lireAnnee(x); refresh() }
   const garde = gardesDuPlan(s, r)
-
   const pilotage = () => (goView ? goView('pilotage') : navigate('#/tableau-de-bord'))
-  const a = avis(s, r)
+  const parties = partiesDuPitch(s, r, navigate, an, choisir)
+  if (!MISES.some((m) => m.key === mise)) mise = 'recit'
 
-  return h('div', { class: 'pitch' },
+  return h('div', { class: `pitch is-${mise}` },
     // La même tête que la synthèse essai : où en est le dossier, ce qui est
     // fait, ce qui reste. Les deux onglets se comparent d'un coup d'œil.
     h('div', { class: 'sy pitch-dossier' }, ...teteDossier(navigate, pilotage, 'pitch-')),
+    h('div', { class: 'pitch-mises', role: 'radiogroup', 'aria-label': 'Mise en page du pitch' },
+      h('span', { class: 'pitch-mises-l' }, 'Mise en page à l’essai'),
+      h('div', { class: 'pitch-mises-seg' },
+        ...MISES.map((m) => h('button', {
+          class: `pitch-mise ${m.key === mise ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(m.key === mise),
+          onClick: () => { choisirMise(m.key); refresh() },
+        }, h('b', {}, m.label), h('span', {}, m.dit))),
+      ),
+    ),
     couverture(s, r, navigate),
     garde.length ? gardeBloc(garde, navigate, { classe: 'is-page' }) : null,
-
-    section({ no: 1, nom: 'Ce que tu vends, et à qui', cle: 'pitch-offre',
-      dit: 'Ce que tu vends, à qui et à quel prix : si ça ne tient pas en deux phrases, le reste ne sera pas lu.' },
-      offres(s, r, navigate), conseil(a.offre)),
-
-    section({ no: 2, nom: 'Jusqu’où ça peut aller', cle: 'pitch-trajectoire', droite: exercices(an, choisir),
-      dit: 'Un investisseur achète une trajectoire : la pente du chiffre d’affaires, et le moment où tu gagnes de l’argent.' },
-      grandsChiffres([
-        { cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none',
-          note: () => croissance(p.revenue),
-          pourquoi: 'La taille que peut atteindre l’affaire. Un fonds cherche une entreprise qui peut devenir grande ; un business angel, une qui peut devenir rentable.' },
-        { cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
-          note: (y) => (taux(n(p.ebitda[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebitda[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.'),
-          pourquoi: 'Ce que l’activité gagne vraiment, avant les choix de financement : c’est le chiffre qu’on compare d’un dossier à l’autre.' },
-        { cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
-          note: () => (k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Premier bénéfice en année ${k.firstProfitableYear + 1}.` : 'Pas de bénéfice sur cinq ans.'),
-          pourquoi: 'Le bénéfice final. Tant qu’il est négatif, l’entreprise consomme l’argent levé.' },
-        { cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, mensuel: r.cash.balance, ton: (v) => (v < 0 ? 'bad' : 'good'),
-          note: () => 'Sur le compte de la société au 31 décembre.',
-          pourquoi: 'Ce qui reste de l’argent levé et gagné. S’il passe sous zéro, il faudra relever plus tôt que prévu.' },
-      ], an, choisir, { cle: 'pitch', debut: r.startDate }), conseil(a.trajectoire)),
-
-    section({ no: 3, nom: 'Comment chaque vente gagne de l’argent', cle: 'pitch-modele',
-      dit: 'Ce qui reste sur chaque vente, quand l’entreprise couvre ses frais, et ce que rapporte un client face à ce qu’il coûte.' },
-      modele(s, r), conseil(a.modele)),
-
-    section({ no: 4, nom: 'Ce que tu cherches à financer', cle: 'pitch-besoin',
-      dit: 'Combien il te faut, jusqu’à quand, et pour quoi faire : la somme doit mener à une étape, pas combler un trou.' },
-      besoin(s, r, navigate), conseil(a.besoin)),
-
-    section({ no: 5, nom: 'Qui fait le travail', cle: 'pitch-equipe',
-      dit: 'On investit d’abord dans une équipe : qui est là au départ, qui arrive ensuite, et ce que ça coûte.' },
-      equipe(s, r), conseil(a.equipe)),
-
-    section({ no: 6, nom: 'Ce qui pourrait mal tourner', cle: 'pitch-risques',
-      dit: 'Un dossier qui nomme ses risques rassure plus qu’un dossier qui les tait : voici ceux de ton métier.' },
-      risques(s, r), conseil(a.risques)),
-
-    section({ no: 7, nom: 'Les chiffres qu’on te demandera', cle: 'pitch-ratios',
-      dit: 'Ceux qu’un investisseur compare d’un dossier à l’autre : sache-les sans regarder tes notes.' },
-      ratios(s, r), conseil(a.ratios)),
-
+    mise === 'tableau' ? tableau(parties) : mise === 'diapos' ? diapos(parties) : recit(parties),
     h('div', { class: 'pitch-foot' },
       h('p', {}, 'Tous ces chiffres viennent du même calcul que les états financiers : un chiffre qui te surprend se corrige dans la page où il se saisit, et tout le pitch suit.'),
       h('div', { class: 'pitch-foot-go' },
         h('button', { class: 'sy-btn is-accent is-sm', onClick: () => navigate('#/presentation') }, 'Présenter en plein écran'),
         h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'resultats' }, navigate) }, 'Voir les états financiers'),
       ),
+    ),
+  )
+}
+
+/**
+ * Le contenu du pitch, partie par partie — le même pour les trois mises en
+ * page. Chaque partie : son nom, la phrase qui dit pourquoi un investisseur
+ * la lit, son contenu, et l'avis de Fynomia. `tuile` règle sa place dans le
+ * tableau (colonnes sur douze, lignes).
+ */
+function partiesDuPitch(s, r, navigate, an, choisir) {
+  const p = r.pnl
+  const k = r.kpis
+  const a = avis(s, r)
+  return [
+    { cle: 'trajectoire', nom: 'La trajectoire sur cinq ans',
+      dit: 'Ta trésorerie mois par mois, et les moments qui comptent : l’histoire qu’un investisseur lit en premier.',
+      corps: () => h('div', { class: 'pitch-traj' },
+        h('div', { class: 'pitch-chart' }, storyline(r, s, { compact: narrow() })),
+        h('p', { class: 'pitch-traj-dit' }, trajectorySentence(r)),
+      ),
+      avis: a.tresorerie, tuile: [8, 2] },
+    { cle: 'offre', nom: 'Ce que tu vends, et à qui',
+      dit: 'Si ça ne tient pas en deux phrases, le reste ne sera pas lu.',
+      corps: () => offres(s, r, navigate), avis: a.offre, tuile: [4, 2] },
+    { cle: 'croissance', nom: 'Jusqu’où ça peut aller',
+      dit: 'La pente du chiffre d’affaires, et le moment où tu gagnes de l’argent.',
+      droite: exercices(an, choisir),
+      corps: () => h('div', { class: 'pitch-croiss' },
+        h('div', { class: 'pitch-chart' }, barChart({
+          series: [{ label: 'Chiffre d’affaires', values: p.revenue.map(n), color: '#0E0F0C' }],
+          line: { label: 'Résultat net', values: p.netResult.map(n), color: '#1B7F4B' },
+          categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 220,
+        })),
+        grandsChiffres([
+          { cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none', note: () => croissance(p.revenue) },
+          { cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
+            note: (y) => (taux(n(p.ebitda[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebitda[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.') },
+          { cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
+            note: () => (k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Premier bénéfice en année ${k.firstProfitableYear + 1}.` : 'Pas de bénéfice sur cinq ans.') },
+          { cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, mensuel: r.cash.balance, ton: (v) => (v < 0 ? 'bad' : 'good'), note: () => 'Au 31 décembre.' },
+        ], an, choisir, { cle: 'pitch', compact: true, debut: r.startDate }),
+      ),
+      avis: a.trajectoire, tuile: [8, 2] },
+    { cle: 'modele', nom: 'Comment chaque vente gagne de l’argent',
+      dit: 'Ce qui reste sur chaque vente, et ce qu’un client rapporte face à ce qu’il coûte.',
+      corps: () => modele(s, r), avis: a.modele, tuile: [4, 2] },
+    { cle: 'besoin', nom: 'Ce que tu cherches à financer',
+      dit: 'Combien, jusqu’à quand, pour quoi faire : la somme doit mener à une étape.',
+      corps: () => besoin(s, r, navigate), avis: a.besoin, tuile: [6, 1] },
+    { cle: 'equipe', nom: 'Qui fait le travail',
+      dit: 'Qui est là au départ, qui arrive ensuite, et ce que ça coûte.',
+      corps: () => equipe(s, r), avis: a.equipe, tuile: [6, 1] },
+    { cle: 'risques', nom: 'Ce qui pourrait mal tourner',
+      dit: 'Un dossier qui nomme ses risques rassure plus qu’un dossier qui les tait.',
+      corps: () => risques(s, r), avis: a.risques, tuile: [6, 1] },
+    { cle: 'ratios', nom: 'Les chiffres qu’on te demandera',
+      dit: 'Ceux qu’un investisseur compare d’un dossier à l’autre.',
+      corps: () => ratios(s, r), avis: a.ratios, tuile: [6, 1] },
+  ]
+}
+
+/** Récit : une partie par ligne, l'avis en bloc final à droite. */
+function recit(parties) {
+  return h('div', { class: 'pitch-recit' },
+    ...parties.map((x, i) => section({ no: i + 1, nom: x.nom, dit: x.dit, droite: x.droite || null, cle: `pitch-${x.cle}`, classe: 'pitch-ligne' },
+      h('div', { class: 'pitch-ligne-corps' },
+        h('div', { class: 'pitch-ligne-main' }, x.corps()),
+        conseil(x.avis, { cote: true }),
+      ),
+    )))
+}
+
+/** Tableau : tout en tuiles, sur une grille de douze colonnes. */
+function tableau(parties) {
+  return h('div', { class: 'pitch-bento' },
+    ...parties.map((x, i) => h('article', {
+      class: 'pitch-tuile', 'data-partie': x.cle,
+      style: { '--cols': String(x.tuile?.[0] || 6), '--rows': String(x.tuile?.[1] || 1), '--i': String(i) },
+    },
+      h('header', { class: 'pitch-tuile-head' },
+        h('b', {}, String(i + 1).padStart(2, '0')),
+        h('h3', {}, x.nom),
+        x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
+      ),
+      h('p', { class: 'pitch-tuile-dit' }, x.dit),
+      h('div', { class: 'pitch-tuile-corps' }, x.corps()),
+      conseil(x.avis, { court: true }),
+    )))
+}
+
+/** Diapos : une partie par diapositive, qu'on fait défiler de côté. */
+const diapo = { i: 0 }
+function diapos(parties) {
+  const n = parties.length
+  const piste = h('div', { class: 'pitch-piste', tabindex: '0', 'aria-label': 'Diapositives du pitch' },
+    ...parties.map((x, i) => h('section', { class: 'pitch-diapo', 'data-partie': x.cle, 'aria-label': `${i + 1} sur ${n} : ${x.nom}` },
+      h('div', { class: 'pitch-diapo-main' },
+        h('div', { class: 'pitch-diapo-head' },
+          h('span', { class: 'pitch-diapo-no' }, `${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`),
+          h('h3', {}, x.nom),
+          x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
+        ),
+        h('p', { class: 'pitch-diapo-dit' }, x.dit),
+        h('div', { class: 'pitch-diapo-corps' }, x.corps()),
+      ),
+      conseil(x.avis, { cote: true }),
+    )))
+  const points = h('div', { class: 'pitch-points' },
+    ...parties.map((x, i) => h('button', { class: `pitch-point ${i === diapo.i ? 'is-on' : ''}`, 'aria-label': x.nom, title: x.nom, onClick: () => aller(i) })))
+  const compteur = h('span', { class: 'pitch-compteur' }, `${diapo.i + 1} / ${n}`)
+  const aller = (i) => {
+    diapo.i = Math.max(0, Math.min(n - 1, i))
+    piste.scrollTo({ left: diapo.i * piste.clientWidth, behavior: 'smooth' })
+  }
+  const suivre = () => {
+    const i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth))
+    if (i === diapo.i && compteur.textContent === `${i + 1} / ${n}`) return
+    diapo.i = i
+    compteur.textContent = `${i + 1} / ${n}`
+    points.querySelectorAll('.pitch-point').forEach((b, k) => b.classList.toggle('is-on', k === i))
+  }
+  piste.addEventListener('scroll', () => requestAnimationFrame(suivre), { passive: true })
+  piste.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); aller(diapo.i + 1) }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); aller(diapo.i - 1) }
+  })
+  // Un redessin (changer d'exercice) garde la diapositive ouverte.
+  requestAnimationFrame(() => { if (diapo.i) piste.scrollLeft = diapo.i * piste.clientWidth })
+  return h('div', { class: 'pitch-deck' },
+    piste,
+    h('div', { class: 'pitch-nav' },
+      h('button', { class: 'pitch-fleche', 'aria-label': 'Diapositive précédente', onClick: () => aller(diapo.i - 1) }, '←'),
+      points,
+      compteur,
+      h('button', { class: 'pitch-fleche', 'aria-label': 'Diapositive suivante', onClick: () => aller(diapo.i + 1) }, '→'),
     ),
   )
 }
@@ -344,15 +470,22 @@ function avis(s, r) {
     ? 'Un fondateur seul, c’est la première question qu’on te posera : qui te complète, et sur quoi ? Même un associé à temps partiel ou un conseil compte.'
     : `${equipe} postes au démarrage. Un investisseur regardera surtout qui fait quoi parmi les fondateurs, et quand arrivent les premières embauches clés.`
 
+  const bas = k.cashLow || {}
+  out.tresorerie = manque > 0
+    ? `Le compte touche ${euro(-manque)} en ${monthLabel(bas.month, r.startDate)} : c’est la date à laquelle l’argent doit être là, pas après. ${k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Ensuite, le premier bénéfice arrive en année ${k.firstProfitableYear + 1} : c’est ce moment que l’investisseur finance.` : 'Sans bénéfice sur cinq ans, il faudra expliquer ce qui retourne la courbe.'}`
+    : n(r.cash?.yearEnd?.[4]) > 0
+      ? `La trésorerie ne passe jamais sous zéro : ton plan se finance seul. Si tu lèves quand même, dis précisément ce que l’argent accélère.`
+      : 'La trésorerie reste fragile sur la durée : un investisseur voudra voir le mois où elle se retourne.'
+
   out.risques = 'Nomme ces risques toi-même, avec ce que tu fais pour les réduire. Un investisseur qui les découvre seul se méfie de tout le reste.'
   out.ratios = 'Ces sept chiffres reviendront dans toutes les conversations. Sache-les par cœur, et sache dire en une phrase d’où vient chacun.'
   return out
 }
 
-/** Une note de l'assistant, sous une partie. */
-function conseil(texte) {
+/** Une note de l'assistant : à côté d'une partie, ou en pied de tuile. */
+function conseil(texte, { cote = false, court = false } = {}) {
   if (!texte) return null
-  return h('aside', { class: 'pitch-avis' },
+  return h('aside', { class: `pitch-avis ${cote ? 'is-cote' : ''} ${court ? 'is-court' : ''}` },
     h('span', { class: 'pitch-avis-sign', 'aria-hidden': 'true' }, 'F'),
     h('div', {},
       h('b', {}, 'L’avis de Fynomia'),

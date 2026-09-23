@@ -35,13 +35,20 @@ export const EUROS = (v) => ({ court: euro(v, { compact: Math.abs(v) >= 100000 }
 
 /** La tête seule d'une partie numérotée, posée au-dessus d'un contenu existant. */
 export function entete({ no, nom, dit = null, droite = null }) {
-  return h('header', { class: 'sx sx-solo sx-head' },
-    h('div', { class: 'sx-no' },
-      h('b', {}, String(no).padStart(2, '0')),
-      h('span', {}, nom),
-      droite ? h('div', { class: 'sx-right' }, droite) : null,
-    ),
+  return h('header', { class: 'sx sx-solo sx-head' }, ligneTitre({ no, nom, dit, droite }))
+}
+
+/**
+ * La ligne de tête d'une partie : le numéro, le nom, la phrase qui dit à
+ * quoi elle sert — sur la même ligne, pour ne pas en coûter trois — et, au
+ * bout, ce qui la règle (l'exercice lu, un avertissement).
+ */
+function ligneTitre({ no, nom, dit, droite }) {
+  return h('div', { class: 'sx-no' },
+    no === null || no === undefined ? null : h('b', {}, String(no).padStart(2, '0')),
+    h('span', { class: 'sx-name' }, nom),
     dit ? h('p', { class: 'sx-say' }, dit) : null,
+    droite ? h('div', { class: 'sx-right' }, droite) : null,
   )
 }
 
@@ -49,19 +56,15 @@ export function entete({ no, nom, dit = null, droite = null }) {
  * Une partie numérotée.
  *
  * Le numéro et le nom de la partie d'abord — ce dont elle parle, en quelques
- * mots — puis, s'il y a lieu, un titre qui est déjà la réponse et une phrase
- * qui la justifie. `droite` loge un sélecteur (l'exercice lu, par exemple).
+ * mots, dans la typographie des titres du tableau de bord — avec, sur la même
+ * ligne, la phrase qui la justifie. `titre`, s'il y a lieu, est déjà la
+ * réponse. `droite` loge un sélecteur (l'exercice lu, par exemple).
  */
 export function section({ no, nom, titre = null, dit = null, droite = null, cle = null, classe = '' }, ...corps) {
   const el = h('section', { class: `sx ${classe}` },
     h('header', { class: 'sx-head' },
-      h('div', { class: 'sx-no' },
-        no === null || no === undefined ? null : h('b', {}, String(no).padStart(2, '0')),
-        h('span', {}, nom),
-        droite ? h('div', { class: 'sx-right' }, droite) : null,
-      ),
+      ligneTitre({ no, nom, dit, droite }),
       titre ? h('h2', { class: 'sx-title' }, titre) : null,
-      dit ? h('p', { class: 'sx-say' }, dit) : null,
     ),
     ...corps,
   )

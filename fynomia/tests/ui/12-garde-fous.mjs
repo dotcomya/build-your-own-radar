@@ -14,7 +14,9 @@
  *      premier acte, un avertissement replié ; le verdict dit « À vérifier »
  *      et aucune carte ne se colore en succès ;
  *   5. « Corriger », une fois l'avertissement déplié, ramène sur le champ ;
- *   6. un salaire saisi en milliers (« 44 ») propose 44 000 €.
+ *   6. un salaire saisi en milliers (« 44 ») propose 44 000 € ;
+ *   7. une charge démesurée se dit sur sa ligne, et « Je valide » la fait
+ *      oublier tant que son montant ne change pas.
  */
 export const nom = 'Garde-fous — un chiffre hors de proportion se dit'
 
@@ -131,6 +133,30 @@ export default async function (t) {
     const txt = (await n2.isVisible()) ? await n2.innerText() : ''
     t.verifie(/SMIC/.test(txt) && /44\s000/.test(txt), 'un salaire de 44 € propose 44 000 €', txt)
   }
+
+  // 7. Une charge hors de proportion se dit sur sa ligne ; « Je valide » la
+  // fait oublier, tant que le montant ne change pas.
+  await t.aller(q, 'achats', 900)
+  const montant = q.locator('.cost-row .cost-amount input').first()
+  await montant.fill('900000')
+  await montant.blur()
+  await q.waitForTimeout(900)
+  const ligne = q.locator('.cost-row').first().locator('.garde-ligne')
+  t.verifie(await ligne.count() === 1, 'une charge de 900 000 € par mois est signalée sur sa ligne')
+  t.verifie(/meilleure année|aucune vente/.test(await ligne.innerText().catch(() => '')), 'la note compare la charge à ce que l’affaire vend', await ligne.innerText().catch(() => ''))
+  t.verifie(await q.locator('.sx-ribbon .garde').count() === 1, 'le bandeau des chiffres le signale aussi, sur sa ligne')
+  await ligne.locator('.garde-ok').click()
+  await q.waitForTimeout(900)
+  t.verifie(await q.locator('.cost-row').first().locator('.garde-ligne').count() === 0, '« Je valide » fait disparaître l’avertissement')
+  const encore = await q.evaluate(async () => {
+    const m = await import('./js/ui/garde.js')
+    return m.gardesDuPlan().filter((g) => g.cle.startsWith('charge:')).length
+  })
+  t.verifie(encore === 0, 'une charge validée ne se redit nulle part', String(encore))
+  await q.locator('.cost-row .cost-amount input').first().fill('1900000')
+  await q.locator('.cost-row .cost-amount input').first().blur()
+  await q.waitForTimeout(900)
+  t.verifie(await q.locator('.cost-row').first().locator('.garde-ligne').count() === 1, 'si le montant change, l’avertissement revient')
 
   t.verifie(q.erreurs.length === 0, 'aucune erreur JavaScript (exemple)', q.erreurs.slice(0, 2))
   await q.fermer()

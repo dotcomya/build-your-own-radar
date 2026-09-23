@@ -37,7 +37,7 @@ import { claim, goToGap } from '../spotlight.js'
 import store from '../../state/store.js'
 import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
-import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
+import { chiffresDePage } from '../chiffres-pages.js'
 import { gardePrix, gardeAbonnement, gardeCroissance } from '../../engine/plausible.js'
 import { tradeSuggest } from '../trade-suggest.js'
 
@@ -99,25 +99,20 @@ export function renderOffer(navigate, refresh) {
   const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
   renderOffer.view = view
 
-  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('offre', refresh, navigate, { forme: 'cote' })
+  // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
+  const chiffres = chiffresDePage('offre', refresh, navigate)
 
   return h('div', { class: 'content' },
 
     moduleShell({
       no: '02', title: 'Offre et revenus',
       lede: "Tes offres : leur prix, leurs volumes et leurs conditions de paiement.",
-      figure: revenueFigure(s, r),
+      figure: chiffres ? null : revenueFigure(s, r),
       guide: stepGuide('clients', journey(store.scenario, store.result), 'offre'),
       views, view, onPick: (k) => { renderOffer.view = k; refresh() },
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
-    chiffres ? null : gardePage('offre', navigate),
-    // En colonne à droite, les chiffres restent en vue pendant qu'on saisit ;
-    // la zone de travail garde toute la hauteur de la page.
-    h('div', { class: chiffres ? 'saisie-cote' : 'saisie-plein' },
-      h('div', { class: 'saisie-main' },
-        partieTravail('offre', view, false),
+    chiffres || gardePage('offre', navigate),
 
     view === 'offres'
       ? h('div', { class: 'view' },
@@ -138,9 +133,6 @@ export function renderOffer(navigate, refresh) {
     todoPanel('offre', store.scenario, navigate),
 
     tutorial('clients', navigate),
-      ),
-      chiffres ? h('aside', { class: 'saisie-aside' }, chiffres) : null,
-    ),
   )
 }
 

@@ -49,6 +49,8 @@ export const assess = (r, s) => verdict(r, s)
  * d'avant.
  */
 export function openSynthesis() { renderDashboard.view = 'synthese' }
+export function openPitch() { renderDashboard.view = 'pitch' }
+export function openPilotage() { renderDashboard.view = 'pilotage' }
 
 export function renderDashboard(navigate, refresh) {
   const r = store.result
