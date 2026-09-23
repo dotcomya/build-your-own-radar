@@ -43,12 +43,14 @@ export function renderFounder(navigate, refresh) {
         barChart({
           categories: YEAR_CATEGORIES,
           series: [
-            { label: "Ce que l'entreprise débourse", values: income.rows.map((x) => x.employerCost + x.distributed), color: PALETTE[1] },
+            { label: income.micro ? 'Ce que tu encaisses' : "Ce que l'entreprise débourse", values: income.rows.map((x) => (income.micro ? x.microRevenue : x.employerCost + x.distributed)), color: PALETTE[1] },
             { label: 'Ce qui arrive sur ton compte', values: income.rows.map((x) => x.disposable), color: PALETTE[0] },
           ],
         }),
         h('p', { class: 'tiny muted', style: { margin: '10px 0 0' } },
-          "L'écart entre les deux barres est la somme des cotisations, de l'impôt sur les sociétés, des prélèvements sur dividendes et de l'impôt sur le revenu."),
+          income.micro
+            ? "L'écart entre les deux barres est la somme de tes cotisations, de tes charges réelles et de ton impôt sur le revenu."
+            : "L'écart entre les deux barres est la somme des cotisations, de l'impôt sur les sociétés, des prélèvements sur dividendes et de l'impôt sur le revenu."),
       ),
     ),
 
@@ -80,6 +82,7 @@ export function renderFounder(navigate, refresh) {
  * sépare du précédent. Le détail complet reste juste en dessous.
  */
 function payLadder(income, row, r, y) {
+  if (income.micro) return microLadder(income, row, r, y)
   const salaryCost = row.employerCost || 0
   const employerCharges = salaryCost - (row.gross || 0)
   const employeeCharges = (row.gross || 0) - (row.netBeforeTax || 0)
@@ -104,6 +107,11 @@ function payLadder(income, row, r, y) {
       k: 'Tes dividendes nets',
       v: row.netDividends,
       note: `Sur ${euro(row.grossDividends)} distribués, après prélèvements sociaux${row.dividendIncomeTax > 0 ? ' et flat tax' : ''}.`,
+    } : null,
+    row.honourRepayment > 0 ? {
+      k: 'Ton prêt d’honneur',
+      v: -row.honourRepayment,
+      note: 'Remboursé sur tes revenus, sans intérêts : c’est une dette à toi, pas à l’entreprise.',
     } : null,
     {
       k: 'Ce qui te reste, net de tout',
@@ -132,6 +140,41 @@ function payLadder(income, row, r, y) {
   )
 }
 
+/**
+ * Le micro-entrepreneur : de ce qu'il encaisse à ce qui lui reste.
+ *
+ * Pas de super brut ni de dividendes ici. Le chiffre d'affaires paie d'abord
+ * les cotisations — sur chaque euro encaissé —, puis les charges réelles ; ce
+ * qui reste est son revenu, imposé à son nom.
+ */
+function microLadder(income, row, r, y) {
+  const charges = row.microRevenue - row.microSocial - row.microIncome
+  const steps = [
+    { k: 'Ce que tu encaisses', v: row.microRevenue, note: 'Ton chiffre d’affaires, sur lequel se calculent tes cotisations.', tone: 'cost' },
+    { k: 'Tes cotisations', v: -row.microSocial, note: `${pct(r.micro.rate, 1)} de ce que tu encaisses${r.micro.training ? `, plus ${pct(r.micro.training, 1)} de formation professionnelle` : ''}${row.acreSaving > 0 ? ` — dont ${euro(row.acreSaving)} effacés par l’ACRE` : ''}.` },
+    { k: 'Tes charges réelles', v: -charges, note: 'Achats, loyer, logiciels, taxes : en micro-entreprise, elles ne se déduisent de rien.' },
+    { k: 'Ton revenu avant impôt', v: row.microIncome, note: 'Ce que ton activité te laisse, avant l’impôt sur le revenu.' },
+    { k: income.vl ? 'Versement libératoire' : 'Impôt sur le revenu', v: -row.incomeTax, note: income.vl ? `${pct(r.micro.flatRate, 1)} de ce que tu encaisses, payé avec tes cotisations.` : `Au barème, sur ${euro(row.taxableIncome)} après l’abattement forfaitaire.` },
+    row.honourRepayment > 0 ? { k: 'Ton prêt d’honneur', v: -row.honourRepayment, note: 'Remboursé sur tes revenus, sans intérêts.' } : null,
+    { k: 'Ce qui te reste, net de tout', v: row.disposable, note: `Soit ${euro(row.monthly)} par mois. Tu prélèves ${euro((row.draws || 0) / 12)} par mois : ${row.disposable >= (row.draws || 0) ? 'ton activité le permet.' : 'c’est plus que ce que ton activité te laisse, la différence sort de ta trésorerie.'}`, tone: 'final' },
+  ].filter(Boolean)
+  return h('section', { class: 'pay' },
+    h('div', { class: 'pay-head' },
+      h('h2', {}, 'De ce que tu encaisses à ce qui te reste'),
+      h('span', { class: 'pay-year' }, yearLabel(y)),
+    ),
+    h('div', { class: 'pay-steps' },
+      ...steps.map((st) => h('div', { class: `pay-step ${st.tone || ''}` },
+        h('div', { class: 'pay-step-main' },
+          h('span', { class: 'pay-step-k' }, st.k),
+          h('span', { class: 'pay-step-v num' }, euro(st.v)),
+        ),
+        h('p', { class: 'pay-step-note' }, st.note),
+      )),
+    ),
+  )
+}
+
 /* ─────────────────────────── Chemin de l'argent ───────────────────────── */
 
 /**
@@ -142,6 +185,17 @@ function waterfall(income, r, y) {
   const row = income.rows[y]
   const ebitda = r.pnl.ebitda[y]
   const steps = []
+
+  if (income.micro) {
+    steps.push({ label: 'Chiffre d’affaires encaissé', value: row.microRevenue, kind: 'start' })
+    steps.push({ label: 'Cotisations sociales', value: -row.microSocial, kind: 'cost' })
+    steps.push({ label: 'Achats, charges et taxes', value: -(row.microRevenue - row.microSocial - row.microIncome), kind: 'cost' })
+    steps.push({ label: 'Ton revenu avant impôt', value: row.microIncome, kind: 'subtotal' })
+    steps.push({ label: income.vl ? 'Versement libératoire' : 'Impôt sur le revenu', value: -row.incomeTax, kind: 'cost' })
+    if (row.honourRepayment > 0) steps.push({ label: 'Remboursement du prêt d’honneur', value: -row.honourRepayment, kind: 'cost' })
+    steps.push({ label: 'Sur ton compte', value: row.disposable, kind: 'total' })
+    return flowPanel(steps, y, null)
+  }
 
   steps.push({ label: "EBITDA de l'entreprise", value: ebitda, kind: 'start' })
   if (row.employerCost > 0) steps.push({ label: 'dont ta rémunération chargée', value: -row.employerCost, kind: 'info', note: `${euro(row.gross)} de brut, ${euro(row.employerCost - row.gross)} de cotisations` })
@@ -160,8 +214,12 @@ function waterfall(income, r, y) {
   if (row.dividendIncomeTax > 0) steps.push({ label: "Impôt forfaitaire sur dividendes (12,8 %)", value: -row.dividendIncomeTax, kind: 'cost' })
   steps.push({ label: 'Ton salaire net', value: row.netBeforeTax, kind: 'gain' })
   steps.push({ label: "Impôt sur le revenu", value: -row.incomeTax, kind: 'cost' })
+  if (row.honourRepayment > 0) steps.push({ label: 'Remboursement du prêt d’honneur', value: -row.honourRepayment, kind: 'cost' })
   steps.push({ label: 'Sur ton compte', value: row.disposable, kind: 'total' })
+  return flowPanel(steps, y, row)
+}
 
+function flowPanel(steps, y, row) {
   return h('section', { class: 'panel' },
     h('div', { class: 'card-head' },
       h('div', {}, h('h2', {}, "Le chemin de l'argent"), h('div', { class: 'tiny muted' }, yearLabel(y))),
@@ -175,7 +233,7 @@ function waterfall(income, r, y) {
         st.note && h('div', { class: 'flow-note' }, st.note),
       )),
     ),
-    row.costPerEuro && row.costPerEuro > 0 ? h('div', { class: 'panel-body', style: { paddingTop: 0 } },
+    row && row.costPerEuro && row.costPerEuro > 0 ? h('div', { class: 'panel-body', style: { paddingTop: 0 } },
       h('div', { class: 'note plain' },
         h('div', { class: 'note-title' }, `${num(row.costPerEuro, 2)} € pour un euro dans ton poche`),
         `L'entreprise doit dégager ${num(row.costPerEuro, 2)} € de valeur pour te laisser 1 € net d'impôt. C'est le prix de la chaîne complète : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`),
@@ -186,6 +244,27 @@ function waterfall(income, r, y) {
 function settingsPanel(s, income, set, refresh) {
   const f = s.founder
   const isSarl = ['SARL', 'EURL'].includes(s.meta.legalForm)
+  if (income.micro) {
+    return h('section', { class: 'panel' },
+      h('header', { class: 'panel-head' },
+        h('h2', {}, 'Tes paramètres'),
+        h('p', { class: 'panel-sub' }, 'Ce qui fixe ton impôt sur le revenu.'),
+      ),
+      h('div', { class: 'panel-body stack' },
+        h('div', { class: 'grid grid-2' },
+          numberField({ label: 'Parts fiscales du foyer', field: 'count', value: f.taxParts, step: 0.5, max: 10,
+            hint: 'Célibataire 1, couple 2, plus une demi-part par enfant.', onInput: (v) => set({ taxParts: v }) }),
+          numberField({ label: 'Autres revenus du foyer', field: 'amount', value: f.otherIncome, suffix: '€/an',
+            hint: 'Salaire du conjoint, revenus fonciers. Ils modifient ta tranche.', onInput: (v) => set({ otherIncome: v }) }),
+        ),
+        h('div', { class: 'note' },
+          h('div', { class: 'note-title' }, income.vl ? 'Tu as choisi le versement libératoire' : 'Tu es imposé au barème'),
+          income.vl
+            ? 'Ton impôt est déjà payé, avec tes cotisations, en pourcentage de ce que tu encaisses. Il ne dépend ni de ton foyer ni de tes autres revenus. Le choix se fait dans Mon projet, sous ton statut.'
+            : 'Ton chiffre d’affaires est imposé après un abattement forfaitaire censé représenter tes charges, avec les autres revenus de ton foyer. Si ton foyer est imposé à 11 % ou plus, le versement libératoire peut coûter moins : le choix se fait dans Mon projet, sous ton statut.'),
+      ),
+    )
+  }
   return h('section', { class: 'panel' },
     h('header', { class: 'panel-head' },
       h('h2', {}, 'Tes paramètres'),
@@ -261,6 +340,23 @@ function detailTable(income, r) {
     h('td', { style: indent ? { paddingLeft: '26px' } : {} }, label),
     ...rows.map((x) => h('td', { class: 'num' }, euro(get(x)))),
   )
+  const pret = rows.some((x) => x.honourRepayment > 0)
+  if (income.micro) {
+    return h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
+      h('tbody', {},
+        line('Chiffre d’affaires encaissé', (x) => x.microRevenue),
+        line('Cotisations sociales', (x) => -x.microSocial, '', true),
+        rows.some((x) => x.acreSaving > 0) ? line('dont effacé par l’ACRE', (x) => x.acreSaving, 'muted', true) : null,
+        line('Revenu avant impôt', (x) => x.microIncome, 'highlight'),
+        income.vl ? null : line('Revenu imposable du foyer', (x) => x.taxableIncome),
+        line(income.vl ? 'Versement libératoire' : 'Impôt sur le revenu', (x) => -x.incomeTax),
+        pret ? line('Remboursement du prêt d’honneur', (x) => -x.honourRepayment) : null,
+        h('tr', { class: 'total' }, h('td', {}, 'Disponible sur ton compte'), ...rows.map((x) => h('td', { class: 'num' }, euro(x.disposable)))),
+        h('tr', {}, h('td', { class: 'muted small' }, 'soit par mois'), ...rows.map((x) => h('td', { class: 'num muted small' }, euro(x.monthly)))),
+      ),
+    )
+  }
   return h('table', { class: 'data' },
     h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
     h('tbody', {},
@@ -278,6 +374,7 @@ function detailTable(income, r) {
       line('Revenu imposable du foyer', (x) => x.taxableIncome),
       h('tr', {}, h('td', {}, 'Taux marginal'), ...rows.map((x) => h('td', { class: 'num pct' }, pct(x.marginalRate, 0)))),
       line('Impôt dû', (x) => -x.incomeTax),
+      pret ? line('Remboursement du prêt d’honneur', (x) => -x.honourRepayment) : null,
       h('tr', { class: 'total' }, h('td', {}, 'Disponible sur ton compte'), ...rows.map((x) => h('td', { class: 'num' }, euro(x.disposable)))),
       h('tr', {}, h('td', { class: 'muted small' }, 'soit par mois'), ...rows.map((x) => h('td', { class: 'num muted small' }, euro(x.monthly)))),
     ),

@@ -25,6 +25,7 @@ import { euro, pct, num } from '../format.js'
 import { SECTORS } from '../state/schema.js'
 import { getActivity } from '../state/activities.js'
 import { PARAMS } from './fiscal-fr-2026.js'
+import { MICRO_CATEGORIES, microCategory, anneesCiviles } from './micro.js'
 
 /**
  * Les fourchettes, par modèle économique.
@@ -220,6 +221,7 @@ const GO = {
   equipe: { route: 'equipe', view: 'postes', anchor: 'equipe' },
   charges: { route: 'achats', view: 'charges', anchor: 'charges' },
   sources: { route: 'financement', view: 'sources', anchor: 'sources' },
+  regime: { route: 'projet', anchor: 'regime' },
 }
 
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -295,7 +297,7 @@ export function vraisemblance(scenario, result) {
     // Le financement : ce qu'il manque au point bas, face à ce qui est prévu.
     const f = s.financing || {}
     const prevu = n(f.openingCash) + somme(f.equityFounders) + somme(f.equityInvestors) + somme(f.loans) +
-      somme(f.grants) + somme(f.advances) + somme(f.shareholderLoans)
+      somme(f.grants) + somme(f.advances) + somme(f.shareholderLoans) + somme(f.honourLoans)
     const manque = n(result.kpis?.fundingNeed)
     // Manquer d'argent est une situation réelle, que le verdict dit déjà ; on
     // ne soupçonne une faute de saisie qu'à dix fois l'écart, et sans bloquer.
@@ -341,6 +343,45 @@ export function vraisemblance(scenario, result) {
           texte: caMax > 0
             ? `${euro(an)} en année ${k + 1}, c’est ${fois(an / caMax)} ce que l’affaire vend dans sa meilleure année (${euro(caMax)}). Un montant annuel saisi comme mensuel, ou un zéro de trop ?`
             : `${euro(an)} en année ${k + 1}, sans aucune vente en face : un montant annuel saisi comme mensuel, ou un zéro de trop ?`,
+        })
+      }
+    }
+  }
+
+  if (result) {
+    // Les seuils qui changent de régime : ce ne sont pas des fautes de
+    // frappe, ce sont des lignes que le plan franchit. Un micro-entrepreneur
+    // qui dépasse son plafond deux ans de suite en sort ; une affaire en
+    // franchise qui dépasse le seuil majoré facture la TVA dès le lendemain.
+    // Les deux se comptent par année civile, la première au prorata.
+    const sector = SECTORS[s.meta?.sectorKey]
+    const cat = microCategory(s, sector)
+    const nature = MICRO_CATEGORIES[cat].plafond
+    const mensuel = result.revenue?.monthly || []
+    if (result.micro) {
+      const annees = anneesCiviles(s, mensuel, result.micro.ceiling)
+      const dessus = annees.filter((a) => a.ca > a.plafond + 1)
+      if (dessus.length) {
+        const a = dessus[0]
+        const deux = annees.some((x, i) => i > 0 && x.ca > x.plafond + 1 && annees[i - 1].ca > annees[i - 1].plafond + 1)
+        out.push({
+          cle: 'micro-plafond', niveau: 'attention', sortie: true, sujet: 'Le plafond de la micro-entreprise', go: GO.regime, valeur: dessus.map((x) => x.annee).join(','),
+          texte: `${euro(a.ca)} encaissés en ${a.annee}, pour un plafond de ${euro(a.plafond)}${a.plafond < result.micro.ceiling - 1 ? ' — ramené au prorata de ta première année' : ''}. ${deux
+            ? 'Deux années civiles de suite au-dessus : tu sors de la micro-entreprise au 1er janvier suivant. Prévois le passage en société ou au régime réel, avec d’autres cotisations et un autre impôt.'
+            : 'Une année au-dessus ne suffit pas à en sortir, deux de suite si. Surveille l’année suivante.'}`,
+        })
+      }
+    }
+    if (s.meta?.vatExempt && !sector?.vat?.exempt) {
+      const seuils = (result.micro?.franchise) || (() => {
+        const t = PARAMS.vatFranchiseThresholds.value
+        return nature === 'vente' ? { seuil: t.vente, majore: t.venteMajore } : { seuil: t.services, majore: t.servicesMajore }
+      })()
+      const au = anneesCiviles(s, mensuel, seuils.majore).find((x) => x.ca > x.plafond + 1)
+      if (au) {
+        out.push({
+          cle: 'franchise-tva', niveau: 'attention', sortie: true, sujet: 'La franchise de TVA', go: GO.regime, valeur: au.annee,
+          texte: `${euro(au.ca)} encaissés en ${au.annee} : au-delà de ${euro(au.plafond)}, tu factures la TVA dès le premier jour du dépassement. Tes prix devront l’inclure, ou ta marge l’absorber.`,
         })
       }
     }

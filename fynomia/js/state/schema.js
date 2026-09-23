@@ -140,6 +140,10 @@ export const LEGAL_FORMS = {
     label: 'SARL', short: 'Plusieurs associés · gérant TNS', contract: 'tns',
     note: "Attention aux dividendes : au-delà de 10 % du capital, ils supportent les cotisations d'indépendant, pas la flat tax.",
   },
+  MICRO: {
+    label: 'Micro-entreprise', short: 'Cotisations sur ce que tu encaisses', contract: 'micro',
+    note: "Le régime le plus simple pour démarrer seul : tu cotises sur ton chiffre d'affaires encaissé — 12,3 % en vente, 21,2 % en services, 25,6 % en libéral —, sans impôt sur les sociétés ni comptabilité complète. Tes charges ne se déduisent pas, et le chiffre d'affaires est plafonné : 203 100 € en vente, 83 600 € en services.",
+  },
   EI: {
     label: 'Entreprise individuelle', short: 'Pas de société', contract: 'tns',
     note: "Le bénéfice est ton revenu : il est imposé à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.",
@@ -219,6 +223,10 @@ export function emptyScenario(name = 'Mon business plan') {
       id: uid('scn'), name, company: '', sector: '', legalForm: 'SAS',
       startDate: `${Math.max(2026, year)}-01-01`, level: 'easy',
       jeiClaimed: false, reducedCorporateTax: true, companyAgeYears: 0,
+      // L'ACRE se demande et se mérite depuis 2026 : éteinte tant que le
+      // fondateur ne la déclare pas. La nature d'activité du micro-entrepreneur
+      // se déduit du métier tant qu'elle n'est pas choisie.
+      acre: false, microActivity: '', microVL: false,
       sectorKey: null, vatExempt: false, nonProfit: false, persona: 'founder',
       // Ce que le fondateur a répondu — « pizzeria » — et le mot de son métier.
       // `sectorKey` reste le modèle économique qui tourne derrière.
@@ -240,7 +248,7 @@ export function emptyScenario(name = 'Mon business plan') {
     team: [],
     opex: [],
     capex: [],
-    financing: { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [] },
+    financing: { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [], honourLoans: [] },
     assumptions: { stockDays: 0 },
     // La politique sociale se décide une fois, pour toute l'entreprise. La
     // complémentaire santé n'est pas une option : elle est obligatoire dès le
@@ -273,7 +281,7 @@ function blankFromSector(s, sector) {
   s.team = []
   s.opex = []
   s.capex = []
-  s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [] }
+  s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [], honourLoans: [] }
 }
 
 /** Charges de fonctionnement types, pour qu'un modèle ne démarre jamais à zéro. */
@@ -335,6 +343,8 @@ export function scenarioFromTemplate(key, name, { sample = true } = {}) {
   // Un gérant majoritaire de SARL ou d'EURL subit les cotisations TNS sur ses
   // dividendes : la case est cochée d'office pour ces formes.
   s.founder.majorityManager = ['SARL', 'EURL'].includes(s.meta.legalForm)
+  // Un micro-entrepreneur démarre en franchise de TVA : c'est le cas courant.
+  if (s.meta.legalForm === 'MICRO') s.meta.vatExempt = true
   for (const a of s.activities) rangerHypotheses(a)
   return s
 }

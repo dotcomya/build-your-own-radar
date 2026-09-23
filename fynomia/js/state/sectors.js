@@ -68,8 +68,8 @@ export const SECTORS = {
     family: 'tech', label: 'Développeur indépendant', glyph: '⟨⟩',
     tagline: "Ton chiffre d'affaires a un plafond : le nombre de jours dans l'année.",
     unit: { one: 'jour facturé', many: 'jours facturés', verb: 'vendus', client: 'client' },
-    vat: { sales: 0.2, label: 'TVA 20 %', note: "Sous 39 100 € de recettes, la franchise en base dispense de facturer la TVA — mais interdit de la récupérer. Au-delà, le régime réel s'impose." },
-    legal: { forms: ['EI', 'EURL', 'SASU'], regime: 'TNS ou assimilé salarié', note: "En EURL le gérant est TNS : environ 45 % de cotisations sur la rémunération. En SASU il est assimilé salarié : environ 80 % de charges sur le net, mais une meilleure couverture et la possibilité de se verser des dividendes sans cotisations." },
+    vat: { sales: 0.2, label: 'TVA 20 %', note: "Sous 37 500 € de recettes, la franchise en base dispense de facturer la TVA — mais interdit de la récupérer. Au-delà du seuil majoré de 41 250 €, la TVA est due dès le premier jour du dépassement." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SASU'], regime: 'TNS ou assimilé salarié', note: "En micro-entreprise, tu cotises 25,6 % de ce que tu encaisses, sans rien déduire — simple tant que tu restes sous 83 600 € de chiffre d'affaires. En EURL le gérant est TNS : environ 45 % de cotisations sur la rémunération. En SASU il est assimilé salarié : environ 80 % de charges sur le net, mais une meilleure couverture et la possibilité de se verser des dividendes sans cotisations." },
     benchmarks: { grossMargin: [0.9, 1], billableDays: [180, 220], dailyRate: [400, 750] },
     metrics: ['revenue', 'arpu', 'payrollCost', 'runway'],
     traps: [
@@ -240,7 +240,7 @@ export const SECTORS = {
     tagline: "Quatre mois font ton année. Les vitrines, elles, tournent les douze.",
     unit: { one: 'glace', many: 'glaces', verb: 'vendues', client: 'client' },
     vat: { sales: 0.1, label: 'TVA 10 %', note: "Une glace consommée sur place ou à emporter pour consommation immédiate relève du taux de 10 %. Un pot vendu pour être emporté et consommé plus tard passe à 5,5 %. Si tu vends surtout des pots et des bacs, ton taux moyen sera plus bas." },
-    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Formation hygiène obligatoire, agrément sanitaire si tu fabriques pour revendre à d'autres commerces, et registre HACCP dès l'ouverture." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Formation hygiène obligatoire, agrément sanitaire si tu fabriques pour revendre à d'autres commerces, et registre HACCP dès l'ouverture." },
     benchmarks: { grossMargin: [0.72, 0.8], payrollRatio: [0.24, 0.34], rentRatio: [0.08, 0.14], ticket: [4, 9] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
@@ -276,7 +276,7 @@ export const SECTORS = {
     tagline: "Tu fabriques et tu vends le même jour : la perte, c'est de la marge partie à la poubelle.",
     unit: { one: 'vente', many: 'ventes', verb: 'encaissées', client: 'client' },
     vat: { sales: 0.055, label: 'TVA 5,5 %', note: "Le pain, la pâtisserie et les produits vendus à emporter pour une consommation différée relèvent du taux de 5,5 %. Ce qui est consommé sur place passe à 10 %, les confiseries et le chocolat à 20 %. Un point de vente mixte a donc trois taux à tenir." },
-    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "CAP exigé pour la fabrication, formation hygiène obligatoire, registre HACCP et déclaration d'activité auprès de la direction départementale." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "CAP exigé pour la fabrication, formation hygiène obligatoire, registre HACCP et déclaration d'activité auprès de la direction départementale." },
     benchmarks: { grossMargin: [0.65, 0.75], payrollRatio: [0.3, 0.4], rentRatio: [0.05, 0.1], ticket: [4, 12] },
     metrics: ['revenue', 'grossMargin', 'payrollRatio', 'breakEven'],
     traps: [
@@ -336,7 +336,7 @@ export const SECTORS = {
     tagline: "Ton stock se fane : la démarque est ton vraie charge.",
     unit: { one: 'vente', many: 'ventes', verb: 'réalisées', client: 'client' },
     vat: { sales: 0.1, label: 'TVA 10 %', note: "Les fleurs coupées et plantes d'ornement relèvent du taux de 10 %. Les contenants, accessoires et articles de décoration restent à 20 % : ton taux moyen dépend de ton mix." },
-    legal: { forms: ['EI', 'EURL', 'SARL'], regime: 'TNS', note: "Commerce de détail : emplacement et flux passants comptent davantage que la surface." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL'], regime: 'TNS', note: "Commerce de détail : emplacement et flux passants comptent davantage que la surface." },
     benchmarks: { grossMargin: [0.5, 0.6], shrinkage: [0.08, 0.12], rentRatio: [0.08, 0.12], ticket: [22, 40] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
@@ -362,7 +362,7 @@ export const SECTORS = {
     tagline: "La marge se fait à l'achat, pas à la vente.",
     unit: { one: 'vente', many: 'ventes', verb: 'réalisées', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Taux normal sur la plupart des produits. L'alimentaire non transformé relève de 5,5 %." },
-    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Le bail commercial engage sur neuf ans avec sortie possible tous les trois ans : c'est souvent l'engagement le plus lourd du projet." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Le bail commercial engage sur neuf ans avec sortie possible tous les trois ans : c'est souvent l'engagement le plus lourd du projet." },
     benchmarks: { grossMargin: [0.3, 0.45], rentRatio: [0.07, 0.12], stockDays: [45, 90] },
     metrics: ['revenue', 'grossMargin', 'peakBfr', 'breakEven'],
     traps: [
@@ -389,7 +389,7 @@ export const SECTORS = {
     tagline: "La masse salariale mange la moitié du chiffre : chaque fauteuil doit tourner.",
     unit: { one: 'prestation', many: 'prestations', verb: 'réalisées', client: 'client' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Prestations de service au taux normal, comme la revente de produits capillaires." },
-    legal: { forms: ['EI', 'EURL', 'SARL'], regime: 'TNS', note: "Diplôme exigé pour l'exercice. La convention collective de la coiffure encadre les minima et les classifications." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL'], regime: 'TNS', note: "Diplôme exigé pour l'exercice. La convention collective de la coiffure encadre les minima et les classifications." },
     benchmarks: { grossMargin: [0.85, 0.92], payrollRatio: [0.42, 0.52], rentRatio: [0.08, 0.13], ticket: [30, 48] },
     metrics: ['revenue', 'payrollRatio', 'breakEven', 'cashLow'],
     traps: [
@@ -449,7 +449,7 @@ export const SECTORS = {
     tagline: "Ton chiffre d'affaires tient en deux nombres : le prix de la nuit et le taux de remplissage.",
     unit: { one: 'nuitée', many: 'nuitées', verb: 'vendues', client: 'voyageur' },
     vat: { sales: 0.1, label: 'TVA 10 %', note: "L'hébergement en hôtel, camping ou meublé de tourisme classé relève du taux de 10 %. La location nue de meublé non classé est exonérée ; dès que trois prestations para-hôtelières sont fournies — petit déjeuner, ménage, linge, accueil — la TVA s'applique." },
-    legal: { forms: ['EI', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Déclaration en mairie, numéro d'enregistrement et taxe de séjour à collecter. En zone tendue, le changement d'usage peut être exigé et limiter la location à cent vingt jours par an." },
+    legal: { forms: ['EI', 'MICRO', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Déclaration en mairie, numéro d'enregistrement et taxe de séjour à collecter. En zone tendue, le changement d'usage peut être exigé et limiter la location à cent vingt jours par an." },
     benchmarks: { grossMargin: [0.72, 0.85], occupancy: [0.45, 0.7], payrollRatio: [0.2, 0.35], ticket: [70, 180] },
     metrics: ['revenue', 'grossMargin', 'breakEven', 'cashLow'],
     traps: [
@@ -472,7 +472,7 @@ export const SECTORS = {
     tagline: "Tu vends des heures : le prix et le nombre d'intervenants sont tes deux seuls leviers.",
     unit: { one: 'heure', many: 'heures', verb: 'facturées', client: 'client' },
     vat: { sales: 0, label: 'Exonéré de TVA', note: "Les services à la personne rendus par un organisme déclaré sont exonérés de TVA. En contrepartie, la TVA sur les achats n'est pas récupérable : raisonne en montants TTC. La déclaration ouvre au client le crédit d'impôt de 50 %, qui divise son prix perçu par deux." },
-    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "La déclaration en préfecture ouvre le crédit d'impôt au client ; l'agrément, obligatoire pour la garde d'enfants de moins de trois ans et l'assistance aux personnes dépendantes, va plus loin et se renouvelle." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "La déclaration en préfecture ouvre le crédit d'impôt au client ; l'agrément, obligatoire pour la garde d'enfants de moins de trois ans et l'assistance aux personnes dépendantes, va plus loin et se renouvelle." },
     benchmarks: { grossMargin: [0.28, 0.45], payrollRatio: [0.55, 0.7], ticket: [25, 40] },
     metrics: ['revenue', 'payrollRatio', 'breakEven', 'cashLow'],
     traps: [
@@ -499,7 +499,7 @@ export const SECTORS = {
     tagline: "Vendre un abonnement est facile ; le faire renouveler l'est moins.",
     unit: { one: 'adhérent', many: 'adhérents', verb: 'inscrits', client: 'adhérent' },
     vat: { sales: 0.2, label: 'TVA 20 %', note: "Prestations sportives au taux normal. Une association sportive à gestion désintéressée peut en revanche être exonérée." },
-    legal: { forms: ['EI', 'EURL', 'SASU'], regime: 'TNS ou assimilé salarié', note: "La carte professionnelle d'éducateur sportif est obligatoire pour l'encadrement contre rémunération, et se déclare en préfecture." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SASU'], regime: 'TNS ou assimilé salarié', note: "La carte professionnelle d'éducateur sportif est obligatoire pour l'encadrement contre rémunération, et se déclare en préfecture." },
     benchmarks: { grossMargin: [0.8, 0.92], churn: [0.03, 0.06], payrollRatio: [0.3, 0.45], rentRatio: [0.12, 0.2] },
     metrics: ['recurringShare', 'revenue', 'breakEven', 'runway'],
     traps: [
@@ -526,7 +526,7 @@ export const SECTORS = {
     tagline: "Ta marge se joue sur le devis, et ta trésorerie sur la date de paiement.",
     unit: { one: 'chantier', many: 'chantiers', verb: 'réalisés', client: 'client' },
     vat: { sales: 0.1, label: 'TVA 10 %', note: "Les travaux d'amélioration, de transformation et d'entretien d'un logement achevé depuis plus de deux ans relèvent du taux de 10 %, et de 5,5 % pour la rénovation énergétique. Le neuf et les locaux professionnels restent à 20 %. L'attestation du client conditionne le taux réduit." },
-    legal: { forms: ['EI', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Qualification professionnelle exigée, inscription à la chambre de métiers, et surtout assurance décennale obligatoire avant le premier chantier : sans elle, la responsabilité est personnelle et illimitée." },
+    legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "Qualification professionnelle exigée, inscription à la chambre de métiers, et surtout assurance décennale obligatoire avant le premier chantier : sans elle, la responsabilité est personnelle et illimitée." },
     benchmarks: { grossMargin: [0.35, 0.5], payrollRatio: [0.3, 0.42], dailyRate: [350, 550] },
     metrics: ['revenue', 'grossMargin', 'payrollCost', 'cashLow'],
     traps: [

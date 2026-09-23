@@ -9,7 +9,8 @@
 
 import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell, foldSign } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
-import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
+import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS, MANDATAIRES } from '../../engine/payroll.js'
+import { isMicro } from '../../engine/micro.js'
 import { barChart, PALETTE, YEAR_CATEGORIES, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, unitAmount } from '../dom.js'
@@ -151,12 +152,16 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
     store.update((sc) => Object.assign(sc.team.find((x) => x.id === m.id), patch), { label, ...opts })
 
   const headcount = r?.payroll.headcount[Number(m.startMonth) || 0] || 1
+  // En micro-entreprise, la ligne du fondateur est un prélèvement : ni
+  // salaire, ni cotisations, ni coût pour l'entreprise.
+  const micro = isMicro(store.scenario)
+  const preleve = m.contractType === 'micro' || (micro && MANDATAIRES.includes(m.contractType))
   const cost = monthlyCost(m, {
-    headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0,
+    headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0, micro,
     fiscal: store.scenario.fiscal, benefits: store.scenario.hr?.benefits,
   })
   const count = Number(m.count) || 1
-  const contract = CONTRACT_TYPES[m.contractType] || CONTRACT_TYPES.cdi
+  const contract = preleve ? CONTRACT_TYPES.micro : (CONTRACT_TYPES[m.contractType] || CONTRACT_TYPES.cdi)
   const unit = payUnit()
   const annual = unit === 'year'
 
@@ -167,9 +172,10 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
     }
   }
 
-  const payLabel = m.contractType === 'tns' ? 'Rémunération'
-    : m.contractType === 'freelance' ? 'Facturation'
-      : m.contractType === 'stage' ? 'Gratification' : 'Salaire brut'
+  const payLabel = preleve ? 'Prélèvement'
+    : m.contractType === 'tns' ? 'Rémunération'
+      : m.contractType === 'freelance' ? 'Facturation'
+        : m.contractType === 'stage' ? 'Gratification' : 'Salaire brut'
 
   const sections = [
     { key: 'poste', label: 'Le poste' },
@@ -190,11 +196,11 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
       h('div', { class: 'spacer' },
         h('div', { class: 'item-title' }, m.role || 'Poste sans nom', count > 1 ? h('span', { class: 'chip', style: { marginLeft: '7px' } }, `× ${count}`) : null),
         h('div', { class: 'item-meta' },
-          `${contract.label} · ${euro((Number(m.monthlyGross) || 0) * 12)} brut/an · dès ${monthLabel(m.startMonth || 0, r?.startDate)}`),
+          `${contract.label} · ${euro((Number(m.monthlyGross) || 0) * 12)} ${preleve ? 'prélevés' : 'brut'}/an · dès ${monthLabel(m.startMonth || 0, r?.startDate)}`),
       ),
       h('div', { class: 'right', style: { marginRight: '10px' } },
-        h('div', { class: 'small num', style: { fontWeight: '650' } }, euro(cost.cost * count * 12)),
-        h('div', { class: 'tiny muted' }, 'coût annuel'),
+        h('div', { class: 'small num', style: { fontWeight: '650' } }, preleve ? euro((Number(m.monthlyGross) || 0) * count * 12) : euro(cost.cost * count * 12)),
+        h('div', { class: 'tiny muted' }, preleve ? 'prélevés par an' : 'coût annuel'),
       ),
       foldSign(),
     ),
@@ -215,7 +221,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         // perdre le curseur — mais les trois nombres qui dépendent du salaire
         // sont réécrits à la main, à chaque frappe. Pas de rendu, pas de perte
         // de focus, et le chiffre est toujours celui qu'on vient de taper.
-        const coutValue = h('strong', { class: 'num' }, `${euro(cost.cost * 12)} / an`)
+        const coutValue = h('strong', { class: 'num' }, preleve ? 'Pas une charge' : `${euro(cost.cost * 12)} / an`)
         const netValue = h('strong', { class: 'num' }, `${euro((m.contractType === 'tns' ? cost.gross : cost.net) * 12)} / an`)
         const plural = h('div', { class: 'paycard-note' },
           count > 1 ? `Pour ${count} personnes : ${euro(cost.cost * count * 12)} par an.` : '')
@@ -225,17 +231,17 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
           let neuf
           try {
             neuf = monthlyCost(vivant, {
-              headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0,
+              headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0, micro,
               fiscal: store.scenario.fiscal, benefits: store.scenario.hr?.benefits,
             })
           } catch { return }
-          coutValue.textContent = `${euro(neuf.cost * 12)} / an`
+          coutValue.textContent = preleve ? 'Pas une charge' : `${euro(neuf.cost * 12)} / an`
           netValue.textContent = `${euro((m.contractType === 'tns' ? neuf.gross : neuf.net) * 12)} / an`
           plural.textContent = count > 1 ? `Pour ${count} personnes : ${euro(neuf.cost * count * 12)} par an.` : ''
         }
 
         const champSalaire = unitAmount({
-          label: `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
+          label: preleve ? `${payLabel} — ${annual ? 'par an' : 'par mois'}` : `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
           value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
           onUnit: (k) => { renderTeam.unit = k; refresh() },
           onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
@@ -260,8 +266,13 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
             return h('div', { class: `postline ${statut ? '' : 'is-short'}` },
               textField({ label: 'Intitulé du poste', value: m.role, onInput: (v, o) => set({ role: v }, undefined, o) }),
               selectField({
-                label: 'Type de contrat', value: m.contractType,
-                options: Object.entries(CONTRACT_TYPES).map(([k, v]) => ({ value: k, label: v.label })),
+                label: 'Type de contrat', value: preleve ? 'micro' : m.contractType,
+                // Le prélèvement du micro-entrepreneur n'existe qu'en
+                // micro-entreprise, et il y remplace les deux statuts de
+                // dirigeant : on ne propose que ce qui a un sens.
+                options: Object.entries(CONTRACT_TYPES)
+                  .filter(([k]) => (micro ? !MANDATAIRES.includes(k) : k !== 'micro'))
+                  .map(([k, v]) => ({ value: k, label: v.label })),
                 onInput: (v) => set({ contractType: v }),
               }),
               statut,
@@ -270,7 +281,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
                 h('span', { class: 'postresult-label' }, "Coût pour l’entreprise"),
                 coutValue,
                 h('span', { class: 'postresult-net' },
-                  m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt', ' ', netValue),
+                  preleve ? 'Tes cotisations se comptent sur ton chiffre d’affaires' : m.contractType === 'tns' ? 'Perçu avant impôt' : 'Net avant impôt', ' ', preleve ? null : netValue),
               ),
             )
           })(),

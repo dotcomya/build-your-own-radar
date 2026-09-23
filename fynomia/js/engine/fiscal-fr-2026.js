@@ -335,6 +335,81 @@ export const PARAMS = {
     confidence: 'stable',
     note: "300 000 € d'aides publiques cumulées sur trois exercices fiscaux glissants, en application du règlement européen 2023/2831.",
   },
+
+  // ───────────────────────────── Micro-entreprise ──────────────────────────
+  //
+  // Un micro-entrepreneur ne cotise pas sur un salaire ni sur un bénéfice :
+  // il cotise sur ce qu'il encaisse, à un taux qui dépend de la nature de
+  // l'activité. Quatre catégories suffisent à couvrir presque tout le monde :
+  // la vente (achat-revente, restauration, hébergement), les services
+  // commerciaux et artisanaux, les professions libérales du régime général,
+  // et celles qui cotisent à la CIPAV.
+  microSocialRates: {
+    value: { vente: 0.123, services: 0.212, liberal: 0.256, cipav: 0.232 },
+    unit: '% du chiffre d’affaires encaissé',
+    label: 'Cotisations sociales du micro-entrepreneur',
+    confidence: 'enacted',
+    source: "Taux URSSAF 2026 ; décret n° 2025-943 du 8 septembre 2025 pour les professions libérales",
+    note: "12,3 % pour la vente de marchandises, 21,2 % pour les prestations de services commerciales et artisanales, 25,6 % pour les professions libérales du régime général (le décret du 8 septembre 2025 a ramené à 25,6 % le taux de 26,1 % prévu pour 2026), 23,2 % pour les professions libérales affiliées à la CIPAV. Ces taux s'appliquent au chiffre d'affaires encaissé, sans déduire aucune charge : un micro-entrepreneur qui achète beaucoup pour revendre cotise sur ses ventes, pas sur sa marge.",
+  },
+  microTrainingRates: {
+    value: { vente: 0.001, services: 0.003, liberal: 0.002, cipav: 0.002 },
+    unit: '% du chiffre d’affaires encaissé',
+    label: 'Contribution à la formation professionnelle (micro)',
+    confidence: 'to-verify',
+    source: 'Barème URSSAF',
+    note: "0,1 % pour les commerçants, 0,3 % pour les artisans, 0,2 % pour les professions libérales. Fynomia retient le taux artisan pour les services : un prestataire de services commerciaux paie 0,2 %, c'est-à-dire un peu moins. La taxe pour frais de chambre consulaire, de quelques centièmes de point, n'est pas comptée.",
+  },
+  microIncomeTaxAllowance: {
+    value: { vente: 0.71, services: 0.5, liberal: 0.34, cipav: 0.34, min: 305 },
+    unit: '% du chiffre d’affaires',
+    label: 'Abattement forfaitaire du régime micro-fiscal',
+    confidence: 'stable',
+    note: "Sans versement libératoire, le chiffre d'affaires est imposé au barème après un abattement censé représenter les charges : 71 % pour la vente, 50 % pour les services commerciaux et artisanaux, 34 % pour les bénéfices non commerciaux, avec un minimum de 305 €. Les charges réelles, elles, ne se déduisent jamais.",
+  },
+  microFlatIncomeTax: {
+    value: { vente: 0.01, services: 0.017, liberal: 0.022, cipav: 0.022, rfrPerPart: 29315 },
+    unit: '% du chiffre d’affaires encaissé',
+    label: 'Versement libératoire de l’impôt sur le revenu',
+    confidence: 'enacted',
+    source: 'Article 151-0 du CGI ; seuil 2026 sur le revenu fiscal de référence 2024',
+    note: "Sur option, l'impôt sur le revenu se paie avec les cotisations, en pourcentage du chiffre d'affaires : 1 % pour la vente, 1,7 % pour les services, 2,2 % pour les professions libérales. L'option n'est ouverte que si le revenu fiscal de référence de l'avant-dernière année ne dépasse pas 29 315 € par part de quotient familial. Elle est intéressante quand le foyer est imposé à 11 % ou plus ; en dessous, le barème coûte moins.",
+  },
+  microRevenueCeilings: {
+    value: { vente: 203100, services: 83600 },
+    unit: '€ de chiffre d’affaires annuel',
+    label: 'Plafonds de chiffre d’affaires de la micro-entreprise',
+    confidence: 'enacted',
+    source: 'Seuils 2026-2028, revalorisés au 1er janvier 2026 (URSSAF, portail autoentrepreneur)',
+    note: "203 100 € pour la vente de marchandises, la restauration et l'hébergement ; 83 600 € pour les prestations de services et les professions libérales. Pour une activité mixte, le total ne doit pas dépasser 203 100 € dont 83 600 € de services. La première année, le plafond s'apprécie au prorata du temps d'activité. On ne sort du régime qu'après deux années civiles consécutives de dépassement.",
+  },
+  vatFranchiseThresholds: {
+    value: { vente: 85000, services: 37500, venteMajore: 93500, servicesMajore: 41250 },
+    unit: '€ de chiffre d’affaires annuel',
+    label: 'Seuils de la franchise en base de TVA',
+    confidence: 'enacted',
+    source: 'Loi de finances pour 2026 : seuils maintenus',
+    note: "85 000 € pour la vente, 37 500 € pour les services. Entre ce seuil et le seuil majoré — 93 500 € et 41 250 € — la franchise tient jusqu'au 31 décembre ; au-delà du seuil majoré, la TVA est due dès le premier jour du dépassement. Le projet de seuil unique à 25 000 € a été abandonné.",
+  },
+
+  // ───────────────────────────────── ACRE ──────────────────────────────────
+  acre: {
+    value: {
+      microReduction: 0.5,
+      microReductionFrom: { date: '2026-07-01', value: 0.25 },
+      rate: 0.25,
+      fullUpToPass: 0.75,
+      months: 12,
+      coveredTns: 0.27,
+      coveredEmployer: 0.25,
+      coveredEmployee: 0.073,
+    },
+    unit: '%',
+    label: 'ACRE — aide aux créateurs et repreneurs',
+    confidence: 'to-verify',
+    source: "LFSS 2026 (loi n° 2025-1403, article 23) ; décret n° 2026-69 du 6 février 2026",
+    note: "Depuis le 1er janvier 2026, l'ACRE n'est plus automatique : il faut la demander à l'URSSAF dans les 60 jours qui suivent le début d'activité, et elle est réservée à certains créateurs — demandeurs d'emploi, bénéficiaires du RSA ou de l'ASS, moins de 26 ans, créateurs en quartier prioritaire, entre autres. Pour un micro-entrepreneur, elle réduit les cotisations de moitié si l'activité a commencé avant le 1er juillet 2026, d'un quart ensuite, jusqu'à la fin du troisième trimestre civil qui suit le début d'activité. Pour les autres créateurs, elle exonère pendant douze mois 25 % des cotisations de maladie, maternité, invalidité-décès, allocations familiales et vieillesse de base, en entier sous 75 % du PASS, de façon dégressive jusqu'au PASS, plus du tout au-delà. La part de ces cotisations dans la rémunération (environ 27 % pour un indépendant, 25 % côté employeur et 7,3 % côté salarié pour un assimilé salarié) est un ordre de grandeur retenu par Fynomia.",
+  },
 }
 
 /** Renvoie la valeur d'un paramètre, surcharge utilisateur prioritaire. */

@@ -9,6 +9,7 @@
  */
 
 import { fiscalContext } from './fiscal-fr-2026.js'
+import { acreFactor } from './micro.js'
 
 export const CONTRACT_TYPES = {
   cdi: { label: 'CDI', help: "Contrat à durée indéterminée. Cotisations patronales de droit commun, réduction générale applicable sous 3 SMIC." },
@@ -18,7 +19,11 @@ export const CONTRACT_TYPES = {
   tns: { label: 'Dirigeant TNS', help: "Gérant majoritaire de SARL ou EURL, entrepreneur individuel. Régime des indépendants : environ 45 % de cotisations sur la rémunération, sensiblement moins que le régime général — mais une protection plus légère et aucun droit au chômage." },
   dirigeant: { label: 'Dirigeant assimilé salarié', help: "Président de SAS ou SASU, gérant minoritaire ou égalitaire de SARL. Régime général, comme un cadre — donc une meilleure couverture, mais le coût employeur le plus élevé. L'assurance chômage n'est pas due : le dirigeant n'y a pas droit." },
   freelance: { label: 'Freelance / prestataire', help: "Facturation externe. Aucune cotisation sociale : le montant saisi est le coût complet, soumis à TVA." },
+  micro: { label: 'Micro-entrepreneur (toi)', help: "En micro-entreprise, tu ne te verses pas de salaire : ce que tu retires chaque mois est un prélèvement sur ce qui reste, pas une charge. Tes cotisations se calculent sur ton chiffre d'affaires encaissé, pas sur ce montant." },
 }
+
+/** Les mandataires : ceux dont la rémunération ouvre droit à l'ACRE. */
+export const MANDATAIRES = ['tns', 'dirigeant']
 
 export const STATUSES = {
   cadre: { label: 'Cadre', help: "Prévoyance obligatoire (1,50 % sur la tranche A) et contribution APEC en supplément." },
@@ -141,10 +146,25 @@ export function reductionCoefficient(monthlyGross, headcount, ctx) {
  * Coût complet d'un poste pour un mois donné.
  * @returns {{gross,employerBase,reduction,jeiExemption,employerCharges,superGross,employeeCharges,net,detail}}
  */
-export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal = {}, benefits = {} } = {}) {
+export function monthlyCost(member, { headcount = 1, jeiActive = false, acreActive = false, micro = false, fiscal = {}, benefits = {} } = {}) {
   const ctx = fiscalContext(fiscal)
   const gross = Math.max(0, Number(member.monthlyGross) || 0)
   const detail = []
+
+  // Micro-entrepreneur : un prélèvement, pas une paie. En micro-entreprise,
+  // le fondateur ne peut pas être son propre salarié — quel que soit le
+  // contrat inscrit sur sa ligne, ce qu'il retire sort de la trésorerie sans
+  // passer par le compte de résultat, et ses cotisations se calculent sur le
+  // chiffre d'affaires.
+  if (member.contractType === 'micro' || (micro && MANDATAIRES.includes(member.contractType))) {
+    detail.push({ label: 'Prélèvement mensuel', amount: gross, note: "Ce que tu retires pour vivre. Ce n'est pas une charge : tes cotisations se calculent sur ton chiffre d'affaires encaissé." })
+    return { gross: 0, employerBase: 0, reduction: 0, jeiExemption: 0, acreExemption: 0, employerCharges: 0, superGross: 0, employeeCharges: 0, net: gross, cost: 0, draw: gross, detail, benefits: 0, benefitsLines: [] }
+  }
+
+  // ACRE : 25 % des cotisations de base effacées pendant douze mois, en
+  // entier sous 75 % du PASS, de façon dégressive jusqu'au PASS.
+  const acreCfg = ctx.get('acre')
+  const acreCoef = acreActive && MANDATAIRES.includes(member.contractType) ? acreCfg.rate * acreFactor(gross * 12, ctx) : 0
 
   // Mutuelle, transport, titres-restaurant : une dépense réelle, qui ne passe
   // ni par le brut ni par les cotisations. On la calcule une fois et on
@@ -187,10 +207,13 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
   // Dirigeant TNS : cotisations du régime des indépendants sur la rémunération.
   if (member.contractType === 'tns') {
     const rate = ctx.get('tnsRate')
-    const charges = gross * rate
+    const full = gross * rate
+    const acreExemption = gross * acreCfg.coveredTns * acreCoef
+    const charges = full - acreExemption
     detail.push({ label: 'Rémunération du dirigeant', amount: gross })
-    detail.push({ label: `Cotisations TNS (${pct(rate)})`, amount: charges, note: 'Régime des travailleurs non salariés : assiette et taux distincts du régime général.' })
-    return { gross, employerBase: charges, reduction: 0, jeiExemption: 0, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail, benefits: 0, benefitsLines: [] }
+    detail.push({ label: `Cotisations TNS (${pct(rate)})`, amount: full, note: 'Régime des travailleurs non salariés : assiette et taux distincts du régime général.' })
+    if (acreExemption > 0) detail.push({ label: 'ACRE', amount: -acreExemption, note: `25 % des cotisations de base effacées la première année${acreCoef < acreCfg.rate ? ', en partie seulement : ta rémunération dépasse 75 % du PASS' : ''}.` })
+    return { gross, employerBase: full, reduction: 0, jeiExemption: 0, acreExemption, employerCharges: charges, superGross: gross + charges, employeeCharges: 0, net: gross, cost: gross + charges, detail, benefits: 0, benefitsLines: [] }
   }
 
   // Stagiaire : gratification exonérée jusqu'au minimum légal.
@@ -274,15 +297,22 @@ export function monthlyCost(member, { headcount = 1, jeiActive = false, fiscal =
   const cdSurcharge = member.contractType === 'cdd' ? gross * 0.01 : 0
   if (cdSurcharge > 0) detail.push({ label: 'Contribution CPF-CDD (1 %)', amount: cdSurcharge })
 
-  const employerCharges = Math.max(0, employerBase - reduction - jeiExemption + cdSurcharge)
+  // ACRE du dirigeant assimilé salarié : la part patronale et la part
+  // salariale des cotisations de base, chacune allégée de 25 %.
+  const acreEmployer = gross * acreCfg.coveredEmployer * acreCoef
+  const acreEmployee = gross * acreCfg.coveredEmployee * acreCoef
+  const acreExemption = acreEmployer + acreEmployee
+  if (acreEmployer > 0) detail.push({ label: 'ACRE', amount: -acreEmployer, note: `25 % des cotisations de base effacées la première année, côté entreprise ; ${fmt(acreEmployee)} € de plus sur ton net, côté salarié.` })
+
+  const employerCharges = Math.max(0, employerBase - reduction - jeiExemption - acreEmployer + cdSurcharge)
   const superGross = gross + employerCharges
-  const employeeCharges = gross * ctx.get('employeeRate')
+  const employeeCharges = Math.max(0, gross * ctx.get('employeeRate') - acreEmployee)
   const net = gross - employeeCharges
 
   detail.push({ label: 'Coût total employeur', amount: superGross, emphasis: true })
   detail.push({ label: 'Net avant impôt versé au salarié', amount: net, note: `Après ${pct(ctx.get('employeeRate'))} de cotisations salariales. Le prélèvement à la source s'applique ensuite sur ce net.` })
 
-  return withBenefits({ gross, employerBase, reduction, jeiExemption, employerCharges, superGross, employeeCharges, net, cost: superGross, detail })
+  return withBenefits({ gross, employerBase, reduction, jeiExemption, acreExemption, employerCharges, superGross, employeeCharges, net, cost: superGross, detail })
 }
 
 /** Le poste est-il actif au mois `m` (index 0-59) ? */
@@ -299,7 +329,9 @@ export function isActive(member, m) {
  * Masse salariale mensuelle sur l'horizon complet.
  * @returns {{cost:number[],gross:number[],employerCharges:number[],benefits:number[],headcount:number[],fte:number[],jeiExemption:number[],byMember:Array}}
  */
-export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {}, benefits: policy = {} } = {}) {
+export function payrollSeries(team, { months = 60, jeiByMonth = [], acreByMonth = [], micro = false, fiscal = {}, benefits: policy = {} } = {}) {
+  const draws = new Array(months).fill(0)
+  const acreExemption = new Array(months).fill(0)
   const cost = new Array(months).fill(0)
   const gross = new Array(months).fill(0)
   const employerCharges = new Array(months).fill(0)
@@ -310,12 +342,16 @@ export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {},
   const byMember = []
 
   // Effectif brut, nécessaire au seuil de 50 salariés de la réduction générale.
+  // Un micro-entrepreneur n'est pas un salarié de sa propre affaire : il ne
+  // compte pas dans l'effectif.
+  const horsEffectif = (member) => member.contractType === 'freelance' || member.contractType === 'micro' || (micro && MANDATAIRES.includes(member.contractType))
   for (let m = 0; m < months; m++) {
     for (const member of team) {
       if (!isActive(member, m)) continue
       const n = Number(member.count) || 1
-      if (member.contractType !== 'freelance') headcount[m] += n
-      if (!['alternance', 'stage', 'freelance'].includes(member.contractType)) fte[m] += n
+      if (horsEffectif(member)) continue
+      headcount[m] += n
+      if (!['alternance', 'stage'].includes(member.contractType)) fte[m] += n
     }
   }
 
@@ -324,18 +360,20 @@ export function payrollSeries(team, { months = 60, jeiByMonth = [], fiscal = {},
     for (let m = 0; m < months; m++) {
       if (!isActive(member, m)) continue
       const n = Number(member.count) || 1
-      const r = monthlyCost(member, { headcount: headcount[m], jeiActive: !!jeiByMonth[m], fiscal, benefits: policy })
+      const r = monthlyCost(member, { headcount: headcount[m], jeiActive: !!jeiByMonth[m], acreActive: !!acreByMonth[m], micro, fiscal, benefits: policy })
       series[m] = r.cost * n
       cost[m] += r.cost * n
       gross[m] += r.gross * n
       employerCharges[m] += r.employerCharges * n
       jeiExemption[m] += r.jeiExemption * n
+      acreExemption[m] += (r.acreExemption || 0) * n
       benefits[m] += (r.benefits || 0) * n
+      draws[m] += (r.draw || 0) * n
     }
     byMember.push({ id: member.id, role: member.role, series })
   }
 
-  return { cost, gross, employerCharges, jeiExemption, benefits, headcount, fte, byMember }
+  return { cost, gross, employerCharges, jeiExemption, acreExemption, benefits, headcount, fte, byMember, draws }
 }
 
 const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)

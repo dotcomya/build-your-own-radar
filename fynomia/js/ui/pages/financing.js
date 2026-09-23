@@ -1,6 +1,6 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell, PLUS, MINUS } from '../dom.js'
+import { h, euro, num, pct, numberField, textField, selectField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell, PLUS, MINUS } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
@@ -48,6 +48,19 @@ const SOURCES = [
     note: (l) => loanSummary(l),
   },
   {
+    key: 'honourLoans', label: "Pr\u00eat d'honneur", glyph: '\u2726', level: 'easy',
+    hint: "Un pr\u00eat \u00e0 taux z\u00e9ro et sans garantie, accord\u00e9 \u00e0 toi personnellement par un r\u00e9seau d'accompagnement. Tu l'apportes \u00e0 ton entreprise : il compte comme un apport, et c'est souvent lui qui d\u00e9clenche le pr\u00eat bancaire \u2014 Initiative France observe en moyenne 9,50 \u20ac de pr\u00eat bancaire pour 1 \u20ac de pr\u00eat d'honneur. Tu le rembourses sur tes revenus : Fynomia le d\u00e9duit de ce qui te reste, pas des comptes de l'entreprise.",
+    make: () => ({ id: uid('hon'), label: "Pr\u00eat d'honneur", network: 'initiative', amount: 0, month: 0, months: 60, graceMonths: 6 }),
+    fields: [
+      { k: 'network', label: 'R\u00e9seau', type: 'select', options: () => Object.entries(HONOUR_NETWORKS).map(([value, n]) => ({ value, label: n.label })) },
+      { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
+      { k: 'months', label: 'Rembours\u00e9 sur', suffix: 'mois', type: 'number' },
+      { k: 'graceMonths', label: 'Diff\u00e9r\u00e9', suffix: 'mois', type: 'number' },
+      { k: 'month', label: 'Versement', type: 'month' },
+    ],
+    note: (l) => honourSummary(l),
+  },
+  {
     key: 'grants', label: 'Subvention', glyph: '\u25c7', level: 'easy',
     hint: "Une subvention est un produit d'exploitation : elle am\u00e9liore le r\u00e9sultat et vient en d\u00e9duction de l'assiette du cr\u00e9dit d'imp\u00f4t recherche.",
     make: () => ({ id: uid('grt'), label: 'Subvention', amount: 0, month: 0, months: 1 }),
@@ -91,6 +104,47 @@ const SOURCES = [
     ],
   },
 ]
+
+/**
+ * Les réseaux de prêt d'honneur, et ce qu'ils prêtent d'ordinaire.
+ *
+ * Les montants sont ceux que les réseaux publient ; ils varient d'une
+ * plateforme locale à l'autre. Ils servent à situer une saisie, pas à la
+ * borner.
+ */
+export const HONOUR_NETWORKS = {
+  initiative: {
+    label: 'Initiative France',
+    repere: 'jusqu\u2019\u00e0 50 000 \u20ac, autour de 10 000 \u20ac en moyenne, rembours\u00e9 sur 2 \u00e0 5 ans',
+    max: 50000,
+  },
+  reseau: {
+    label: 'R\u00e9seau Entreprendre',
+    repere: 'de 15 000 \u00e0 50 000 \u20ac, jusqu\u2019\u00e0 90 000 \u20ac dans certaines r\u00e9gions, rembours\u00e9 sur 5 ans avec un diff\u00e9r\u00e9, et un chef d\u2019entreprise qui t\u2019accompagne',
+    max: 90000,
+  },
+  franceactive: {
+    label: 'France Active',
+    repere: 'pr\u00eats d\u2019honneur et garanties d\u2019emprunt, pour les cr\u00e9ateurs sans apport et les projets \u00e0 impact',
+    max: 50000,
+  },
+  autre: {
+    label: 'Autre r\u00e9seau',
+    repere: 'plateformes r\u00e9gionales, fondations, r\u00e9seaux d\u2019\u00e9coles',
+    max: 90000,
+  },
+}
+
+function honourSummary(l) {
+  const amount = Number(l.amount) || 0
+  const n = Math.max(1, Number(l.months) || 1)
+  const grace = Math.max(0, Number(l.graceMonths) || 0)
+  const reseau = HONOUR_NETWORKS[l.network] || HONOUR_NETWORKS.autre
+  const base = amount > 0
+    ? `Tu rembourses ${euro(amount / n)} par mois pendant ${n} mois${grace ? `, apr\u00e8s ${grace} mois de diff\u00e9r\u00e9` : ''}, sans int\u00e9r\u00eats, sur tes revenus.`
+    : 'Indique le montant que tu vises.'
+  return `${base} Rep\u00e8re ${reseau.label} : ${reseau.repere}.`
+}
 
 const LEVEL_RANK = { easy: 0, intermediate: 1, advanced: 2 }
 
@@ -279,6 +333,7 @@ function sourceDetail(src, items, r, { add, drop, setField }) {
                 if (fd.type === 'text') return textField({ ...common, onInput: (v, o) => setField(src.key, item.id, { [fd.k]: v }, o) })
                 if (fd.type === 'month') return monthField({ ...common, startDate: r?.startDate, allowEmpty: !!fd.allowEmpty, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
                 if (fd.type === 'percent') return numberField({ ...common, field: 'rate', percent: true, step: fd.step, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
+                if (fd.type === 'select') return selectField({ ...common, options: fd.options(), onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
                 return numberField({ ...common, field: 'amount', suffix: fd.suffix, onInput: (v) => setField(src.key, item.id, { [fd.k]: v }) })
               }),
               h('button', { class: 'btn btn-sm btn-danger btn-sign', title: 'Retirer cette ligne', html: MINUS, onClick: () => drop(src.key, item.id) }),
@@ -301,9 +356,11 @@ function financingPlanTable(r) {
       row('Variation du besoin en fonds de roulement', 'bfrChange'),
       row('Investissements', 'capex'),
       row('Remboursements', 'repayment'),
+      p.some((y) => y.draws > 0) ? row('Prélèvements de l’exploitant', 'draws') : null,
       row('Total des emplois', 'uses', 'total'),
       h('tr', { class: 'section' }, h('td', { colspan: 6 }, 'Ressources')),
       row('Apports en capital', 'equity'),
+      p.some((y) => y.honour > 0) ? row('Prêts d’honneur', 'honour') : null,
       row('Emprunts', 'loans'),
       row('Subventions', 'grants'),
       row("Crédits d'impôt", 'credits'),

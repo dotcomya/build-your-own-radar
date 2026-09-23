@@ -18,13 +18,17 @@ export function vatModel({ salesCashByActivity, activities, purchaseCash, opexCa
   const collected = zeros()
   const deductible = zeros()
 
+  // Qui ne facture pas la TVA — franchise en base ou activité exonérée — n'en
+  // collecte sur aucune vente, quel que soit le taux inscrit sur l'offre.
   activities.forEach((a, i) => {
-    const rate = num(a.vatRateSales, generic)
+    const rate = exempt ? 0 : num(a.vatRateSales, generic)
     const cash = salesCashByActivity[i] || zeros()
     for (let m = 0; m < MONTHS; m++) collected[m] += cash[m] * rate
   })
+  // Et elle n'en récupère sur aucun achat : ses coûts se comptent toutes
+  // taxes comprises, sans crédit de TVA à se faire rembourser.
   activities.forEach((a, i) => {
-    const rate = num(a.vatRatePurchase, generic)
+    const rate = exempt ? 0 : num(a.vatRatePurchase, generic)
     const cash = purchaseCash[i] || zeros()
     for (let m = 0; m < MONTHS; m++) deductible[m] += cash[m] * rate
   })

@@ -21,6 +21,8 @@ import store from '../../state/store.js'
 import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
 import { resetSetup } from './setup.js'
 import { familyIcon } from '../icons.js'
+import { MICRO_CATEGORIES, microCategory, acreMicroMonths, acreMicroReduction } from '../../engine/micro.js'
+import { fiscalContext } from '../../engine/fiscal-fr-2026.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
 /**
@@ -97,6 +99,7 @@ export function renderProject(navigate, refresh) {
         legalLine(s, refresh),
       ),
       legalOpen(s) ? legalBlock(s, sector, set, refresh) : null,
+      regimeBlock(s, sector, set),
 
       h('div', { class: 'grid grid-2 mt' },
         activityLine(s, refresh),
@@ -229,7 +232,7 @@ function legalBlock(s, sector, set, refresh) {
     ))),
     h('p', { class: 'field-hint mt' }, LEGAL_FORMS[s.meta.legalForm]?.note || ''),
 
-    refine('projet-fiscal', 'Affiner le régime fiscal',
+    s.meta.legalForm === 'MICRO' ? null : refine('projet-fiscal', 'Affiner le régime fiscal',
       h('div', { class: 'grid grid-2' },
         switchField({
           label: "Taux réduit d\u2019impôt sur les sociétés",
@@ -410,12 +413,72 @@ function legalChoices(sector) {
 
 function applyLegal(key) {
   store.update((sc) => {
+    const avant = sc.meta.legalForm
     sc.meta.legalForm = key
     sc.meta.legalFormChosen = true
     sc.founder.majorityManager = ['SARL', 'EURL', 'SELARL'].includes(key)
-    const me = sc.team?.find((x) => /fondateur|dirigeant|moi/i.test(x.role || ''))
+    const me = sc.team?.find((x) => new RegExp('fondateur|dirigeant|g\u00e9rant|moi', 'i').test(x.role || ''))
     if (me) me.contractType = LEGAL_FORMS[key].contract
+    // Un micro-entrepreneur démarre en franchise de TVA ; qui quitte la
+    // micro-entreprise la quitte aussi — sauf s'il a tranché lui-même, ou si
+    // son métier est exonéré.
+    if (!sc.meta.vatChecked) {
+      if (key === 'MICRO') sc.meta.vatExempt = true
+      else if (avant === 'MICRO') sc.meta.vatExempt = !!SECTORS[sc.meta.sectorKey]?.vat?.exempt
+    }
   }, { label: 'Forme juridique' })
+}
+
+/**
+ * Le régime social et les aides, sous le statut.
+ *
+ * Deux choses changent le premier exercice d'un créateur plus que n'importe
+ * quel réglage fiscal : la micro-entreprise, qui fait cotiser sur le chiffre
+ * d'affaires au lieu d'une paie, et l'ACRE, qui efface une partie des
+ * cotisations la première année. Elles sont à côté de la forme juridique,
+ * parce que c'est là qu'on les décide.
+ */
+function regimeBlock(s, sector, set) {
+  const micro = s.meta.legalForm === 'MICRO'
+  const ctx = fiscalContext(s.fiscal || {})
+  const cat = microCategory(s, sector)
+  const taux = ctx.get('microSocialRates')
+  const vl = ctx.get('microFlatIncomeTax')
+  const pctFr = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
+  const acreNote = micro
+    ? `Tes cotisations baissent de ${pctFr(acreMicroReduction(s, ctx))} pendant ${acreMicroMonths(s)} mois — jusqu’à la fin du troisième trimestre civil après ton début d’activité.`
+    : 'Pendant douze mois, 25 % de tes cotisations de base effacées, en entier sous 36 045 € de revenu annuel, puis de moins en moins jusqu’à 48 060 €.'
+  return h('div', { class: 'regime', 'data-gap': 'regime' },
+    micro ? h('div', { class: 'grid grid-3' },
+      selectField({
+        label: 'Nature de ton activité',
+        value: cat,
+        options: Object.entries(MICRO_CATEGORIES).map(([k, c]) => ({ value: k, label: `${c.label} — ${pctFr(taux[k])}` })),
+        hint: `${MICRO_CATEGORIES[cat].note} Tes cotisations : ${pctFr(taux[cat])} de ce que tu encaisses.`,
+        onInput: (v) => set({ microActivity: v }, 'Nature de l’activité'),
+      }),
+      switchField({
+        label: 'Versement libératoire de l’impôt',
+        checked: !!s.meta.microVL,
+        hint: `Ton impôt sur le revenu payé avec tes cotisations : ${pctFr(vl[cat])} de ce que tu encaisses. Ouvert si ton revenu fiscal de référence ne dépasse pas ${euro(vl.rfrPerPart)} par part. Rentable si ton foyer est imposé à 11 % ou plus.`,
+        onInput: (v) => set({ microVL: v }, 'Versement libératoire'),
+      }),
+      switchField({
+        label: 'Franchise de TVA',
+        checked: !!s.meta.vatExempt,
+        hint: 'Tu ne factures pas la TVA et tu ne la récupères pas. Tu la factures dès que tu dépasses le seuil majoré.',
+        onInput: (v) => set({ vatExempt: v, vatChecked: true }, 'Régime de TVA'),
+      }),
+    ) : null,
+    h('div', { class: `grid ${micro ? 'grid-3' : 'grid-2'} ${micro ? 'mt' : ''}` },
+      switchField({
+        label: 'J’ai droit à l’ACRE',
+        checked: !!s.meta.acre,
+        hint: `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
+        onInput: (v) => set({ acre: v }, 'ACRE'),
+      }),
+    ),
+  )
 }
 
 /**

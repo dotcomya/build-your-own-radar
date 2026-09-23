@@ -120,8 +120,9 @@ const TURNS = [
     input: 'number', suffix: '€ brut par mois', placeholder: '2500', skippable: true,
     apply: (value) => store.update((sc) => {
       const tns = ['SARL', 'EURL', 'EI', 'BNC'].includes(sc.meta.legalForm)
+      const contrat = sc.meta.legalForm === 'MICRO' ? 'micro' : tns ? 'tns' : 'dirigeant'
       let me = sc.team.find((x) => /fondateur|dirigeant|moi/i.test(x.role || ''))
-      if (!me) { me = { id: `tm${Date.now()}`, role: 'Moi', contractType: tns ? 'tns' : 'dirigeant', status: 'cadre', count: 1, monthlyGross: 0, startMonth: 0, enabled: true }; sc.team.push(me) }
+      if (!me) { me = { id: `tm${Date.now()}`, role: 'Moi', contractType: contrat, status: 'cadre', count: 1, monthlyGross: 0, startMonth: 0, enabled: true }; sc.team.push(me) }
       me.monthlyGross = n(value)
     }, { label: 'Rémunération', silent: true }),
     echo: (value) => `${euro(n(value))} brut par mois. Fynomia calcule ce que ça coûte à l’entreprise.`,

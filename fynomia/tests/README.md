@@ -37,6 +37,7 @@ mise en ligne.
 | `14-graphiques` | tout ce qui se révèle se révèle, et seulement à l'arrivée (ni au chargement, ni quand seul le bord dépasse) ; parties propres à chaque onglet des états financiers ; exercice partagé ; chiffres des pages de saisie en bandeau d'une ligne, titre à gauche, « i » sans texte ; zoom mois par mois ; survol ; rien ne déborde au téléphone |
 | `15-pitch` | l'onglet pitch investisseur : huit parties dans l'ordre, titre et phrase sur une ligne, l'avis à droite, les courbes et le récit de la trajectoire, le besoin affiché est celui du moteur, les trois mises en page (récit, tableau, diapos), le dossier aligné, au téléphone sans débordement |
 | `16-parcours` | le parcours d'accueil : aucune question pré-remplie ni cochée, « ton business prend forme » vu une seule fois puis le pitch, un seul ordre de recommandations (relire d'abord, jamais les délais ni la hausse des prix en tête), partagé par le guide et le pilotage |
+| `17-createurs` | la micro-entreprise se choisit sous le statut et règle sa nature d'activité, son versement libératoire et sa franchise ; pas d'IS ni de TVA ; le fondateur devient un prélèvement ; l'ACRE allège la première année ; le prêt d'honneur, avec son réseau, entre en trésorerie ; « Ce que je touche » descend de ce qu'il encaisse à ce qui lui reste |
 
 ## Options
 

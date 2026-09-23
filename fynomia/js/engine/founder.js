@@ -14,8 +14,9 @@
  */
 
 import { fiscalContext } from './fiscal-fr-2026.js'
-import { YEARS } from './revenue.js'
+import { YEARS, byYear } from './revenue.js'
 import { monthlyCost } from './payroll.js'
+import { isMicro } from './micro.js'
 
 /**
  * Impôt sur le revenu par application du barème à une part de quotient.
@@ -72,8 +73,10 @@ export function incomeTax(taxableIncome, parts, ctx) {
  * @returns {Array} une ligne par exercice, avec le détail de chaque prélèvement
  */
 export function founderIncome(scenario, result) {
+  if (isMicro(scenario) && result.micro) return microFounderIncome(scenario, result)
   const ctx = fiscalContext(scenario.fiscal || {})
   const cfg = scenario.founder || {}
+  const honourY = honourRepaymentY(result)
   const share = clamp01(cfg.equityShare ?? 1)
   const parts = Math.max(1, Number(cfg.taxParts) || 1)
   const payout = clamp01(cfg.dividendPayout ?? 0)
@@ -104,12 +107,24 @@ export function founderIncome(scenario, result) {
   for (let y = 0; y < YEARS; y++) {
     // ─── 1. Rémunération ───────────────────────────────────────────────
     const months = activeMonths(member, y)
-    const cost = member ? monthlyCost(member, { headcount: result.payroll.headcount[y * 12 + 11] || 1, fiscal: scenario.fiscal || {}, benefits: scenario.hr?.benefits }) : null
-    const gross = cost ? cost.gross * months : 0
-    const employerCost = cost ? cost.cost * months : 0
-    // Un TNS n'a pas de cotisations salariales : sa rémunération est déjà nette
-    // de charges sociales patronales, l'assiette imposable est le montant versé.
-    const netBeforeTax = cost ? (member.contractType === 'tns' ? cost.gross : cost.net) * months : 0
+    // Mois par mois : l'ACRE ne vaut que la première année, et un poste peut
+    // arriver en cours d'exercice.
+    let gross = 0, employerCost = 0, netBeforeTax = 0, acreSaving = 0
+    if (member) {
+      for (let m = y * 12; m < y * 12 + 12; m++) {
+        if (!isPaidMonth(member, m)) continue
+        const cost = monthlyCost(member, {
+          headcount: result.payroll.headcount[m] || 1, acreActive: !!acreOn(scenario, m),
+          fiscal: scenario.fiscal || {}, benefits: scenario.hr?.benefits,
+        })
+        gross += cost.gross
+        employerCost += cost.cost
+        // Un TNS n'a pas de cotisations salariales : sa rémunération est déjà
+        // nette de charges sociales, l'assiette imposable est le montant versé.
+        netBeforeTax += member.contractType === 'tns' ? cost.gross : cost.net
+        acreSaving += cost.acreExemption || 0
+      }
+    }
 
     // ─── 2. Dividendes ─────────────────────────────────────────────────
     // On ne distribue que ce que l'exercice a laissé, augmenté des réserves.
@@ -152,12 +167,15 @@ export function founderIncome(scenario, result) {
 
     const netSalary = netBeforeTax
     const netDividends = grossDividends - dividendSocial - dividendIncomeTax
-    const disposable = netSalary + netDividends - attributableTax
+    // Le prêt d'honneur est une dette personnelle : il se rembourse sur ce
+    // qui arrive sur le compte du fondateur.
+    const honourRepayment = honourY[y] || 0
+    const disposable = netSalary + netDividends - attributableTax - honourRepayment
 
     rows.push({
       year: y,
       months,
-      gross, employerCost, netBeforeTax,
+      gross, employerCost, netBeforeTax, acreSaving, honourRepayment,
       grossDividends, dividendSocial, dividendIncomeTax, tnsPortion,
       netDividends,
       taxableIncome: householdTaxable,
@@ -182,6 +200,82 @@ export function founderIncome(scenario, result) {
     capitalBase,
     settings: { share, parts, payout, useFlatTax, majorityManager, otherIncome, liberalBnc },
   }
+}
+
+/**
+ * Ce qui reste à un micro-entrepreneur.
+ *
+ * Le chemin est plus court qu'en société, mais il n'est pas celui qu'on
+ * croit : le chiffre d'affaires encaissé paie d'abord les cotisations — sur
+ * chaque euro, même quand la marge est mince —, puis les charges réelles, qui
+ * ne se déduisent de rien. Ce qui reste est le revenu, imposé au barème après
+ * un abattement forfaitaire, ou déjà réglé par le versement libératoire.
+ */
+function microFounderIncome(scenario, result) {
+  const ctx = fiscalContext(scenario.fiscal || {})
+  const cfg = scenario.founder || {}
+  const parts = Math.max(1, Number(cfg.taxParts) || 1)
+  const otherIncome = Math.max(0, Number(cfg.otherIncome) || 0)
+  const ms = result.micro
+  const abattements = ctx.get('microIncomeTaxAllowance')
+  const abattement = abattements[ms.category] ?? 0.5
+  const honourY = honourRepaymentY(result)
+  const rows = []
+  for (let y = 0; y < YEARS; y++) {
+    const encaisse = ms.revenueCashY[y] || 0
+    const cotisations = (ms.socialY[y] || 0) + (ms.trainingY[y] || 0)
+    const revenu = result.pnl.netResult[y]
+    let impot = 0, imposable = 0, marginal = 0, effectif = 0
+    if (ms.vl) {
+      impot = ms.flatTaxY[y] || 0
+      effectif = encaisse > 0 ? impot / encaisse : 0
+    } else {
+      imposable = encaisse > 0 ? Math.max(abattements.min, encaisse * (1 - abattement)) : 0
+      const foyer = incomeTax(imposable + otherIncome, parts, ctx)
+      const autre = otherIncome > 0 ? incomeTax(otherIncome, parts, ctx).tax : 0
+      impot = Math.max(0, foyer.tax - autre)
+      marginal = foyer.marginalRate
+      effectif = foyer.effectiveRate
+    }
+    const honourRepayment = honourY[y] || 0
+    const disposable = revenu - impot - honourRepayment
+    const draws = result.draws?.yearly?.[y] || 0
+    rows.push({
+      year: y, months: 12,
+      gross: 0, employerCost: 0, netBeforeTax: revenu,
+      grossDividends: 0, dividendSocial: 0, dividendIncomeTax: 0, tnsPortion: 0, netDividends: 0,
+      taxableIncome: imposable + otherIncome, incomeTax: impot,
+      marginalRate: marginal, effectiveRate: effectif, quotientCapped: 0,
+      disposable, monthly: disposable / 12, retained: 0, distributed: 0, costPerEuro: null,
+      microRevenue: encaisse, microSocial: cotisations, microIncome: revenu,
+      acreSaving: ms.acreSavingY?.[y] || 0, honourRepayment,
+      draws: draws - (ms.vl ? impot : 0),
+    })
+  }
+  return {
+    rows, member: null, micro: true, microCategory: ms.category, vl: ms.vl,
+    hasSalary: false, hasDividends: false, capitalBase: 0,
+    settings: { share: 1, parts, payout: 0, useFlatTax: false, majorityManager: false, otherIncome, liberalBnc: false },
+  }
+}
+
+/** Remboursements personnels de prêts d'honneur, exercice par exercice. */
+function honourRepaymentY(result) {
+  const serie = result.financing?.honourRepayment
+  return serie ? byYear(serie) : Array(YEARS).fill(0)
+}
+
+/** L'ACRE s'applique-t-elle au mois m (hors micro-entreprise) ? */
+function acreOn(scenario, m) {
+  return scenario.meta?.acre === true && m < fiscalContext(scenario.fiscal || {}).get('acre').months
+}
+
+/** Le poste est-il rémunéré au mois m ? */
+function isPaidMonth(member, m) {
+  if (!member || member.enabled === false) return false
+  const start = Number(member.startMonth) || 0
+  const end = member.endMonth === '' || member.endMonth === null || member.endMonth === undefined ? Infinity : Number(member.endMonth)
+  return m >= start && m <= end
 }
 
 /** Capital libéré et comptes courants : assiette du seuil TNS. */

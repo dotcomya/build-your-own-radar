@@ -1,6 +1,6 @@
 # Vérification comptable et fiscale
 
-Six scripts qui rejouent le moteur et vérifient ses identités. Ils ne testent
+Sept scripts qui rejouent le moteur et vérifient ses identités. Ils ne testent
 pas l'interface : ils testent les chiffres. Un directeur financier qui veut
 s'assurer que l'outil ne raconte pas d'histoires commence ici.
 
@@ -12,6 +12,7 @@ node 03-bilan-et-dirigeant.mjs
 node 04-charges-indexees.mjs
 node 05-parametres-2026.mjs
 node 06-vraisemblance.mjs
+node 07-micro-acre-honneur.mjs
 ```
 
 Chaque ligne affiche `✓` ou `✗`. Une seule croix doit suffire à arrêter une
@@ -88,3 +89,24 @@ Les garde-fous qui comparent une saisie aux fourchettes du métier :
   en nombre de fois et la correction probable ;
 - une alerte fait passer le verdict à « À vérifier » : un plan qui gagne
   280 millions la première année n'est plus présenté comme un succès.
+
+## 07 — Micro-entreprise, ACRE et prêt d'honneur
+
+- un micro-entrepreneur cotise sur ce qu'il encaisse (21,2 % en services, plus
+  la formation professionnelle), ne paie pas d'impôt sur les sociétés et ne
+  collecte pas de TVA en franchise ;
+- ses prélèvements sortent de la trésorerie sans être des charges, et le bilan
+  tient ;
+- l'impôt se calcule au barème après 50 % d'abattement, ou à 1,7 % du chiffre
+  d'affaires avec le versement libératoire ;
+- l'ACRE divise ses cotisations par deux pour un début d'activité avant le
+  1er juillet 2026, les réduit d'un quart ensuite, jusqu'à la fin du troisième
+  trimestre civil qui suit ;
+- le plafond de la première année civile est ramené au prorata du temps
+  d'activité ;
+- hors micro, l'ACRE efface 25 % des cotisations de base sous 75 % du PASS,
+  de façon dégressive jusqu'au PASS, et seulement douze mois ;
+- un prêt d'honneur entre en trésorerie comme un apport, ne pèse pas sur le
+  compte de résultat, et se rembourse sur le revenu du fondateur après son
+  différé.
+

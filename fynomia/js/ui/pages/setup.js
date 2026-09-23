@@ -807,7 +807,7 @@ function legalScreen(ctx) {
   // statut social du dirigeant, imposition du bénéfice, traitement des
   // dividendes. Une SCI ou une SCM n'abritent pas une activité d'exploitation
   // et ne changeraient rien au prévisionnel — les proposer serait du décor.
-  const allowed = [...suggested, ...['SASU', 'SAS', 'EURL', 'SARL', 'EI', 'BNC', 'Association']
+  const allowed = [...suggested, ...['MICRO', 'SASU', 'SAS', 'EURL', 'SARL', 'EI', 'BNC', 'Association']
     .filter((f) => !suggested.includes(f))]
   const current = () => store.scenario.meta.legalForm
   // Tant que rien n'a été choisi, aucune carte n'est allumée : une forme
@@ -819,7 +819,8 @@ function legalScreen(ctx) {
     SAS: { label: 'SAS', note: "Plusieurs associés possibles. Même régime que la SASU pour le président. C'est la forme des projets qui lèvent des fonds.", contract: 'dirigeant' },
     EURL: { label: 'EURL', note: "Toi seul. Gérant travailleur non salarié : environ 45 % de cotisations, sensiblement moins cher qu'un assimilé salarié à revenu égal, mais une couverture plus légère.", contract: 'tns' },
     SARL: { label: 'SARL', note: "Plusieurs associés. Gérant majoritaire TNS. Attention aux dividendes : au-delà de 10 % du capital, ils supportent les cotisations d'indépendant, pas la flat tax.", contract: 'tns' },
-    EI: { label: 'Entreprise individuelle', note: "Pas de société, pas de capital. Le bénéfice est ton revenu : il est impôté à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.", contract: 'tns' },
+    MICRO: { label: 'Micro-entreprise', note: "Toi seul, le plus simple pour démarrer. Tu cotises sur ce que tu encaisses — 12,3 % en vente, 21,2 % en services, 25,6 % en libéral — sans impôt sur les sociétés. Tes charges ne se déduisent pas, et le chiffre d'affaires est plafonné : 203 100 € en vente, 83 600 € en services.", contract: 'micro' },
+    EI: { label: 'Entreprise individuelle', note: "Pas de société, pas de capital. Le bénéfice est ton revenu : il est imposé à l'impôt sur le revenu, sans impôt sur les sociétés ni dividendes.", contract: 'tns' },
     BNC: { label: 'Exercice libéral', note: "Professions libérales non réglementées en société. Bénéfices non commerciaux : le résultat est ton revenu imposable, sans abattement de 10 %.", contract: 'tns' },
     SELARL: { label: 'SELARL', note: "Réservée aux professions réglementées. Gérant majoritaire TNS, même traitement des dividendes qu'une SARL.", contract: 'tns' },
     SELAS: { label: 'SELAS', note: "Réservée aux professions réglementées. Président assimilé salarié, dividendes à la flat tax.", contract: 'dirigeant' },
@@ -839,6 +840,8 @@ function legalScreen(ctx) {
         // pas un choix séparé qu'on oublierait de mettre à jour.
         const me = sc.team?.find((x) => ME.test(x.role || ''))
         if (me) me.contractType = FORMS[f].contract
+        // Un micro-entrepreneur démarre en franchise de TVA.
+        if (!sc.meta.vatChecked) sc.meta.vatExempt = f === 'MICRO' ? true : !!getSector(sc.meta.sectorKey)?.vat?.exempt
       }, { label: 'Forme juridique', silent: true }),
     })),
     () => `On garde ${FORMS[current()]?.label || 'la forme la plus courante'} pour l\u2019instant, la plus fréquente dans ton métier.`),
@@ -1184,14 +1187,35 @@ function salaryScreen(ctx) {
     if (m) m.monthlyGross = 0
   })
   const me = () => store.scenario.team?.find((x) => ME.test(x.role || ''))
-  const type = () => me()?.contractType || (['SARL', 'EURL', 'EI', 'BNC', 'SELARL'].includes(store.scenario.meta.legalForm) ? 'tns' : 'dirigeant')
-  const label = () => (type() === 'tns' ? 'Dirigeant TNS' : 'Dirigeant assimilé salarié')
+  const type = () => me()?.contractType || (store.scenario.meta.legalForm === 'MICRO' ? 'micro' : ['SARL', 'EURL', 'EI', 'BNC', 'SELARL'].includes(store.scenario.meta.legalForm) ? 'tns' : 'dirigeant')
+  const label = () => (type() === 'micro' ? 'Micro-entrepreneur' : type() === 'tns' ? 'Dirigeant TNS' : 'Dirigeant assimilé salarié')
 
   const host = h('div', { class: 'setup-salary-echo' })
   const draw = () => {
     const m = me()
     const gross = Number(m?.monthlyGross) || 0
     if (!gross) { host.replaceChildren(h('p', { class: 'setup-note' }, 'Laisse vide si tu ne te verses rien la première année.')); return }
+    // En micro-entreprise, il n'y a pas d'échelle à descendre : ce que tu
+    // retires n'est pas un salaire, et tes cotisations se comptent sur ce
+    // que tu encaisses. On le dit, plutôt que d'afficher un super brut faux.
+    if (type() === 'micro') {
+      host.replaceChildren(
+        h('div', { class: 'ladder' },
+          h('div', { class: 'ladder-row bottom' },
+            h('span', { class: 'ladder-main' },
+              h('span', { class: 'ladder-label' }, 'Ce que tu retires'),
+              h('span', { class: 'ladder-note' }, 'un prélèvement, pas une charge'),
+            ),
+            h('span', { class: 'ladder-figures' },
+              h('span', { class: 'num ladder-month' }, `${euro(gross * 12)} / an`),
+              h('span', { class: 'num ladder-year' }, `${euro(gross)} / mois`),
+            ),
+          ),
+        ),
+        h('p', { class: 'setup-note' }, 'En micro-entreprise, tes cotisations se calculent sur ton chiffre d’affaires encaissé, pas sur ce que tu retires. Fynomia vérifiera que ton activité le permet.'),
+      )
+      return
+    }
     let c = null
     try { c = monthlyCost({ ...m, monthlyGross: gross }, { headcount: 1, fiscal: store.scenario.fiscal }) } catch { /* rien */ }
     if (!c) { host.replaceChildren(); return }
@@ -1245,7 +1269,7 @@ function salaryScreen(ctx) {
   // raisonne au mois ; la conversion se fait ici, une fois.
   const f = field(ctx, {
     type: 'number', placeholder: '30000',
-    suffix: type() === 'tns' ? '\u20AC par an' : '\u20AC brut par an',
+    suffix: ['tns', 'micro'].includes(type()) ? '\u20AC par an' : '\u20AC brut par an',
     value: (sc) => {
       const m = sc.team?.find((x) => ME.test(x.role || ''))
       return m && Number(m.monthlyGross) > 0 ? Math.round(m.monthlyGross * 12) : ''

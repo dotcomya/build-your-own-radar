@@ -13,6 +13,8 @@ import { MONTHS, YEARS, zeros, byYear, revenueModel, valueForYear } from './reve
 import { payrollSeries } from './payroll.js'
 import { vatModel, taxesAndDuties, jeiStatus, researchCredits, corporateTax } from './taxes.js'
 import { fiscalContext } from './fiscal-fr-2026.js'
+import { isMicro, microSeries, acreMonths } from './micro.js'
+import { SECTORS } from '../state/sectors.js'
 
 export { MONTHS, YEARS }
 
@@ -27,8 +29,13 @@ export function compute(scenario) {
   const revenueMonthly = rev.totals.total
   const revenueCash = rev.totals.cash
 
+  // ─── 1 bis. Micro-entreprise : cotisations sur le chiffre d'affaires ───
+  const micro = isMicro(scenario)
+  const microS = micro ? microSeries({ scenario, sector: SECTORS[scenario.meta?.sectorKey], revenueCash, ctx }) : null
+  const acreByMonth = acreMonths(scenario, ctx)
+
   // ─── 2. Personnel (première passe, sans JEI, pour évaluer l'éligibilité) ─
-  const payroll0 = payrollSeries(team, { fiscal, benefits: scenario.hr?.benefits })
+  const payroll0 = payrollSeries(team, { fiscal, benefits: scenario.hr?.benefits, acreByMonth, micro })
 
   // ─── 3. Charges externes ───────────────────────────────────────────────
   const opex = opexSeries(scenario.opex || [], { revenue: revenueMonthly, headcount: payroll0.headcount, perActivity: rev.perActivity })
@@ -52,7 +59,20 @@ export function compute(scenario) {
   const jeiByMonth = zeros().map((_, m) => (jei[Math.floor(m / 12)]?.eligible ? 1 : 0))
 
   // ─── 6. Personnel (seconde passe, exonération JEI appliquée) ───────────
-  const payroll = payrollSeries(team, { fiscal, jeiByMonth, benefits: scenario.hr?.benefits })
+  const payroll = payrollSeries(team, { fiscal, jeiByMonth, benefits: scenario.hr?.benefits, acreByMonth, micro })
+
+  // Les cotisations du micro-entrepreneur sont des charges de personnel —
+  // ses cotisations personnelles d'exploitant — et se paient chaque mois
+  // avec sa déclaration. Le versement libératoire, lui, est son impôt sur le
+  // revenu : il sort du compte avec les cotisations, mais comme un
+  // prélèvement personnel, pas comme une charge de l'entreprise.
+  if (microS) {
+    payroll.microSocial = microS.social.map((v, m) => v + microS.trainingSeries[m])
+    for (let m = 0; m < MONTHS; m++) {
+      payroll.cost[m] += payroll.microSocial[m]
+      payroll.draws[m] += microS.flatTax[m]
+    }
+  }
 
   // ─── 7. TVA ────────────────────────────────────────────────────────────
   const vat = vatModel({
@@ -64,6 +84,7 @@ export function compute(scenario) {
     exempt: scenario.meta?.vatExempt === true,
     fiscal,
   })
+  const drawsY = byYear(payroll.draws)
 
   // ─── 8. Soldes intermédiaires de gestion ───────────────────────────────
   const revenueY = byYear(revenueMonthly)
@@ -105,13 +126,16 @@ export function compute(scenario) {
   })
 
   // ─── 10. Impôt sur les sociétés ────────────────────────────────────────
+  // Un micro-entrepreneur n'en paie pas : son revenu est imposé à son nom.
   const jeiSavingY = byYear(payroll.jeiExemption)
-  const tax = corporateTax({
-    preTaxResult: preCreditY,
-    revenue: revenueY,
-    eligibleForReducedRate: scenario.meta?.reducedCorporateTax !== false,
-    fiscal,
-  })
+  const tax = micro
+    ? Array.from({ length: YEARS }, (_, y) => ({ year: y, taxable: 0, used: 0, carried: 0, tax: 0, reducedPart: 0, normalPart: 0 }))
+    : corporateTax({
+      preTaxResult: preCreditY,
+      revenue: revenueY,
+      eligibleForReducedRate: scenario.meta?.reducedCorporateTax !== false,
+      fiscal,
+    })
   const netResultY = preCreditY.map((v, y) => v - tax[y].tax + credits[y].total)
 
   // ─── 11. BFR ───────────────────────────────────────────────────────────
@@ -125,12 +149,12 @@ export function compute(scenario) {
 
   // ─── 13. Bilan et plan de financement ──────────────────────────────────
   const balance = balanceSheet({ capex, amortisationY, bfr, cash, financing, netResultY, scenario, vat, tax, credits })
-  const fundingPlan = financingPlan({ bfr, capex, financing, netResultY, amortisationY, grantsY, creditsY: credits.map((c) => c.total) })
+  const fundingPlan = financingPlan({ bfr, capex, financing, netResultY, amortisationY, grantsY, creditsY: credits.map((c) => c.total), drawsY })
 
   // ─── 14. Indicateurs ───────────────────────────────────────────────────
   const kpis = indicators({
     revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY,
-    ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx,
+    ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing,
   })
 
   return {
@@ -140,6 +164,9 @@ export function compute(scenario) {
     variableCost: { monthly: rev.totals.variableCost, yearly: variableCostY },
     payroll, opex, capex, vat, financing, bfr, cash, balance, fundingPlan,
     jei, credits, duties, tax,
+    micro: microS ? { ...microS, socialY: byYear(microS.social), trainingY: byYear(microS.trainingSeries), flatTaxY: byYear(microS.flatTax), acreSavingY: byYear(microS.acreSaving), revenueCashY: byYear(revenueCash) } : null,
+    acre: { active: scenario.meta?.acre === true, savingY: microS ? byYear(microS.acreSaving) : byYear(payroll.acreExemption) },
+    draws: { monthly: payroll.draws, yearly: drawsY },
     pnl: {
       revenue: revenueY, variableCost: variableCostY, grossMargin: grossMarginY,
       external: externalY, valueAdded: valueAddedY, duties: dutiesY, grants: grantsY,
@@ -320,6 +347,23 @@ export function financingSeries(scenario) {
     for (let k = 0; k < n; k++) push(advanceRepayment, start + k, per)
   }
 
+  // Prêts d'honneur : prêtés au fondateur, à taux zéro et sans garantie, et
+  // apportés par lui à son entreprise. Ils entrent dans la trésorerie comme
+  // un apport ; leur remboursement est personnel — il se lit dans ce qui
+  // reste au fondateur, pas dans les comptes de l'entreprise.
+  const honour = zeros()
+  const honourRepayment = zeros()
+  for (const p of f.honourLoans || []) {
+    const amount = Number(p.amount) || 0
+    push(honour, p.month, amount)
+    const n = Math.max(1, Number(p.months) || 60)
+    const start = Math.max(0, Number(p.month) || 0) + Math.max(0, Number(p.graceMonths) || 0)
+    for (let k = 0; k < n; k++) {
+      const m = start + k
+      if (m < MONTHS) honourRepayment[m] += amount / n
+    }
+  }
+
   // Prêts bancaires : annuités constantes, ventilation capital / intérêts.
   for (const loan of f.loans || []) {
     const principal = Number(loan.amount) || 0
@@ -341,7 +385,7 @@ export function financingSeries(scenario) {
     }
   }
 
-  return { equity, investors, grants, shareholderLoans, advances, loanDrawdown, repayment, interest, advanceRepayment, openingCash: Number(f.openingCash) || 0 }
+  return { equity, investors, grants, shareholderLoans, advances, loanDrawdown, repayment, interest, advanceRepayment, honour, honourRepayment, openingCash: Number(f.openingCash) || 0 }
 }
 
 // ──────────────────────── Besoin en fonds de roulement ──────────────────────
@@ -376,7 +420,7 @@ export function cashflow({ scenario, rev, payroll, opex, capex, vat, financing, 
   // en trésorerie, la TVA déductible en sort, et seul le solde est reversé à
   // l'État le mois suivant. Sur la durée, l'effet net est nul — seul demeure le
   // décalage d'un mois, qui apparaît au bilan en dette ou créance de TVA.
-  const rows = { sales: rev.totals.cash, vatCollected: vat.collected, vatRefunded: vat.refunded, grants: financing.grants, equity: financing.equity.map((v, m) => v + financing.investors[m]), loans: financing.loanDrawdown, shareholder: financing.shareholderLoans.map((v, m) => v + financing.advances[m]), credits: zeros(), purchases: rev.totals.variableCash, opex: opex.total, payroll: payroll.cost, vatDeductible: vat.deductible, vatPaid: vat.paid, duties: zeros(), capex: capex.spendMonthly, lease: capex.leaseMonthly, loanRepayment: financing.repayment.map((v, m) => v + financing.interest[m]), advanceRepayment: financing.advanceRepayment, corporateTax: zeros(), stockChange: zeros() }
+  const rows = { sales: rev.totals.cash, vatCollected: vat.collected, vatRefunded: vat.refunded, grants: financing.grants, equity: financing.equity.map((v, m) => v + financing.investors[m]), loans: financing.loanDrawdown, shareholder: financing.shareholderLoans.map((v, m) => v + financing.advances[m]), credits: zeros(), purchases: rev.totals.variableCash, opex: opex.total, payroll: payroll.cost, vatDeductible: vat.deductible, vatPaid: vat.paid, duties: zeros(), capex: capex.spendMonthly, lease: capex.leaseMonthly, loanRepayment: financing.repayment.map((v, m) => v + financing.interest[m]), advanceRepayment: financing.advanceRepayment, corporateTax: zeros(), stockChange: zeros(), honour: financing.honour || zeros(), draws: payroll.draws || zeros() }
 
   // Constitution du stock : une charge de trésorerie qui n'est pas une charge
   // du compte de résultat tant que la marchandise n'est pas vendue.
@@ -398,8 +442,8 @@ export function cashflow({ scenario, rev, payroll, opex, capex, vat, financing, 
 
   let running = financing.openingCash
   for (let m = 0; m < MONTHS; m++) {
-    const inc = rows.sales[m] + rows.vatCollected[m] + rows.vatRefunded[m] + rows.grants[m] + rows.equity[m] + rows.loans[m] + rows.shareholder[m] + rows.credits[m]
-    const out = rows.purchases[m] + rows.opex[m] + rows.payroll[m] + rows.vatDeductible[m] + rows.vatPaid[m] + rows.duties[m] + rows.capex[m] + rows.lease[m] + rows.loanRepayment[m] + rows.advanceRepayment[m] + rows.corporateTax[m] + rows.stockChange[m]
+    const inc = rows.sales[m] + rows.vatCollected[m] + rows.vatRefunded[m] + rows.grants[m] + rows.equity[m] + rows.loans[m] + rows.shareholder[m] + rows.credits[m] + rows.honour[m]
+    const out = rows.purchases[m] + rows.opex[m] + rows.payroll[m] + rows.vatDeductible[m] + rows.vatPaid[m] + rows.duties[m] + rows.capex[m] + rows.lease[m] + rows.loanRepayment[m] + rows.advanceRepayment[m] + rows.corporateTax[m] + rows.stockChange[m] + rows.draws[m]
     inflow[m] = inc
     outflow[m] = out
     running += inc - out
@@ -412,9 +456,11 @@ export function cashflow({ scenario, rev, payroll, opex, capex, vat, financing, 
 
 export function balanceSheet({ capex, amortisationY, bfr, cash, financing, netResultY, scenario, vat, tax, credits }) {
   const rows = []
-  let grossFixed = 0, cumAmort = 0, cumEquity = financing.openingCash, cumResult = 0, cumDebt = 0, cumShareholder = 0
+  let grossFixed = 0, cumAmort = 0, cumEquity = financing.openingCash, cumResult = 0, cumDebt = 0, cumShareholder = 0, cumDraws = 0
 
   const equityY = byYear(financing.equity), investorsY = byYear(financing.investors)
+  const honourY = byYear(financing.honour || Array(MONTHS).fill(0))
+  const drawsY = byYear(cash.rows.draws || Array(MONTHS).fill(0))
   const drawY = byYear(financing.loanDrawdown), repayY = byYear(financing.repayment)
   const shareholderY = byYear(financing.shareholderLoans.map((v, m) => v + financing.advances[m]))
   const advanceRepayY = byYear(financing.advanceRepayment)
@@ -423,8 +469,11 @@ export function balanceSheet({ capex, amortisationY, bfr, cash, financing, netRe
   for (let y = 0; y < YEARS; y++) {
     grossFixed += capexY[y]
     cumAmort += amortisationY[y]
-    cumEquity += equityY[y] + investorsY[y] + byYear(capex.contributions)[y]
+    cumEquity += equityY[y] + investorsY[y] + honourY[y] + byYear(capex.contributions)[y]
     cumResult += netResultY[y]
+    // Les prélèvements de l'exploitant — micro-entreprise — sortent de ses
+    // capitaux propres, comme ils sortent de la trésorerie.
+    cumDraws += drawsY[y]
     cumDebt += drawY[y] - repayY[y]
     cumShareholder += shareholderY[y] - advanceRepayY[y]
 
@@ -441,11 +490,11 @@ export function balanceSheet({ capex, amortisationY, bfr, cash, financing, netRe
     const vatDebt = vat.net[m]
     const taxDebt = tax[y].tax
     const liabilities = cumDebt + cumShareholder + payables + vatDebt + taxDebt + Math.max(0, -treasury)
-    const equity = cumEquity + cumResult
+    const equity = cumEquity + cumResult - cumDraws
 
     rows.push({
       year: y, grossFixed, amortisation: cumAmort, netFixed, receivables, stock, vatCredit,
-      treasury, taxCredit, totalAssets: assets, equity, capital: cumEquity, retained: cumResult,
+      treasury, taxCredit, totalAssets: assets, equity, capital: cumEquity, retained: cumResult, draws: cumDraws,
       debt: cumDebt, shareholder: cumShareholder, payables, vatDebt, taxDebt,
       totalLiabilities: liabilities + equity, gap: assets - (liabilities + equity),
     })
@@ -453,8 +502,9 @@ export function balanceSheet({ capex, amortisationY, bfr, cash, financing, netRe
   return rows
 }
 
-export function financingPlan({ bfr, capex, financing, netResultY, amortisationY, grantsY, creditsY }) {
+export function financingPlan({ bfr, capex, financing, netResultY, amortisationY, grantsY, creditsY, drawsY = Array(YEARS).fill(0) }) {
   const rows = []
+  const honourY = byYear(financing.honour || Array(MONTHS).fill(0))
   const capexY = byYear(capex.spendMonthly)
   const repayY = byYear(financing.repayment)
   const advanceRepayY = byYear(financing.advanceRepayment)
@@ -467,10 +517,10 @@ export function financingPlan({ bfr, capex, financing, netResultY, amortisationY
     const prev = y === 0 ? 0 : bfr.total[(y - 1) * 12 + 11]
     const bfrChange = bfr.total[y * 12 + 11] - prev
     const caf = netResultY[y] + amortisationY[y] - creditsY[y] - grantsY[y]
-    const uses = Math.max(0, bfrChange) + capexY[y] + repayY[y] + advanceRepayY[y] + Math.max(0, -caf)
-    const resources = equityY[y] + investorsY[y] + drawY[y] + shareholderY[y] + grantsY[y] + creditsY[y] + Math.max(0, caf) + Math.max(0, -bfrChange)
+    const uses = Math.max(0, bfrChange) + capexY[y] + repayY[y] + advanceRepayY[y] + (drawsY[y] || 0) + Math.max(0, -caf)
+    const resources = equityY[y] + investorsY[y] + honourY[y] + drawY[y] + shareholderY[y] + grantsY[y] + creditsY[y] + Math.max(0, caf) + Math.max(0, -bfrChange)
     cumulative += resources - uses
-    rows.push({ year: y, bfrChange, capex: capexY[y], repayment: repayY[y] + advanceRepayY[y], caf, uses, equity: equityY[y] + investorsY[y], loans: drawY[y], shareholder: shareholderY[y], grants: grantsY[y], credits: creditsY[y], resources, surplus: resources - uses, cumulative })
+    rows.push({ year: y, bfrChange, capex: capexY[y], repayment: repayY[y] + advanceRepayY[y], draws: drawsY[y] || 0, caf, uses, equity: equityY[y] + investorsY[y], honour: honourY[y], loans: drawY[y], shareholder: shareholderY[y], grants: grantsY[y], credits: creditsY[y], resources, surplus: resources - uses, cumulative })
   }
   return rows
 }
