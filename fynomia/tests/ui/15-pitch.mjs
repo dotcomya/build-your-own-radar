@@ -38,8 +38,10 @@ export default async function (t, { rapide } = {}) {
   // résultat ; et le récit de la trajectoire, en toutes lettres.
   t.verifie(await p.locator('.pitch .pitch-traj svg').count() >= 1, 'la trajectoire de trésorerie est tracée, avec ses jalons')
   t.verifie(await p.locator('.pitch .pitch-croiss .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
-  const recitTraj = await p.locator('.pitch-traj-dit').innerText().catch(() => '')
-  t.verifie(/année 5/i.test(recitTraj) && /exercice bénéficiaire|trésorerie/i.test(recitTraj), 'la trajectoire se raconte en toutes lettres', recitTraj.slice(0, 90))
+  const recitTraj = await p.locator('.pitch-recit .pitch-chapeau').first().innerText().catch(() => '')
+  t.verifie(/année 5/i.test(recitTraj) && /exercice bénéficiaire|trésorerie/i.test(recitTraj), 'la trajectoire se raconte en toutes lettres, en tête de partie', recitTraj.slice(0, 90))
+  t.verifie(await p.locator('.pitch-recit .pitch-chapeau').count() === 8, 'chaque partie du récit s’ouvre sur la phrase qui la raconte')
+  t.verifie(!(await p.locator('.module-nav .hnav-tab', { hasText: 'essai' }).count()), 'la synthèse essai n’est plus un onglet à part')
 
   // Le besoin de la couverture est celui du moteur.
   const besoin = await p.evaluate(async () => {
@@ -89,17 +91,28 @@ export default async function (t, { rapide } = {}) {
   // Sans phrase d'accroche, la couverture le dit et y emmène.
   t.verifie(await p.locator('.pitch-cover .pitch-manque').count() === 1, 'sans description, la couverture propose de l’écrire')
 
-  // Les deux autres mises en page portent le même contenu.
+  // Les autres formes portent le même contenu.
   await p.locator('.pitch-mise', { hasText: 'Tableau' }).click()
-  await p.waitForTimeout(800)
-  const tuiles = await p.$$eval('.pitch-bento .pitch-tuile', (e) => e.map((x) => ({ titre: x.querySelector('h3')?.textContent, avis: !!x.querySelector('.pitch-avis') })))
-  t.verifie(tuiles.length === 8 && tuiles.every((x) => x.avis), 'tableau : huit tuiles, chacune avec son avis', tuiles.length)
+  await p.waitForTimeout(900)
+  const tuiles = await p.$$eval('.pz-cockpit .pitch-tuile', (e) => e.map((x) => ({
+    chiffre: (x.querySelector('.pz-chiffre b')?.textContent || '').trim(),
+    verdict: (x.querySelector('.pz-verdict')?.textContent || '').trim(),
+    ton: !!x.querySelector('.pz-ton'),
+  })))
+  t.verifie(tuiles.length === 8 && tuiles.every((x) => x.chiffre && x.verdict && x.ton), 'tableau : huit tuiles, chacune avec son chiffre, son verdict et son ton', tuiles.length)
+  await p.locator('.pz-cockpit .pz-ouvrir').nth(2).click()
+  await p.waitForTimeout(600)
+  t.verifie(await p.locator('.pz-cockpit .pitch-tuile.is-open .pitch-avis').count() === 1 && await p.locator('.pz-cockpit .pitch-tuile.is-open .sx-card').count() >= 1, 'tableau : une tuile s’ouvre sur tout son contenu, avis compris')
   await p.locator('.pitch-mise', { hasText: 'Diapos' }).click()
-  await p.waitForTimeout(800)
-  t.verifie(await p.locator('.pitch-deck .pitch-diapo').count() === 8, 'diapos : huit diapositives')
+  await p.waitForTimeout(900)
+  t.verifie(await p.locator('.pitch-deck .pitch-diapo').count() === 8 && await p.locator('.pitch-deck .pz-note').count() === 8, 'diapos : huit diapositives, chacune avec sa note d’orateur')
   await p.locator('.pitch-fleche[aria-label="Diapositive suivante"]').click()
   await p.waitForTimeout(900)
   t.verifie((await p.locator('.pitch-compteur').innerText()).startsWith('2'), 'diapos : la flèche passe à la suivante')
+  await p.locator('.pitch-mise', { hasText: 'En détail' }).click()
+  await p.waitForTimeout(1200)
+  const detail = await p.evaluate(() => ({ actes: document.querySelectorAll('.pitch.is-detail .sy-act').length, clairs: document.querySelectorAll('.pitch.is-detail .sy-clair').length }))
+  t.verifie(detail.actes >= 3 && detail.clairs >= 3, '« En détail » : tout le raisonnement, et « en clair » sous chaque acte', detail)
   await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
   await p.waitForTimeout(700)
   // Le voyage : la page s'ouvre en haut (on lit son titre), puis la zone

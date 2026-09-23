@@ -18,7 +18,7 @@ import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 import { celebrate } from '../burst.js'
-import { gardePage } from '../garde.js'
+import { gardePage, sansValidee } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
 import { gardeSalaire } from '../../engine/plausible.js'
 
@@ -239,7 +239,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
           value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
           onUnit: (k) => { renderTeam.unit = k; refresh() },
           onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
-          garde: (v) => gardeSalaire(v * 12, m.contractType),
+          garde: sansValidee(`salaire:${m.id}`, (v) => `${Number(v) || 0}:${m.contractType || ''}`, (v) => gardeSalaire(v * 12, m.contractType)),
         })
 
         return [

@@ -124,6 +124,22 @@ export function valider(x) {
   }, { label: `${x.sujet} validé` })
 }
 
+/**
+ * Un garde-fou de champ qui respecte « Je valide ».
+ *
+ * La note sous le champ jugeait la valeur à chaque frappe sans savoir qu'elle
+ * avait été validée : l'alerte disparaissait de la page, mais pas du champ.
+ * `signe(v)` rend la même signature que le moteur (voir plausible.js) : tant
+ * que la valeur est celle qui a été validée, la note se tait.
+ */
+export function sansValidee(cle, signe, fn) {
+  return (v) => {
+    const ok = store.scenario?.meta?.gardesValidees?.[cle]
+    if (ok !== undefined && ok === String(signe(v))) return null
+    return fn(v)
+  }
+}
+
 /** L'avertissement d'une ligne précise (une charge, un poste), sous elle. */
 export function gardeLigne(cle) {
   const x = gardesDuPlan().find((g) => g.cle === cle)

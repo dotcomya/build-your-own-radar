@@ -114,11 +114,12 @@ export function renderProject(navigate, refresh) {
       ),
       activityOpen(s) ? h('div', { class: 'legalopen' }, sectorGrid(s, set, refresh)) : null,
 
-      // Le régime de TVA, à découvert : il était rangé dans un volet replié
-      // sous la forme juridique, si bien que « choisir ton régime de TVA »
-      // menait à la liste des sociétés. Deux réponses, un clic.
+      // La clôture de l'exercice, à côté de rien d'autre : la question du
+      // régime de TVA est partie. Elle doublonnait le statut juridique et le
+      // taux de TVA de chaque offre, et personne ne savait quoi y répondre ;
+      // la franchise, qui ne concerne que les petites affaires, reste dans le
+      // régime fiscal du statut.
       h('div', { class: 'grid grid-2 mt' },
-        tvaField(s, set),
         h('div', { 'data-gap': 'calendrier' },
           selectField({
             label: 'Mois de clôture', value: String(s.meta.fiscalYearEnd ?? 12),
@@ -241,6 +242,12 @@ function legalBlock(s, sector, set, refresh) {
           checked: !!s.meta.jeiClaimed,
           hint: "Exonération de cotisations patronales sur les postes affectés à la recherche.",
           onInput: (v) => set({ jeiClaimed: v }, 'Statut JEI'),
+        }),
+        switchField({
+          label: 'Je ne facture pas la TVA (franchise en base)',
+          checked: !!s.meta.vatExempt,
+          hint: "Seulement pour les petites affaires sous les seuils de chiffre d\u2019affaires, souvent en micro-entreprise. Sinon, laisse éteint : le taux de TVA de chaque offre se règle dans Offre et revenus.",
+          onInput: (v) => set({ vatExempt: v, vatChecked: true }, 'Régime de TVA'),
         }),
       ),
     ),
@@ -422,23 +429,4 @@ function applyLegal(key) {
  */
 function valider(texte, onClick) {
   return h('button', { class: 'valider-chip', type: 'button', onClick: (e) => { e.preventDefault(); onClick() } }, '✓ ', texte)
-}
-
-/** Le régime de TVA : on la facture, ou on est en franchise. */
-function tvaField(s, set) {
-  const choisi = s.meta.vatChecked === true || !!s.meta.confirmes?.tva
-  const exo = !!s.meta.vatExempt
-  const choix = (v) => set({ vatExempt: v, vatChecked: true }, 'Régime de TVA')
-  return h('div', { class: 'field', 'data-gap': 'tva' },
-    h('label', {}, 'Régime de TVA',
-      choisi ? null : valider('Valider ce régime', () => set({ vatChecked: true }, 'Régime de TVA validé'))),
-    h('div', { class: 'control control-bare' },
-      h('div', { class: 'tva-picks', role: 'radiogroup', 'aria-label': 'Régime de TVA' },
-        h('button', { class: `tva-pick ${!exo ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(!exo), onClick: () => choix(false) },
-          h('b', {}, 'Je facture la TVA'), h('span', {}, 'Tu l’ajoutes à tes prix et tu la reverses.')),
-        h('button', { class: `tva-pick ${exo ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(exo), onClick: () => choix(true) },
-          h('b', {}, 'Franchise en base'), h('span', {}, 'Pas de TVA, sous les seuils de chiffre d’affaires.')),
-      ),
-    ),
-  )
 }

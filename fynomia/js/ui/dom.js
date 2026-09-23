@@ -597,9 +597,15 @@ export function refine(id, label, ...children) {
  * si on lui en donne un).
  */
 if (typeof document !== 'undefined') {
-  // Une bulle ouverte se referme dès qu'on clique ailleurs.
+  // Une bulle ouverte, une liste déroulante marquée « data-ferme-dehors »,
+  // se referment dès qu'on clique ailleurs. `fermer`, s'il existe, oublie
+  // tout de suite l'état retenu : un redessin déclenché par ce même clic ne
+  // doit pas la rouvrir.
   document.addEventListener('pointerdown', (e) => {
     for (const b of document.querySelectorAll('.info-point.is-open')) if (!b.contains(e.target)) b.classList.remove('is-open')
+    for (const d of document.querySelectorAll('details[data-ferme-dehors][open]')) {
+      if (!d.contains(e.target)) { d.open = false; d.fermer?.() }
+    }
   }, true)
 }
 export function infoPoint(texte, { onClick = null, classe = '' } = {}) {

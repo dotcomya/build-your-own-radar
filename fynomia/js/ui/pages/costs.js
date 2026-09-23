@@ -194,7 +194,7 @@ function scopePicker(o, set, refresh) {
     h('span', { class: 'scopepick-name' }, texte),
   )
 
-  const d = h('details', { class: 'scopepick', open: ouverts.has(o.id) || null },
+  const d = h('details', { class: 'scopepick', 'data-ferme-dehors': '', open: ouverts.has(o.id) || null },
     h('summary', { class: 'scopepick-sum', title: 'Offres concernées par cette charge' },
       h('span', { class: 'scopepick-text' }, resume),
       h('span', { class: 'scopepick-chev', 'aria-hidden': 'true' }, '\u203A'),
@@ -206,6 +206,9 @@ function scopePicker(o, set, refresh) {
     ),
   )
   d.addEventListener('toggle', () => { d.open ? ouverts.add(o.id) : ouverts.delete(o.id) })
+  // Un clic ailleurs la referme (voir dom.js) ; et l'on oublie qu'elle était
+  // ouverte, pour qu'elle ne se rouvre pas au prochain rendu.
+  d.fermer = () => ouverts.delete(o.id)
   return d
 }
 

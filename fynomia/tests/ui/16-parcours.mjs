@@ -95,9 +95,10 @@ export default async function (t) {
   await p.waitForTimeout(700)
   const date = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().items.find((i) => i.key === 'demarrage'))
   t.verifie(date?.done && !(await p.locator('[data-gap="demarrage"] .valider-chip').count()), 'une fois validée, la date de début compte comme faite', date?.label)
-  // Le régime de TVA mène à la TVA, pas au statut juridique.
-  const tva = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().items.find((i) => i.key === 'tva'))
-  t.verifie(tva?.go?.anchor === 'tva' && await p.locator('[data-gap="tva"] .tva-pick').count() === 2, 'la ligne TVA mène à son propre champ', tva?.go)
+  // Plus de question de régime de TVA : elle doublonnait le statut et la
+  // TVA de chaque offre.
+  const tva = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().items.some((i) => i.key === 'tva'))
+  t.verifie(!tva && !(await p.locator('[data-gap="tva"]').count()), 'aucune question de régime de TVA dans Mon projet ni dans l’assistant')
   const libelles = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().items.filter((i) => !i.done).map((i) => i.label))
   t.verifie(libelles.every((l) => /^(Choisir|Nommer|Fixer|Estimer|Chiffrer|Lister|Indiquer|Prévoir|Valider|Ajouter|Décrire|Préciser)\b/.test(l)), 'chaque ligne à faire commence par un verbe d’action', libelles)
 

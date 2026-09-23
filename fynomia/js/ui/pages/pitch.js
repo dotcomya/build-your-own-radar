@@ -13,7 +13,7 @@
  * ce qu'on lui demandera d'expliquer.
  */
 
-import { h, euro, pct, num, monthLabel, narrow } from '../dom.js'
+import { h, svg, euro, pct, num, monthLabel, narrow } from '../dom.js'
 import { barChart, entree } from '../charts.js'
 import { storyline } from '../story.js'
 import { trajectorySentence } from '../explain.js'
@@ -23,7 +23,7 @@ import { goToGap } from '../spotlight.js'
 import { section, exercices, grandsChiffres, anneeLue, lireAnnee } from '../sections.js'
 import { barres, courbe, compter } from '../vitrine.js'
 import { gardesDuPlan, gardeBloc } from '../garde.js'
-import { teteDossier } from './studio.js'
+import { teteDossier, renderStudio } from './studio.js'
 
 const n = (v) => Number(v) || 0
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -46,21 +46,28 @@ const ME = new RegExp('fondateur|dirigeant|g\\u00E9rant|moi', 'i')
 const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des entreprises qui revendent à des particuliers' }
 
 /**
- * Trois mises en page à l'essai, pour le même contenu.
+ * Quatre façons de lire le même pitch.
  *
- *   « Récit »   — une partie par ligne : le titre et sa phrase sur une ligne,
- *                 le contenu à gauche, l'avis de Fynomia en bloc final à
- *                 droite ;
- *   « Tableau » — tout le pitch en tuiles, sur un ou deux écrans ;
- *   « Diapos »  — une idée par diapositive, comme le deck qu'on présentera.
+ *   « Récit »     — un texte qu'on lit : chaque partie s'ouvre sur une phrase
+ *                   qui la raconte, les images suivent, l'avis de Fynomia se
+ *                   tient à droite ;
+ *   « Tableau »   — un cockpit : tout le pitch sur un écran, une tuile par
+ *                   partie avec son chiffre, sa courbe et le verdict ; une
+ *                   tuile s'ouvre au clic sur tout son contenu ;
+ *   « Diapos »    — le deck qu'on présentera : une idée par diapositive, au
+ *                   format d'un écran, l'avis en note d'orateur ;
+ *   « En détail » — tout le raisonnement, acte par acte, avec « en clair »
+ *                   ce que chaque chiffre veut dire pour toi.
  *
- * Le fondateur choisit ; on gardera celle qu'il préfère. Le choix est retenu
- * sur cet appareil.
+ * Les trois premières disent exactement la même chose — mêmes parties, mêmes
+ * chiffres, mêmes avis — sous trois formes ; on passe de l'une à l'autre d'un
+ * clic, sans rien perdre. Le choix est retenu sur cet appareil.
  */
 const MISES = [
-  { key: 'recit', label: 'Récit', dit: 'une partie par ligne, l’avis à droite' },
-  { key: 'tableau', label: 'Tableau', dit: 'tout en tuiles, presque sans défiler' },
-  { key: 'diapos', label: 'Diapos', dit: 'une idée par diapositive' },
+  { key: 'recit', label: 'Récit', dit: 'à lire, partie par partie' },
+  { key: 'tableau', label: 'Tableau', dit: 'tout sur un écran' },
+  { key: 'diapos', label: 'Diapos', dit: 'à présenter' },
+  { key: 'detail', label: 'En détail', dit: 'tout le raisonnement' },
 ]
 const CLE_MISE = 'fynomia:pitch-mise'
 let mise = (() => { try { return localStorage.getItem(CLE_MISE) || 'recit' } catch { return 'recit' } })()
@@ -71,26 +78,44 @@ export function renderPitch(navigate, refresh, goView) {
   const s = store.scenario
   const r = store.result
   if (!r) return h('p', {}, 'Aucun résultat.')
+  if (!MISES.some((m) => m.key === mise)) mise = 'recit'
   const an = anneeLue(r)
   const choisir = (x) => { lireAnnee(x); refresh() }
   const garde = gardesDuPlan(s, r)
   const pilotage = () => (goView ? goView('pilotage') : navigate('#/tableau-de-bord'))
-  const parties = partiesDuPitch(s, r, navigate, an, choisir)
-  if (!MISES.some((m) => m.key === mise)) mise = 'recit'
 
-  return h('div', { class: `pitch is-${mise}` },
-    // La même tête que la synthèse essai : où en est le dossier, ce qui est
-    // fait, ce qui reste. Les deux onglets se comparent d'un coup d'œil.
-    h('div', { class: 'sy pitch-dossier' }, ...teteDossier(navigate, pilotage, 'pitch-')),
-    h('div', { class: 'pitch-mises', role: 'radiogroup', 'aria-label': 'Mise en page du pitch' },
-      h('span', { class: 'pitch-mises-l' }, 'Mise en page à l’essai'),
-      h('div', { class: 'pitch-mises-seg' },
-        ...MISES.map((m) => h('button', {
-          class: `pitch-mise ${m.key === mise ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(m.key === mise),
-          onClick: () => { choisirMise(m.key); refresh() },
-        }, h('b', {}, m.label), h('span', {}, m.dit))),
-      ),
+  // Changer de forme se voit : l'ancienne s'efface, la nouvelle se pose.
+  const basculer = (k) => {
+    if (k === mise) return
+    choisirMise(k)
+    if (document.startViewTransition && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('is-bascule')
+      const tr = document.startViewTransition(() => refresh())
+      tr.finished.finally(() => document.documentElement.classList.remove('is-bascule'))
+    } else refresh()
+  }
+  const selecteur = h('div', { class: 'pitch-mises', role: 'radiogroup', 'aria-label': 'Façon de lire le pitch' },
+    h('span', { class: 'pitch-mises-l' }, 'Lire le pitch'),
+    h('div', { class: 'pitch-mises-seg' },
+      ...MISES.map((m) => h('button', {
+        class: `pitch-mise ${m.key === mise ? 'is-on' : ''} is-${m.key}`, role: 'radio', 'aria-checked': String(m.key === mise),
+        onClick: () => basculer(m.key),
+      }, h('b', {}, m.label), h('span', {}, m.dit))),
     ),
+  )
+
+  // En détail : la synthèse complète, acte par acte — elle porte sa propre
+  // tête de dossier.
+  if (mise === 'detail') {
+    return h('div', { class: 'pitch is-detail' }, selecteur, renderStudio(navigate, refresh, goView))
+  }
+
+  const parties = partiesDuPitch(s, r, navigate, an, choisir)
+  return h('div', { class: `pitch is-${mise}` },
+    selecteur,
+    // La même tête que la vue « En détail » : où en est le dossier, ce qui
+    // est fait, ce qui reste.
+    h('div', { class: 'sy pitch-dossier' }, ...teteDossier(navigate, pilotage, 'pitch-')),
     couverture(s, r, navigate),
     garde.length ? gardeBloc(garde, navigate, { classe: 'is-page' }) : null,
     mise === 'tableau' ? tableau(parties) : mise === 'diapos' ? diapos(parties) : recit(parties),
@@ -104,29 +129,116 @@ export function renderPitch(navigate, refresh, goView) {
   )
 }
 
+/* ─────────── Petits dessins, pour le tableau et les diapositives ─────────── */
+
+/** Cinq barres, sans axe : la pente d'un chiffre sur cinq ans. */
+function miniBarres(vals) {
+  const v = (vals || []).map(n)
+  const hi = Math.max(1, ...v.map(Math.abs))
+  return h('div', { class: 'pz-barres', 'aria-hidden': 'true' },
+    ...v.map((x, i) => h('i', { class: x < 0 ? 'is-neg' : '', style: { height: `${Math.max(4, (Math.abs(x) / hi) * 100)}%`, '--i': String(i) } })))
+}
+
+/** Une courbe, sans axe : la trésorerie mois par mois. */
+function miniCourbe(vals) {
+  const v = (vals || []).map(n)
+  if (!v.length) return null
+  const W = 200, H = 56
+  const hi = Math.max(0, ...v), lo = Math.min(0, ...v), span = hi - lo || 1
+  const x = (i) => (i / Math.max(1, v.length - 1)) * W
+  const y = (val) => 4 + (1 - (val - lo) / span) * (H - 8)
+  const d = v.map((val, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(val).toFixed(1)}`).join(' ')
+  return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'pz-mini is-courbe', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
+    svg('line', { x1: 0, x2: W, y1: y(0), y2: y(0), class: 'pz-zero' }),
+    svg('path', { d, class: 'pz-trait', pathLength: 1 }))
+}
+
+/** Une jauge : une part, et la fourchette du métier si on la connaît. */
+function miniJauge(part, repere = null) {
+  const p = Math.max(0, Math.min(1, n(part)))
+  return h('div', { class: 'pz-jauge', 'aria-hidden': 'true' },
+    repere ? h('span', { class: 'pz-jauge-rep', style: { left: `${repere[0] * 100}%`, width: `${(repere[1] - repere[0]) * 100}%` } }) : null,
+    h('i', { style: { width: `${p * 100}%` } }))
+}
+
+/** Des parts côte à côte : les offres, ou l'usage de l'argent. */
+function miniParts(parts) {
+  const total = parts.reduce((t, x) => t + n(x.v), 0) || 1
+  return h('div', { class: 'pz-parts', 'aria-hidden': 'true' },
+    ...parts.filter((x) => n(x.v) > 0).map((x, i) => h('i', { class: `is-${i}`, style: { flexGrow: String(n(x.v) / total) }, title: x.nom })))
+}
+
 /**
- * Le contenu du pitch, partie par partie — le même pour les trois mises en
- * page. Chaque partie : son nom, la phrase qui dit pourquoi un investisseur
- * la lit, son contenu, et l'avis de Fynomia. `tuile` règle sa place dans le
- * tableau (colonnes sur douze, lignes).
+ * Le contenu du pitch, partie par partie — le même pour les trois formes.
+ *
+ * Chaque partie porte : son nom, la phrase qui dit pourquoi on la lit
+ * (`dit`), la phrase qui la raconte (`recit`), son chiffre (`chiffre`), un
+ * petit dessin (`mini`), son contenu complet (`corps`) et l'avis de Fynomia.
+ * Le récit lit la phrase, le tableau lit le chiffre et le dessin, les
+ * diapositives lisent les deux en grand : même fond, trois formes.
  */
 function partiesDuPitch(s, r, navigate, an, choisir) {
   const p = r.pnl
   const k = r.kpis
   const a = avis(s, r)
+  const f = s.financing || {}
+  const bas = k.cashLow || {}
+  const manque = n(k.fundingNeed)
+  const premier = k.firstProfitableYear
+  const aPremier = premier !== null && premier !== undefined
+  const a1 = n(p.revenue[0]), a5 = n(p.revenue[4])
+  const cagr = a1 > 0 && a5 > 0 && a5 / a1 <= 1000 ? Math.pow(a5 / a1, 1 / 4) - 1 : null
+  const marge = n(k.marginRate?.[2])
+  const margeOk = n(p.revenue[2]) > 0 && Math.abs(marge) <= 10
+  const mois = (k.breakEvenMonth || []).findIndex((m) => m)
+  const offres = (s.activities || []).filter((x) => n(x.unitPrice) > 0 || n(x.recurringPrice) > 0)
+  const total3 = (r.revenue?.perActivity || []).reduce((t, x) => t + parAn(x.total, 2), 0)
+  const parts = (r.revenue?.perActivity || []).map((x, i) => ({ nom: s.activities?.[i]?.name || `Offre ${i + 1}`, v: parAn(x.total, 2) }))
+  const phare = [...parts].sort((x, y) => y.v - x.v)[0]
+  const phareOffre = (s.activities || []).find((x) => x.name === phare?.nom) || offres[0]
+  const prixPhare = phareOffre ? (n(phareOffre.recurringPrice) > 0 ? `${euro(n(phareOffre.recurringPrice))} / mois` : `${num(n(phareOffre.unitPrice), n(phareOffre.unitPrice) < 100 ? 2 : 0)} €`) : '—'
+  const finance = n(f.openingCash) + somme(f.equityFounders) + somme(f.equityInvestors) + somme(f.loans) + somme(f.shareholderLoans) + somme(f.advances) + somme(f.grants)
+  const team = s.team || []
+  const masse1 = Math.abs(n(p.payroll[0]))
+  const bm = SECTORS[s.meta?.sectorKey]?.benchmarks || {}
+  const usage = [
+    { nom: 'Équipe', v: Math.abs(n(p.payroll[0])) },
+    { nom: 'Frais de fonctionnement', v: Math.abs(n(p.external[0])) + Math.abs(n(p.duties[0])) },
+    { nom: 'Achats liés aux ventes', v: Math.abs(n(p.variableCost[0])) },
+    { nom: 'Investissements', v: parAn(r.capex?.spendMonthly, 0) },
+  ]
+  const risquesNoms = [
+    manque > 0 ? 'la trésorerie qui passe sous zéro' : null,
+    offres.length <= 1 ? 'une seule offre' : null,
+    !aPremier ? 'pas de bénéfice sur cinq ans' : null,
+    ...(SECTORS[s.meta?.sectorKey]?.traps || []).map((t) => t.title.toLowerCase()),
+  ].filter(Boolean)
+
   return [
     { cle: 'trajectoire', nom: 'La trajectoire sur cinq ans',
       dit: 'Ta trésorerie mois par mois, et les moments qui comptent : l’histoire qu’on lit en premier.',
+      recit: trajectorySentence(r),
+      chiffre: manque > 0 ? { v: euro(-manque), l: `au plus bas, en ${monthLabel(bas.month, r.startDate)}`, ton: 'bad' } : { v: eur(n(r.cash.yearEnd?.[4])), l: 'sur le compte en année 5', ton: 'good' },
+      mini: () => miniCourbe(r.cash.balance),
+      // La phrase de la trajectoire est son récit : chaque forme la montre
+      // une fois, pas deux.
       corps: () => h('div', { class: 'pitch-traj' },
         h('div', { class: 'pitch-chart' }, storyline(r, s, { compact: narrow() })),
-        h('p', { class: 'pitch-traj-dit' }, trajectorySentence(r)),
       ),
       avis: a.tresorerie, tuile: [8, 2] },
     { cle: 'offre', nom: 'Ce que tu vends, et à qui',
       dit: 'Si ça ne tient pas en deux phrases, le reste ne sera pas lu.',
-      corps: () => offres(s, r, navigate), avis: a.offre, tuile: [4, 2] },
+      recit: String(s.meta?.pitch || '').trim() || (offres.length
+        ? `Tu vends ${offres.length > 1 ? `${offres.length} produits, dont « ${phare?.nom} », ton produit phare` : `« ${offres[0].name || 'ton offre'} »`}, à ${prixPhare} hors taxes.`
+        : 'Tu n’as pas encore chiffré ce que tu vends : commence par ton produit phare.'),
+      chiffre: { v: prixPhare, l: phare ? `« ${phare.nom} », ton produit phare` : 'ton produit phare' },
+      mini: () => miniParts(parts),
+      corps: () => offresBloc(s, r, navigate), avis: a.offre, tuile: [4, 2] },
     { cle: 'croissance', nom: 'Jusqu’où ça peut aller',
       dit: 'La pente du chiffre d’affaires, et le moment où tu gagnes de l’argent.',
+      recit: `De ${eur(a1)} de chiffre d’affaires la première année à ${eur(a5)} la cinquième${cagr !== null ? `, soit ${cagr >= 0 ? '+' : '−'}${pct(Math.abs(cagr), 0)} par an` : ''}. ${aPremier ? `Premier bénéfice en année ${premier + 1}.` : 'Pas de bénéfice sur cinq ans.'}`,
+      chiffre: { v: eur(a5), l: 'de chiffre d’affaires en année 5' },
+      mini: () => miniBarres(p.revenue),
       droite: exercices(an, choisir),
       corps: () => h('div', { class: 'pitch-croiss' },
         h('div', { class: 'pitch-chart' }, barChart({
@@ -139,87 +251,164 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
           { cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
             note: (y) => (taux(n(p.ebitda[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebitda[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.') },
           { cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
-            note: () => (k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Premier bénéfice en année ${k.firstProfitableYear + 1}.` : 'Pas de bénéfice sur cinq ans.') },
+            note: () => (aPremier ? `Premier bénéfice en année ${premier + 1}.` : 'Pas de bénéfice sur cinq ans.') },
           { cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, mensuel: r.cash.balance, ton: (v) => (v < 0 ? 'bad' : 'good'), note: () => 'Au 31 décembre.' },
         ], an, choisir, { cle: 'pitch', compact: true, debut: r.startDate }),
       ),
       avis: a.trajectoire, tuile: [8, 2] },
     { cle: 'modele', nom: 'Comment chaque vente gagne de l’argent',
       dit: 'Ce qui reste sur chaque vente, et ce qu’un client rapporte face à ce qu’il coûte.',
+      recit: margeOk && marge > 0
+        ? `Sur 100 € vendus, il te reste ${Math.round(marge * 100)} € une fois payé ce que coûte la vente. ${mois >= 0 ? `Tes ventes couvrent tous tes frais à partir de l’année ${mois + 1}.` : 'Sur cinq ans, elles ne couvrent jamais tous tes frais.'}`
+        : 'Tes ventes ne couvrent pas encore ce qu’elles coûtent : c’est le premier chiffre à corriger.',
+      chiffre: { v: margeOk ? pct(marge, 0) : '—', l: 'de marge brute en année 3', ton: margeOk && bm.grossMargin && marge < bm.grossMargin[0] ? 'bad' : '' },
+      mini: () => miniJauge(margeOk ? marge : 0, bm.grossMargin),
       corps: () => modele(s, r), avis: a.modele, tuile: [4, 2] },
     { cle: 'besoin', nom: 'Ce que tu cherches à financer',
       dit: 'Combien, jusqu’à quand, pour quoi faire : la somme doit mener à une étape.',
+      recit: manque > 0
+        ? `Il te faut ${eur(manque)} sur le compte avant ${monthLabel(bas.month, r.startDate)} ; tu as déjà réuni ${eur(finance)}.`
+        : `Ton plan se finance avec ce que tu as réuni : ${eur(finance)}.`,
+      chiffre: manque > 0 ? { v: eur(manque), l: 'à trouver au point bas', ton: 'bad' } : { v: 'Aucun', l: 'besoin de financement', ton: 'good' },
+      mini: () => miniParts(usage),
       corps: () => besoin(s, r, navigate), avis: a.besoin, tuile: [6, 1] },
     { cle: 'equipe', nom: 'Qui fait le travail',
       dit: 'Qui est là au départ, qui arrive ensuite, et ce que ça coûte.',
+      recit: team.length
+        ? `${team.length} poste${team.length > 1 ? 's' : ''}, ${eur(masse1)} de salaires et de cotisations la première année.`
+        : 'Aucun poste saisi : on voudra savoir qui fait le travail.',
+      chiffre: { v: String(team.length), l: `poste${team.length > 1 ? 's' : ''} · ${eur(masse1)} en année 1` },
+      mini: () => miniBarres(p.payroll.map((x) => Math.abs(n(x)))),
       corps: () => equipe(s, r), avis: a.equipe, tuile: [6, 1] },
     { cle: 'risques', nom: 'Ce qui pourrait mal tourner',
       dit: 'Un dossier qui nomme ses risques rassure plus qu’un dossier qui les tait.',
+      recit: risquesNoms.length ? `Les risques à nommer toi-même : ${risquesNoms.slice(0, 3).join(', ')}.` : 'Aucun risque particulier dans les chiffres.',
+      chiffre: { v: String(Math.min(5, risquesNoms.length)), l: 'risques à nommer' },
+      mini: () => h('div', { class: 'pz-points', 'aria-hidden': 'true' }, ...risquesNoms.slice(0, 5).map(() => h('i'))),
       corps: () => risques(s, r), avis: a.risques, tuile: [6, 1] },
     { cle: 'ratios', nom: 'Les chiffres qu’on te demandera',
-      dit: 'Ceux qu’un investisseur compare d’un dossier à l’autre.',
+      dit: 'Ceux qu’on compare d’un dossier à l’autre.',
+      recit: 'Sept chiffres à savoir par cœur : chiffre d’affaires, croissance, marges, premier bénéfice, besoin et autonomie.',
+      chiffre: { v: mois >= 0 ? `Année ${mois + 1}` : 'Pas atteint', l: 'le point mort' },
+      mini: () => null,
       corps: () => ratios(s, r), avis: a.ratios, tuile: [6, 1] },
   ]
 }
 
-/** Récit : une partie par ligne, l'avis en bloc final à droite. */
+/**
+ * Récit : un texte qu'on lit.
+ *
+ * Chaque partie s'ouvre sur la phrase qui la raconte, en grand, comme le
+ * chapeau d'un article ; les images et le détail suivent ; l'avis de
+ * Fynomia se tient dans la marge de droite.
+ */
 function recit(parties) {
   return h('div', { class: 'pitch-recit' },
     ...parties.map((x, i) => section({ no: i + 1, nom: x.nom, dit: x.dit, droite: x.droite || null, cle: `pitch-${x.cle}`, classe: 'pitch-ligne' },
       h('div', { class: 'pitch-ligne-corps' },
-        h('div', { class: 'pitch-ligne-main' }, x.corps()),
+        h('div', { class: 'pitch-ligne-main' },
+          h('p', { class: 'pitch-chapeau' }, insecable(x.recit)),
+          x.corps()),
         conseil(x.avis, { cote: true }),
       ),
     )))
 }
 
-/** Tableau : tout en tuiles, sur une grille de douze colonnes. */
+/**
+ * Tableau : un cockpit.
+ *
+ * Tout le pitch sur un écran, sur fond sombre : une tuile par partie, avec
+ * son chiffre, sa courbe et le verdict en une ligne. Une tuile s'ouvre au
+ * clic sur tout son contenu — le même que dans le récit — et se referme.
+ */
+const tuilesOuvertes = new Set()
 function tableau(parties) {
-  return h('div', { class: 'pitch-bento' },
-    ...parties.map((x, i) => h('article', {
-      class: 'pitch-tuile', 'data-partie': x.cle,
-      style: { '--cols': String(x.tuile?.[0] || 6), '--rows': String(x.tuile?.[1] || 1), '--i': String(i) },
-    },
-      h('header', { class: 'pitch-tuile-head' },
-        h('b', {}, String(i + 1).padStart(2, '0')),
-        h('h3', {}, x.nom),
-        x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
-      ),
-      h('p', { class: 'pitch-tuile-dit' }, x.dit),
-      h('div', { class: 'pitch-tuile-corps' }, x.corps()),
-      conseil(x.avis, { court: true }),
-    )))
+  return h('div', { class: 'pitch-bento pz-cockpit' },
+    ...parties.map((x, i) => {
+      const ouverte = tuilesOuvertes.has(x.cle)
+      const basculer = () => {
+        ouverte ? tuilesOuvertes.delete(x.cle) : tuilesOuvertes.add(x.cle)
+        const el = document.querySelector(`.pitch-tuile[data-partie="${x.cle}"]`)
+        if (el) el.replaceWith(tuile())
+      }
+      const tuile = () => {
+        const o = tuilesOuvertes.has(x.cle)
+        const ton = x.avis?.ton || 'good'
+        return h('article', {
+          class: `pitch-tuile ${o ? 'is-open' : ''}`, 'data-partie': x.cle,
+          style: { '--cols': String(o ? 12 : (x.tuile?.[0] || 6)), '--rows': String(o ? 1 : (x.tuile?.[1] || 1)), '--i': String(i) },
+        },
+          h('header', { class: 'pitch-tuile-head' },
+            h('b', {}, String(i + 1).padStart(2, '0')),
+            h('h3', {}, x.nom),
+            h('span', { class: `pz-ton is-${ton}` }, TONS[ton]),
+          ),
+          h('div', { class: 'pz-chiffre' },
+            h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
+            h('span', {}, x.chiffre?.l || ''),
+          ),
+          x.mini ? h('div', { class: 'pz-dessin' }, x.mini()) : null,
+          h('p', { class: 'pz-verdict' }, insecable(x.avis?.titre || '')),
+          o ? h('div', { class: 'pitch-tuile-corps' },
+            h('p', { class: 'pitch-chapeau' }, insecable(x.recit)),
+            x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null, x.corps()) : null,
+          o ? conseil(x.avis, { court: true }) : null,
+          h('button', { class: 'pz-ouvrir', type: 'button', 'aria-expanded': String(o), onClick: basculer }, o ? 'Refermer' : 'Tout voir'),
+        )
+      }
+      return tuile()
+    }))
 }
 
-/** Diapos : une partie par diapositive, qu'on fait défiler de côté. */
+/**
+ * Diapos : le deck qu'on présentera.
+ *
+ * Une idée par diapositive, au format d'un écran : le titre et la phrase en
+ * grand, le chiffre qui la porte, l'image ; l'avis de Fynomia en bas, comme
+ * une note d'orateur. Les flèches du clavier font défiler.
+ */
 const diapo = { i: 0 }
 function diapos(parties) {
-  const n = parties.length
+  const total = parties.length
   const piste = h('div', { class: 'pitch-piste', tabindex: '0', 'aria-label': 'Diapositives du pitch' },
-    ...parties.map((x, i) => h('section', { class: 'pitch-diapo', 'data-partie': x.cle, 'aria-label': `${i + 1} sur ${n} : ${x.nom}` },
-      h('div', { class: 'pitch-diapo-main' },
-        h('div', { class: 'pitch-diapo-head' },
-          h('span', { class: 'pitch-diapo-no' }, `${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`),
-          h('h3', {}, x.nom),
-          x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
-        ),
-        h('p', { class: 'pitch-diapo-dit' }, x.dit),
-        h('div', { class: 'pitch-diapo-corps' }, x.corps()),
+    ...parties.map((x, i) => h('section', { class: `pitch-diapo ${i % 2 ? 'is-clair' : 'is-sombre'}`, 'data-partie': x.cle, 'aria-label': `${i + 1} sur ${total} : ${x.nom}` },
+      h('div', { class: 'pz-diapo-haut' },
+        h('span', { class: 'pitch-diapo-no' }, `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`),
+        x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
       ),
-      conseil(x.avis, { cote: true }),
+      h('div', { class: 'pz-diapo-grille' },
+        h('div', { class: 'pz-diapo-texte' },
+          h('h3', {}, x.nom),
+          h('p', { class: 'pz-diapo-recit' }, insecable(x.recit)),
+          h('div', { class: 'pz-diapo-chiffre' },
+            h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
+            h('span', {}, x.chiffre?.l || ''),
+          ),
+        ),
+        h('div', { class: 'pz-diapo-visuel' }, x.corps()),
+      ),
+      h('footer', { class: 'pz-note' },
+        h('span', { class: 'avis-mono', 'aria-hidden': 'true' }, 'F'),
+        h('div', {},
+          h('b', {}, 'Note d’orateur · ', TONS[x.avis?.ton || 'good']),
+          h('p', {}, insecable(x.avis?.titre || ''), x.avis?.question ? ` — on te demandera : « ${x.avis.question} »` : ''),
+        ),
+      ),
     )))
+  const barre = h('div', { class: 'pz-progres', 'aria-hidden': 'true' }, h('i', { style: { width: `${((diapo.i + 1) / total) * 100}%` } }))
   const points = h('div', { class: 'pitch-points' },
     ...parties.map((x, i) => h('button', { class: `pitch-point ${i === diapo.i ? 'is-on' : ''}`, 'aria-label': x.nom, title: x.nom, onClick: () => aller(i) })))
-  const compteur = h('span', { class: 'pitch-compteur' }, `${diapo.i + 1} / ${n}`)
+  const compteur = h('span', { class: 'pitch-compteur' }, `${diapo.i + 1} / ${total}`)
   const aller = (i) => {
-    diapo.i = Math.max(0, Math.min(n - 1, i))
+    diapo.i = Math.max(0, Math.min(total - 1, i))
     piste.scrollTo({ left: diapo.i * piste.clientWidth, behavior: 'smooth' })
   }
   const suivre = () => {
     const i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth))
-    if (i === diapo.i && compteur.textContent === `${i + 1} / ${n}`) return
+    if (i === diapo.i && compteur.textContent === `${i + 1} / ${total}`) return
     diapo.i = i
-    compteur.textContent = `${i + 1} / ${n}`
+    compteur.textContent = `${i + 1} / ${total}`
+    barre.firstChild.style.width = `${((i + 1) / total) * 100}%`
     points.querySelectorAll('.pitch-point').forEach((b, k) => b.classList.toggle('is-on', k === i))
   }
   piste.addEventListener('scroll', () => requestAnimationFrame(suivre), { passive: true })
@@ -229,15 +418,18 @@ function diapos(parties) {
   })
   // Un redessin (changer d'exercice) garde la diapositive ouverte.
   requestAnimationFrame(() => { if (diapo.i) piste.scrollLeft = diapo.i * piste.clientWidth })
-  return h('div', { class: 'pitch-deck' },
+  const deck = h('div', { class: 'pitch-deck' },
+    barre,
     piste,
     h('div', { class: 'pitch-nav' },
       h('button', { class: 'pitch-fleche', 'aria-label': 'Diapositive précédente', onClick: () => aller(diapo.i - 1) }, '←'),
       points,
       compteur,
       h('button', { class: 'pitch-fleche', 'aria-label': 'Diapositive suivante', onClick: () => aller(diapo.i + 1) }, '→'),
+      h('button', { class: 'pz-plein', type: 'button', onClick: () => deck.requestFullscreen?.().catch(() => {}) }, 'Plein écran'),
     ),
   )
+  return deck
 }
 
 /**
@@ -323,7 +515,7 @@ function croissance(ca) {
   return `×${num(x, 1)} en cinq ans, soit ${annuel >= 0 ? '+' : '−'}${pct(Math.abs(annuel), 0)} par an en moyenne.`
 }
 
-function offres(s, r, navigate) {
+function offresBloc(s, r, navigate) {
   const acts = s.activities || []
   const y = 2
   const total = (r.revenue?.perActivity || []).reduce((t, a) => t + parAn(a.total, y), 0)

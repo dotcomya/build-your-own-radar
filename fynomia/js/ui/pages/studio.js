@@ -457,6 +457,7 @@ function acte(a, i, total, r, s, sansCA, navigate) {
     ),
     h('h2', { class: 'sy-act-title' }, titre(a.titre)),
     h('p', { class: 'sy-act-say' }, titre(a.dit)),
+    enClair(i, sansCA, s, r, navigate),
   )
 
   const dernier = i === total - 1
@@ -468,6 +469,78 @@ function acte(a, i, total, r, s, sansCA, navigate) {
   return guet(h('section', { class: `sy-act is-${i === 1 ? 'feature' : i === 2 ? 'band' : 'duo'}` },
     tete, corps,
   ), `acte-${i}`)
+}
+
+/**
+ * « En clair » : ce que l'acte veut dire pour toi, sans un mot de compta.
+ *
+ * Les actes étaient justes et beaux, mais un fondateur les lisait « sans
+ * comprendre » : un titre, des cartes, des montants — et la question « donc,
+ * je fais quoi ? » restait entière. Sous chaque titre, trois phrases au plus,
+ * avec des euros et des mois plutôt que des sigles, puis le geste qui répond.
+ */
+function enClair(i, sansCA, s, r, navigate) {
+  const p = r.pnl, k = r.kpis
+  const y = referenceYear(r)
+  const net = (p.netResult || []).map(n)
+  const premier = net.findIndex((v) => v > 0)
+  const manque = n(k.fundingNeed)
+  const bas = k.cashLow || {}
+  const quand = bas.month !== undefined && bas.month !== null ? monthLabel(bas.month, r.startDate) : null
+  const ca = n(p.revenue[y])
+  const lignes = []
+  const gestes = []
+  const va = (label, go) => gestes.push(h('button', { class: 'sy-clair-go', onClick: (e) => goToGap(go, navigate, e.currentTarget) }, `${label} →`))
+
+  if (sansCA) {
+    const mois = (Math.abs(n(p.payroll[0])) + Math.abs(n(p.external[0])) + Math.abs(n(p.duties[0]))) / 12
+    if (i === 0) {
+      lignes.push(`Sans aucune vente, ton projet te coûte environ ${euro(mois)} par mois.`)
+      lignes.push(manque > 0 ? `À ce rythme, ton compte descend jusqu’à ${euro(-manque)}${quand ? ` en ${quand}` : ''}.` : 'Ton compte tient malgré tout : tu as de quoi payer ces frais.')
+      va('Fixer ton prix de vente', { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' })
+    } else if (i === 1) {
+      lignes.push('Le plus gros poste de dépense est celui à regarder en premier : c’est là qu’un euro économisé compte le plus.')
+      va('Voir tes charges', { route: 'achats', view: 'charges', anchor: 'charges' })
+    } else {
+      lignes.push(`Pour couvrir ces frais, il faudra vendre au moins ${euro(mois)} par mois, avant même de te payer davantage.`)
+      va('Estimer tes ventes du premier mois', { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' })
+    }
+  } else if (i === 0) {
+    lignes.push(net[0] < 0
+      ? `La première année, tu perds ${euro(-net[0])} : c’est normal au démarrage, tu dépenses avant de vendre.`
+      : `Dès la première année, tu gagnes ${euro(net[0])} une fois tout payé, impôts compris.`)
+    lignes.push(premier > 0
+      ? `Tu commences à gagner de l’argent en année ${premier + 1} (${euro(net[premier])} de bénéfice).`
+      : premier === 0 ? 'Tu restes bénéficiaire ensuite, année après année.' : 'Sur cinq ans, tu ne gagnes jamais d’argent : il faut revoir tes prix, tes volumes ou tes charges.')
+    lignes.push(manque > 0
+      ? `Mais avant d’y arriver, ton compte descend jusqu’à ${euro(-manque)}${quand ? ` en ${quand}` : ''} : c’est la somme à trouver (apport, prêt ou levée).`
+      : 'Ton compte ne passe jamais sous zéro : tu n’as pas besoin d’argent extérieur pour tenir.')
+    if (manque > 0) va('Ajouter un financement', { route: 'financement', view: 'sources', anchor: 'sources' })
+    else if (premier < 0) va('Revoir ton prix de vente', { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' })
+  } else if (i === 1) {
+    if (ca > 0) {
+      const sur = (v) => Math.round((Math.abs(n(v)) / ca) * 100)
+      const achats = sur(p.variableCost[y]), salaires = sur(p.payroll[y]), frais = sur(n(p.external[y]) + n(p.duties[y]))
+      const reste = 100 - achats - salaires - frais
+      lignes.push(`Sur 100 € que tu encaisses en année ${y + 1} : ${achats} € partent dans les achats, ${salaires} € dans les salaires, ${frais} € dans les frais fixes.`)
+      lignes.push(reste >= 0 ? `Il t’en reste ${reste} € avant amortissements, intérêts et impôts.` : `Il en manque ${-reste} € : tu dépenses plus que tu n’encaisses.`)
+    }
+    va('Voir tes charges', { route: 'achats', view: 'charges', anchor: 'charges' })
+  } else {
+    const seuil = n(k.breakEven?.[y])
+    const mois = (k.breakEvenMonth || []).findIndex((m) => m)
+    if (seuil > 0) lignes.push(`Pour couvrir tous tes frais, il faut vendre ${euro(seuil)} dans l’année, soit ${euro(seuil / 12)} par mois.`)
+    lignes.push(mois >= 0
+      ? `Tu y arrives en année ${mois + 1} : à partir de là, chaque vente de plus est du bénéfice.`
+      : 'Sur cinq ans, tu n’y arrives pas : il faut vendre plus, plus cher, ou dépenser moins.')
+    va('Estimer tes volumes de vente', { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' })
+  }
+  if (!lignes.length) return null
+  return h('div', { class: 'sy-clair' },
+    h('span', { class: 'sy-clair-tag' }, 'En clair'),
+    h('ul', {}, ...lignes.map((l) => h('li', {}, titre(l)))),
+    gestes.length ? h('div', { class: 'sy-clair-gestes' }, ...gestes) : null,
+  )
 }
 
 /* ─────────── Forme 1 : deux cartes de mesure ─────────── */

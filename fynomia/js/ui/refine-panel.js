@@ -70,14 +70,22 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
     ),
 
     h('div', { class: 'refinery-groups' },
-      ...c.groups.map((g) => h('div', { class: `refinery-group ${g.done === g.total ? 'is-full' : ''}` },
-        h('div', { class: 'refinery-group-head' },
+      ...c.groups.map((g) => {
+        // Chaque palier s'ouvre seul : on veut voir toute la finition sans
+        // dérouler aussi les fondations.
+        const deplie = open || memory.paliers.has(g.key)
+        const caches = g.items.length - visible(g, false).length
+        const basculer = () => { memory.paliers.has(g.key) ? memory.paliers.delete(g.key) : memory.paliers.add(g.key); refresh() }
+        return h('div', { class: `refinery-group ${g.done === g.total ? 'is-full' : ''} ${deplie ? 'is-open' : ''}` },
+        h('button', { class: 'refinery-group-head', type: 'button', 'aria-expanded': String(deplie), onClick: basculer,
+          title: deplie ? 'Replier ce palier' : 'Voir toutes les lignes de ce palier' },
           h('span', { class: `refinery-chip is-${g.key}` }, g.label),
           h('span', { class: 'refinery-group-note' }, g.note),
           h('span', { class: 'refinery-group-count num' }, `${g.done}/${g.total}`),
+          h('span', { class: 'refinery-group-chev', 'aria-hidden': 'true' }),
         ),
         h('div', { class: 'refinery-items' },
-          ...visible(g, open).map((it) => {
+          ...visible(g, deplie).map((it) => {
             const aFaire = !it.done || it.relire
             return h('button', {
               class: `refinery-item ${aFaire ? '' : 'is-done'} ${it.relire ? 'is-relire' : ''} ${it.later ? 'is-later' : ''} ${it === c.next ? 'is-next' : ''}`,
@@ -98,8 +106,11 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
               aFaire ? h('span', { class: 'refinery-go' }, '→') : null,
             )
           }),
+          !deplie && caches > 0 ? h('button', { class: 'refinery-group-more', type: 'button', onClick: basculer },
+            `Voir ${caches > 1 ? `les ${caches} autres` : 'l’autre'}`) : null,
         ),
-      )),
+      )
+      }),
     ),
 
     // Trente lignes d'un coup, c'est un mur. On montre ce qui compte
@@ -125,7 +136,7 @@ function visible(group, open) {
 }
 
 /** Replié ou déplié — le choix survit aux redessins de la page. */
-const memory = { open: false, shut: false }
+const memory = { open: false, shut: false, paliers: new Set() }
 
 /**
  * Pourquoi cet ordre-là.

@@ -126,6 +126,14 @@ export function outils(browser, base, journal) {
 
   /** Cliquer un onglet de module par son libellé. */
   async function onglet(p, texte, attente = 900) {
+    // La synthèse essai vit désormais dans le pitch, sous « En détail ».
+    if (/essai/i.test(texte)) {
+      await p.locator('.module-nav .hnav-tab', { hasText: 'Pitch' }).first().click()
+      await p.waitForTimeout(400)
+      await p.locator('.pitch-mise', { hasText: 'En détail' }).first().click()
+      await p.waitForTimeout(attente)
+      return
+    }
     await p.locator('.module-nav .hnav-tab', { hasText: texte }).first().click()
     await p.waitForTimeout(attente)
   }

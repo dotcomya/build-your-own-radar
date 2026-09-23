@@ -13,7 +13,6 @@ import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
-import { renderStudio } from './studio.js'
 import { renderPitch } from './pitch.js'
 import { storyline, gauge } from '../story.js'
 import { stepGuide } from '../tutorial.js'
@@ -80,14 +79,13 @@ export function renderDashboard(navigate, refresh) {
   // socle qu'on déplie quand on veut vérifier.
   const views = [
     { key: 'synthese', read: true, label: 'Synthèse' },
-    // Une seconde écriture de la même synthèse, mise à l'essai : mêmes séries,
-    // autre forme. Elle vit à côté de l'originale tant qu'on les compare.
-    { key: 'studio', read: true, label: 'Synthèse — essai' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
-    // Pour un business angel ou un fonds : l'essentiel du plan, en une page.
+    // Pour un banquier, un business angel ou un fonds : l'essentiel du plan,
+    // sous quatre formes — dont « En détail », l'ancienne synthèse essai.
     { key: 'pitch', read: true, label: 'Pitch investisseur' },
     { key: 'simulation', label: 'Simulation' },
   ]
+  if (renderDashboard.view === 'studio') renderDashboard.view = 'pitch'
   const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'synthese'
   renderDashboard.view = view
   const goView = (k) => { renderDashboard.view = k; refresh() }
@@ -102,7 +100,6 @@ export function renderDashboard(navigate, refresh) {
       views, view, onPick: goView,
     }),
 
-    view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh, goView)) : null,
     view === 'pitch' ? h('div', { class: 'view' }, renderPitch(navigate, refresh, goView)) : null,
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
