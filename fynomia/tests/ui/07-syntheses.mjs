@@ -45,7 +45,9 @@ export default async function (t) {
       c.querySelector('.sy-card-kicker').textContent,
       (c.querySelector('.sy-card-title, .sy-feature-title, .sy-fact-title') || {}).textContent,
       (c.querySelector('.sy-card-body') || {}).textContent]))
-    const actesE = await p.evaluate(() => [...document.querySelectorAll('.sy-act-title')].map((x) => x.textContent))
+    // Les trois actes du récit ; les parties 04 et 05 (chiffres clés, détail
+    // des comptes) reprennent leur style mais ne sont pas partagées.
+    const actesE = await p.evaluate(() => [...document.querySelectorAll('.sy-act:not(.sy-figs):not(.sy-deep) > .sy-act-head .sy-act-title')].map((x) => x.textContent))
     const cle = (l) => l.map((x) => x.map(norm).join(' | ')).sort()
     const o = cle(orig), e = cle(essai)
     t.verifie(o.length >= 5 && o.length === e.length, `${format} : l’essai porte autant de lectures que l’original`, `${o.length} / ${e.length}`)
