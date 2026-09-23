@@ -37,6 +37,7 @@ import { claim, goToGap } from '../spotlight.js'
 import store from '../../state/store.js'
 import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
+import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
 import { gardePrix, gardeAbonnement, gardeCroissance } from '../../engine/plausible.js'
 import { tradeSuggest } from '../trade-suggest.js'
 
@@ -98,6 +99,9 @@ export function renderOffer(navigate, refresh) {
   const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
   renderOffer.view = view
 
+  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
+  const chiffres = chiffresDePage('offre', refresh)
+
   return h('div', { class: 'content' },
 
     moduleShell({
@@ -109,6 +113,8 @@ export function renderOffer(navigate, refresh) {
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
     gardePage('offre', navigate),
+    chiffres,
+    partieTravail('offre', view, !!chiffres),
 
     view === 'offres'
       ? h('div', { class: 'view' },

@@ -9,6 +9,8 @@ import { founderIncome } from '../../engine/founder.js'
 import { bfrSentence } from '../explain.js'
 import { refine } from '../dom.js'
 import { claim } from '../spotlight.js'
+import { referenceYear } from '../../format.js'
+import { section, exercices, grandsChiffres } from '../sections.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -36,7 +38,18 @@ export function renderResults(navigate, refresh) {
   const view = views.some((v) => v.key === renderResults.tab) ? renderResults.tab : 'resultat'
   renderResults.tab = view
 
-  return h('div', { class: 'content' },
+  // L'exercice lu : le même pour les quatre chiffres, les colonnes des
+  // tableaux et la photo du bilan. On l'ouvre sur le premier exercice
+  // bénéficiaire, celui qu'on regarde d'abord.
+  const an = Number.isInteger(renderResults.an) && renderResults.an >= 0 && renderResults.an < 5 ? renderResults.an : referenceYear(r)
+  bilanAn = an
+  const choisir = (k) => { renderResults.an = k; bilanAn = k; refresh() }
+
+  const net = netSummary(r, refresh)
+  let no = 0
+  const [nomVue, ditVue] = VUES[view] || [TABS[view] || '', '']
+
+  return h('div', { class: 'content fin' },
     moduleShell({
       no: '07', title: 'États financiers',
       lede: "Le format que comprennent un comptable, une banque et un investisseur. Tout est calculé à partir de ce que tu as saisi : aucune ligne n’est à remplir ici.",
@@ -47,18 +60,75 @@ export function renderResults(navigate, refresh) {
     // Avant les tableaux : le seul chiffre que le fondateur cherche vraiment.
     // Les états financiers disent comment l'argent circule ; celui-ci dit ce
     // qu'il en reste pour lui.
-    netSummary(r, refresh),
+    net ? section({ no: ++no, nom: 'Ce qu’il te reste', cle: 'fin-net' }, net) : null,
 
-    h('div', { class: 'view' },
-      view === 'resultat' ? pnlView(r, level)
-        : view === 'tresorerie' ? cashView(r, level, refresh)
-        : view === 'bilan' ? balanceView(r, refresh)
-        : view === 'bfr' ? bfrView(r)
-        : view === 'revenu' ? h('div', { class: 'merged' }, renderFounder(navigate, refresh))
-        : taxView(r),
-    ),
+    // Puis l'exercice en quatre chiffres, comme dans la synthèse : le montant
+    // en grand, sa valeur exacte, ce qu'il a fait en un an, ses cinq années.
+    section({ no: ++no, nom: 'L’exercice en quatre chiffres', droite: exercices(an, choisir), cle: 'fin-quatre' },
+      quatreChiffres(r, an, choisir)),
+
+    section({ no: ++no, nom: nomVue, dit: ditVue, cle: `fin-${view}` },
+      h('div', { class: `view fin-an fin-an-${an}` },
+        view === 'resultat' ? pnlView(r, level)
+          : view === 'tresorerie' ? cashView(r, level, refresh)
+          : view === 'bilan' ? balanceView(r, refresh)
+          : view === 'bfr' ? bfrView(r)
+          : view === 'revenu' ? h('div', { class: 'merged' }, renderFounder(navigate, refresh))
+          : taxView(r),
+      )),
   )
 }
+
+/** Le nom de chaque état, et ce qu'il dit, en une phrase. */
+const VUES = {
+  resultat: ['Le compte de résultat', 'Ce que l’activité gagne ou perd, exercice par exercice.'],
+  tresorerie: ['La trésorerie', 'Ce qu’il y a sur le compte, mois après mois, et ce qui le fait bouger.'],
+  bilan: ['Le bilan', 'Ce que l’entreprise possède, et d’où vient l’argent, au dernier jour de l’exercice.'],
+  bfr: ['Le besoin en fonds de roulement', 'L’argent immobilisé entre ce que tu paies et ce qu’on te paie.'],
+  fiscalite: ['La fiscalité', 'Ce que tu verses à l’État, impôt par impôt.'],
+  revenu: ['Ce que tu touches', 'Ta rémunération, tes dividendes et ton impôt, exercice par exercice.'],
+}
+
+/**
+ * L'exercice en quatre chiffres.
+ *
+ * Chiffre d'affaires, EBITDA, résultat net, trésorerie à la clôture : les
+ * quatre montants qu'un banquier lit avant tout le reste. Chacun dit ce qu'il
+ * vaut par rapport à ce qui compte — le point mort, le chiffre d'affaires, le
+ * point bas du compte — et ses cinq exercices se cliquent.
+ */
+function quatreChiffres(r, an, choisir) {
+  const p = r.pnl, k = r.kpis
+  const ton = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none')
+  const low = k.cashLow || {}
+  const anBas = low.month != null ? Math.floor(low.month / 12) : -1
+  const part = (v, y) => (p.revenue[y] > 0 ? `${pct(v / p.revenue[y], 0)} du chiffre d’affaires` : null)
+  return grandsChiffres([
+    {
+      cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, ton: () => 'none',
+      note: (y) => (k.breakEven?.[y]
+        ? (p.revenue[y] >= k.breakEven[y]
+          ? `Au-dessus du point mort de l’année (${euro(k.breakEven[y], { compact: true })}).`
+          : `Sous le point mort de l’année : il en faudrait ${euro(k.breakEven[y], { compact: true })}.`)
+        : 'Hors taxes. Aucun point mort calculable sans marge positive.'),
+    },
+    {
+      cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton,
+      note: (y) => `${part(p.ebitda[y], y) ? `${part(p.ebitda[y], y)}, ` : ''}avant amortissements, intérêts et impôts.`,
+    },
+    {
+      cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton,
+      note: (y) => `${part(p.netResult[y], y) ? `${part(p.netResult[y], y)}, ` : ''}après impôt sur les sociétés.`,
+    },
+    {
+      cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, ton: (v) => (v < 0 ? 'bad' : 'good'),
+      note: (y) => (y === anBas && n0(low.value) < 0
+        ? `Point bas de l’exercice : ${euro(low.value)} en ${monthLabel(low.month, r.startDate)}.`
+        : 'Sur le compte au dernier jour de l’exercice.'),
+    },
+  ], an, choisir, { cle: 'fin' })
+}
+const n0 = (v) => Number(v) || 0
 
 /**
  * Ce qu'il te reste, net de tout.
@@ -292,7 +362,7 @@ function cashView(r, level, refresh) {
                   ...r.cash.yearEnd.map((v) => h('td', { class: `num ${v < 0 ? 'neg' : ''}` }, euro(v)))),
               ),
             )
-          : h('table', { class: 'data' },
+          : h('table', { class: 'data is-monthly' },
               h('thead', {}, h('tr', {}, h('th', {}, ''), ...monthsHeader.map((m) => h('th', {}, m)))),
               h('tbody', {},
                 h('tr', {}, h('td', {}, 'Encaissements'), ...r.cash.inflow.map((v) => h('td', { class: 'num' }, euro(v, { compact: true })))),
@@ -452,7 +522,7 @@ function balanceView(r, refresh) {
           type: 'button',
           role: 'tab',
           'aria-selected': y === an ? 'true' : 'false',
-          onClick: () => { bilanAn = y; refresh && refresh() },
+          onClick: () => { bilanAn = y; renderResults.an = y; refresh && refresh() },
         }, yearLabel(y))),
         h('span', { class: 'bil-years-dit' }, `Photo au 31 décembre de l’année ${an + 1}`),
       ),

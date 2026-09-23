@@ -13,6 +13,7 @@ import { tradeSuggest } from '../trade-suggest.js'
 import { celebrate } from '../burst.js'
 import store from '../../state/store.js'
 import { gardePage } from '../garde.js'
+import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
 
 export function renderCosts(navigate, refresh) {
   const s = store.scenario
@@ -75,6 +76,9 @@ export function renderCosts(navigate, refresh) {
   }
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
+  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
+  const chiffres = chiffresDePage('achats', refresh)
+
   return h('div', { class: 'content' },
 
     moduleShell({
@@ -91,6 +95,8 @@ export function renderCosts(navigate, refresh) {
       ],
     }),
     gardePage('achats', navigate),
+    chiffres,
+    partieTravail('achats', view, !!chiffres),
 
     view === 'charges' ? h('div', { class: 'view' },
       // Les suggestions du métier ouvrent la vue, comme dans Offre et revenus :

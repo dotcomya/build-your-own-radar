@@ -566,8 +566,9 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ───────────────────────────── Graphiques ────────────────────────────── */
 .chart { width: 100%; max-width: 100%; height: auto; display: block; overflow: visible; }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em; }
-.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.chart-legend .swatch { border-radius: 2px; }
 .swatch { width: 9px; height: 9px; flex: none; }
 .spark { flex: none; width: 120px; }
 .meter { height: 4px; background: var(--rule); overflow: hidden; }
@@ -7096,3 +7097,154 @@ details[open] > .refine-head .refine-sign {
 .field-garde > i::after { top: 9.5px; height: 2px; }
 .control.is-odd { border-color: var(--warn); }
 .control.is-odd-alerte { border-color: var(--loss); }
+
+/* ─── Les graphiques entrent en scène, comme dans la synthèse ─── */
+/* Les barres poussent depuis leur ligne de base, les courbes se tracent, les
+   anneaux se remplissent ; les valeurs arrivent en dernier. Une fois par
+   visite de page (voir charts.js), et jamais pour qui a demandé moins de
+   mouvement. Au survol, l'exercice interrogé reste allumé, les autres
+   s'effacent derrière lui. */
+.chart .ch-num { font-family: var(--mono); letter-spacing: -.01em; }
+.ch-bar, .ch-col { transform-box: fill-box; transform-origin: 50% 100%; transition: opacity .18s var(--ease-soft); }
+.ch-bar.is-neg { transform-origin: 50% 0; }
+.ch-val, .ch-dot, .ch-leg { transition: opacity .18s var(--ease-soft); }
+.ch-arc { transition: opacity .18s var(--ease-soft); }
+.ch .is-dim { opacity: .26; }
+.ch-hl { fill: #0E0F0C; opacity: 0; transition: opacity .18s var(--ease-soft); pointer-events: none; }
+.ch-hl.is-on { opacity: .045; }
+
+.ch-watch:not(.is-seen) .ch-bar, .ch-watch:not(.is-seen) .ch-col { transform: scaleY(0); }
+.ch-watch:not(.is-seen) .ch-line, .ch-watch:not(.is-seen) .ch-arc,
+.ch-watch.ch-line:not(.is-seen) { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.ch-watch:not(.is-seen) .ch-fill, .ch-watch:not(.is-seen) .ch-val, .ch-watch:not(.is-seen) .ch-dot,
+.ch-watch:not(.is-seen) .ch-ref, .ch-watch:not(.is-seen) .ch-fade, .ch-watch:not(.is-seen) .ch-leg { opacity: 0; }
+
+.ch.is-play .ch-bar, .ch.is-play .ch-col { animation: ch-grow .72s var(--ease-soft) both; animation-delay: calc(.08s + var(--i, 0) * .05s); }
+.ch.is-play .ch-line { stroke-dasharray: 1; animation: ch-draw 1.2s var(--ease-soft) both; animation-delay: .12s; }
+.ch.is-play .ch-arc { stroke-dasharray: 1; animation: ch-draw .8s var(--ease-soft) both; animation-delay: calc(.08s + var(--i, 0) * .11s); }
+.ch.is-play .ch-fill, .ch.is-play .ch-ref { animation: ch-fade .8s var(--ease-soft) both; animation-delay: .7s; }
+.ch.is-play .ch-val, .ch.is-play .ch-dot, .ch.is-play .ch-fade { animation: ch-fade .45s var(--ease-soft) both; animation-delay: calc(.55s + var(--i, 0) * .05s); }
+.ch.is-play .ch-leg { animation: ch-fade .4s var(--ease-soft) both; animation-delay: calc(.2s + var(--i, 0) * .08s); }
+@keyframes ch-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes ch-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes ch-fade { from { opacity: 0; } to { opacity: 1; } }
+.ch-donut .ch-leg { cursor: default; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .ch *, .ch { animation: none !important; }
+}
+
+@media print {
+  .ch-watch:not(.is-seen) .ch-bar, .ch-watch:not(.is-seen) .ch-col { transform: none !important; }
+  .ch-watch:not(.is-seen) * { opacity: 1 !important; stroke-dashoffset: 0 !important; }
+}
+
+/* ─── Le style de la synthèse essai, pour tout le logiciel (sections.js) ─── */
+/* Des parties numérotées dont le nom dit la question ; des cartes où le
+   montant s'écrit en grand, sa valeur exacte dessous ; des barres qui
+   poussent quand on arrive. Les mêmes briques aux états financiers et dans
+   les pages de saisie. */
+.sx { margin-top: 44px; }
+.sx:first-of-type { margin-top: 28px; }
+.sx-head { margin-bottom: 20px; }
+.sx-no {
+  display: flex; align-items: center; gap: 12px; padding-top: 18px; border-top: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+}
+.sx-no > b {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: var(--ink); color: var(--accent); font-size: 11.5px; font-weight: 600; letter-spacing: 0;
+}
+.sx-no > span { color: var(--ink); font-weight: 600; }
+.sx-right { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.sx-title {
+  margin: 16px 0 0; font-family: var(--display); font-weight: 750; color: var(--ink);
+  font-size: clamp(24px, 2.6vw, 32px); letter-spacing: -.03em; line-height: 1.1; max-width: 30ch;
+}
+.sx-say { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-3); max-width: 66ch; }
+.sx.ch-watch:not(.is-seen) > :not(.sx-head) { opacity: 0; transform: translateY(14px); }
+.sx.ch.is-play > :not(.sx-head) { animation: sy-rise .6s var(--ease-soft) both; animation-delay: .08s; }
+
+.sx-years { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule); }
+.sx-year {
+  border: 0; background: none; cursor: pointer; border-radius: 999px; padding: 5px 11px;
+  font: 600 11px/1 var(--mono); color: var(--ink-4); transition: background .16s, color .16s;
+}
+.sx-year:hover { color: var(--ink); }
+.sx-year.is-on { background: var(--ink); color: var(--accent); }
+
+.sx-cards { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sx-cards.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sx-cards.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sx-cards.is-1 { grid-template-columns: minmax(0, 1fr); }
+.sx-card {
+  display: flex; flex-direction: column; min-width: 0; padding: 20px 20px 18px; background: var(--surface);
+  border-radius: 18px; box-shadow: 0 1px 0 var(--rule), 0 26px 50px -40px rgba(14, 15, 12, .45);
+  transition: transform .22s var(--ease-soft), box-shadow .22s var(--ease-soft);
+}
+.sx-card:hover { transform: translateY(-2px); box-shadow: 0 1px 0 var(--rule), 0 30px 56px -38px rgba(14, 15, 12, .55); }
+.sx-card-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4);
+}
+.sx-card-kicker > i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-5); flex: none; }
+.sx-card.is-good .sx-card-kicker > i { background: var(--gain); }
+.sx-card.is-bad .sx-card-kicker > i { background: var(--loss); }
+.sx-card.is-watch .sx-card-kicker > i { background: #D09A2A; }
+.sx-big { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; min-width: 0; }
+.sx-big-val {
+  font-family: var(--mono); font-weight: 600; font-size: clamp(26px, 2.5vw, 34px); letter-spacing: -.04em;
+  line-height: 1; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sx-card.is-good .sx-big-val { color: var(--gain); }
+.sx-card.is-bad .sx-big-val { color: var(--loss); }
+.sx-big-val.is-fresh { animation: sy-fresh .9s var(--ease-soft); }
+.sx-big-cap { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sx-delta { margin-top: 8px; align-self: flex-start; font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--ink-4); background: var(--surface-2); border-radius: 6px; padding: 3px 7px; }
+.sx-delta.is-up { color: var(--gain); }
+.sx-delta.is-down { color: var(--loss); }
+.sx-bars { position: relative; display: flex; gap: 6px; height: 74px; margin-top: 16px; padding-bottom: 18px; }
+.sx-bars-zero { position: absolute; left: 0; right: 0; top: calc((100% - 18px) * var(--zero)); height: 1px; background: var(--ink); opacity: .22; pointer-events: none; }
+.sx-bar { position: relative; flex: 1; min-width: 0; border: 0; background: none; padding: 0; cursor: pointer; height: 100%; }
+.sx-bar > i { position: absolute; left: 12%; right: 12%; border-radius: 3px; background: var(--ink-5); opacity: .5; transition: opacity .16s, background .16s; }
+.sx-bar > i[style*="top"] { border-radius: 0 0 3px 3px; }
+.sx-bar:hover > i { opacity: .85; }
+.sx-bar.is-on > i { background: var(--ink); opacity: 1; }
+.sx-card.is-good .sx-bar.is-on > i { background: var(--gain); }
+.sx-card.is-bad .sx-bar.is-on > i { background: var(--loss); }
+.sx-bar-year { position: absolute; left: 0; right: 0; bottom: -18px; text-align: center; font: 500 9.5px/1 var(--mono); color: var(--ink-5); }
+.sx-bar.is-on .sx-bar-year { color: var(--ink); font-weight: 600; }
+.sx-card-note { margin: 14px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-4); }
+.ch-watch:not(.is-seen) .sx-card { opacity: 0; }
+.ch.is-play .sx-card { animation: sy-rise .55s var(--ease-soft) both; animation-delay: calc(.05s + var(--i) * .07s); }
+
+/* L'exercice lu se retrouve dans les colonnes des tableaux. */
+.fin-an table.data:not(.is-monthly) tr > :is(td, th) { transition: background .2s; }
+.fin-an-0 table.data:not(.is-monthly) tr > :nth-child(2),
+.fin-an-1 table.data:not(.is-monthly) tr > :nth-child(3),
+.fin-an-2 table.data:not(.is-monthly) tr > :nth-child(4),
+.fin-an-3 table.data:not(.is-monthly) tr > :nth-child(5),
+.fin-an-4 table.data:not(.is-monthly) tr > :nth-child(6) { background: rgba(214, 240, 52, .16); }
+.fin table.data tbody tr:hover > td { background: var(--surface-2); }
+
+@media (max-width: 1100px) {
+  .sx-cards, .sx-cards.is-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .sx { margin-top: 34px; }
+  .sx-no { flex-wrap: wrap; row-gap: 10px; }
+  .sx-right { margin-left: 0; width: 100%; }
+  .sx-cards, .sx-cards.is-3, .sx-cards.is-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* La tête seule d'une partie, posée au-dessus d'une zone de travail. */
+.sx-solo { margin: 40px 0 16px; }
+.sx-solo:first-child { margin-top: 20px; }
+
+/* Mon projet : ses blocs sont numérotés, comme les parties de la synthèse. */
+.content:has(.slab) { counter-reset: slab; }
+.slab-title::before {
+  counter-increment: slab; content: counter(slab, decimal-leading-zero);
+  display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; vertical-align: 1px;
+  border-radius: 50%; background: var(--ink); color: var(--accent);
+  font: 600 10.5px/1 var(--mono); letter-spacing: 0;
+}

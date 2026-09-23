@@ -19,6 +19,7 @@ import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
 import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
+import { chiffresDePage, partieTravail } from '../chiffres-pages.js'
 import { gardeSalaire } from '../../engine/plausible.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
@@ -59,6 +60,9 @@ export function renderTeam(navigate, refresh) {
 
   const payrollY = r ? yearly(r.payroll.cost)[0] : 0
 
+  // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
+  const chiffres = chiffresDePage('equipe', refresh)
+
   return h('div', { class: 'content' },
 
     moduleShell({
@@ -72,6 +76,8 @@ export function renderTeam(navigate, refresh) {
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),
     gardePage('equipe', navigate),
+    chiffres,
+    partieTravail('equipe', view, !!chiffres),
 
     view === 'postes' ? h('div', { class: 'view', 'data-gap': 'equipe' },
       s.team.length === 0

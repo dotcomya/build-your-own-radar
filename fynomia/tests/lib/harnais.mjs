@@ -152,7 +152,7 @@ export function outils(browser, base, journal) {
 }
 
 /** Le débordement horizontal d'une page, et les valeurs coupées. */
-export async function debordements(p, selecteurs = '.metric-value,.kpi-value,.figure-value,.takehome-value,.verdict-word,.sy-big-val,.bil-side-total') {
+export async function debordements(p, selecteurs = '.metric-value,.kpi-value,.figure-value,.takehome-value,.verdict-word,.sy-big-val,.bil-side-total,.sx-big-val,.sx-big-cap') {
   return p.evaluate((sel) => ({
     page: document.documentElement.scrollWidth > window.innerWidth + 1,
     coupes: [...document.querySelectorAll(sel)].filter((v) => v.scrollWidth > v.clientWidth + 1).map((v) => v.className).slice(0, 3),
