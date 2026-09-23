@@ -712,7 +712,7 @@ function conseil(a, { cote = false, court = false } = {}) {
     ),
     h('h4', { class: 'avis-titre' }, insecable(a.titre)),
     points.length ? h('ul', { class: 'avis-points' },
-      ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, x.t)))) : null,
+      ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, insecable(x.t))))) : null,
     a.question ? h('div', { class: 'avis-question' },
       h('span', {}, 'On te demandera'),
       h('p', {}, `« ${a.question} »`),
