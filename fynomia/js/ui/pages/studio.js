@@ -98,9 +98,9 @@ const vus = new Set()
 let guetteur = null
 const reduit = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
 
-function guet(el, cle) {
+function guet(el, cle, { visuel = false, min = 0.14 } = {}) {
   if (!el) return el
-  el.classList.add('sy-watch')
+  el.classList.add(visuel ? 'sy-vis' : 'sy-watch')
   if (vus.has(cle) || reduit() || typeof IntersectionObserver !== 'function') {
     el.classList.add('is-seen')
     return el
@@ -108,20 +108,29 @@ function guet(el, cle) {
   if (!guetteur) {
     guetteur = new IntersectionObserver((entrees) => {
       for (const e of entrees) {
+        if (!e.isIntersecting) continue
+        // Une image ne se joue que lorsqu'on la voit presque entière : c'est
+        // elle qu'on regarde pousser, pas le haut de la partie qui la porte.
         // Un bloc plus haut que la fenêtre n'atteint jamais une grande
         // proportion visible : on le déclenche aussi sur une hauteur absolue.
-        if (!e.isIntersecting || (e.intersectionRatio < 0.14 && e.intersectionRect.height < 220)) continue
         const t = e.target
+        const m = Number(t.dataset.min) || 0.14
+        const assez = Math.max(220, window.innerHeight * 0.45)
+        if (e.intersectionRatio < m && e.intersectionRect.height < assez) continue
         vus.add(t.dataset.guet)
         t.classList.add('is-seen', 'is-play')
         guetteur.unobserve(t)
       }
-    }, { threshold: [0, 0.14, 0.3], rootMargin: '0px 0px -6% 0px' })
+    }, { threshold: [0, 0.14, 0.3, 0.5, 0.65, 0.8, 1], rootMargin: '0px 0px -6% 0px' })
   }
   el.dataset.guet = cle
+  el.dataset.min = String(min)
   guetteur.observe(el)
   return el
 }
+
+/** Une image — barres, courbe, jauge — guettée pour elle-même. */
+const vis = (el, cle) => guet(el, cle, { visuel: true, min: 0.65 })
 
 export function renderStudio(navigate, refresh, goView) {
   const s = store.scenario
@@ -142,19 +151,16 @@ export function renderStudio(navigate, refresh, goView) {
   let c = null
   try { c = checklist(s) } catch { c = null }
   const v = verdict(r, s)
-  const { actes, sansCA, garde } = synthese(s, r)
+  const { actes, sansCA } = synthese(s, r)
   const complet = !c || !c.open || !c.next
 
   racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
     // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
     // quelque chose. Un dossier complet ouvre directement sur son verdict.
     guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), 'hero'),
-    // Un chiffre hors de proportion passe avant tout le reste : les actes
-    // qui suivent en découlent.
-    garde.length ? guet(gardeBloc(garde, navigate, { classe: 'sy-garde' }), 'garde') : null,
     complet ? null : guet(verdictLigne(v), 'verdict'),
     complet ? null : guet(dossierParAxe(c, navigate), 'dossier'),
-    ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA)),
+    ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA, navigate)),
     pied(navigate, pilotage),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
     analyse(r, s, y, choisir, navigate, refresh),
@@ -418,7 +424,7 @@ const SECTIONS = {
   avant: ['Ce que ton projet coûte chaque mois', 'Ce qui pèse le plus dans tes dépenses', 'Combien il faudra vendre'],
 }
 
-function acte(a, i, total, r, s, sansCA) {
+function acte(a, i, total, r, s, sansCA, navigate) {
   const cartes = a.cartes.filter(Boolean)
   const nom = (sansCA ? SECTIONS.avant : SECTIONS.plein)[i] || ''
   const tete = h('header', { class: 'sy-act-head' },
@@ -428,6 +434,9 @@ function acte(a, i, total, r, s, sansCA) {
       h('em', {}, `${i + 1} / ${total}`),
     ),
     h('h2', { class: 'sy-act-title' }, titre(a.titre)),
+    // Le titre dit ce que le plan donne tel qu'il est saisi ; un chiffre qui
+    // étonne se signale juste dessous, replié, sans prendre sa place.
+    a.garde ? gardeBloc(a.garde, navigate, { classe: 'sy-garde' }) : null,
     h('p', { class: 'sy-act-say' }, titre(a.dit)),
   )
 
@@ -464,6 +473,7 @@ function carte(c, k, r) {
     visuel(c, r),
     h('h3', { class: 'sy-card-title' }, titre(c.title)),
     h('p', { class: 'sy-card-body' }, c.body),
+    c.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), c.pourquoi) : null,
   )
 }
 
@@ -498,10 +508,11 @@ function abrege(texte) {
 
 /** L'image d'une lecture, quelle qu'elle soit. */
 function visuel(c, r, { grand = false } = {}) {
-  if (c.bars) return barres(c.bars, c.kicker, grand)
-  if (c.line) return courbe(c.line, r.startDate, { hauteur: grand ? 120 : 84, legende: 'Ton compte, mois par mois' })
-  if (c.split) return grand ? grandeBarre(c.split, c.kicker) : repartition(c.split, c.kicker)
-  if (c.meter) return jauge(c.meter, grand)
+  const cle = `vis-${c.cle || c.kicker}-${grand ? 'g' : 'p'}`
+  if (c.bars) return vis(barres(c.bars, c.kicker, grand), cle)
+  if (c.line) return vis(courbe(c.line, r.startDate, { hauteur: grand ? 120 : 84, legende: 'Ton compte, mois par mois' }), cle)
+  if (c.split) return vis(grand ? grandeBarre(c.split, c.kicker) : repartition(c.split, c.kicker), cle)
+  if (c.meter) return vis(jauge(c.meter, grand), cle)
   return null
 }
 
@@ -524,6 +535,7 @@ function miseEnAvant(cartes, r) {
       h('h3', { class: 'sy-feature-title' }, titre(centre.title)),
       visuel(centre, r, { grand: true }),
       h('p', { class: 'sy-card-body' }, centre.body),
+      centre.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), centre.pourquoi) : null,
       centre.figure ? h('div', { class: 'sy-feature-fig' },
         h('span', {}, centre.figure.label),
         h('b', { class: centre.figure.good ? 'is-pos' : 'is-neg' }, centre.figure.value)) : null,
@@ -539,8 +551,9 @@ function fait(c, k, r) {
     h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
     exact ? h('div', { class: `sy-fact-val ${c.figure.good ? 'is-pos' : 'is-neg'}` }, abrege(exact)) : null,
     h('h3', { class: 'sy-fact-title' }, titre(c.title)),
-    c.split ? repartition(c.split, c.kicker) : null,
+    c.split ? vis(repartition(c.split, c.kicker), `vis-${c.cle}-fait`) : null,
     h('p', { class: 'sy-card-body' }, c.body),
+    c.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), c.pourquoi) : null,
   )
 }
 
@@ -570,6 +583,7 @@ function bande(cartes, r, leviers) {
         grandChiffre(centre),
         h('h3', { class: 'sy-card-title' }, titre(centre.title)),
         h('p', { class: 'sy-card-body' }, centre.body),
+        centre.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), centre.pourquoi) : null,
       ),
       h('div', { class: 'sy-band-viz' }, visuel(centre, r, { grand: true })),
     ),
@@ -639,13 +653,22 @@ function pied(navigate, pilotage) {
  * piège à connaître, puis un bouton dit où le chiffre se corrige. L'exercice
  * se choisit ici ; l'analyse détaillée, plus bas, lit le même.
  */
+/** Le numéro d'une partie, au même format que les trois actes. */
+function numero(no, nom) {
+  return h('div', { class: 'sy-act-no' },
+    h('b', {}, String(no).padStart(2, '0')),
+    h('span', {}, nom),
+  )
+}
+
 function sixChiffres(r, s, y, choisir, navigate) {
   const figures = figureSet(r, s, y)
-  return h('section', { class: 'sy-figs' },
+  return h('section', { class: 'sy-figs sy-act' },
+    numero(4, 'Les chiffres clés'),
     h('div', { class: 'sy-sec-head' },
       h('div', {},
-        h('h2', { class: 'sy-sec-title' }, 'Les six chiffres qu’on te demandera'),
-        h('p', { class: 'sy-sec-say' }, 'Clique sur l’un d’eux : il dit ce qu’il signifie avant d’emmener là où il se corrige.'),
+        h('h2', { class: 'sy-act-title' }, 'Les six chiffres qu’un banquier te demandera'),
+        h('p', { class: 'sy-act-say' }, 'EBITDA, point mort, trésorerie au plus bas, montant à financer, marge brute, autonomie : clique sur chacun pour savoir ce qu’il veut dire, pourquoi on te le demande, et où le corriger.'),
       ),
       anneeChips(y, choisir),
     ),
@@ -691,8 +714,10 @@ function chiffre(f, i, navigate) {
     h('span', { class: 'sy-fig-label' }, f.label),
     h('span', { class: `sy-fig-val ${frais ? 'is-fresh' : ''}` }, f.value),
     h('span', { class: 'sy-fig-note' }, f.note),
-    f.spark && f.spark.some((v) => v) ? etincelle(f.spark, TON[f.tone === 'pos' ? 'good' : f.tone === 'neg' ? 'bad' : 'watch']) : null,
-    h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' }),
+    f.spark && f.spark.some((v) => v) ? vis(etincelle(f.spark, TON[f.tone === 'pos' ? 'good' : f.tone === 'neg' ? 'bad' : 'watch']), `spark-${f.help}`) : null,
+    h('span', { class: 'sy-fig-more' },
+      h('span', { class: 'sy-fig-more-o' }, 'Comprendre'), h('span', { class: 'sy-fig-more-c' }, 'Refermer'),
+      h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' })),
   )
   el.append(tete,
     h('div', { class: 'sy-unfold' },
@@ -726,7 +751,10 @@ function chiffre(f, i, navigate) {
 function analyse(r, s, y, choisir, navigate, refresh) {
   const neuve = etat.analyseNeuve
   etat.analyseNeuve = false
-  return h('section', { class: `sy-deep ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}` },
+  return h('section', { class: `sy-deep sy-act ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}` },
+    numero(5, 'Le détail des comptes'),
+    h('h2', { class: 'sy-act-title' }, 'D’où viennent tous ces chiffres'),
+    h('p', { class: 'sy-act-say' }, 'Pour vérifier un chiffre ou répondre à une question précise : le compte de résultat de chaque année, ce qui fait passer du chiffre d’affaires au bénéfice, et le compte en banque mois par mois.'),
     h('button', {
       class: 'sy-deep-head',
       'aria-expanded': String(etat.analyse),
@@ -736,18 +764,16 @@ function analyse(r, s, y, choisir, navigate, refresh) {
         refresh()
       },
     },
-      h('span', {},
-        h('span', { class: 'sy-sec-title' }, 'Analyse détaillée'),
-        h('span', { class: 'sy-sec-say' }, 'Les cinq exercices, la cascade du résultat, les courbes — tout, d’un coup.'),
-      ),
-      h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' }),
+      h('span', { class: 'sy-deep-list' },
+        ...['Les cinq années', 'Du chiffre d’affaires au bénéfice', 'Le compte en banque', 'Où part l’argent', 'Tes offres', 'Les ratios'].map((x) => h('span', {}, x))),
+      h('span', { class: 'sy-deep-open' }, etat.analyse ? 'Refermer' : 'Ouvrir le détail', h('i', { class: 'sy-fig-chev', 'aria-hidden': 'true' })),
     ),
     etat.analyse ? h('div', { class: 'sy-deep-body' },
       exercices(r, y, choisir),
       equation(r, y),
-      h('div', { class: 'sy-pair' }, guet(cinqAns(r, y, choisir), 'deep-cinq'), guet(cascade(r, y), 'deep-cascade')),
-      guet(tresorerie(r), 'deep-tresor'),
-      h('div', { class: 'sy-pair' }, guet(structure(r, y), 'deep-structure'), guet(offres(r), 'deep-offres')),
+      h('div', { class: 'sy-pair' }, vis(cinqAns(r, y, choisir), 'deep-cinq'), vis(cascade(r, y), 'deep-cascade')),
+      vis(tresorerie(r), 'deep-tresor'),
+      h('div', { class: 'sy-pair' }, vis(structure(r, y), 'deep-structure'), vis(offres(r), 'deep-offres')),
       guet(ratios(r, y), 'deep-ratios'),
       h('div', { class: 'sy-deep-go' },
         h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'resultats' }, navigate) }, 'Les états financiers'),

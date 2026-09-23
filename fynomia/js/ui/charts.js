@@ -105,28 +105,37 @@ let pageVue = null
 let guetteur = null
 const reduit = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
 
-export function entree(el, cle) {
+export function entree(el, cle, { classe = 'ch', min = 0.55 } = {}) {
   if (!el) return el
-  el.classList.add('ch')
+  // Deux familles : les graphiques (« ch ») et les parties qui les portent
+  // (« rv »). Une partie qui se révèle ne doit pas lancer les graphiques
+  // qu'elle contient : ils attendent qu'on les voie eux-mêmes.
+  el.classList.add(classe)
   const page = typeof location !== 'undefined' ? String(location.hash).split('?')[0] : ''
   if (page !== pageVue) { vus.clear(); pageVue = page }
   if (vus.has(cle) || reduit() || typeof IntersectionObserver !== 'function') {
     el.classList.add('is-seen')
     return el
   }
-  el.classList.add('ch-watch')
+  el.classList.add(`${classe}-watch`)
   el.dataset.ch = cle
+  el.dataset.min = String(min)
   if (!guetteur) {
     guetteur = new IntersectionObserver((entrees) => {
       for (const e of entrees) {
         if (!e.isIntersecting) continue
+        // Un graphique se joue quand on le voit presque entier — pas quand son
+        // bord supérieur passe le bas de l'écran. Un élément plus haut que la
+        // fenêtre se déclenche dès qu'il en occupe une bonne moitié.
         const t = e.target
+        const m = Number(t.dataset.min) || 0.55
+        if (e.intersectionRatio < m && e.intersectionRect.height < window.innerHeight * 0.5) continue
         vus.add(t.dataset.ch)
         t.classList.add('is-seen', 'is-play')
         guetteur.unobserve(t)
         guettes.delete(t)
       }
-    }, { threshold: 0.2, rootMargin: '0px 0px -4% 0px' })
+    }, { threshold: [0, 0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 0.95, 1], rootMargin: '0px 0px -4% 0px' })
   }
   // Les graphiques remplacés par un rendu ne seront jamais vus : on cesse de
   // les guetter, sans quoi l'observateur les retiendrait indéfiniment. Un
@@ -166,14 +175,22 @@ function niceTicks(min, max, count = 4) {
 }
 
 /**
+ * `largeur` : la largeur de dessin. Les pages de saisie dessinent plus large
+ * pour la même hauteur : le graphique s'étire sans grandir, et laisse la
+ * place aux champs qu'on y remplit.
+ */
+/** Dessin à plat, pour les pages de saisie : large et bas. */
+export const A_PLAT = { largeur: 1180, height: 170 }
+
+/**
  * Barres groupées avec optionnellement une ligne superposée.
  *
  * Une seule série : chaque barre porte sa valeur, comme dans la synthèse —
  * on lit le chiffre sans viser la barre. Plusieurs séries : les valeurs se
  * lisent au survol, qui éteint les autres années.
  */
-export function barChart({ series, categories, height = 220, line = null, formatter = (v) => euro(v, { compact: true }) }) {
-  const width = 720
+export function barChart({ series, categories, height = 220, line = null, formatter = (v) => euro(v, { compact: true }), largeur = 720 }) {
+  const width = largeur
   const seule = series.length === 1 && !line
   const pad = { t: seule ? 24 : 14, r: 14, b: 30, l: 58 }
   const all = series.flatMap((s) => s.values).concat(line ? line.values : [])
@@ -253,8 +270,8 @@ export function barChart({ series, categories, height = 220, line = null, format
 }
 
 /** Courbe de trésorerie ou de tout flux mensuel, avec zone sous la courbe. */
-export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', label = 'Trésorerie', markZero = true, threshold = null, compare = null, formatter = (v) => euro(v, { compact: true }) }) {
-  const width = 720
+export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', label = 'Trésorerie', markZero = true, threshold = null, compare = null, formatter = (v) => euro(v, { compact: true }), largeur = 720 }) {
+  const width = largeur
   const pad = { t: 14, r: 14, b: 28, l: 58 }
   // Le seuil fait partie de l'échelle : tracé hors cadre, il ne se verrait pas.
   const all = compare ? [...values, ...compare.values] : values
@@ -312,7 +329,7 @@ export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', 
   // Il se lit sans survol : la valeur et le mois sont écrits à côté du point.
   if (values[lowIndex] < 0) {
     const lx = x(lowIndex), ly = y(values[lowIndex])
-    const aDroite = lx < width - 170
+    const aDroite = lx < width - 190
     nodes.push(svg('circle', { cx: lx, cy: ly, r: 5, fill: STATUS.loss, stroke: SURFACE, 'stroke-width': 2, class: 'ch-dot' }))
     const dessous = ly + 20 <= height - pad.b - 2
     nodes.push(svg('text', {
@@ -353,8 +370,8 @@ export function areaChart({ values, startDate, height = 220, color = '#1B3BFF', 
  * Chaque colonne pousse d'un bloc depuis la base et porte son total au
  * sommet ; le survol donne le détail et éteint les autres exercices.
  */
-export function stackedBar({ series, categories, height = 220, formatter = (v) => euro(v, { compact: true }) }) {
-  const width = 720
+export function stackedBar({ series, categories, height = 220, formatter = (v) => euro(v, { compact: true }), largeur = 720 }) {
+  const width = largeur
   const pad = { t: 24, r: 14, b: 30, l: 58 }
   const totals = categories.map((_, i) => series.reduce((a, s) => a + Math.max(0, s.values[i] || 0), 0))
   let max = Math.max(1, ...totals)

@@ -34,7 +34,8 @@ mise en ligne.
 | `11-etapes` | chacune des trente lignes du dossier, cliquée, mène à sa page, trouve son champ et l'entoure (métier neuf et exemple) |
 | `12-garde-fous` | un chiffre hors de proportion se dit sous le champ, en tête de page et des synthèses ; le verdict passe à « À vérifier » ; aucun garde-fou sur un plan neuf |
 | `13-ajouts` | charge, investissement, poste, offre : l'ajout fait jaillir ses icônes, la ligne créée arrive éclairée ; la carte ouverte est soulevée, sans halo coloré ni animation en boucle |
-| `14-graphiques` | sur les 9 pages et les onglets des états financiers, tout ce qui se révèle au défilement se révèle (un volet replié, à son ouverture) ; trois parties et quatre chiffres aux états financiers ; changer d'exercice change les chiffres et la colonne surlignée, et l'exercice suit sur les pages de saisie ; survol d'un graphique ; rien ne déborde au téléphone |
+| `14-graphiques` | tout ce qui se révèle se révèle, et seulement à l'arrivée (ni au chargement, ni quand seul le bord dépasse) ; parties propres à chaque onglet des états financiers ; exercice partagé ; zoom mois par mois ; survol ; rien ne déborde au téléphone |
+| `15-pitch` | l'onglet pitch investisseur : sept parties dans l'ordre, chacune dit pourquoi elle compte, le besoin affiché est celui du moteur, la trajectoire suit l'exercice, au téléphone sans débordement |
 
 ## Options
 

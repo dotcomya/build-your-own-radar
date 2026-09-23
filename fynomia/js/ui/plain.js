@@ -58,23 +58,36 @@ export function synthese(s, r) {
 
   // Un chiffre hors de toute proportion avec le métier — un prix avec deux
   // zéros de trop, un salaire saisi en milliers — produit des résultats
-  // exacts et absurdes. Les présenter en vert, sous « Oui, dès la première
-  // année », c'était féliciter une faute de frappe. Le premier acte le dit
-  // donc d'abord, et aucune carte ne se colore en succès tant que ça tient.
+  // exacts et absurdes. Le premier acte garde son titre, qui dit ce que le
+  // plan donne tel qu'il est saisi ; il porte en plus un avertissement qui se
+  // déplie, et aucune carte ne se colore en succès tant qu'il tient.
+  // Chaque lecture dit aussi pourquoi elle compte : un chiffre sans ce qu'il
+  // représente se lit comme une légende de graphique, pas comme un conseil.
+  for (const a of actes) a.cartes = a.cartes.map((c) => (c && POURQUOI[c.cle] ? { ...c, pourquoi: POURQUOI[c.cle] } : c))
+
   let garde = []
   try { garde = vraisemblance(s, r) } catch { garde = [] }
-  const alertes = bloquantes(garde)
-  if (alertes.length && !sansCA) {
-    actes[0] = {
-      ...actes[0],
-      titre: alertes.length > 1
-        ? `À vérifier : ${alertes.length} chiffres sortent de toute proportion`
-        : `À vérifier : ${alertes[0].sujet.charAt(0).toLowerCase()}${alertes[0].sujet.slice(1)} sort de toute proportion`,
-      dit: 'Les calculs ci-dessous sont justes, mais ils partent d\u2019un chiffre qui ne l\u2019est probablement pas. Corrige-le d\u2019abord : tout le reste en découle.',
-    }
+  if (garde.length) actes[0] = { ...actes[0], garde }
+  if (bloquantes(garde).length && !sansCA) {
     for (const a of actes) a.cartes = a.cartes.map((c) => (c && c.tone === 'good' ? { ...c, tone: 'watch' } : c))
   }
   return { sansCA, actes, garde }
+}
+
+/** Pourquoi chaque lecture compte — dit simplement, pour qui n'a jamais lu un bilan. */
+export const POURQUOI = {
+  cout: 'C’est ce que ton projet dépense chaque mois, même sans rien vendre : la somme à couvrir avant de gagner le premier euro.',
+  tenue: 'Le nombre de mois que ton argent de départ te laisse : c’est le temps dont tu disposes pour trouver tes premiers clients.',
+  invest: 'Le matériel acheté au départ vide le compte tout de suite, même s’il ne pèse sur le résultat que petit à petit.',
+  objectif: 'Le chiffre d’affaires minimum pour ne plus perdre d’argent : c’est ton premier objectif commercial.',
+  manque: 'L’argent à trouver pour ne jamais être à découvert : c’est ce que tu demandes à une banque ou à des investisseurs.',
+  profit: 'Ce qui reste une fois tout payé, impôt compris : la preuve que l’activité crée de la valeur au lieu d’en consommer.',
+  cash: 'On peut être rentable et manquer d’argent : c’est le compte en banque qui décide si tu tiens jusqu’au bénéfice.',
+  remuneration: 'Ce que toi tu touches : un plan où le fondateur ne vit pas de son activité ne tient pas longtemps.',
+  seuil: 'Le chiffre d’affaires à partir duquel tu gagnes de l’argent : en dessous, chaque mois te coûte.',
+  poste: 'Ta plus grosse dépense : c’est là qu’une économie rapporte le plus vite.',
+  sur100: 'Sur 100 € encaissés, ce qui part où : l’image la plus simple de ton modèle, celle qu’un associé comprend en dix secondes.',
+  croissance: 'Comment ton chiffre d’affaires évolue d’une année sur l’autre : c’est ce qui dit si l’entreprise grandit, et à quel rythme.',
 }
 
 /** La phrase qui clôt la synthèse : d'où viennent ces lectures, et que faire d'un écart. */
@@ -98,13 +111,13 @@ export function plainBoard(s, r, navigate, goRefine) {
   // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
   // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
   // dans l'ordre où on se la pose.
-  const { actes, garde } = synthese(s, r)
+  const { actes } = synthese(s, r)
 
   return h('div', { class: 'plain' },
-    gardeBloc(garde, navigate),
     ...actes.map((a) => h('section', { class: 'plain-act' },
       h('div', { class: 'plain-act-head' },
         h('h2', { class: 'plain-act-title' }, a.titre),
+        a.garde ? gardeBloc(a.garde, navigate, { classe: 'is-act' }) : null,
         h('p', { class: 'plain-act-say' }, a.dit),
       ),
       h('div', { class: 'plain-cards' }, ...a.cartes.filter(Boolean).map(card)),
@@ -693,7 +706,7 @@ function growthCard(r) {
  */
 const spec = (o) => o
 
-function card({ tone, kicker, title, body, figure, bars, line, split, meter, ico }) {
+function card({ tone, kicker, title, body, figure, bars, line, split, meter, ico, pourquoi }) {
   return h('section', { class: `plaincard is-${tone}` },
     h('header', { class: 'plaincard-head' },
       ico ? h('span', { class: 'plaincard-ico', html: icon(ico) }) : null,
@@ -703,6 +716,7 @@ function card({ tone, kicker, title, body, figure, bars, line, split, meter, ico
       ),
     ),
     h('p', { class: 'plaincard-body' }, body),
+    pourquoi ? h('p', { class: 'plaincard-why' }, h('b', {}, 'Pourquoi c’est important · '), pourquoi) : null,
     bars ? miniBars(bars) : null,
     line ? miniLine(line) : null,
     split ? miniSplit(split) : null,

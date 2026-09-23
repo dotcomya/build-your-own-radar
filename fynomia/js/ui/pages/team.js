@@ -10,7 +10,7 @@
 import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell, foldSign } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS } from '../../engine/payroll.js'
-import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
+import { barChart, PALETTE, YEAR_CATEGORIES, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, unitAmount } from '../dom.js'
 import { journey } from '../../engine/journey.js'
@@ -431,6 +431,7 @@ function payrollSummary(r, level) {
           { label: 'Cotisations patronales', values: chargesY, color: PALETTE[2] },
           ...(benY.some((v) => v > 0) ? [{ label: 'Avantages salariés', values: benY, color: PALETTE[4] || PALETTE[1] }] : []),
         ],
+        ...A_PLAT,
       }),
       h('div', { class: 'table-wrap mt' },
         h('table', { class: 'data' },

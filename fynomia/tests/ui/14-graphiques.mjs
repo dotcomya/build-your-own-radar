@@ -16,7 +16,7 @@ export const nom = 'Graphiques et parties — tout se révèle, tout se lit'
 
 // Seuls comptent les éléments affichés : un graphique dans un volet replié
 // se révèle quand on ouvre le volet, pas avant.
-const caches = (p) => p.evaluate(() => [...document.querySelectorAll('.ch-watch:not(.is-seen)')]
+const caches = (p) => p.evaluate(() => [...document.querySelectorAll('.ch-watch:not(.is-seen), .rv-watch:not(.is-seen), .sy-watch:not(.is-seen), .sy-vis:not(.is-seen)')]
   .filter((x) => x.getClientRects().length > 0 && !x.closest('details:not([open])'))
   .map((x) => x.dataset.ch || x.className).slice(0, 4))
 
@@ -47,6 +47,33 @@ export default async function (t, { rapide } = {}) {
     t.verifie(ouverts, 'ouvrir un volet trace les graphiques qu’il contient')
   }
 
+  // Une image ne se joue qu'à l'arrivée : ni au chargement, ni quand seul son
+  // bord supérieur dépasse du bas de l'écran — c'est ce que le fondateur
+  // voyait : des graphiques déjà figés quand il arrivait dessus.
+  async function arrivee(route, onglet, selecteur, libelle) {
+    await t.aller(p, route, 900)
+    if (onglet) await t.onglet(p, onglet, 900)
+    await p.evaluate(() => window.scrollTo(0, 0))
+    await p.waitForTimeout(400)
+    const cible = p.locator(selecteur).first()
+    if (!(await cible.count())) { t.verifie(false, `${libelle} : l’image existe`); return }
+    const etat = () => cible.evaluate((x) => ({ vu: x.classList.contains('is-seen'), haut: x.getBoundingClientRect().top }))
+    const e0 = await etat()
+    const vh = await p.evaluate(() => window.innerHeight)
+    if (e0.haut < vh * 0.8) { t.verifie(e0.vu, `${libelle} : à l’écran dès l’arrivée, jouée`); return }
+    t.verifie(!e0.vu, `${libelle} : pas jouée au chargement, hors de l’écran`)
+    // Seul le bord supérieur dépasse.
+    await cible.evaluate((x) => window.scrollBy(0, x.getBoundingClientRect().top - window.innerHeight + 30))
+    await p.waitForTimeout(500)
+    t.verifie(!(await etat()).vu, `${libelle} : pas jouée quand seul son bord dépasse`)
+    await cible.evaluate((x) => x.scrollIntoView({ block: 'center' }))
+    await p.waitForTimeout(600)
+    t.verifie((await etat()).vu, `${libelle} : jouée une fois à l’écran`)
+  }
+  await arrivee('resultats', 'Compte de résultat', '.fin .ch.ch-watch', 'États financiers › graphique')
+  await arrivee('resultats', 'Compte de résultat', '.sx-bars.ch', 'États financiers › barres d’une carte')
+  await arrivee('tableau-de-bord', 'Synthèse — essai', '.sy-act .sy-vis', 'Synthèse essai › image du premier acte')
+
   // Les onglets des états financiers ont chacun leurs graphiques.
   for (const tab of ['Trésorerie', 'Bilan', 'BFR', 'Fiscalité']) {
     await t.aller(p, 'resultats', 700)
@@ -61,8 +88,18 @@ export default async function (t, { rapide } = {}) {
   await t.aller(p, 'resultats', 900)
   await t.onglet(p, 'Compte de résultat', 900)
   const parties = await p.$$eval('.sx > .sx-head .sx-no > b', (e) => e.map((x) => x.textContent))
-  t.verifie(parties.join(',') === '01,02,03', 'les états financiers ont trois parties numérotées', parties)
+  t.verifie(parties.join(',') === '01,02', 'le compte de résultat a deux parties numérotées', parties)
   t.verifie(await p.locator('.sx-card').count() === 4, 'l’exercice se lit en quatre chiffres')
+  t.verifie(!(await p.locator('.netsum').count()), 'ce qui arrive sur ton compte perso n’est pas sur cet onglet')
+  // Chaque onglet n'a que ses propres parties.
+  for (const tab of ['Bilan', 'BFR', 'Trésorerie']) {
+    await t.onglet(p, tab, 800)
+    t.verifie(!(await p.locator('.sx-card').count()) && !(await p.locator('.netsum').count()), `${tab} : ni les quatre chiffres, ni le compte perso`)
+  }
+  await t.onglet(p, 'Ce que tu touches', 900)
+  const net = await p.locator('.netsum').innerText().catch(() => '')
+  t.verifie(/compte perso/i.test(net) && /ni l’argent sur le compte de ta société/i.test(net), '« Ce que tu touches » dit de quel argent il s’agit', net.slice(0, 80))
+  await t.onglet(p, 'Compte de résultat', 900)
   const exacts = await p.$$eval('.sx-card .sx-big-cap', (e) => e.map((x) => x.textContent))
   t.verifie(exacts.every((x) => /année \d/i.test(x)), 'chaque chiffre porte sa valeur exacte et son année', exacts)
 
@@ -95,6 +132,26 @@ export default async function (t, { rapide } = {}) {
     t.verifie(parts[0] === '01' && parts[1] === '02', `${route} : chiffres en 01, zone de travail en 02`, parts)
   }
 
+  // Cliquer une année d'une carte descend dans ses douze mois ; « ← 5 ans »
+  // remonte. Les mois additionnés redonnent l'année.
+  await t.aller(p, 'offre', 900)
+  const carte = p.locator('.sx-card').first()
+  await carte.scrollIntoViewIfNeeded()
+  await p.waitForTimeout(800)
+  await carte.locator('.sx-bar').nth(1).click()
+  await p.waitForTimeout(700)
+  const mois = await p.locator('.sx-card').first().locator('.sx-bars.is-zoom .sx-bar').count()
+  t.verifie(mois === 12, 'un clic sur une année montre ses douze mois', String(mois))
+  await p.locator('.sx-card').first().locator('.sx-unzoom').click()
+  await p.waitForTimeout(600)
+  t.verifie(await p.locator('.sx-card').first().locator('.sx-bars:not(.is-zoom) .sx-bar').count() === 5, '« ← 5 ans » ramène aux cinq exercices')
+  const juste = await p.evaluate(async () => {
+    const st = (await import('./js/state/store.js')).default
+    const r = st.result
+    return [0, 1, 2, 3, 4].every((y) => Math.abs(r.revenue.monthly.slice(y * 12, y * 12 + 12).reduce((a, b) => a + b, 0) - r.pnl.revenue[y]) < 1)
+  })
+  t.verifie(juste, 'les douze mois additionnés redonnent le chiffre d’affaires de l’année')
+
   // Les graphiques gardent leur survol : une année s'allume, les autres s'éteignent.
   await t.aller(p, 'resultats', 900)
   const svg = p.locator('.ch svg.chart').first()
@@ -107,10 +164,21 @@ export default async function (t, { rapide } = {}) {
   t.verifie(dims > 0, 'survoler une année éteint les autres')
   t.verifie(await p.locator('.ctip.is-on').count() === 1, 'l’infobulle donne les montants exacts')
 
-  // Au téléphone, rien ne déborde et aucun chiffre n'est coupé.
+  // Au téléphone, rien ne déborde et aucun chiffre n'est coupé ; les barres
+  // d'une carte empilée sous l'écran attendent qu'on arrive dessus.
   if (!rapide) {
     const q = await t.page('telephone')
     await t.exemple(q)
+    await t.aller(q, 'offre', 900)
+    const barres = q.locator('.sx-bars.ch').nth(2)
+    const avant = await barres.evaluate((x) => ({ vu: x.classList.contains('is-seen'), haut: x.getBoundingClientRect().top, vh: window.innerHeight }))
+    t.verifie(avant.haut > avant.vh && !avant.vu, 'téléphone : les barres de la troisième carte attendent sous l’écran', avant)
+    await barres.evaluate((x) => window.scrollBy(0, x.getBoundingClientRect().top - window.innerHeight + 20))
+    await q.waitForTimeout(500)
+    t.verifie(!(await barres.evaluate((x) => x.classList.contains('is-seen'))), 'téléphone : pas jouées quand seul leur bord dépasse')
+    await barres.evaluate((x) => x.scrollIntoView({ block: 'center' }))
+    await q.waitForTimeout(600)
+    t.verifie(await barres.evaluate((x) => x.classList.contains('is-seen')), 'téléphone : jouées une fois à l’écran')
     for (const route of ['resultats', 'offre', 'equipe', 'financement', 'achats']) {
       await t.aller(q, route, 900)
       await t.defiler(q, 500, 120)

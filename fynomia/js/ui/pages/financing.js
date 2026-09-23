@@ -2,7 +2,7 @@
 
 import { h, euro, num, pct, numberField, textField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell, PLUS, MINUS } from '../dom.js'
 import { uid } from '../../state/schema.js'
-import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
+import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
@@ -241,7 +241,7 @@ export function renderFinancing(navigate, refresh) {
       ),
       h('div', { class: 'card' },
         h('div', { class: 'card-body' },
-          areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain }),
+          areaChart({ values: r.cash.balance, startDate: r.startDate, color: r.kpis.fundingNeed > 0 ? STATUS.warn : STATUS.gain, ...A_PLAT }),
           r.kpis.fundingNeed > 0 ? h('div', { class: 'note warn mt' },
             h('div', { class: 'note-title' }, `Il manque ${euro(r.kpis.fundingNeed)}`),
             `Ton solde atteint son point bas en ${monthLabel(r.kpis.cashLow.month, r.startDate)}. Trois leviers : ajouter une source, négocier des acomptes clients plus élevés dans l'onglet Offre, ou décaler des recrutements et investissements.`) : null,

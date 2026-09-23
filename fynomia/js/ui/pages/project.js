@@ -154,7 +154,10 @@ export function renderProject(navigate, refresh) {
         ),
       ),
       (() => {
-        const cle = s.meta.clientType || 'b2b'
+        // Rien n'est choisi tant que le fondateur n'a pas choisi : afficher
+        // « Entreprises » par défaut faisait croire la case remplie, pendant
+        // que le dossier la réclamait encore.
+        const cle = s.meta.clientType || null
         const choisi = CLIENTS.find((c) => c.key === cle)
         return pickSet({
           id: 'client', chosen: !!choisi, nom: choisi?.name, note: choisi?.note, refresh,

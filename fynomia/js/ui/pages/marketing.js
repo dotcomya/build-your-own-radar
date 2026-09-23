@@ -480,7 +480,7 @@ function mixPanel(r) {
       h('div', { class: 'grid grid-2' },
         h('div', {},
           h('h4', { class: 'mb' }, 'Clients acquis par campagne'),
-          donut({ items: campaigns.map((c, i) => ({ label: c.name, value: c.totalClients, color: PALETTE[i % PALETTE.length] })), formatter: (v) => `${num(v)} clients` }),
+          donut({ items: campaigns.map((c, i) => ({ label: c.name, value: c.totalClients, color: PALETTE[i % PALETTE.length] })), formatter: (v) => `${num(v)} clients`, size: 132 }),
         ),
         h('div', {},
           h('h4', { class: 'mb' }, 'Budget marketing par exercice'),
@@ -497,6 +497,7 @@ function mixPanel(r) {
                 return months * budget
               }),
             })),
+            height: 160,
           }),
         ),
       ),

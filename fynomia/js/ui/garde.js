@@ -24,37 +24,51 @@ export function gardesDuPlan(s = store.scenario, r = store.result) {
 }
 
 /**
- * Le bloc « à vérifier » : la liste, le plus grave d'abord, et pour chaque
- * ligne le bouton qui mène au champ fautif.
+ * Le bloc « à vérifier », replié.
+ *
+ * Il s'étalait sur la moitié de l'écran, au-dessus des champs qu'on venait
+ * remplir. Il tient maintenant sur une ligne — une pastille d'avertissement
+ * qui dit combien de chiffres étonnent — et se déplie au clic : l'écart, de
+ * combien, et le bouton qui mène au champ. On sait qu'il y a quelque chose
+ * sans que ça prenne la place du travail.
  */
-export function gardeBloc(liste, navigate, { titre, classe = '' } = {}) {
+export function gardeBloc(liste, navigate, { classe = '', ouvert = false } = {}) {
   if (!liste || !liste.length) return null
   const alertes = liste.filter((x) => x.niveau === 'alerte').length
-  return h('section', { class: `garde ${alertes ? 'is-alerte' : 'is-attention'} ${classe}`, role: 'note', 'data-garde': String(liste.length) },
-    h('div', { class: 'garde-head' },
+  const d = h('details', {
+    class: `garde ${alertes ? 'is-alerte' : 'is-attention'} ${classe}`,
+    open: ouvert || gardeOuverts.has(classe) || null, 'data-garde': String(liste.length),
+  },
+    h('summary', { class: 'garde-pill' },
       h('span', { class: 'garde-sign', 'aria-hidden': 'true' }),
-      h('div', { class: 'garde-txt' },
-        h('strong', { class: 'garde-title' }, titre || (liste.length > 1
-          ? `${liste.length} chiffres sortent de l’ordinaire pour ton métier`
-          : 'Un chiffre sort de l’ordinaire pour ton métier')),
-        h('p', { class: 'garde-say' }, alertes
-          ? 'Tout ce qui suit en découle : corrige d’abord, lis ensuite.'
-          : 'Un positionnement atypique existe : vérifie simplement que c’est voulu.'),
+      h('span', { class: 'garde-pill-txt' }, liste.length > 1
+        ? `${liste.length} chiffres à vérifier`
+        : `${liste[0].sujet} est à vérifier`),
+      h('span', { class: 'garde-pill-more' }, 'Voir pourquoi'),
+    ),
+    h('div', { class: 'garde-body' },
+      h('p', { class: 'garde-say' }, alertes
+        ? 'Ces chiffres sont très loin de ce qu’on voit dans ton métier. Souvent, c’est un zéro de trop ou une unité confondue. Les résultats en dépendent : vérifie-les d’abord.'
+        : 'Ces chiffres sortent de l’ordinaire pour ton métier. Si c’est voulu, rien à faire.'),
+      h('ul', { class: 'garde-list' },
+        ...liste.map((x) => h('li', { class: `garde-item is-${x.niveau}` },
+          h('div', { class: 'garde-item-txt' },
+            h('b', {}, x.sujet),
+            h('span', {}, x.texte),
+          ),
+          x.go && navigate
+            ? h('button', { class: 'garde-go', onClick: (e) => goToGap(x.go, navigate, e.currentTarget) }, 'Corriger →')
+            : null,
+        )),
       ),
     ),
-    h('ul', { class: 'garde-list' },
-      ...liste.map((x) => h('li', { class: `garde-item is-${x.niveau}` },
-        h('div', { class: 'garde-item-txt' },
-          h('b', {}, x.sujet),
-          h('span', {}, x.texte),
-        ),
-        x.go && navigate
-          ? h('button', { class: 'garde-go', onClick: (e) => goToGap(x.go, navigate, e.currentTarget) }, 'Corriger →')
-          : null,
-      )),
-    ),
   )
+  d.addEventListener('toggle', () => { d.open ? gardeOuverts.add(classe) : gardeOuverts.delete(classe) })
+  return d
 }
+// Un bloc déplié le reste d'un rendu à l'autre : corriger un chiffre
+// redessine la page, et le bloc ne doit pas se refermer sous les yeux.
+const gardeOuverts = new Set()
 
 /** Le bloc d'une page de saisie : seulement ce qui s'y corrige. */
 export function gardePage(route, navigate) {

@@ -45,9 +45,20 @@ export function renderResults(navigate, refresh) {
   bilanAn = an
   const choisir = (k) => { renderResults.an = k; bilanAn = k; refresh() }
 
-  const net = netSummary(r, refresh)
   let no = 0
   const [nomVue, ditVue] = VUES[view] || [TABS[view] || '', '']
+
+  // Chaque onglet a ses propres parties. Les quatre chiffres de l'exercice
+  // appartiennent au compte de résultat ; ce qui arrive sur ton compte perso
+  // appartient à « Ce que tu touches ». Les laisser en tête de tous les
+  // onglets faisait lire le bilan sous un résumé qui n'en parlait pas.
+  const tete = view === 'resultat'
+    ? section({ no: ++no, nom: 'L’exercice en quatre chiffres', droite: exercices(an, choisir), cle: 'fin-quatre',
+        dit: 'Les quatre montants qu’un banquier ou un investisseur lit avant tout le reste : ce que tu vends, ce que l’activité dégage, ce qu’il reste après impôt, et ce qu’il y a sur le compte.' },
+      quatreChiffres(r, an, choisir))
+    : view === 'revenu'
+      ? (() => { const net = netSummary(r); return net ? section({ no: ++no, nom: 'Ce qui arrive sur ton compte perso', cle: 'fin-net' }, net) : null })()
+      : null
 
   return h('div', { class: 'content fin' },
     moduleShell({
@@ -57,15 +68,7 @@ export function renderResults(navigate, refresh) {
       views, view, onPick: (k) => { renderResults.tab = k; refresh() },
     }),
 
-    // Avant les tableaux : le seul chiffre que le fondateur cherche vraiment.
-    // Les états financiers disent comment l'argent circule ; celui-ci dit ce
-    // qu'il en reste pour lui.
-    net ? section({ no: ++no, nom: 'Ce qu’il te reste', cle: 'fin-net' }, net) : null,
-
-    // Puis l'exercice en quatre chiffres, comme dans la synthèse : le montant
-    // en grand, sa valeur exacte, ce qu'il a fait en un an, ses cinq années.
-    section({ no: ++no, nom: 'L’exercice en quatre chiffres', droite: exercices(an, choisir), cle: 'fin-quatre' },
-      quatreChiffres(r, an, choisir)),
+    tete,
 
     section({ no: ++no, nom: nomVue, dit: ditVue, cle: `fin-${view}` },
       h('div', { class: `view fin-an fin-an-${an}` },
@@ -105,7 +108,8 @@ function quatreChiffres(r, an, choisir) {
   const part = (v, y) => (p.revenue[y] > 0 ? `${pct(v / p.revenue[y], 0)} du chiffre d’affaires` : null)
   return grandsChiffres([
     {
-      cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, ton: () => 'none',
+      cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none',
+      pourquoi: 'Tout ce que tu factures dans l’année, hors taxes. C’est le point de départ de tous les autres chiffres.',
       note: (y) => (k.breakEven?.[y]
         ? (p.revenue[y] >= k.breakEven[y]
           ? `Au-dessus du point mort de l’année (${euro(k.breakEven[y], { compact: true })}).`
@@ -114,19 +118,22 @@ function quatreChiffres(r, an, choisir) {
     },
     {
       cle: 'ebitda', label: 'EBITDA', valeurs: p.ebitda, ton,
+      pourquoi: 'Ce que ton activité gagne vraiment, avant les choix de financement et la fiscalité. C’est le chiffre qu’un investisseur compare d’une entreprise à l’autre.',
       note: (y) => `${part(p.ebitda[y], y) ? `${part(p.ebitda[y], y)}, ` : ''}avant amortissements, intérêts et impôts.`,
     },
     {
       cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton,
+      pourquoi: 'Le bénéfice final, après tout : c’est lui qui peut être distribué en dividendes ou laissé dans l’entreprise.',
       note: (y) => `${part(p.netResult[y], y) ? `${part(p.netResult[y], y)}, ` : ''}après impôt sur les sociétés.`,
     },
     {
-      cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, ton: (v) => (v < 0 ? 'bad' : 'good'),
+      cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, mensuel: r.cash.balance, ton: (v) => (v < 0 ? 'bad' : 'good'),
+      pourquoi: 'On peut être rentable et manquer d’argent : c’est le compte en banque qui dit si l’entreprise peut payer ses factures.',
       note: (y) => (y === anBas && n0(low.value) < 0
         ? `Point bas de l’exercice : ${euro(low.value)} en ${monthLabel(low.month, r.startDate)}.`
         : 'Sur le compte au dernier jour de l’exercice.'),
     },
-  ], an, choisir, { cle: 'fin' })
+  ], an, choisir, { cle: 'fin', debut: r.startDate })
 }
 const n0 = (v) => Number(v) || 0
 
@@ -139,7 +146,7 @@ const n0 = (v) => Number(v) || 0
  * dividende, qui n'en ouvre aucun mais supporte moins de prélèvements. Le
  * détail complet, exercice par exercice, reste à un clic.
  */
-function netSummary(r, refresh) {
+function netSummary(r) {
   const s = store.scenario
   let income = null
   try { income = founderIncome(s, r) } catch { return null }
@@ -151,7 +158,7 @@ function netSummary(r, refresh) {
   const row = income.rows[y]
   if (!row || row.disposable <= 0) {
     return h('section', { class: 'netsum is-empty' },
-      h('div', { class: 'netsum-tag' }, 'Ce qu’il te reste, net de tout'),
+      h('div', { class: 'netsum-tag' }, 'Sur ton compte perso, après impôt'),
       h('div', { class: 'netsum-value' }, '—'),
       h('p', { class: 'netsum-note' },
         'Aucune rémunération ni dividende sur cinq ans. Renseigne ta rémunération dans le module Équipe : un plan où le fondateur ne se paie pas n’est pas prudent, il est faux.'),
@@ -166,19 +173,18 @@ function netSummary(r, refresh) {
   return h('section', { class: 'netsum' },
     h('span', { class: 'netsum-arc', 'aria-hidden': 'true' }),
     h('div', { class: 'netsum-main' },
-      h('div', { class: 'netsum-tag' }, `Ce qu’il te reste, net de tout — ${yearLabel(y).toLowerCase()}`),
+      h('div', { class: 'netsum-tag' }, `Sur ton compte perso, après impôt — ${yearLabel(y).toLowerCase()}`),
       h('div', { class: 'netsum-value num' }, euro(row.disposable, { compact: true })),
       h('div', { class: 'netsum-month num' }, `${euro(row.monthly)} par mois`),
+      // Trois argents se confondent facilement : celui de la société, son
+      // bénéfice, et le tien. On dit lequel.
+      h('p', { class: 'netsum-what' }, 'Ton salaire net et tes dividendes nets, moins ton impôt sur le revenu : ce que tu peux dépenser pour vivre. Ce n’est ni l’argent sur le compte de ta société, ni son bénéfice.'),
     ),
     h('div', { class: 'netsum-split' },
       splitCell('Salaire net', salaire, salaire > 0 ? `${part(salaire)} de ce que tu encaisses, avant impôt sur le revenu` : 'Tu ne te verses pas de salaire'),
       splitCell('Dividendes nets', dividendes, dividendes > 0 ? `${part(dividendes)} de ce que tu encaisses, après prélèvements sociaux` : 'Aucun dividende distribué'),
       splitCell('Impôt sur le revenu', -impot, `Tranche marginale ${pct(row.marginalRate, 0)}`),
     ),
-    h('button', {
-      class: 'netsum-more',
-      onClick: () => { renderResults.tab = 'revenu'; refresh() },
-    }, 'Voir le détail, exercice par exercice \u2192'),
   )
 }
 

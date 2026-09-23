@@ -9,10 +9,11 @@
  *   1. un plan neuf ne déclenche rien (pas de fausse alerte) ;
  *   2. la note apparaît sous le champ pendant la frappe, et s'efface quand le
  *      chiffre redevient plausible ;
- *   3. la page de saisie l'annonce en tête ;
- *   4. les deux synthèses la placent avant les résultats, le premier acte
- *      la nomme, et le verdict dit « À vérifier » au lieu d'un succès ;
- *   5. « Corriger » ramène sur le champ ;
+ *   3. la page de saisie l'annonce en tête, sur une ligne qui se déplie ;
+ *   4. les deux synthèses gardent un titre factuel et portent, dans le
+ *      premier acte, un avertissement replié ; le verdict dit « À vérifier »
+ *      et aucune carte ne se colore en succès ;
+ *   5. « Corriger », une fois l'avertissement déplié, ramène sur le champ ;
  *   6. un salaire saisi en milliers (« 44 ») propose 44 000 €.
  */
 export const nom = 'Garde-fous — un chiffre hors de proportion se dit'
@@ -61,6 +62,12 @@ export default async function (t) {
   const bandeau = p.locator('.garde.is-page')
   t.verifie(await bandeau.count() === 1, 'la page Offre annonce le chiffre à vérifier')
   t.verifie(/prix/i.test(await bandeau.innerText().catch(() => '')), 'le bandeau nomme le prix')
+  t.verifie(!(await bandeau.evaluate((d) => d.open)), 'le bandeau est replié : il ne prend qu’une ligne')
+  const haut = await bandeau.evaluate((d) => d.getBoundingClientRect().height)
+  t.verifie(haut < 48, 'une seule ligne tant qu’on ne l’ouvre pas', `${Math.round(haut)} px`)
+  await bandeau.locator('summary').click()
+  await p.waitForTimeout(250)
+  t.verifie(await bandeau.locator('.garde-go').isVisible(), 'au clic, il se déplie et propose de corriger')
 
   // Sur une pizzeria sans volumes, il n'y a pas encore de résultat à juger :
   // le garde-fou est affiché, le verdict reste « à chiffrer ».
@@ -81,9 +88,9 @@ export default async function (t) {
   await t.aller(q, 'tableau-de-bord', 700)
   await t.onglet(q, 'Synthèse — essai', 1000)
   await t.defiler(q)
-  t.verifie(await q.locator('.sy-garde').count() === 1, 'la synthèse essai place le garde-fou avant les actes')
+  t.verifie(await q.locator('.sy-act').first().locator('.sy-garde').count() === 1, 'le premier acte porte l’avertissement')
   const titre1 = (await q.locator('.sy-act-title').first().innerText().catch(() => '')).trim()
-  t.verifie(/^À vérifier/.test(titre1), 'le premier acte nomme ce qui est à vérifier', titre1)
+  t.verifie(titre1 && !/^À vérifier/.test(titre1), 'le titre du premier acte reste factuel', titre1)
   const mot = await q.evaluate(() => [...document.querySelectorAll('.sy-verdict-word, .sy-ink-word, .sy-ink .sy-kicker')].map((x) => x.textContent).join(' | '))
   t.verifie(/vérifier/i.test(mot), 'le verdict dit « À vérifier »', mot.slice(0, 120))
   t.verifie(!(await q.locator('.sy-card.is-good, .sy-feature-main.is-good, .sy-fact.is-good').count()), 'aucune carte ne se colore en succès')
@@ -94,6 +101,10 @@ export default async function (t) {
 
   // 5. « Corriger » ramène sur le champ.
   await t.onglet(q, 'Synthèse — essai', 1000)
+  const pill = q.locator('.sy-garde summary').first()
+  await pill.evaluate((b) => b.scrollIntoView({ block: 'center' }))
+  await pill.click()
+  await q.waitForTimeout(300)
   const go = q.locator('.sy-garde .garde-go').first()
   await go.evaluate((b) => b.scrollIntoView({ block: 'center' }))
   await q.waitForTimeout(300)

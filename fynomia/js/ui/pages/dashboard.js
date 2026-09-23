@@ -14,6 +14,7 @@ import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
 import { renderStudio } from './studio.js'
+import { renderPitch } from './pitch.js'
 import { storyline, gauge } from '../story.js'
 import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
@@ -81,6 +82,8 @@ export function renderDashboard(navigate, refresh) {
     // autre forme. Elle vit à côté de l'originale tant qu'on les compare.
     { key: 'studio', read: true, label: 'Synthèse — essai' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
+    // Pour un business angel ou un fonds : l'essentiel du plan, en une page.
+    { key: 'pitch', read: true, label: 'Pitch investisseur' },
     { key: 'simulation', label: 'Simulation' },
   ]
   const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'synthese'
@@ -98,6 +101,7 @@ export function renderDashboard(navigate, refresh) {
     }),
 
     view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh, goView)) : null,
+    view === 'pitch' ? h('div', { class: 'view' }, renderPitch(navigate, refresh)) : null,
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
       // Ce qui manque se dit avant ce qu'on a trouvé.

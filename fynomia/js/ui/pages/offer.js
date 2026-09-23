@@ -431,12 +431,13 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
       // reviennent telles quelles.
       sec === 'affiner' ? h('div', { class: 'view', 'data-gap': 'paiement' },
         h('p', { class: 'view-intro' },
-          'Chaque réglage compte dans le calcul quand il est allumé, et pas avant. Éteint, Fynomia prend le cas le plus simple.'),
+          'Des réglages plus fins pour cette offre. Chacun ne compte dans le calcul que s’il est activé ; désactivé, on prend l’hypothèse la plus simple, écrite sous son titre.'),
 
         mode === 'recurring' ? switchBlock({
           a, cle: 'signature', refresh,
-          titre: 'Frais à la signature',
-          sous: 'Un montant encaissé une fois, en plus de l’abonnement',
+          titre: 'Frais de mise en service',
+          sous: 'Un montant payé une seule fois par le client, en plus de l’abonnement.',
+          eteint: 'Désactivé : aucun frais au départ.',
           neutre: { unitPrice: 0 },
           corps: () => h('div', { class: 'grid grid-2' },
             numberField({
@@ -449,8 +450,9 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
 
         mode === 'recurring' ? switchBlock({
           a, cle: 'contrat', refresh,
-          titre: 'Durée d’engagement et attrition',
-          sous: 'Combien de temps un client reste, et combien partent chaque mois',
+          titre: 'Durée d’engagement et clients qui partent',
+          sous: 'Combien de mois un client s’engage, et quelle part de tes abonnés arrête chaque mois.',
+          eteint: 'Désactivé : contrats d’un an, et personne ne résilie.',
           neutre: { contractMonths: 12, churnMonthly: 0 },
           corps: () => h('div', {},
             h('div', { class: 'grid grid-2' },
@@ -463,8 +465,9 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
 
         switchBlock({
           a, cle: 'paiement', refresh,
-          titre: 'Quand l’argent entre et sort',
-          sous: 'Délais, acomptes — côté client et côté fournisseur',
+          titre: 'Délais de paiement et acomptes',
+          sous: 'Combien de temps tes clients mettent à te payer, et toi à payer tes fournisseurs.',
+          eteint: 'Désactivé : tout le monde paie comptant, le jour de la vente.',
           neutre: { deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, costPaymentLag: 0, costDeposit: 0 },
           corps: () => h('div', {},
             h('div', { class: 'grid grid-2' },
@@ -483,8 +486,9 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
 
         switchBlock({
           a, cle: 'evolution', refresh,
-          titre: 'Faire évoluer le prix d’une année sur l’autre',
-          sous: 'Sans ça, le prix de l’année 1 vaut pour les cinq ans',
+          titre: 'Hausse des prix d’une année à l’autre',
+          sous: 'Pour prévoir une augmentation (ou une baisse) de prix après la première année.',
+          eteint: 'Désactivé : le prix de l’année 1 reste le même pendant cinq ans.',
           neutre: { priceByYear: [], recurringPriceByYear: [] },
           corps: () => h('div', { 'data-gap': 'evolution' }, priceEvolutionFields(a, set)),
         }),
@@ -509,7 +513,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
  * de ses chiffres. Un délai déjà posé allume son bloc, sinon rien ne compterait
  * plus du jour au lendemain.
  */
-function switchBlock({ a, cle, titre, sous, neutre, corps, refresh }) {
+function switchBlock({ a, cle, titre, sous, eteint, neutre, corps, refresh }) {
   const pose = Object.keys(neutre).some((k) => {
     const v = a[k], d = neutre[k]
     if (Array.isArray(d)) return Array.isArray(v) && v.some((x) => x !== undefined && x !== null && x !== '')
@@ -544,7 +548,8 @@ function switchBlock({ a, cle, titre, sous, neutre, corps, refresh }) {
       enableToggle(on, bascule, `tune-${a.id}-${cle}`),
       h('div', { class: 'spacer' },
         h('div', { class: 'tuneblock-title' }, titre),
-        h('div', { class: 'tuneblock-sub' }, on ? sous : `${sous}. Éteint : Fynomia prend le cas simple.`),
+        h('div', { class: 'tuneblock-sub' }, sous),
+        on ? null : h('div', { class: 'tuneblock-off' }, eteint || 'Désactivé : on prend l’hypothèse la plus simple.'),
       ),
     ),
     on ? h('div', { class: 'tuneblock-body' }, corps()) : null,
@@ -725,7 +730,7 @@ function volumeVisual(detail, voc) {
       h('span', { class: 'tiny muted' }, `sommet à ${num(peak)} en ${monthLabel(peakMonth, store.result?.startDate)}`),
     ),
     areaChart({
-      values: detail.volumes, startDate: store.result?.startDate, height: 170,
+      values: detail.volumes, startDate: store.result?.startDate, height: 150, largeur: 1180,
       color: PALETTE[2], markZero: false, formatter: (v) => num(v, 0),
     }),
     h('div', { class: 'vol-years' },
