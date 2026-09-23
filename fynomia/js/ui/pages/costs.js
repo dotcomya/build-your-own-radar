@@ -12,6 +12,7 @@ import { claim } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
 import { pop } from '../spotlight.js'
 import store from '../../state/store.js'
+import { gardePage } from '../garde.js'
 
 export function renderCosts(navigate, refresh) {
   const s = store.scenario
@@ -66,6 +67,7 @@ export function renderCosts(navigate, refresh) {
         view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
       ],
     }),
+    gardePage('achats', navigate),
 
     view === 'charges' ? h('div', { class: 'view' },
       // Les suggestions du métier ouvrent la vue, comme dans Offre et revenus :

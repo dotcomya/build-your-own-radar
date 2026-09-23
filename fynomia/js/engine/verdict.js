@@ -14,6 +14,7 @@
 
 import { euro, monthLabel, yearLabel, referenceYear } from '../format.js'
 import { founderIncome } from './founder.js'
+import { vraisemblance, bloquantes } from './plausible.js'
 
 export function verdict(result, scenario) {
   const k = result.kpis, p = result.pnl
@@ -35,6 +36,23 @@ export function verdict(result, scenario) {
       line: "Aucun revenu n'est encore modélisé.",
       body: "Renseigne ce que tu vends, à quel prix et à combien de clients : tout le reste en découle.",
       figure: { label: "Chiffre d'affaires", value: '—', tone: 'neutral' },
+    }
+  }
+
+  // Un chiffre hors de toute proportion avec le métier fausse tout ce qui
+  // suit : on ne dit pas « viable » d'un plan qui gagne 280 millions la
+  // première année parce qu'un prix a pris deux zéros de trop.
+  const alertes = bloquantes(vraisemblance(scenario, result))
+  if (alertes.length) {
+    const a = alertes[0]
+    return {
+      word: 'À vérifier', tone: 'watch',
+      line: alertes.length > 1
+        ? `${alertes.length} chiffres sortent de toute proportion avec ton métier.`
+        : `${a.sujet} sort de toute proportion avec ton métier.`,
+      body: `${a.texte} Tant que ce n\u2019est pas corrigé, le reste du diagnostic ne veut rien dire.`,
+      figure: { label: a.sujet, value: 'À vérifier', tone: 'watch' },
+      garde: alertes,
     }
   }
 

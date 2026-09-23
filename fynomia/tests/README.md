@@ -30,6 +30,9 @@ mise en ligne.
 | `07-syntheses` | la synthèse suit le plan ; l'essai dit mot pour mot la même chose ; tout se trace au défilement |
 | `08-interactions` | voyage vers une page, carte ouverte, suggestion acceptée, cases d'avancement, financement, Mon projet, bilan équilibré |
 | `09-livre` | le fichier livré fonctionne seul |
+| `10-pilotage` | une saisie (la description) fait avancer le compteur et coche le pilotage sans changer de page ; Tab garde le curseur |
+| `11-etapes` | chacune des trente lignes du dossier, cliquée, mène à sa page, trouve son champ et l'entoure (métier neuf et exemple) |
+| `12-garde-fous` | un chiffre hors de proportion se dit sous le champ, en tête de page et des synthèses ; le verdict passe à « À vérifier » ; aucun garde-fou sur un plan neuf |
 
 ## Options
 

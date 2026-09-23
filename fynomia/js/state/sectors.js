@@ -347,7 +347,7 @@ export const SECTORS = {
       s.activities = [newActivity({ name: 'Ventes en boutique', unitPrice: 28, recurringPrice: 0, contractMonths: 0, deliveryLag: 0, paymentLag: 0, deposit: 1, unitCost: 13, vatRateSales: 0.1, costPaymentLag: 1, volumes: { mode: 'growth', launchMonth: 0, startUnits: 620, monthlyGrowth: 0.03, growthDecay: 0.93, cap: 1100, manual: [] } })]
       s.team = [
         newTeamMember({ role: 'Gérant fleuriste', contractType: 'tns', monthlyGross: 2000 }),
-        newTeamMember({ role: 'Vendeur', contractType: 'cdi', monthlyGross: 1850, startMonth: 6 }),
+        newTeamMember({ role: 'Vendeur', contractType: 'cdi', monthlyGross: 1870, startMonth: 6 }),
       ]
       s.opex = opexSet([['Loyer et charges', 1500], ['Énergie', 330], ['Comptable', 200], ['Assurances', 110], ['Emballages et consommables', 260]])
       s.capex = [newCapex({ label: 'Agencement et chambre froide', amount: 38000, amortYears: 7 })]

@@ -17,6 +17,8 @@ import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
+import { gardePage } from '../garde.js'
+import { gardeSalaire } from '../../engine/plausible.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
 const PAY_UNITS = [
@@ -65,6 +67,7 @@ export function renderTeam(navigate, refresh) {
       views, view, onPick: (k) => { renderTeam.view = k; refresh() },
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),
+    gardePage('equipe', navigate),
 
     view === 'postes' ? h('div', { class: 'view', 'data-gap': 'equipe' },
       s.team.length === 0
@@ -228,6 +231,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
           value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
           onUnit: (k) => { renderTeam.unit = k; refresh() },
           onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
+          garde: (v) => gardeSalaire(v * 12, m.contractType),
         })
 
         return [

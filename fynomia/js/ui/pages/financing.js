@@ -8,6 +8,7 @@ import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
+import { gardePage } from '../garde.js'
 
 /**
  * Les sources de financement.
@@ -169,6 +170,7 @@ export function renderFinancing(navigate, refresh) {
       actions: [view === 'sources' && source && (f[source.key] || []).length
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],
     }),
+    gardePage('financement', navigate),
 
     view === 'sources' ? h('div', { class: 'view' },
       h('div', { class: 'sources', 'data-gap': 'sources' },

@@ -30,6 +30,7 @@ import { goToGap } from '../spotlight.js'
 import { lookup } from '../glossary.js'
 import { changed } from '../motion.js'
 import { synthese, RELIRE, lignesRestantes } from '../plain.js'
+import { gardeBloc } from '../garde.js'
 import { figureSet, PAGE_NAME, avancement } from '../figures.js'
 import { revenueSentence, costsSentence, mixSentence, cashSentence, bfrSentence, moneyFlowSentence } from '../explain.js'
 import { suggestActions } from '../../engine/simulate.js'
@@ -141,13 +142,16 @@ export function renderStudio(navigate, refresh, goView) {
   let c = null
   try { c = checklist(s) } catch { c = null }
   const v = verdict(r, s)
-  const { actes, sansCA } = synthese(s, r)
+  const { actes, sansCA, garde } = synthese(s, r)
   const complet = !c || !c.open || !c.next
 
   racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
     // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
     // quelque chose. Un dossier complet ouvre directement sur son verdict.
     guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), 'hero'),
+    // Un chiffre hors de proportion passe avant tout le reste : les actes
+    // qui suivent en découlent.
+    garde.length ? guet(gardeBloc(garde, navigate, { classe: 'sy-garde' }), 'garde') : null,
     complet ? null : guet(verdictLigne(v), 'verdict'),
     complet ? null : guet(dossierParAxe(c, navigate), 'dossier'),
     ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA)),

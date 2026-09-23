@@ -1,6 +1,6 @@
 # Vérification comptable et fiscale
 
-Trois scripts qui rejouent le moteur et vérifient ses identités. Ils ne testent
+Six scripts qui rejouent le moteur et vérifient ses identités. Ils ne testent
 pas l'interface : ils testent les chiffres. Un directeur financier qui veut
 s'assurer que l'outil ne raconte pas d'histoires commence ici.
 
@@ -10,6 +10,8 @@ node 01-identites-comptables.mjs
 node 02-fiscalite-et-paie.mjs
 node 03-bilan-et-dirigeant.mjs
 node 04-charges-indexees.mjs
+node 05-parametres-2026.mjs
+node 06-vraisemblance.mjs
 ```
 
 Chaque ligne affiche `✓` ou `✗`. Une seule croix doit suffire à arrêter une
@@ -74,3 +76,15 @@ lien tient :
 - un montant par unité vendue suit les volumes d'une offre, ou de toutes ;
 - doubler les volumes double la charge indexée ;
 - un montant fixe, lui, ne bouge pas avec les ventes.
+
+## 06 — Vraisemblance
+
+Les garde-fous qui comparent une saisie aux fourchettes du métier :
+
+- les vingt et un plans types et toutes les offres suggérées ne déclenchent
+  rien — un garde-fou qui s'allume sur un plan sensé n'est plus lu ;
+- un prix avec deux zéros de trop, une croissance saisie en entier, un salaire
+  en milliers, un financement sans ses zéros sont attrapés, avec l'écart dit
+  en nombre de fois et la correction probable ;
+- une alerte fait passer le verdict à « À vérifier » : un plan qui gagne
+  280 millions la première année n'est plus présenté comme un succès.

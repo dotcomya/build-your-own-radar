@@ -25,6 +25,8 @@ import { icon } from './icons.js'
 import { checklist } from './checklist.js'
 import { changed } from './motion.js'
 import store from '../state/store.js'
+import { vraisemblance, bloquantes } from '../engine/plausible.js'
+import { gardeBloc } from './garde.js'
 
 const n = (v) => Number(v) || 0
 
@@ -52,7 +54,27 @@ export function synthese(s, r) {
   // rien. Il y a une synthèse à rendre dans cet état : ce que ça coûte, combien
   // de temps la trésorerie tient, et ce qu'il faudra vendre pour couvrir.
   const sansCA = !(r.pnl.revenue || []).some((v) => n(v) > 0)
-  return { sansCA, actes: sansCA ? actsAvant(s, r) : acts(s, r) }
+  const actes = sansCA ? actsAvant(s, r) : acts(s, r)
+
+  // Un chiffre hors de toute proportion avec le métier — un prix avec deux
+  // zéros de trop, un salaire saisi en milliers — produit des résultats
+  // exacts et absurdes. Les présenter en vert, sous « Oui, dès la première
+  // année », c'était féliciter une faute de frappe. Le premier acte le dit
+  // donc d'abord, et aucune carte ne se colore en succès tant que ça tient.
+  let garde = []
+  try { garde = vraisemblance(s, r) } catch { garde = [] }
+  const alertes = bloquantes(garde)
+  if (alertes.length && !sansCA) {
+    actes[0] = {
+      ...actes[0],
+      titre: alertes.length > 1
+        ? `À vérifier : ${alertes.length} chiffres sortent de toute proportion`
+        : `À vérifier : ${alertes[0].sujet.charAt(0).toLowerCase()}${alertes[0].sujet.slice(1)} sort de toute proportion`,
+      dit: 'Les calculs ci-dessous sont justes, mais ils partent d\u2019un chiffre qui ne l\u2019est probablement pas. Corrige-le d\u2019abord : tout le reste en découle.',
+    }
+    for (const a of actes) a.cartes = a.cartes.map((c) => (c && c.tone === 'good' ? { ...c, tone: 'watch' } : c))
+  }
+  return { sansCA, actes, garde }
 }
 
 /** La phrase qui clôt la synthèse : d'où viennent ces lectures, et que faire d'un écart. */
@@ -76,9 +98,10 @@ export function plainBoard(s, r, navigate, goRefine) {
   // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
   // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
   // dans l'ordre où on se la pose.
-  const { actes } = synthese(s, r)
+  const { actes, garde } = synthese(s, r)
 
   return h('div', { class: 'plain' },
+    gardeBloc(garde, navigate),
     ...actes.map((a) => h('section', { class: 'plain-act' },
       h('div', { class: 'plain-act-head' },
         h('h2', { class: 'plain-act-title' }, a.titre),

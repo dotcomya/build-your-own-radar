@@ -35,6 +35,8 @@ import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
 import { claim, goToGap } from '../spotlight.js'
 import store from '../../state/store.js'
+import { gardePage } from '../garde.js'
+import { gardePrix, gardeAbonnement, gardeCroissance } from '../../engine/plausible.js'
 import { tradeSuggest } from '../trade-suggest.js'
 
 export function renderOffer(navigate, refresh) {
@@ -102,6 +104,7 @@ export function renderOffer(navigate, refresh) {
       views, view, onPick: (k) => { renderOffer.view = k; refresh() },
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
+    gardePage('offre', navigate),
 
     view === 'offres'
       ? h('div', { class: 'view' },
@@ -351,6 +354,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
                 units: ABO_UNITS, unit: perKey(a),
                 onUnit: (k) => set({ recurringPeriod: k }),
                 onInput: (v) => set({ recurringPrice: v }),
+                garde: (v) => gardeAbonnement(store.scenario, v),
               })
             : mode === 'commission'
               ? numberField({
@@ -364,6 +368,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
                   // nom de l'offre est juste à côté pour dire de quoi il s'agit.
                   label: 'Prix', field: 'unitPrice', value: a.unitPrice, suffix: '\u20ac HT',
                   onInput: (v) => set({ unitPrice: v }),
+                  garde: (v) => gardePrix(store.scenario, v, { principale: (store.scenario.activities || []).findIndex((x) => x.id === a.id) <= 0 }),
                 }),
           selectField({
             label: 'Taux de TVA', value: a.vatRateSales,
@@ -647,7 +652,7 @@ function volumesEditor(a, setVolumes, level, detail, refresh = () => {}) {
           h('div', { class: 'grid grid-4' },
             numberField({ label: 'Premier mois de vente', field: 'month', value: v.launchMonth, suffix: 'M', hint: 'Mois 0 = démarrage.', onInput: (x) => setVolumes({ launchMonth: x }) }),
             numberField({ label: `${voc.many[0].toUpperCase()}${voc.many.slice(1)} le premier mois`, field: 'startUnits', value: v.startUnits, suffix: voc.many, onInput: (x) => setVolumes({ startUnits: x }) }),
-            numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
+            numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', garde: (x) => gardeCroissance(store.scenario, x), onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
             numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que tu ne peux physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
           // Ce qui affine vient après ce qui décide.

@@ -7049,3 +7049,62 @@ details[open] > .refine-head .refine-sign {
 .bil-full > summary:hover { color: var(--ink); }
 .bil-mass.is-empty { opacity: .5; }
 .bil-mass.is-empty .bil-mass-bar { background: transparent; border-top: 1px dashed var(--rule); height: 0; margin-top: 12px; }
+
+/* ─── Les garde-fous : un chiffre hors de proportion avec le métier ─── */
+/* Le ton d'un associé qui relit, pas d'une alarme : un trait de couleur sur
+   le bord, l'écart dit en toutes lettres, un bouton qui mène au champ. */
+.garde {
+  background: var(--surface); border-radius: 16px; padding: 18px 22px 8px;
+  box-shadow: inset 3px 0 0 var(--warn), 0 1px 0 var(--rule), 0 22px 44px -38px rgba(14, 15, 12, .45);
+}
+.garde.is-alerte { box-shadow: inset 3px 0 0 var(--loss), 0 1px 0 var(--rule), 0 22px 44px -38px rgba(14, 15, 12, .45); }
+.garde.is-page { margin: 0 0 20px; }
+.garde-head { display: flex; gap: 14px; align-items: flex-start; }
+.garde-sign {
+  flex: none; position: relative; width: 26px; height: 26px; border-radius: 50%; margin-top: 1px;
+  background: var(--warn-wash); color: var(--warn);
+}
+.garde.is-alerte .garde-sign { background: var(--loss-wash); color: var(--loss); }
+.garde-sign::before, .garde-sign::after { content: ''; position: absolute; left: 50%; width: 2.5px; margin-left: -1.25px; border-radius: 2px; background: currentColor; }
+.garde-sign::before { top: 6px; height: 9px; }
+.garde-sign::after { top: 17px; height: 2.5px; }
+.garde-txt { min-width: 0; }
+.garde-title { display: block; font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em; line-height: 1.25; color: var(--ink); }
+.garde-say { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-4); }
+.garde-list { list-style: none; margin: 14px 0 0; padding: 0; }
+.garde-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center;
+  padding: 12px 0; border-top: 1px solid var(--rule);
+}
+.garde-item-txt b { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.garde-item-txt b::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.garde-item.is-alerte .garde-item-txt b::before { background: var(--loss); }
+.garde-item-txt span { display: block; margin-top: 3px; padding-left: 15px; font-size: 13px; line-height: 1.5; color: var(--ink-3); max-width: 86ch; }
+.garde-go {
+  white-space: nowrap; cursor: pointer; border: 0; border-radius: 999px; padding: 8px 15px;
+  background: var(--ink); color: #fff; font: 600 12.5px/1 var(--sans);
+  transition: transform .16s var(--ease-soft), box-shadow .16s var(--ease-soft);
+}
+.garde-go:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -10px rgba(14, 15, 12, .6); }
+@media (max-width: 720px) {
+  .garde { padding: 16px 16px 6px; }
+  .garde-item { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .garde-go { justify-self: start; margin-left: 15px; }
+}
+
+/* Sous le champ : la même lecture, pendant qu'on tape. */
+.field-garde {
+  display: flex; gap: 8px; align-items: flex-start; margin-top: 7px;
+  font-size: 12px; line-height: 1.45; color: var(--ink-2);
+}
+.field-garde[hidden] { display: none; }
+.field-garde > i {
+  flex: none; position: relative; width: 15px; height: 15px; border-radius: 50%; margin-top: 1px;
+  background: var(--warn);
+}
+.field-garde.is-alerte > i { background: var(--loss); }
+.field-garde > i::before, .field-garde > i::after { content: ''; position: absolute; left: 50%; width: 2px; margin-left: -1px; background: #fff; border-radius: 1px; }
+.field-garde > i::before { top: 3.5px; height: 5px; }
+.field-garde > i::after { top: 9.5px; height: 2px; }
+.control.is-odd { border-color: var(--warn); }
+.control.is-odd-alerte { border-color: var(--loss); }

@@ -80,7 +80,7 @@ import { BOUNDS, clampField } from '../state/schema.js'
  * Champ numérique borné. La valeur est ramenée dans les limites du schéma
  * à la sortie du champ : l'utilisateur ne peut pas produire un scénario absurde.
  */
-export function numberField({ label, value, field, suffix, prefix, hint, help, onInput, percent = false, step, min, max, disabled, fieldKey, placeholder = null, muted = false }) {
+export function numberField({ label, value, field, suffix, prefix, hint, help, onInput, percent = false, step, min, max, disabled, fieldKey, placeholder = null, muted = false, garde = null }) {
   const b = BOUNDS[field] || {}
   const toDisplay = (v) => (v === '' || v === null || v === undefined ? '' : percent ? round(Number(v) * 100, 4) : v)
   const input = h('input', {
@@ -122,17 +122,45 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
   }
   input.addEventListener('change', commit)
   input.addEventListener('blur', commit)
+  const note = garde ? gardeNote(control, garde) : null
   input.addEventListener('input', () => {
     const v = Number(input.value)
     const lo = percent ? (b.min ?? -Infinity) * 100 : b.min ?? -Infinity
     const hi = percent ? (b.max ?? Infinity) * 100 : b.max ?? Infinity
     control.classList.toggle('invalid', input.value !== '' && (v < lo || v > hi))
+    if (note) note.juger(input.value === '' ? '' : (percent ? v / 100 : v))
   })
+  if (note) note.juger(value)
   return h('div', { class: 'field' },
     label && h('label', {}, label, help && helpButton(help)),
     control,
+    note,
     hint && h('div', { class: 'field-hint' }, hint),
   )
+}
+
+/**
+ * La note d'un garde-fou, sous le champ.
+ *
+ * `garde(valeur)` rend `{ niveau, texte }` quand la valeur sort de toute
+ * proportion avec le métier, rien sinon. La note se réécrit à chaque frappe,
+ * sans rendu : on voit l'écart pendant qu'on tape, et il disparaît dès que
+ * le chiffre redevient plausible.
+ */
+export function gardeNote(control, garde) {
+  const texte = h('span', {})
+  const note = h('div', { class: 'field-garde', role: 'status', 'aria-live': 'polite', hidden: true },
+    h('i', { 'aria-hidden': 'true' }), texte)
+  note.juger = (v) => {
+    let g = null
+    try { g = v === '' || v === null || v === undefined ? null : garde(Number(v)) } catch { g = null }
+    note.hidden = !g
+    note.className = `field-garde ${g ? `is-${g.niveau}` : ''}`
+    texte.textContent = g ? g.texte : ''
+    control.classList.toggle('is-odd', !!g)
+    control.classList.toggle('is-odd-alerte', !!g && g.niveau === 'alerte')
+  }
+  return note
 }
 
 export function textField({ label, value, placeholder, onInput, hint, help, fieldKey }) {
@@ -462,28 +490,34 @@ export function pageBar(title, sub, ...actions) {
  * Plutôt que d'imposer une convention, le champ porte son unité et la bascule
  * d'un clic — la valeur stockée, elle, ne change jamais de nature.
  */
-export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, help }) {
+export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, help, garde = null }) {
   const def = units.find((u) => u.key === unit) || units[0]
   const shown = def.toDisplay ? def.toDisplay(value) : value
+  let note = null
   const input = h('input', {
     class: 'num', inputmode: 'decimal', value: shown === 0 ? '0' : String(Math.round(shown * 100) / 100),
     onInput: (e) => {
       const raw = Number(String(e.target.value).replace(/\s/g, '').replace(',', '.')) || 0
-      onInput(def.fromDisplay ? def.fromDisplay(raw) : raw)
+      const stored = def.fromDisplay ? def.fromDisplay(raw) : raw
+      onInput(stored)
+      if (note) note.juger(stored)
     },
   })
+  const control = h('div', { class: 'control unit-control' },
+    input,
+    h('div', { class: 'unit-switch' },
+      ...units.map((u) => h('button', {
+        class: `unit-btn ${u.key === def.key ? 'active' : ''}`, type: 'button',
+        title: u.title || u.label,
+        onClick: () => onUnit(u.key),
+      }, u.label)),
+    ),
+  )
+  if (garde) { note = gardeNote(control, garde); note.juger(value) }
   return h('div', { class: 'field' },
     h('label', {}, label, help ? helpButton(help) : null),
-    h('div', { class: 'control unit-control' },
-      input,
-      h('div', { class: 'unit-switch' },
-        ...units.map((u) => h('button', {
-          class: `unit-btn ${u.key === def.key ? 'active' : ''}`, type: 'button',
-          title: u.title || u.label,
-          onClick: () => onUnit(u.key),
-        }, u.label)),
-      ),
-    ),
+    control,
+    note,
     hint ? h('div', { class: 'field-hint' }, hint) : null,
   )
 }
