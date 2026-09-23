@@ -19,21 +19,16 @@ const intent = { ...EMPTY }
 /**
  * Y aller, et que ça se voie.
  *
- * Cliquer « Y aller » depuis le guide, la liste ou une encoche fait franchir
- * une vraie distance : on quitte une page pour arriver sur un champ précis
- * d'une autre. Sans transition, l'écran se remplace en une image et le geste
- * ressemble à un défaut d'affichage. Le drapeau posé ici dit à la charpente
- * d'animer ce passage.
- */
-/** Poser l'intention, puis y aller. */
-/**
- * Aller poser la ligne, tout de suite.
+ * Cliquer « Y aller », « Renseigner » ou une étape de la synthèse fait
+ * franchir une vraie distance : on quitte une page pour arriver sur un champ
+ * précis d'une autre. C'est un voyage — l'écran qu'on quitte s'éloigne, celui
+ * qu'on rejoint arrive — puis l'anneau se pose sur le champ visé.
  *
- * Le trajet s'accompagnait d'un fondu de page : un quart de seconde d'écran
- * gelé entre le clic et la destination, pendant lequel on ne comprenait pas ce
- * qui se passait — on avait cliqué sur « Type de clientèle » et l'outil
- * semblait recharger. On y va directement ; c'est l'anneau qui arrive sur le
- * champ visé qui dit qu'on est au bon endroit, pas le voyage.
+ * Il avait été retiré, au motif d'un quart de seconde d'écran gelé avant le
+ * départ. Sans lui, l'écran se remplaçait en une image et le geste perdait sa
+ * direction : on ne sentait plus qu'on avait été conduit quelque part. Le
+ * départ ne gèle plus — la mutation est jouée d'office au bout d'un dixième
+ * de seconde si le navigateur tarde (voir travel) — et le voyage revient.
  *
  * `depuis` est le bouton cliqué : il crache un « + » avant qu'on parte, pour
  * que le geste ait une réponse à l'endroit où le doigt était.
@@ -41,7 +36,7 @@ const intent = { ...EMPTY }
 export function goToGap(target, navigate, depuis) {
   if (depuis) pop(depuis)
   Object.assign(intent, EMPTY, target)
-  navigate(`#/${target.route}`, { move: false })
+  navigate(`#/${target.route}`)
 }
 
 /**

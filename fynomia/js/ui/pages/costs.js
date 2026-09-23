@@ -204,7 +204,7 @@ function opexRow(o, r, level, refresh) {
     }
   }
 
-  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''}` },
+  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''}`, 'data-row': o.id },
     h('div', { class: 'cost-line' },
       enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }, `opex-${o.id}`),
 
@@ -361,7 +361,7 @@ function capexRow(c, r, level, refresh) {
   const on = c.enabled !== false
   const bascule = (v) => { set({ enabled: v }, { label: v ? 'Investissement retenu' : 'Investissement écarté' }); refresh() }
 
-  return h('div', { class: `card capexcard ${on ? 'is-on' : ''}`, style: { marginBottom: '9px' } },
+  return h('div', { class: `card capexcard ${on ? 'is-on' : ''}`, style: { marginBottom: '9px' }, 'data-row': c.id },
     h('div', { class: 'capexcard-head' },
       enableToggle(on, bascule, `capex-${c.id}`),
       h('div', { class: 'spacer' },

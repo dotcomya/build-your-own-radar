@@ -7,9 +7,22 @@
  * importer une couche haute pour écrire « 1 200 € ».
  */
 
-const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
-const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 })
-const nf2 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 })
+/**
+ * Le séparateur des milliers : une espace insécable ordinaire, pas l'espace
+ * fine que produit Intl.
+ *
+ * L'espace fine insécable (U+202F) est la bonne typographie française, et la
+ * police des titres ne la dessine pas : elle lui donne une largeur nulle. Dans
+ * un titre, « 280 582 085 € » s'affichait « 280582085 € » — un montant
+ * illisible à l'endroit exact où il devait se lire d'un coup. L'espace
+ * insécable ordinaire (U+00A0) existe dans toutes les polices de l'outil ;
+ * elle est un peu plus large, et elle ne disparaît jamais.
+ */
+const lisible = (fmt) => ({ format: (v) => fmt.format(v).replace(/\u202f/g, '\u00a0') })
+
+const nf0 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }))
+const nf1 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }))
+const nf2 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 }))
 
 export function euro(n, { sign = false, compact = false } = {}) {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'
@@ -46,9 +59,9 @@ const kept = new Map()
 function digits(d) {
   const k = Math.max(0, Math.min(6, Math.round(d)))
   if (!kept.has(k)) {
-    kept.set(k, new Intl.NumberFormat('fr-FR', k === 0
+    kept.set(k, lisible(new Intl.NumberFormat('fr-FR', k === 0
       ? { maximumFractionDigits: 0 }
-      : { maximumFractionDigits: k, minimumFractionDigits: k }))
+      : { maximumFractionDigits: k, minimumFractionDigits: k })))
   }
   return kept.get(k)
 }

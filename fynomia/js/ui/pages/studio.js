@@ -84,12 +84,55 @@ const etat = {
  */
 let racine = null
 
+/**
+ * Les images se tracent quand on arrive dessus, pas avant.
+ *
+ * Elles se jouaient toutes à l'ouverture de l'écran, y compris celles qu'on ne
+ * voyait pas : quand on descendait jusqu'à elles, elles étaient déjà posées,
+ * immobiles. Chaque bloc est maintenant guetté ; il se trace la première fois
+ * qu'il entre dans la fenêtre, puis reste tel quel — un recalcul ne le
+ * rejoue pas, une nouvelle visite de l'écran, si.
+ */
+const vus = new Set()
+let guetteur = null
+const reduit = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
+
+function guet(el, cle) {
+  if (!el) return el
+  el.classList.add('sy-watch')
+  if (vus.has(cle) || reduit() || typeof IntersectionObserver !== 'function') {
+    el.classList.add('is-seen')
+    return el
+  }
+  if (!guetteur) {
+    guetteur = new IntersectionObserver((entrees) => {
+      for (const e of entrees) {
+        // Un bloc plus haut que la fenêtre n'atteint jamais une grande
+        // proportion visible : on le déclenche aussi sur une hauteur absolue.
+        if (!e.isIntersecting || (e.intersectionRatio < 0.14 && e.intersectionRect.height < 220)) continue
+        const t = e.target
+        vus.add(t.dataset.guet)
+        t.classList.add('is-seen', 'is-play')
+        guetteur.unobserve(t)
+      }
+    }, { threshold: [0, 0.14, 0.3], rootMargin: '0px 0px -6% 0px' })
+  }
+  el.dataset.guet = cle
+  guetteur.observe(el)
+  return el
+}
+
 export function renderStudio(navigate, refresh, goView) {
   const s = store.scenario
   const r = store.result
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
 
   const entree = !(racine && racine.isConnected)
+  // Chaque arrivée sur l'écran rejoue les images au fil du défilement ; un
+  // simple recalcul, non. Le guetteur précédent observait des nœuds que ce
+  // rendu va remplacer : on le relâche.
+  if (entree) vus.clear()
+  if (guetteur) guetteur.disconnect()
 
   const y = etat.annee !== null && etat.annee >= 0 && etat.annee < 5 ? etat.annee : referenceYear(r)
   const choisir = (k) => { etat.annee = k; refresh() }
@@ -98,17 +141,17 @@ export function renderStudio(navigate, refresh, goView) {
   let c = null
   try { c = checklist(s) } catch { c = null }
   const v = verdict(r, s)
-  const { actes } = synthese(s, r)
+  const { actes, sansCA } = synthese(s, r)
   const complet = !c || !c.open || !c.next
 
   racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
     // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
     // quelque chose. Un dossier complet ouvre directement sur son verdict.
-    complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage),
-    complet ? null : verdictLigne(v),
-    ...actes.map((a, i) => acte(a, i, actes.length, r, s)),
+    guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), 'hero'),
+    complet ? null : guet(verdictLigne(v), 'verdict'),
+    ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA)),
     pied(navigate, pilotage),
-    sixChiffres(r, s, y, choisir, navigate),
+    guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
     analyse(r, s, y, choisir, navigate, refresh),
   )
   return racine
@@ -141,12 +184,25 @@ function heroAvancement(c, navigate, pilotage) {
       h('p', { class: 'sy-ink-text' }, t.texte),
 
       // Une case par ligne du dossier : on voit ce qui est fait et ce qui
-      // reste, sans avoir à lire un pourcentage.
-      h('div', { class: 'sy-cells', role: 'img', 'aria-label': `${c.done} lignes posées sur ${c.total}` },
-        ...c.items.map((i, k) => h('i', {
-          class: i.done ? 'is-done' : i === c.next ? 'is-next' : '',
-          style: { '--i': String(k) },
-        })),
+      // reste, sans avoir à lire un pourcentage. Chaque case se survole — elle
+      // dit ce qu'elle est et pourquoi elle compte — et se clique : elle
+      // emmène à l'endroit où elle se pose.
+      h('div', { class: 'sy-cells', role: 'list', 'aria-label': `${c.done} lignes posées sur ${c.total}` },
+        ...c.items.map((i, k) => {
+          const palier = (c.groups.find((g) => g.key === i.tier) || {}).label || ''
+          const etatCase = i.done ? 'Déjà posé' : i === c.next ? 'Prochaine étape' : 'À poser'
+          return hot(h('button', {
+            class: `sy-cell ${i.done ? 'is-done' : i === c.next ? 'is-next' : ''}`,
+            style: { '--i': String(k) },
+            role: 'listitem',
+            'aria-label': `${i.label} — ${etatCase}`,
+            onClick: (e) => (i.go ? goToGap(i.go, navigate, e.currentTarget) : null),
+          }, h('i', { 'aria-hidden': 'true' })), i.label, () => [
+            { label: etatCase, value: palier, strong: true },
+            i.why ? { label: i.why, value: '' } : null,
+            { label: i.done ? 'Clique pour le revoir' : 'Clique pour le renseigner', value: '→' },
+          ])
+        }),
       ),
       h('div', { class: 'sy-cells-legend' },
         ...c.groups.map((g) => h('span', {},
@@ -266,44 +322,182 @@ function verdictLigne(v) {
 /**
  * Un acte : une question, sa réponse en titre, et les lectures qui la fondent.
  *
- * Le numéro en chasse fixe dit où l'on en est du récit ; le titre est déjà la
- * réponse — c'est la différence entre un sommaire et une synthèse. Les
- * lectures se rangent en colonnes séparées par un filet, sans cadre.
+ * Les trois actes se ressemblaient trop : trois rangées de colonnes de texte,
+ * même poids, même forme, et l'œil ne voyait plus où finissait l'un et
+ * commençait l'autre. Chacun a désormais sa forme, choisie pour ce qu'il dit :
+ *
+ *   — le premier pose deux cartes de mesure : un grand chiffre, sa courbe,
+ *     puis ce qu'il faut en retenir ;
+ *   — le deuxième met une seule image au centre — où part chaque euro — et
+ *     range les autres lectures en texte libre à côté ;
+ *   — le troisième tend une bande : le seuil à franchir en grand, puis les
+ *     leviers chiffrés.
+ *
+ * Dans les trois, la même hiérarchie : ce que l'on mesure, combien, ce qu'il
+ * faut en retenir, puis le détail pour qui le veut. Le texte reste celui de la
+ * synthèse d'origine ; c'est l'ordre et la taille qui ont changé.
  */
-function acte(a, i, total, r, s) {
+const SECTIONS = {
+  plein: ['Rentabilité et trésorerie', 'Structure des coûts', 'Où agir'],
+  avant: ['Ce que coûte le démarrage', 'Structure de la dépense', 'Ce qu’il faudra vendre'],
+}
+
+function acte(a, i, total, r, s, sansCA) {
   const cartes = a.cartes.filter(Boolean)
-  const leviers = i === total - 1 ? leviersChiffres(s, r) : null
-  return h('section', { class: 'sy-act' },
-    h('div', { class: 'sy-act-no' }, `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`),
+  const nom = (sansCA ? SECTIONS.avant : SECTIONS.plein)[i] || ''
+  const tete = h('header', { class: 'sy-act-head' },
+    h('div', { class: 'sy-act-no' },
+      h('b', {}, String(i + 1).padStart(2, '0')),
+      h('span', {}, nom),
+      h('em', {}, `${i + 1} / ${total}`),
+    ),
     h('h2', { class: 'sy-act-title' }, titre(a.titre)),
     h('p', { class: 'sy-act-say' }, titre(a.dit)),
-    h('div', { class: `sy-cards is-${Math.min(3, cartes.length)}` },
-      ...cartes.map((c, k) => carte(c, k, r))),
-    leviers,
+  )
+
+  const dernier = i === total - 1
+  let corps
+  if (i === 1 && cartes.length > 1) corps = miseEnAvant(cartes, r)
+  else if (i === 2 && cartes.some((c) => c.cle === 'seuil' || c.cle === 'objectif')) corps = bande(cartes, r, dernier ? leviersChiffres(s, r) : null)
+  else corps = [duo(cartes, r), dernier ? leviersChiffres(s, r) : null]
+
+  return guet(h('section', { class: `sy-act is-${i === 1 ? 'feature' : i === 2 ? 'band' : 'duo'}` },
+    tete, corps,
+  ), `acte-${i}`)
+}
+
+/* ─────────── Forme 1 : deux cartes de mesure ─────────── */
+
+function duo(cartes, r) {
+  return h('div', { class: `sy-cards is-${Math.min(3, cartes.length)}` },
+    ...cartes.map((c, k) => carte(c, k, r)))
+}
+
+/**
+ * Une carte de mesure.
+ *
+ * Ce que l'on mesure, en surtitre ; combien, en très grand ; l'image qui le
+ * confirme ; la phrase à retenir, en gras ; le détail, en clair. On lit la
+ * carte de haut en bas en s'arrêtant où l'on veut : au chiffre si l'on est
+ * pressé, à l'explication si l'on veut comprendre.
+ */
+function carte(c, k, r) {
+  return h('article', { class: `sy-card is-${c.tone}`, style: { '--i': String(k) } },
+    h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
+    grandChiffre(c),
+    visuel(c, r),
+    h('h3', { class: 'sy-card-title' }, titre(c.title)),
+    h('p', { class: 'sy-card-body' }, c.body),
   )
 }
 
 /**
- * Une lecture : surtitre, titre, explication, image, chiffre.
+ * Le chiffre de la lecture, en grand, et son libellé exact dessous.
  *
- * Le texte est celui de la synthèse d'origine, sans une virgule de moins —
- * c'est lui qui fait comprendre. L'image vient après, pour confirmer ce qu'on
- * vient de lire ; le chiffre ferme la lecture, et bat quand il change.
+ * Un montant de neuf chiffres ne se lit pas d'un coup d'œil : il s'écrit en
+ * millions dans le grand format, et la valeur exacte reste juste dessous, à
+ * l'euro près — précis sans être illisible.
  */
-function carte(c, k, r) {
-  const frais = c.figure ? changed(`sy-carte-${c.kicker}`, c.figure.value) : false
-  return h('article', { class: `sy-card is-${c.tone}`, style: { '--i': String(k) } },
+function grandChiffre(c) {
+  if (!c.figure) return null
+  const exact = String(c.figure.value)
+  const court = abrege(exact)
+  const frais = changed(`sy-chiffre-${c.cle || c.kicker}`, exact)
+  return h('div', { class: 'sy-big' },
+    h('span', { class: `sy-big-val ${c.figure.good ? 'is-pos' : 'is-neg'} ${frais ? 'is-fresh' : ''}` }, court),
+    h('span', { class: 'sy-big-cap' }, court !== exact ? `${c.figure.label} · ${exact}` : c.figure.label),
+  )
+}
+
+/** « 280 582 085 € » devient « 280,6 M€ » ; un pourcentage ou un tiret reste tel quel. */
+function abrege(texte) {
+  // Tests par chaînes, pas par expressions régulières : esbuild réécrit en
+  // clair les caractères échappés d'un littéral /…/, et un € ou un signe moins
+  // typographique y casserait le paquet livré en ASCII.
+  if (!texte.trim().endsWith('\u20ac')) return texte
+  const v = Number(texte.split('\u2212').join('-').replace(/[^\d,-]/g, '').replace(',', '.'))
+  if (!Number.isFinite(v) || Math.abs(v) < 100000) return texte
+  return euro(v, { compact: true })
+}
+
+/** L'image d'une lecture, quelle qu'elle soit. */
+function visuel(c, r, { grand = false } = {}) {
+  if (c.bars) return barres(c.bars, c.kicker, grand)
+  if (c.line) return courbe(c.line, r.startDate, { hauteur: grand ? 120 : 84, legende: 'Ton compte, mois par mois' })
+  if (c.split) return grand ? grandeBarre(c.split, c.kicker) : repartition(c.split, c.kicker)
+  if (c.meter) return jauge(c.meter, grand)
+  return null
+}
+
+/* ─────────── Forme 2 : une image au centre, le reste en texte libre ─────────── */
+
+/**
+ * Où part chaque euro, en grand, et ce qui l'explique à côté.
+ *
+ * La répartition des cent euros est l'image la plus parlante du dossier :
+ * elle prend la largeur et la hauteur. Les autres lectures de l'acte — le
+ * poste qui pèse, la rémunération — n'ont pas besoin de carte : ce sont des
+ * faits, posés en texte libre dans la colonne d'à côté.
+ */
+function miseEnAvant(cartes, r) {
+  const centre = cartes.find((c) => c.cle === 'sur100') || cartes.find((c) => c.split) || cartes[0]
+  const autres = cartes.filter((c) => c !== centre)
+  return h('div', { class: 'sy-feature' },
+    h('article', { class: `sy-feature-main is-${centre.tone}` },
+      h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
+      h('h3', { class: 'sy-feature-title' }, titre(centre.title)),
+      visuel(centre, r, { grand: true }),
+      h('p', { class: 'sy-card-body' }, centre.body),
+      centre.figure ? h('div', { class: 'sy-feature-fig' },
+        h('span', {}, centre.figure.label),
+        h('b', { class: centre.figure.good ? 'is-pos' : 'is-neg' }, centre.figure.value)) : null,
+    ),
+    h('div', { class: 'sy-facts' }, ...autres.map((c, k) => fait(c, k, r))),
+  )
+}
+
+/** Un fait : pas de carte, un filet, un chiffre, une phrase. */
+function fait(c, k, r) {
+  const exact = c.figure ? String(c.figure.value) : null
+  return h('article', { class: `sy-fact is-${c.tone}`, style: { '--i': String(k) } },
     h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
-    h('h3', { class: 'sy-card-title' }, titre(c.title)),
-    h('p', { class: 'sy-card-body' }, c.body),
-    c.bars ? barres(c.bars, c.kicker) : null,
-    c.line ? courbe(c.line, r.startDate, { hauteur: 74, legende: 'Ton compte, mois par mois' }) : null,
+    exact ? h('div', { class: `sy-fact-val ${c.figure.good ? 'is-pos' : 'is-neg'}` }, abrege(exact)) : null,
+    h('h3', { class: 'sy-fact-title' }, titre(c.title)),
     c.split ? repartition(c.split, c.kicker) : null,
-    c.meter ? jauge(c.meter) : null,
-    c.figure ? h('div', { class: 'sy-card-fig' },
-      h('span', { class: 'sy-card-fig-label' }, c.figure.label),
-      h('span', { class: `sy-card-fig-val ${c.figure.good ? 'is-pos' : 'is-neg'} ${frais ? 'is-fresh' : ''}` }, c.figure.value),
-    ) : null,
+    h('p', { class: 'sy-card-body' }, c.body),
+  )
+}
+
+/* ─────────── Forme 3 : une bande, puis les leviers ─────────── */
+
+/**
+ * Le seuil, en travers de la page.
+ *
+ * Le point mort est une distance : ce qu'il faut vendre, ce qu'on prévoit de
+ * vendre, et l'écart entre les deux. Il se lit mieux en longueur qu'en
+ * pourcentage — d'où une bande pleine largeur, avec les deux repères posés
+ * sur la même règle.
+ */
+function bande(cartes, r, leviers) {
+  const centre = cartes.find((c) => c.cle === 'seuil') || cartes.find((c) => c.cle === 'objectif')
+  const autres = cartes.filter((c) => c !== centre)
+  // Sous la bande, la trajectoire et les leviers côte à côte : ce qu'on
+  // promet, et ce qui le rendrait plus sûr. Une carte seule en pleine largeur
+  // étirait ses cinq barres jusqu'à ne plus rien dire.
+  const suite = leviers && autres.length
+    ? h('div', { class: 'sy-band-row' }, ...autres.map((c, k) => carte(c, k, r)), leviers)
+    : [autres.length ? duo(autres, r) : null, leviers]
+  return h('div', { class: 'sy-bandwrap' },
+    h('article', { class: `sy-band is-${centre.tone}` },
+      h('div', { class: 'sy-band-say' },
+        h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
+        grandChiffre(centre),
+        h('h3', { class: 'sy-card-title' }, titre(centre.title)),
+        h('p', { class: 'sy-card-body' }, centre.body),
+      ),
+      h('div', { class: 'sy-band-viz' }, visuel(centre, r, { grand: true })),
+    ),
+    suite,
   )
 }
 
@@ -319,7 +513,10 @@ function leviersChiffres(s, r) {
   try { best = suggestActions(s, r, { limit: 3 }).best } catch { best = [] }
   if (!best.length) return null
   return h('div', { class: 'sy-levers' },
-    h('div', { class: 'sy-kicker' }, 'Chiffré par le moteur — les trois gestes qui rapportent le plus'),
+    h('div', { class: 'sy-levers-head' },
+      h('div', { class: 'sy-kicker' }, 'Chiffré par le moteur'),
+      h('h3', { class: 'sy-levers-title' }, 'Les trois gestes qui rapportent le plus'),
+    ),
     h('div', { class: 'sy-levers-rows' },
       ...best.map((a, i) => {
         const tresor = -n(a.delta.fundingNeed) > 0
@@ -472,10 +669,10 @@ function analyse(r, s, y, choisir, navigate, refresh) {
     etat.analyse ? h('div', { class: 'sy-deep-body' },
       exercices(r, y, choisir),
       equation(r, y),
-      h('div', { class: 'sy-pair' }, cinqAns(r, y, choisir), cascade(r, y)),
-      tresorerie(r),
-      h('div', { class: 'sy-pair' }, structure(r, y), offres(r)),
-      ratios(r, y),
+      h('div', { class: 'sy-pair' }, guet(cinqAns(r, y, choisir), 'deep-cinq'), guet(cascade(r, y), 'deep-cascade')),
+      guet(tresorerie(r), 'deep-tresor'),
+      h('div', { class: 'sy-pair' }, guet(structure(r, y), 'deep-structure'), guet(offres(r), 'deep-offres')),
+      guet(ratios(r, y), 'deep-ratios'),
       h('div', { class: 'sy-deep-go' },
         h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'resultats' }, navigate) }, 'Les états financiers'),
         h('button', { class: 'sy-btn is-line is-sm', onClick: () => navigate('#/presentation') }, 'La présentation en plein écran'),
@@ -809,7 +1006,7 @@ function ratios(r, y) {
  * La barre dit le sens — ça monte, ça part du rouge, ça passe au positif
  * telle année ; le survol donne le montant exact.
  */
-function barres(items, nom) {
+function barres(items, nom, grand = false) {
   const haut = Math.max(0, ...items.map((i) => n(i.value)))
   const bas = Math.min(0, ...items.map((i) => n(i.value)))
   const span = haut - bas || 1
@@ -817,7 +1014,7 @@ function barres(items, nom) {
   // 12 000 € face à un bénéfice de 800 000 € ne mérite pas la moitié du dessin.
   // Une échelle, une seule, pour les deux sens.
   const zero = haut / span
-  return h('div', { class: 'sy-mini', style: { '--zero': String(zero) } },
+  return h('div', { class: `sy-mini ${grand ? 'is-grand' : ''}`, style: { '--zero': String(zero) } },
     h('i', { class: 'sy-mini-zero', 'aria-hidden': 'true' }),
     ...items.map((it, k) => {
       const v = n(it.value)
@@ -827,7 +1024,10 @@ function barres(items, nom) {
         : { top: `${zero * 100}%`, height: `${part}%` }
       return hot(h('div', { class: 'sy-mini-col' },
         h('div', { class: 'sy-mini-track' },
-          h('i', { class: v < 0 ? 'is-neg' : 'is-pos', style: { ...pose, '--i': String(k) } })),
+          h('i', { class: v < 0 ? 'is-neg' : 'is-pos', style: { ...pose, '--i': String(k) } },
+            // En grand, chaque barre porte son montant : l'image se lit sans
+            // survol, et le survol garde l'euro près.
+            grand ? h('span', { class: 'sy-mini-val' }, euro(v, { compact: true })) : null)),
         h('span', { class: 'sy-mini-label' }, it.label),
       ), nom, () => [{ label: it.label, value: euro(v), strong: true }])
     }),
@@ -848,8 +1048,33 @@ function repartition(parts, nom) {
   )
 }
 
-/** Une jauge : la part d'un seuil atteinte, et le repère du seuil. */
-function jauge({ part, label }) {
+/**
+ * Une jauge : la part d'un seuil atteinte, et le repère du seuil.
+ *
+ * En grand, elle devient une règle : le seuil et le prévu y sont posés avec
+ * leurs montants, et l'écart se lit comme une distance.
+ */
+function jauge(meter, grand = false) {
+  const { part, label, seuil, prevu } = meter
+  if (grand && n(seuil) > 0) {
+    const max = Math.max(n(seuil), n(prevu)) * 1.08 || 1
+    const franchi = n(prevu) >= n(seuil)
+    const xs = (n(seuil) / max) * 100
+    const xp = Math.max(1.5, (n(prevu) / max) * 100)
+    return h('div', { class: `sy-rule ${franchi ? 'is-ok' : ''}` },
+      h('div', { class: 'sy-rule-track' },
+        h('i', { class: 'sy-rule-fill', style: { width: `${xp}%` } }),
+        h('span', { class: 'sy-rule-mark', style: { left: `${xs}%` }, 'aria-hidden': 'true' }),
+      ),
+      h('div', { class: 'sy-rule-labels' },
+        h('span', { class: 'sy-rule-seuil', style: { left: `${xs}%` } },
+          h('b', {}, 'Point mort'), euro(n(seuil), { compact: true })),
+        h('span', { class: 'sy-rule-prevu', style: { left: `${xp}%` } },
+          h('b', {}, 'Prévu'), euro(n(prevu), { compact: true })),
+      ),
+      h('span', { class: 'sy-gauge-label' }, label),
+    )
+  }
   const echelle = Math.max(1, n(part))
   return h('div', { class: 'sy-gauge' },
     h('div', { class: 'sy-gauge-track' },
@@ -860,6 +1085,31 @@ function jauge({ part, label }) {
       h('span', { class: 'sy-gauge-mark', style: { left: `${(1 / echelle) * 100}%` }, 'aria-hidden': 'true' }),
     ),
     h('span', { class: 'sy-gauge-label' }, label),
+  )
+}
+
+/**
+ * Cent euros, en une barre large.
+ *
+ * Chaque part porte son montant dans la barre quand elle est assez large pour
+ * le contenir, et toutes se retrouvent dans la liste dessous, alignée sur la
+ * droite : on lit l'image, puis on vérifie les nombres.
+ */
+function grandeBarre(parts, nom) {
+  const garde = parts.filter((p) => n(p.value) > 0)
+  const total = garde.reduce((a, p) => a + n(p.value), 0) || 100
+  return h('div', { class: 'sy-hundred' },
+    hot(h('div', { class: 'sy-hundred-bar' },
+      ...garde.map((p, k) => h('i', {
+        class: `is-${p.tone}`,
+        style: { flexGrow: String(n(p.value) / total), '--i': String(k) },
+      }, n(p.value) / total >= 0.09 ? h('span', {}, `${p.value} €`) : null))),
+      nom, () => garde.map((p) => ({ label: p.label, value: `${p.value} € sur 100`, strong: p.tone === 'left' }))),
+    h('div', { class: 'sy-hundred-keys' },
+      ...garde.map((p) => h('div', { class: `sy-hundred-key is-${p.tone}` },
+        h('i', { 'aria-hidden': 'true' }),
+        h('span', {}, p.label),
+        h('b', {}, `${p.value} €`)))),
   )
 }
 

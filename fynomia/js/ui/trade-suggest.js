@@ -23,7 +23,8 @@ import { h, euro, toast, PLUS } from './dom.js'
 import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
 import { getSector, vocabulary, tradeName } from '../state/sectors.js'
-import { goToGap, pop } from './spotlight.js'
+import { goToGap } from './spotlight.js'
+import { celebrate } from './burst.js'
 import { focusOffer } from './pages/offer.js'
 import store from '../state/store.js'
 
@@ -70,7 +71,7 @@ export function tradeSuggest(kind, navigate, refresh) {
       ...items.map((it) => h('button', {
         class: 'tradetip-item',
         title: it.why || it.note || 'Ajouter au modèle',
-        onClick: (e) => { pop(e.currentTarget); added(kind, it, vocab, navigate, refresh) },
+        onClick: (e) => added(kind, it, vocab, navigate, refresh, e.currentTarget.getBoundingClientRect()),
       },
         h('span', { class: 'tradetip-plus', 'aria-hidden': 'true', html: PLUS }),
         h('span', { class: 'tradetip-label' }, it.label),
@@ -125,19 +126,22 @@ function amountOf(kind, item, vocab) {
  * il faut le dire. Une charge, elle, arrive avec son montant : on annonce
  * simplement ce qui vient d'entrer dans le modèle.
  */
-function added(kind, item, vocab, navigate, refresh) {
-  add(kind, item, vocab)
+function added(kind, item, vocab, navigate, refresh, depuis) {
+  const id = add(kind, item, vocab)
   if (kind === 'offers') {
     // On atterrissait sur « Volumes » : on venait d'accepter une idée, et la
     // première question posée était combien on en vend — avant même d'avoir vu
     // ce qu'elle coûte au client. Le prix d'abord ; les volumes sont l'onglet
-    // d'à côté.
-    goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' }, navigate)
+    // d'à côté. Le départ attend que l'éclat ait joué : sinon le voyage
+    // l'emporte avant qu'on l'ait vu.
+    if (depuis) celebrate(depuis, { kind, label: item.label })
+    setTimeout(() => goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' }, navigate), 420)
     toast(`${item.label} ajouté. Vérifie son prix.`)
     return
   }
   toast(`${item.label} — ${amountOf(kind, item, vocab)}`, 'ok')
   refresh()
+  if (depuis) celebrate(depuis, { kind, label: item.label, cible: id ? `[data-row="${id}"]` : null })
 }
 
 /* ───────────────────────── Ce qu'on ajoute au modèle ────────────────────── */
@@ -145,25 +149,27 @@ function added(kind, item, vocab, navigate, refresh) {
 function add(kind, item, vocab) {
   if (kind === 'opex') {
     const shape = chargeShape(item, vocab)
-    store.update((sc) => sc.opex.push(newOpex({
+    const made = newOpex({
       label: item.label,
       mode: shape.mode,
       monthlyAmount: shape.mode === 'fixed' ? shape.value : 0,
       perUnit: shape.mode === 'perUnit' ? shape.value : 0,
       pctRevenue: shape.mode === 'pctRevenue' ? shape.value : 0,
-    })), { label: `Ajout — ${item.label}` })
-    return
+    })
+    store.update((sc) => sc.opex.push(made), { label: `Ajout — ${item.label}` })
+    return made.id
   }
 
   if (kind === 'capex') {
-    store.update((sc) => sc.capex.push(newCapex({
+    const made = newCapex({
       label: item.label,
       amount: item.amount,
       // Un droit au bail ou un stock ne s'amortit pas : la durée reste à zéro,
       // et le moteur le laisse au bilan au lieu de l'étaler en charges.
       amortYears: item.years || 0,
-    })), { label: `Ajout — ${item.label}` })
-    return
+    })
+    store.update((sc) => sc.capex.push(made), { label: `Ajout — ${item.label}` })
+    return made.id
   }
 
   // Une offre proposée s'ouvre là où on la décrit, pas sur ses volumes : on
@@ -181,4 +187,5 @@ function add(kind, item, vocab) {
       })
   store.update((sc) => sc.activities.push(made), { label: `Ajout — ${item.label}` })
   focusOffer(made.id)
+  return made.id
 }

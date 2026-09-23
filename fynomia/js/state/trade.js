@@ -506,6 +506,6 @@ const money = (v) => {
   // 4,5 € se lit « quatre euros cinquante » : les centimes s'écrivent à deux
   // chiffres, sinon un prix a l'air d'une approximation.
   const [ent, dec] = r.toFixed(Number.isInteger(r) ? 0 : 2).split('.')
-  const groupe = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')
+  const groupe = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')
   return `${dec ? `${groupe},${dec}` : groupe} \u20ac`
 }
