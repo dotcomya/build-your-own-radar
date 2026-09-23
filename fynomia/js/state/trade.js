@@ -48,7 +48,6 @@ export const TRADE = {
       { label: 'Postes de travail', amount: 6000, years: 3 },
       { label: 'Dépôt de marque', amount: 1200, years: 5 },
     ],
-    watch: "Ton coût serveur suit tes clients : mets-le en charge indexée, pas en montant fixe, sinon ta marge paraît meilleure qu'elle ne sera.",
   },
 
   developpeur: {
@@ -68,7 +67,6 @@ export const TRADE = {
       { label: 'Ordinateur et écrans', amount: 4000, years: 3 },
       { label: 'Siège et bureau', amount: 1400, years: 5 },
     ],
-    watch: "Compte tes jours facturables, pas tes jours ouvrés : prospection, administratif et formation en mangent facilement un cinquième.",
   },
 
   conseil: {
@@ -88,7 +86,6 @@ export const TRADE = {
       { label: 'Matériel informatique', amount: 3500, years: 3 },
       { label: 'Certification Qualiopi', amount: 2500, years: 3, note: "Ouvre le financement OPCO de tes formations." },
     ],
-    watch: "Au-delà de 70 % du chiffre d'affaires sur un seul client, la relation peut être requalifiée — et sa fin te laisse sans revenu.",
   },
 
   // ───────────────────── Professions réglementées ──────────────────────────
@@ -109,7 +106,6 @@ export const TRADE = {
       { label: 'Aménagement du cabinet', amount: 18000, years: 9 },
       { label: 'Logiciel de gestion de dossiers', amount: 3000, years: 3 },
     ],
-    watch: "Tes honoraires s'encaissent des mois après le travail. Le besoin en fonds de roulement est ton vrai sujet, pas la marge.",
   },
 
   medecin: {
@@ -129,7 +125,6 @@ export const TRADE = {
       { label: 'Équipement médical', amount: 22000, years: 7 },
       { label: 'Aménagement du cabinet', amount: 15000, years: 9 },
     ],
-    watch: "Tes actes sont exonérés de TVA : tu ne récupères donc pas celle de tes achats. Raisonne toujours en montants TTC.",
   },
 
   kine: {
@@ -149,7 +144,6 @@ export const TRADE = {
       { label: 'Tables et matériel de rééducation', amount: 14000, years: 7 },
       { label: 'Aménagement et accessibilité', amount: 12000, years: 9 },
     ],
-    watch: "Ton plafond, c'est le nombre de patients dans une journée. La croissance passe par le tarif, les cours collectifs ou un associé — pas par le volume.",
   },
 
   dentiste: {
@@ -170,7 +164,6 @@ export const TRADE = {
       { label: 'Radiologie panoramique', amount: 35000, years: 7 },
       { label: 'Stérilisation et autoclave', amount: 12000, years: 7 },
     ],
-    watch: "Les soins conventionnés sont à tarif fixé ; la rentabilité se joue sur la prothèse et l'implantologie, donc sur le coût de ton laboratoire.",
   },
 
   // ─────────────────────── Commerce et restauration ────────────────────────
@@ -196,7 +189,6 @@ export const TRADE = {
       { label: 'Hotte et extraction', amount: 12000, years: 9 },
       { label: 'Droit au bail', amount: 60000, years: 0, note: "Ne s'amortit pas : il reste au bilan tant que tu exploites." },
     ],
-    watch: "Matière plus personnel chargé sous 65 % du chiffre d'affaires : au-delà, aucun volume ne rattrape.",
   },
 
   glacier: {
@@ -222,7 +214,6 @@ export const TRADE = {
       { label: 'Laboratoire — inox, plonge, surgélateur', amount: 18000, years: 9 },
       { label: 'Enseigne et devanture', amount: 8000, years: 9 },
     ],
-    watch: "Ton année n'est pas linéaire : quatre mois font souvent 65 % du chiffre. Saisis tes volumes mois par mois, sinon ta trésorerie de février sera une fiction.",
   },
 
   ecommerce: {
@@ -244,7 +235,6 @@ export const TRADE = {
       { label: 'Photographie produit', amount: 4000, years: 3 },
       { label: 'Poste de préparation de commandes', amount: 3000, years: 5 },
     ],
-    watch: "Tu n'achètes pas des ventes, tu achètes des clients. Si le coût d'acquisition dépasse la marge de la première commande, seul le réachat te sauve.",
   },
 
   fleuriste: {
@@ -266,7 +256,6 @@ export const TRADE = {
       { label: 'Agencement et présentoirs', amount: 14000, years: 9 },
       { label: 'Véhicule de livraison', amount: 15000, years: 5 },
     ],
-    watch: "Trois dates font ton année : Saint-Valentin, fête des mères, Toussaint. Un prévisionnel lissé sur douze mois ne dit rien de ta trésorerie.",
   },
 
   commerce: {
@@ -288,7 +277,6 @@ export const TRADE = {
       { label: 'Enseigne et vitrine', amount: 9000, years: 9 },
       { label: 'Stock de lancement', amount: 30000, years: 0, note: "Trésorerie immobilisée, pas un amortissement." },
     ],
-    watch: "Ta rotation de stock commande ta trésorerie. Trente jours de stock sur un commerce à faible marge, c'est un découvert permanent.",
   },
 
   // ─────────────────────── Services aux particuliers ───────────────────────
@@ -314,7 +302,6 @@ export const TRADE = {
       { label: 'Sèche-cheveux, casques et petit matériel', amount: 3500, years: 5 },
       { label: 'Enseigne et devanture', amount: 7000, years: 9 },
     ],
-    watch: "Un fauteuil de plus, c'est un salaire chargé fixe. Simule l'embauche avant de la faire : le seuil de remplissage se calcule, il ne se sent pas.",
   },
 
   spa: {
@@ -341,7 +328,6 @@ export const TRADE = {
       { label: 'Ventilation et déshumidification', amount: 18000, years: 9, note: "L'humidité détruit un bâtiment plus vite qu'on ne le croit. Ce poste ne se coupe pas." },
       { label: 'Vestiaires et agencement', amount: 25000, years: 9 },
     ],
-    watch: "Tes charges fixes tournent même à vide : le sauna chauffe pour un client comme pour vingt. Ton seuil de rentabilité est haut, ton abonnement est la réponse.",
   },
 
   hebergement: {
@@ -365,7 +351,6 @@ export const TRADE = {
       { label: 'Serrure connectée et accueil autonome', amount: 2500, years: 5 },
       { label: 'Travaux de mise aux normes', amount: 22000, years: 9 },
     ],
-    watch: "Six chambres ne font pas six fois 365 nuitées. À 55 % de remplissage — déjà correct — tu vends la moitié de ce qu’un calcul naïf annonce. Saisis tes volumes mois par mois.",
   },
 
   boulangerie: {
@@ -390,7 +375,6 @@ export const TRADE = {
       { label: 'Laboratoire — inox et plonge', amount: 14000, years: 9 },
       { label: 'Droit au bail', amount: 80000, years: 0, note: "Ne s’amortit pas : il reste au bilan tant que tu exploites." },
     ],
-    watch: "Ta production commence à quatre heures du matin : la masse salariale porte des majorations de nuit qu’un calcul au taux horaire de base ignore complètement.",
   },
 
   batiment: {
@@ -413,7 +397,6 @@ export const TRADE = {
       { label: 'Échafaudage et matériel de levage', amount: 8000, years: 7 },
       { label: 'Dépôt et rangement', amount: 6000, years: 9 },
     ],
-    watch: "Tu achètes les matériaux au début et tu encaisses le solde à la réception. Entre les deux, c’est ta trésorerie qui finance le chantier : exige un acompte de 30 %.",
   },
 
   services: {
@@ -434,7 +417,6 @@ export const TRADE = {
       { label: 'Véhicules de service', amount: 18000, years: 5 },
       { label: 'Matériel d’intervention', amount: 6000, years: 5 },
     ],
-    watch: "Ton client paie 28 € de l’heure et en récupère la moitié en crédit d’impôt. C’est ton argument commercial, pas ton revenu : toi, tu encaisses bien 28 €.",
   },
 
   coach: {
@@ -457,7 +439,6 @@ export const TRADE = {
       { label: 'Sol amortissant et miroirs', amount: 12000, years: 9 },
       { label: 'Vestiaires et douches', amount: 18000, years: 9 },
     ],
-    watch: "Vendre un abonnement est facile ; le faire renouveler l'est moins. Une attrition de 5 % par mois vide ta salle en un an et demi.",
   },
 
   formation: {
@@ -478,7 +459,6 @@ export const TRADE = {
       { label: 'Production des contenus', amount: 15000, years: 3 },
       { label: 'Matériel de captation vidéo', amount: 5000, years: 3 },
     ],
-    watch: "Les financeurs paient à 60 ou 90 jours après la fin de session. Tu avances la trésorerie de chaque formation.",
   },
 
   association: {
@@ -498,7 +478,6 @@ export const TRADE = {
       { label: 'Matériel d’activité', amount: 8000, years: 5 },
       { label: 'Aménagement du local', amount: 12000, years: 9 },
     ],
-    watch: "Tes subventions arrivent en décalé et ne sont jamais acquises deux ans de suite. Regarde ta trésorerie au mois, pas à l'année.",
   },
 }
 

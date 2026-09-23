@@ -78,9 +78,10 @@ export function tradeSuggest(kind, navigate, refresh) {
       )),
     ),
 
-    // La phrase qu'un professionnel du métier dirait en premier. Elle ne
-    // s'ajoute pas au modèle : elle situe tout le reste.
-    trade.watch ? h('p', { class: 'tradetip-watch' }, trade.watch) : null,
+    // Une phrase de métier suivait les pastilles (« matière plus personnel
+    // sous 65 % », « compte tes jours facturables »…). Elle a été retirée :
+    // des généralités qu'on lit une fois, qui n'aident à rien saisir, sous un
+    // bloc dont le seul rôle est d'ajouter une ligne en un clic.
   )
 }
 

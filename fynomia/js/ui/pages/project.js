@@ -12,7 +12,7 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, fold, moduleShell, confirmDialog } from '../dom.js'
+import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleShell, confirmDialog } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { stepGuide } from '../tutorial.js'
@@ -83,12 +83,23 @@ export function renderProject(navigate, refresh) {
           h('span', { class: 'slab-tag' }, 'Parcours'),
         ),
       ),
-      h('div', { class: 'grid grid-3' },
+      // Deux lignes, deux paires : qui tu es (le nom, la forme juridique), puis
+      // ce que tu fais et à partir de quand (le métier, la date). Le métier et
+      // la forme se lisent de la même façon — une réponse d'une ligne, et
+      // « Modifier » qui déplie la grille juste en dessous. Ce sont deux
+      // réponses qu'on relit vingt fois et qu'on change une.
+      h('div', { class: 'grid grid-2' },
         textField({
           label: 'Nom du projet', value: s.meta.company || s.meta.name,
           placeholder: 'Ton projet',
           onInput: (v, o) => set({ company: v, name: v || 'Mon business plan' }, undefined, o),
         }),
+        legalLine(s, refresh),
+      ),
+      legalOpen(s) ? legalBlock(s, sector, set, refresh) : null,
+
+      h('div', { class: 'grid grid-2 mt' },
+        activityLine(s, refresh),
         (() => {
           const input = h('input', { type: 'date', value: s.meta.startDate })
           input.addEventListener('change', () => set({ startDate: input.value }, 'Date de démarrage'))
@@ -98,16 +109,8 @@ export function renderProject(navigate, refresh) {
             h('div', { class: 'field-hint' }, 'Décale tout le calendrier : volumes, salaires, échéances.'),
           )
         })(),
-        // Le cadre juridique tenait un chapitre entier en bas de page, avec son
-        // titre, son sous-titre et sept cartes dépliées. Or c'est une réponse
-        // d'une ligne — SASU — qu'on relit vingt fois et qu'on change une.
-        // Il rejoint donc le nom et la date : les trois choses qui cadrent le
-        // projet, sur la même ligne. La grille complète est à un clic.
-        legalLine(s, refresh),
       ),
-      legalOpen(s) ? legalBlock(s, sector, set, refresh) : null,
-
-      h('div', { class: 'mt', 'data-gap': 'secteur' }, sectorPicks(s, set, refresh)),
+      activityOpen(s) ? h('div', { class: 'legalopen' }, sectorGrid(s, set, refresh)) : null,
 
       h('div', { 'data-gap': 'calendrier' },
       refine('projet-cloture', 'Affiner le calendrier',
@@ -242,15 +245,52 @@ function legalBlock(s, sector, set, refresh) {
 
 /* ───────────────────────────── Le métier ───────────────────────────────── */
 
+/** La grille des métiers est-elle ouverte ? Tant qu'on n'a pas choisi, oui. */
+function activityOpen(s) { return !s.meta.sectorKey || ouverts.has('metier') }
+
 /**
- * Le choix du métier, repliable.
+ * Le métier en une ligne, présenté comme le cadre juridique.
  *
- * La liste s'ouvrait et ne se refermait plus : il fallait choisir pour en
- * sortir. Elle vit désormais dans un volet, comme « affiner le calendrier » —
- * le titre porte le métier retenu, le chevron ouvre et referme, et la grille
- * ne prend de la place que le temps qu'on en a besoin.
+ * Il vivait dans un volet à part, sous la première ligne, avec un titre de
+ * volet et un glyphe : on ne voyait pas du premier coup d'œil que c'était une
+ * réponse, ni laquelle. Il prend maintenant la même forme que la forme
+ * juridique — l'icône de sa famille, le métier en clair, ce qu'il implique
+ * (la famille, le taux de TVA), et « Modifier » qui déplie les familles juste
+ * en dessous, comme avant.
  */
-function sectorPicks(s, set, refresh) {
+function activityLine(s, refresh) {
+  const chosen = getActivity(s.meta.activityKey)
+  const sector = getSector(s.meta.sectorKey)
+  const fam = ACTIVITY_FAMILIES.find((f) => activitiesOf(f.key).some((a) => a.key === s.meta.activityKey))
+  const nom = chosen ? chosen.label : sector ? sector.label : null
+  const note = sector ? [fam?.label, sector.vat?.label].filter(Boolean).join(' · ') : null
+  const ouvert = activityOpen(s)
+  const bascule = () => { ouverts.has('metier') ? ouverts.delete('metier') : ouverts.add('metier'); refresh() }
+
+  return h('div', { class: 'field', 'data-gap': 'secteur' },
+    h('label', {}, 'Type d’activité'),
+    h('div', { class: 'control control-bare' },
+      h('button', {
+        class: `legalline is-activity ${nom ? '' : 'is-empty'} ${ouvert ? 'is-open' : ''}`,
+        onClick: bascule,
+        title: nom ? 'Changer de métier' : 'Choisir un métier',
+      },
+        fam ? h('span', { class: 'legalline-icon', 'aria-hidden': 'true', html: familyIcon(fam.key) }) : null,
+        h('span', { class: 'legalline-name' }, nom || 'À choisir'),
+        note ? h('span', { class: 'legalline-note' }, note) : null,
+        h('span', { class: 'spacer' }),
+        h('span', { class: 'legalline-edit' }, ouvert && nom ? 'Fermer' : nom ? 'Modifier' : 'Choisir'),
+      ),
+    ),
+    h('div', { class: 'field-hint' }, 'Fixe le vocabulaire, la TVA et les repères de marge.'),
+  )
+}
+
+/**
+ * Tout ce que « Modifier » déplie sous le métier : les familles, puis leurs
+ * métiers. Choisir referme la grille, comme pour la forme juridique.
+ */
+function sectorGrid(s, set, refresh) {
   const chosen = getActivity(s.meta.activityKey)
   const sector = getSector(s.meta.sectorKey)
 
@@ -283,6 +323,7 @@ function sectorPicks(s, set, refresh) {
       unit: act.unit || null,
       vatExempt: !!SECTORS[act.sector].vat.exempt,
     }, "Type d’activité")
+    ouverts.delete('metier')
     refresh()
   }
 
@@ -291,8 +332,8 @@ function sectorPicks(s, set, refresh) {
   // on en ouvre une, et les métiers prennent la place — le même geste que dans
   // le parcours, où il ne fait pas défaut.
   const here = ACTIVITY_FAMILIES.find((f) => activitiesOf(f.key).some((a) => a.key === s.meta.activityKey))
-  if (sectorPicks.fam === undefined) sectorPicks.fam = null
-  const open = sectorPicks.fam
+  if (sectorGrid.fam === undefined) sectorGrid.fam = null
+  const open = sectorGrid.fam
 
   const famGrid = h('div', { class: 'famgrid' },
     ...ACTIVITY_FAMILIES.map((fam) => {
@@ -300,7 +341,7 @@ function sectorPicks(s, set, refresh) {
       const mine = here?.key === fam.key
       return h('button', {
         class: `famcard ${mine ? 'is-here' : ''}`,
-        onClick: () => { sectorPicks.fam = fam.key; refresh() },
+        onClick: () => { sectorGrid.fam = fam.key; refresh() },
       },
         h('span', { class: 'famcard-icon', html: familyIcon(fam.key) }),
         h('span', { class: 'famcard-name' }, fam.label),
@@ -314,7 +355,7 @@ function sectorPicks(s, set, refresh) {
     // Une fois dans la famille, son icône ne se répète pas à chaque ligne :
     // elle est déjà en tête, et douze fois le même objet ne distingue rien.
     return h('div', { class: 'famopen' },
-      h('button', { class: 'famopen-back', onClick: () => { sectorPicks.fam = null; refresh() } },
+      h('button', { class: 'famopen-back', onClick: () => { sectorGrid.fam = null; refresh() } },
         '\u2190 Toutes les familles'),
       h('div', { class: 'famopen-head' },
         h('span', { class: 'famopen-icon', html: familyIcon(fam.key) }),
@@ -342,13 +383,7 @@ function sectorPicks(s, set, refresh) {
     }, 'Plut\u00f4t repartir d\u2019un plan neuf \u2192'),
   )
 
-  const title = chosen ? chosen.label : sector ? sector.label : '\u00c0 choisir'
-  return fold(
-    "Type d\u2019activit\u00e9",
-    sector ? `${sector.glyph} ${title}` : title,
-    grid,
-    { id: 'projet-secteur', open: !s.meta.sectorKey },
-  )
+  return grid
 }
 
 /** Repartir d'un plan neuf, depuis le module Projet. */
