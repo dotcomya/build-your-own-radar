@@ -14,13 +14,14 @@
  */
 
 import { h, euro, pct, num, monthLabel, narrow } from '../dom.js'
-import { barChart } from '../charts.js'
+import { barChart, entree } from '../charts.js'
 import { storyline } from '../story.js'
 import { trajectorySentence } from '../explain.js'
 import store from '../../state/store.js'
 import { SECTORS } from '../../state/schema.js'
 import { goToGap } from '../spotlight.js'
 import { section, exercices, grandsChiffres, anneeLue, lireAnnee } from '../sections.js'
+import { barres, courbe, compter } from '../vitrine.js'
 import { gardesDuPlan, gardeBloc } from '../garde.js'
 import { teteDossier } from './studio.js'
 
@@ -37,6 +38,10 @@ const taux = (v, ca) => (n(ca) <= 0 || Math.abs(n(v)) > 10 ? '—' : pct(n(v), 0
 const tauxDit = (v, ca, dit) => (n(ca) <= 0 || Math.abs(n(v)) > 10
   ? 'Trop peu de ventes cette année-là pour qu’un pourcentage veuille dire quelque chose.'
   : dit)
+
+/** Pour les boutons d'action des avis. */
+let navigateur = null
+const ME = new RegExp('fondateur|dirigeant|g\\u00E9rant|moi', 'i')
 
 const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des entreprises qui revendent à des particuliers' }
 
@@ -62,6 +67,7 @@ let mise = (() => { try { return localStorage.getItem(CLE_MISE) || 'recit' } cat
 const choisirMise = (k) => { mise = k; try { localStorage.setItem(CLE_MISE, k) } catch { /* rien à retenir */ } }
 
 export function renderPitch(navigate, refresh, goView) {
+  navigateur = navigate
   const s = store.scenario
   const r = store.result
   if (!r) return h('p', {}, 'Aucun résultat.')
@@ -110,7 +116,7 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
   const a = avis(s, r)
   return [
     { cle: 'trajectoire', nom: 'La trajectoire sur cinq ans',
-      dit: 'Ta trésorerie mois par mois, et les moments qui comptent : l’histoire qu’un investisseur lit en premier.',
+      dit: 'Ta trésorerie mois par mois, et les moments qui comptent : l’histoire qu’on lit en premier.',
       corps: () => h('div', { class: 'pitch-traj' },
         h('div', { class: 'pitch-chart' }, storyline(r, s, { compact: narrow() })),
         h('p', { class: 'pitch-traj-dit' }, trajectorySentence(r)),
@@ -234,35 +240,77 @@ function diapos(parties) {
   )
 }
 
-/** La couverture : le nom, la phrase, le métier — et ce que tu cherches. */
+/**
+ * La couverture, dans le style de « ton business prend forme ».
+ *
+ * La page vue au sortir du parcours avait ce que le pitch n'avait pas : le
+ * nom en grand, cinq ans de chiffre d'affaires qui montent, la trésorerie
+ * tracée d'un trait, des montants qui comptent jusqu'à leur valeur. Le
+ * pitch s'ouvre maintenant ainsi — et se joue quand on arrive dessus.
+ */
 function couverture(s, r, navigate) {
-  const nom = s.meta?.name || s.meta?.company || 'Ton projet'
+  const nom = s.meta?.company || s.meta?.name || 'Ton projet'
   const phrase = String(s.meta?.pitch || '').trim()
   const metier = s.meta?.activityLabel || SECTORS[s.meta?.sectorKey]?.label || ''
   const leve = somme(s.financing?.equityInvestors)
-  const besoin = n(r.kpis.fundingNeed)
-  return h('section', { class: 'sy-ink pitch-cover' },
-    h('div', { class: 'sy-ink-top' },
-      h('span', { class: 'sy-kicker is-accent' }, 'Pitch investisseur · l’essentiel de ton plan'),
+  const p = r.pnl, k = r.kpis
+  const besoin = n(k.fundingNeed)
+  const lecteur = lecteurDe(s)
+  const premier = k.firstProfitableYear
+  const figs = [
+    { l: 'Chiffre d’affaires en année 5', v: n(p.revenue[4]) },
+    { l: 'Premier bénéfice', t: premier !== null && premier !== undefined ? `Année ${premier + 1}` : 'Au-delà de 5 ans' },
+    { l: 'Marge brute, année 3', t: taux(k.marginRate?.[2], p.revenue[2]) },
+    { l: 'Autonomie', t: k.runwayMonths === null || k.runwayMonths === undefined ? 'Illimitée' : `${num(n(k.runwayMonths), 0)} mois` },
+  ]
+  const el = h('section', { class: 'pitch-cover pitch-hero' },
+    h('div', { class: 'rvl-glow', 'aria-hidden': 'true' }),
+    h('div', { class: 'pitch-hero-top' },
+      h('span', { class: 'rvl-kicker', style: { '--d': '0s' } }, `Pitch · ${lecteur.retient}`),
+      h('span', { class: 'sy-live' }, h('i', { 'aria-hidden': 'true' }), 'Live'),
     ),
-    h('h2', { class: 'sy-ink-title' }, nom),
+    h('h2', { class: 'rvl-name pitch-hero-name' },
+      ...nom.split(' ').filter(Boolean).map((mot, i) => h('span', { style: { '--d': `${0.1 + i * 0.08}s` } }, mot))),
     phrase
-      ? h('p', { class: 'pitch-phrase' }, phrase)
-      : h('button', { class: 'pitch-manque', onClick: () => goToGap({ route: 'projet', anchor: 'pitch' }, navigate) },
-          'Écris en une phrase ce que tu vends et à qui : c’est la première chose qu’un investisseur lira. Y aller →'),
+      ? h('p', { class: 'rvl-phrase pitch-phrase', style: { '--d': '.35s' } }, phrase)
+      : h('button', { class: 'pitch-manque rvl-phrase', style: { '--d': '.35s' }, onClick: () => goToGap({ route: 'projet', anchor: 'pitch' }, navigate) },
+          'Écris en une phrase ce que tu vends et à qui : c’est la première chose qu’on lira. Y aller →'),
     h('div', { class: 'pitch-meta' },
       metier ? h('span', {}, metier) : null,
       s.meta?.legalForm ? h('span', {}, s.meta.legalForm) : null,
       h('span', {}, `Démarrage ${monthLabel(0, r.startDate)}`),
     ),
-    h('div', { class: 'pitch-ask' },
-      h('span', {}, leve > 0 ? 'Levée prévue' : besoin > 0 ? 'Il manque au point bas' : 'Besoin de financement'),
-      h('b', {}, leve > 0 ? euro(leve) : besoin > 0 ? euro(besoin) : 'Aucun'),
-      h('small', {}, leve > 0
-        ? (besoin > 0 ? `et il manque encore ${euro(besoin)} au point bas` : 'le plan tient avec cette levée')
-        : besoin > 0 ? `avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}` : 'la trésorerie reste positive sur cinq ans'),
+    h('div', { class: 'pitch-hero-grid' },
+      h('figure', { class: 'rvl-chart', style: { '--d': '.5s' } },
+        h('figcaption', {}, h('b', {}, 'Chiffre d’affaires'), ' année par année'),
+        barres(p.revenue),
+      ),
+      h('figure', { class: 'rvl-chart', style: { '--d': '.7s' } },
+        h('figcaption', {}, h('b', {}, 'Trésorerie'), ' mois par mois'),
+        courbe(r.cash.balance, k.cashLow, r.startDate),
+      ),
+      h('div', { class: 'pitch-ask rvl-fig', style: { '--d': '.9s' } },
+        h('span', {}, leve > 0 ? 'Levée prévue' : besoin > 0 ? 'Il manque au point bas' : 'Besoin de financement'),
+        h('b', {}, leve > 0 ? euro(leve) : besoin > 0 ? euro(besoin) : 'Aucun'),
+        h('small', {}, leve > 0
+          ? (besoin > 0 ? `et il manque encore ${euro(besoin)} au point bas` : 'le plan tient avec cette levée')
+          : besoin > 0 ? `avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la trésorerie reste positive sur cinq ans'),
+      ),
+    ),
+    h('div', { class: 'rvl-figs' },
+      ...figs.map((c, i) => h('div', { class: 'rvl-fig', style: { '--d': `${1.1 + i * 0.12}s` } },
+        h('span', { class: 'rvl-fig-l' }, c.l),
+        h('b', { class: 'rvl-fig-v', 'data-compte': c.v > 0 ? String(c.v) : null }, c.t || euro(c.v || 0, { compact: (c.v || 0) >= 100000 })),
+      )),
     ),
   )
+  // Joué une fois, quand on arrive dessus ; les montants comptent alors.
+  const vu = entree(el, 'pitch-hero', { classe: 'rv', min: 0.2 })
+  const garde = new MutationObserver(() => {
+    if (el.classList.contains('is-play')) { garde.disconnect(); compter(el) }
+  })
+  garde.observe(el, { attributes: true, attributeFilter: ['class'] })
+  return vu
 }
 
 /** « ×4,2 en cinq ans, soit +43 % par an en moyenne ». */
@@ -413,83 +461,262 @@ function ratios(s, r) {
     )))
 }
 
+/** Qui lira ce pitch : un investisseur, un banquier ou un financeur. */
+function lecteurDe(s) {
+  const f = s.financing || {}
+  const sect = SECTORS[s.meta?.sectorKey]
+  if (somme(f.equityInvestors) > 0 || sect?.family === 'tech') return { qui: 'un investisseur', retient: 'ce qu’un investisseur retiendra', court: 'investisseur', inv: true }
+  if (s.meta?.sectorKey === 'association' || s.meta?.nonProfit) return { qui: 'un financeur', retient: 'ce qu’un financeur retiendra', court: 'financeur', inv: false }
+  return { qui: 'ton banquier', retient: 'ce que ton banquier retiendra', court: 'banquier', inv: false }
+}
+
+const eur = (v) => euro(v, { compact: Math.abs(v) >= 100000 })
+
 /**
  * L'avis de Fynomia, partie par partie.
  *
- * Ce qu'un consultant dirait en relisant la page par-dessus ton épaule : une
- * ou deux phrases, tirées de tes chiffres, sur ce qu'un investisseur va
- * retenir et ce qu'il va te demander. Pas de cours : la question qu'on te
- * posera, et comment t'y préparer.
+ * Ce qu'un associé expérimenté dirait en relisant la page : un verdict en une
+ * ligne, deux ou trois chiffres qui le fondent — comparés au métier quand on
+ * a un repère —, la question que le lecteur posera, et le geste qui y répond.
+ * Le lecteur n'est pas toujours un fonds : pour une boulangerie ou un
+ * commerce, c'est un banquier, et on ne lui parle pas de levée mais de
+ * point mort, d'apport et de remboursements.
+ *
+ * Chaque avis : `{ ton, titre, points: [{ v, t }], question, action }`.
  */
 function avis(s, r) {
   const p = r.pnl, k = r.kpis
+  const L = lecteurDe(s)
+  const sect = SECTORS[s.meta?.sectorKey]
+  const bm = sect?.benchmarks || {}
   const offres = (s.activities || []).filter((a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0)
   const phrase = String(s.meta?.pitch || '').trim()
   const a1 = n(p.revenue[0]), a5 = n(p.revenue[4])
   const cagr = a1 > 0 && a5 > 0 && a5 / a1 <= 1000 ? Math.pow(a5 / a1, 1 / 4) - 1 : null
   const marge = n(k.marginRate?.[2])
+  const margeOk = n(p.revenue[2]) > 0 && Math.abs(marge) <= 10
   const ltv = n(k.ltv), cac = n(k.cac)
   const manque = n(k.fundingNeed)
   const burn = Math.abs(n(k.burnRate))
-  const leve = somme(s.financing?.equityInvestors)
-  const equipe = (s.team || []).length
+  const f = s.financing || {}
+  const leve = somme(f.equityInvestors)
+  const apports = n(f.openingCash) + somme(f.equityFounders)
+  const dettes = somme(f.loans) + somme(f.shareholderLoans) + somme(f.advances)
+  const team = s.team || []
+  const moi = team.find((m) => ME.test(m.role || ''))
+  const premier = k.firstProfitableYear
+  const aPremier = premier !== null && premier !== undefined
+  const bas = k.cashLow || {}
+  const autonomie = k.runwayMonths === null || k.runwayMonths === undefined ? null : n(k.runwayMonths)
   const out = {}
 
-  out.offre = !phrase
-    ? 'Commence par la phrase qui dit ce que tu vends et à qui : c’est la première ligne qu’un investisseur lira, et souvent la seule s’il n’accroche pas.'
-    : offres.length <= 1
-      ? 'Une seule offre, c’est lisible : on comprend tout de suite ce que tu vends. Prépare-toi à expliquer pourquoi c’est la bonne, et ce qui viendrait ensuite.'
-      : `${offres.length} offres : montre laquelle porte l’essentiel du chiffre d’affaires, et pourquoi les autres la renforcent au lieu de disperser l’effort.`
-
-  out.trajectoire = cagr === null
-    ? 'Tant qu’il n’y a pas de chiffre d’affaires en année 1, un investisseur jugera surtout la date des premières ventes : sois précis sur ce qui les déclenche.'
-    : cagr > 1
-      ? `+${pct(cagr, 0)} par an en moyenne, ça attire l’œil — et c’est justement ce qu’on va challenger. Aie une réponse précise à « d’où viennent ces clients, mois par mois ? ».`
-      : cagr > 0.25
-        ? `+${pct(cagr, 0)} par an : une trajectoire ambitieuse mais crédible. C’est la zone où un investisseur écoute la suite.`
-        : `+${pct(Math.max(0, cagr), 0)} par an : une croissance raisonnable, qui convient à un business angel ou à une banque. Un fonds cherchera plus de pente.`
-
-  out.modele = ltv > 0 && cac > 0 && ltv / cac < 3
-    ? `Un client te rapporte ${num(ltv / cac, 1)} fois ce qu’il coûte à trouver : en dessous de 3, chaque euro de marketing en rapporte trop peu. C’est le point à travailler avant de lever — prix, rétention ou canal moins cher.`
-    : marge >= 0.7
-      ? 'Des marges de logiciel ou de service : chaque client en plus rapporte beaucoup. C’est ton meilleur argument, mets-le en avant.'
-      : marge > 0 && marge < 0.3
-        ? 'Des marges serrées : le modèle ne tient qu’avec du volume. Montre que tu peux l’atteindre, et ce qui protège tes prix.'
-        : 'Ton modèle couvre ses coûts directs. La question suivante sera : à partir de combien de clients couvre-t-il aussi l’équipe et les frais ?'
-
-  const coussin = manque > 0 ? manque + 6 * burn : 0
-  out.besoin = manque > 0 && leve === 0
-    ? `Il te manque ${euro(manque)} au point bas. Demande plutôt autour de ${euro(Math.ceil(coussin / 1000) * 1000)} : six mois de dépenses en plus, parce qu’un plan se décale toujours et que relever en urgence coûte cher.`
-    : manque > 0
-      ? `Même avec la levée prévue, il manque ${euro(manque)} au point bas : ajuste le montant, ou décale une dépense, avant de présenter.`
-      : leve > 0
-        ? 'La levée prévue couvre le plan avec de la marge. Dis précisément l’étape qu’elle permet d’atteindre : c’est ce qu’on achète.'
-        : 'Ton plan se finance sans levée : c’est une force. Si tu cherches quand même un investisseur, dis ce que son argent accélère.'
-
-  out.equipe = equipe <= 1
-    ? 'Un fondateur seul, c’est la première question qu’on te posera : qui te complète, et sur quoi ? Même un associé à temps partiel ou un conseil compte.'
-    : `${equipe} postes au démarrage. Un investisseur regardera surtout qui fait quoi parmi les fondateurs, et quand arrivent les premières embauches clés.`
-
-  const bas = k.cashLow || {}
+  // 1. La trajectoire de trésorerie.
   out.tresorerie = manque > 0
-    ? `Le compte touche ${euro(-manque)} en ${monthLabel(bas.month, r.startDate)} : c’est la date à laquelle l’argent doit être là, pas après. ${k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Ensuite, le premier bénéfice arrive en année ${k.firstProfitableYear + 1} : c’est ce moment que l’investisseur finance.` : 'Sans bénéfice sur cinq ans, il faudra expliquer ce qui retourne la courbe.'}`
-    : n(r.cash?.yearEnd?.[4]) > 0
-      ? `La trésorerie ne passe jamais sous zéro : ton plan se finance seul. Si tu lèves quand même, dis précisément ce que l’argent accélère.`
-      : 'La trésorerie reste fragile sur la durée : un investisseur voudra voir le mois où elle se retourne.'
+    ? {
+        ton: aPremier ? 'watch' : 'bad',
+        titre: `Il te faut ${eur(manque)} avant ${monthLabel(bas.month, r.startDate)}`,
+        points: [
+          { v: eur(-manque), t: `au plus bas, en ${monthLabel(bas.month, r.startDate)} : la date limite pour avoir l’argent sur le compte.` },
+          aPremier ? { v: `Année ${premier + 1}`, t: 'le premier exercice bénéficiaire : c’est ce moment que le financement doit atteindre.' }
+            : { v: 'Aucun', t: 'bénéfice sur cinq ans : il faudra dire ce qui retourne la courbe.' },
+          autonomie !== null ? { v: `${num(autonomie, 0)} mois`, t: 'd’autonomie au rythme de dépense actuel, sans nouvelle rentrée.' } : null,
+        ].filter(Boolean),
+        question: L.inv ? 'Combien de mois cette levée te donne-t-elle, et pour atteindre quelle étape ?' : 'Que se passe-t-il si tes ventes démarrent trois mois plus tard que prévu ?',
+        action: { label: 'Ajouter un financement', go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+      }
+    : {
+        ton: 'good',
+        titre: 'Ta trésorerie ne passe jamais sous zéro',
+        points: [
+          { v: eur(n(bas.value)), t: `au plus bas, en ${monthLabel(bas.month || 0, r.startDate)} : le plan se finance avec ce qui est prévu.` },
+          { v: eur(n(r.cash.yearEnd?.[4])), t: 'sur le compte à la fin de l’année 5.' },
+        ],
+        question: L.inv ? 'Si le plan se finance seul, qu’est-ce que notre argent te ferait faire plus vite ?' : 'Si ton plan se finance seul, pourquoi as-tu besoin d’un prêt, et pour quoi faire ?',
+        action: null,
+      }
 
-  out.risques = 'Nomme ces risques toi-même, avec ce que tu fais pour les réduire. Un investisseur qui les découvre seul se méfie de tout le reste.'
-  out.ratios = 'Ces sept chiffres reviendront dans toutes les conversations. Sache-les par cœur, et sache dire en une phrase d’où vient chacun.'
+  // 2. L'offre.
+  const total3 = (r.revenue?.perActivity || []).reduce((t, x) => t + parAn(x.total, 2), 0)
+  const parts = (r.revenue?.perActivity || []).map((x, i) => ({ nom: s.activities?.[i]?.name || `Offre ${i + 1}`, part: total3 > 0 ? parAn(x.total, 2) / total3 : 0 })).sort((x, y) => y.part - x.part)
+  const phare = parts[0]
+  out.offre = !phrase
+    ? {
+        ton: 'bad', titre: 'Il manque la phrase qui dit ce que tu vends',
+        points: [
+          offres.length
+            ? { v: String(offres.length), t: `offre${offres.length > 1 ? 's' : ''} chiffrée${offres.length > 1 ? 's' : ''}, mais rien qui ${offres.length > 1 ? 'les' : 'la'} présente en une phrase.` }
+            : { v: '0', t: 'offre chiffrée pour l’instant : commence par ton produit phare.' },
+          { v: '10 s', t: 'le temps qu’on accorde à la première ligne d’un dossier avant de décider de lire la suite.' },
+        ],
+        question: 'Tu vends quoi, à qui, et pourquoi chez toi plutôt qu’ailleurs ?',
+        action: { label: 'Écrire la phrase', go: { route: 'projet', anchor: 'pitch' } },
+      }
+    : offres.length <= 1
+      ? {
+          ton: 'watch', titre: 'Un seul produit porte tout le chiffre d’affaires',
+          points: [
+            { v: '100 %', t: `du chiffre d’affaires sur « ${offres[0]?.name || 'ton offre'} » : lisible, mais fragile.` },
+            s.meta?.clientType ? null : { v: '?', t: 'tes clients ne sont pas précisés : entreprises ou particuliers ne paient pas pareil.' },
+          ].filter(Boolean),
+          question: 'Que se passe-t-il si un concurrent baisse son prix de 20 % sur ton produit phare ?',
+          action: { label: 'Ajouter un deuxième produit', go: { route: 'offre', view: 'offres', anchor: 'ajout-offre' } },
+        }
+      : {
+          ton: phare && phare.part > 0.8 ? 'watch' : 'good',
+          titre: phare && phare.part > 0 ? `« ${phare.nom} » fait ${pct(phare.part, 0)} de tes ventes` : `${offres.length} produits au catalogue`,
+          points: [
+            { v: String(offres.length), t: 'produits chiffrés : le plan ne dépend pas d’un seul.' },
+            phare && parts[1] ? { v: pct(parts[1].part, 0), t: `pour « ${parts[1].nom} », le deuxième.` } : null,
+          ].filter(Boolean),
+          question: 'Pourquoi ces produits se renforcent-ils, au lieu de disperser tes efforts ?',
+          action: s.meta?.clientType ? null : { label: 'Préciser qui sont tes clients', go: { route: 'projet', anchor: 'client' } },
+        }
+
+  // 3. La croissance.
+  const em5 = n(k.ebitdaMargin?.[4])
+  out.trajectoire = cagr === null
+    ? {
+        ton: 'watch', titre: 'Aucune vente la première année',
+        points: [{ v: eur(n(p.revenue[1])), t: 'de chiffre d’affaires en année 2 : tout repose sur la date des premières ventes.' }],
+        question: 'Qu’est-ce qui déclenche ta première vente, et à quelle date exactement ?',
+        action: { label: 'Estimer tes ventes du premier mois', go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
+      }
+    : {
+        ton: cagr > 1 ? 'watch' : cagr < 0.25 && L.inv ? 'watch' : 'good',
+        titre: cagr > 1 ? `+${pct(cagr, 0)} par an : une pente qu’on va challenger`
+          : cagr > 0.25 ? `+${pct(cagr, 0)} par an : ambitieux et défendable`
+            : L.inv ? `+${pct(Math.max(0, cagr), 0)} par an : lent pour un investisseur` : `+${pct(Math.max(0, cagr), 0)} par an : une croissance prudente, qui rassure`,
+        points: [
+          { v: `${eur(a1)} → ${eur(a5)}`, t: 'de chiffre d’affaires, de l’année 1 à l’année 5.' },
+          n(p.revenue[4]) > 0 && Math.abs(em5) <= 10 ? { v: pct(em5, 0), t: 'de marge d’EBITDA en année 5 : ce que l’activité garde une fois tout payé.' } : null,
+        ].filter(Boolean),
+        question: cagr > 1 ? 'D’où viennent ces clients, mois par mois, et combien coûte chacun ?' : L.inv ? 'Qu’est-ce qui ferait passer ta croissance à la vitesse supérieure ?' : 'Tes volumes tiennent-ils avec l’équipe et le local prévus ?',
+        action: cagr > 1 && !(s.marketing || []).length ? { label: 'Chiffrer ce que coûte un nouveau client', go: { route: 'offre', view: 'acquisition', anchor: 'campagnes' } } : null,
+      }
+
+  // 4. Le modèle.
+  const mois = (k.breakEvenMonth || []).findIndex((m) => m)
+  const ratio = ltv > 0 && cac > 0 ? ltv / cac : null
+  const sousRepere = margeOk && bm.grossMargin && marge < bm.grossMargin[0]
+  out.modele = {
+    ton: !margeOk || marge <= 0 || (ratio !== null && ratio < 1) ? 'bad' : sousRepere || (ratio !== null && ratio < 3) || mois < 0 ? 'watch' : 'good',
+    titre: margeOk && marge > 0 ? `Chaque euro vendu t’en laisse ${Math.round(marge * 100)} centimes` : 'Tes ventes ne couvrent pas ce qu’elles coûtent',
+    points: [
+      margeOk ? { v: pct(marge, 0), t: bm.grossMargin ? `de marge brute en année 3, pour ${pct(bm.grossMargin[0], 0)} à ${pct(bm.grossMargin[1], 0)} dans ton métier.` : 'de marge brute en année 3.' } : null,
+      { v: mois >= 0 ? `Année ${mois + 1}` : 'Pas atteint', t: mois >= 0 ? 'le point mort : les ventes de l’année couvrent tous les frais.' : 'le point mort : sur cinq ans, les ventes ne couvrent jamais tous les frais.' },
+      ratio !== null ? { v: `${num(ratio, 1)} ×`, t: 'ce qu’un client rapporte face à ce qu’il coûte à trouver (3 × au moins).' } : null,
+    ].filter(Boolean),
+    question: L.inv ? 'Comment ta marge évolue-t-elle quand tu doubles de taille ?' : 'Si ton fournisseur augmente ses prix de 10 %, que te reste-t-il ?',
+    action: sousRepere || !margeOk || marge <= 0 ? { label: 'Valider ton coût de revient', go: { route: 'achats', view: 'charges', anchor: 'charges' } } : null,
+  }
+
+  // 5. Le besoin.
+  const coussin = manque > 0 ? Math.ceil((manque + 6 * burn) / 1000) * 1000 : 0
+  const finance = apports + dettes + leve
+  const partApport = finance > 0 ? apports / finance : 0
+  out.besoin = manque > 0 && leve === 0
+    ? {
+        ton: 'watch', titre: burn > 0 ? `Demande plutôt ${eur(coussin)} que ${eur(manque)}` : `Il te faut au moins ${eur(manque)}`,
+        points: [
+          { v: eur(manque), t: 'le strict minimum, au point bas.' },
+          burn > 0 ? { v: eur(6 * burn), t: 'six mois de dépenses en sécurité : un plan se décale toujours, et redemander coûte cher.' } : null,
+          !L.inv && finance > 0 ? { v: pct(partApport, 0), t: 'de ton apport dans le financement (une banque attend souvent 20 à 30 %).' } : null,
+        ].filter(Boolean),
+        question: L.inv ? 'Quelle étape cet argent te fait-il franchir, et en combien de mois ?' : 'Combien mets-tu toi-même, et quelles garanties peux-tu apporter ?',
+        action: { label: 'Ajouter un financement', go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+      }
+    : manque > 0
+      ? {
+          ton: 'bad', titre: 'La levée prévue ne suffit pas',
+          points: [
+            { v: eur(leve), t: 'de levée prévue.' },
+            { v: eur(manque), t: 'manquent encore au point bas : ajuste le montant ou décale une dépense.' },
+          ],
+          question: 'Pourquoi ce montant-là, et que fais-tu si la levée prend six mois de plus ?',
+          action: { label: 'Ajuster le financement', go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+        }
+      : {
+          ton: 'good', titre: leve > 0 ? 'La levée couvre le plan, avec de la marge' : 'Ton plan se finance sans aide extérieure',
+          points: [
+            { v: eur(finance), t: 'réunis au total, apport, prêts et levée compris.' },
+            !L.inv && finance > 0 ? { v: pct(partApport, 0), t: 'de ton apport dans le financement (une banque attend souvent 20 à 30 %).' } : null,
+          ].filter(Boolean),
+          question: leve > 0 ? 'Quelle étape précise cette levée permet-elle d’atteindre ?' : 'Si tu n’as besoin de personne, qu’est-ce qu’un financement accélérerait ?',
+          action: null,
+        }
+
+  // 6. L'équipe.
+  const masse1 = Math.abs(n(p.payroll[0]))
+  const ratioMasse = n(p.revenue[2]) > 0 ? Math.abs(n(p.payroll[2])) / n(p.revenue[2]) : null
+  const seul = team.length <= 1
+  const nonPaye = !moi || n(moi.monthlyGross) <= 0
+  out.equipe = {
+    ton: nonPaye || seul ? 'watch' : ratioMasse !== null && bm.payrollRatio && ratioMasse > bm.payrollRatio[1] * 1.3 ? 'watch' : 'good',
+    titre: nonPaye ? 'Tu ne te verses rien : c’est la première chose qu’on verra'
+      : seul ? 'Tu portes le projet seul'
+        : `${team.length} postes, ${eur(masse1)} de salaires la première année`,
+    points: [
+      ratioMasse !== null && ratioMasse <= 10 ? { v: pct(ratioMasse, 0), t: bm.payrollRatio ? `du chiffre d’affaires part en salaires en année 3, pour ${pct(bm.payrollRatio[0], 0)} à ${pct(bm.payrollRatio[1], 0)} dans ton métier.` : 'du chiffre d’affaires part en salaires en année 3.' } : null,
+      moi && n(moi.monthlyGross) > 0 ? { v: `${eur(n(moi.monthlyGross) * 12)}`, t: 'brut par an pour toi : un plan où le fondateur ne vit pas n’est pas crédible.' } : null,
+    ].filter(Boolean),
+    question: L.inv ? 'Qui, dans l’équipe, sait vendre, et qui sait livrer ?' : 'Qui fait tourner l’affaire si tu t’arrêtes deux semaines ?',
+    action: nonPaye ? { label: 'Fixer ta rémunération', go: { route: 'equipe', view: 'postes', anchor: 'equipe' } } : null,
+  }
+
+  // 7. Les risques.
+  const nb = [manque > 0, offres.length <= 1, !aPremier].filter(Boolean).length
+  out.risques = {
+    ton: nb >= 2 ? 'watch' : 'good',
+    titre: nb ? `${nb} risque${nb > 1 ? 's' : ''} à nommer toi-même, avant qu’on te les oppose` : 'Pas de risque majeur dans les chiffres',
+    points: [
+      { v: String((sect?.traps || []).length), t: 'pièges connus de ton métier, listés ici : dis ce que tu fais pour chacun.' },
+      manque > 0 ? { v: eur(manque), t: 'de trésorerie à trouver : c’est le risque qu’on regarde en premier.' } : null,
+    ].filter(Boolean),
+    question: 'Qu’est-ce qui te ferait arrêter, et à partir de quel chiffre ?',
+    action: null,
+  }
+
+  // 8. Les ratios.
+  out.ratios = {
+    ton: 'good',
+    titre: 'Les chiffres à connaître par cœur',
+    points: [
+      { v: eur(n(p.revenue[2])), t: 'de chiffre d’affaires en année 3.' },
+      margeOk ? { v: pct(marge, 0), t: 'de marge brute.' } : null,
+      { v: manque > 0 ? eur(manque) : 'Aucun', t: 'besoin de financement au point bas.' },
+    ].filter(Boolean),
+    question: 'Peux-tu me redonner ton point mort et ton besoin de financement sans regarder tes notes ?',
+    action: null,
+  }
   return out
 }
 
-/** Une note de l'assistant : à côté d'une partie, ou en pied de tuile. */
-function conseil(texte, { cote = false, court = false } = {}) {
-  if (!texte) return null
-  return h('aside', { class: `pitch-avis ${cote ? 'is-cote' : ''} ${court ? 'is-court' : ''}` },
-    h('span', { class: 'pitch-avis-sign', 'aria-hidden': 'true' }, 'F'),
-    h('div', {},
-      h('b', {}, 'L’avis de Fynomia'),
-      h('p', {}, texte),
+const TONS = { good: 'Solide', watch: 'À surveiller', bad: 'À retravailler' }
+/** Un montant ne se coupe pas de son unité : « 23 039 » en fin de ligne et « € » à la suivante. */
+const UNITE = new RegExp(' (\\u20AC|%|mois|\\u00D7)', 'g')
+const insecable = (t) => String(t ?? '').replace(UNITE, '\u00a0$1')
+
+/**
+ * L'avis, mis en page comme une note d'associé : qui parle, le verdict, les
+ * chiffres qui le fondent, la question qu'on te posera, et le geste suivant.
+ */
+function conseil(a, { cote = false, court = false } = {}) {
+  if (!a) return null
+  const ton = a.ton || 'good'
+  const points = court ? (a.points || []).slice(0, 2) : (a.points || [])
+  return h('aside', { class: `pitch-avis is-${ton} ${cote ? 'is-cote' : ''} ${court ? 'is-court' : ''}` },
+    h('header', { class: 'avis-tete' },
+      h('span', { class: 'avis-mono', 'aria-hidden': 'true' }, 'F'),
+      h('span', { class: 'avis-qui' }, 'L’avis de Fynomia'),
+      h('span', { class: 'avis-ton' }, TONS[ton]),
     ),
+    h('h4', { class: 'avis-titre' }, insecable(a.titre)),
+    points.length ? h('ul', { class: 'avis-points' },
+      ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, x.t)))) : null,
+    a.question ? h('div', { class: 'avis-question' },
+      h('span', {}, 'On te demandera'),
+      h('p', {}, `« ${a.question} »`),
+    ) : null,
+    a.action && navigateur ? h('button', { class: 'avis-action', onClick: (e) => goToGap(a.action.go, navigateur, e.currentTarget) }, `${a.action.label} →`) : null,
   )
 }

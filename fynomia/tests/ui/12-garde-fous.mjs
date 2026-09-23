@@ -70,6 +70,15 @@ export default async function (t) {
   await bandeau.locator('summary').click()
   await p.waitForTimeout(250)
   t.verifie(await bandeau.locator('.garde-go').isVisible(), 'au clic, il se déplie et propose de corriger')
+  // Il se referme dès qu'on clique à côté, et ne suit pas sur une autre page.
+  await p.mouse.click(5, 300)
+  await p.waitForTimeout(250)
+  t.verifie(!(await p.locator('.garde.is-page').evaluate((d) => d.open)), 'un clic à côté le referme')
+  await p.locator('.garde.is-page summary').click()
+  await p.waitForTimeout(250)
+  await t.aller(p, 'equipe', 700)
+  await t.aller(p, 'offre', 900)
+  t.verifie(!(await p.locator('.garde.is-page').evaluate((d) => d.open).catch(() => false)), 'changer de page le referme')
 
   // Sur une pizzeria sans volumes, il n'y a pas encore de résultat à juger :
   // le garde-fou est affiché, le verdict reste « à chiffrer ».

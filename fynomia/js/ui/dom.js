@@ -596,6 +596,12 @@ export function refine(id, label, ...children) {
  * au survol ou au focus, et un clic la laisse ouverte (ou ouvre le tiroir,
  * si on lui en donne un).
  */
+if (typeof document !== 'undefined') {
+  // Une bulle ouverte se referme dès qu'on clique ailleurs.
+  document.addEventListener('pointerdown', (e) => {
+    for (const b of document.querySelectorAll('.info-point.is-open')) if (!b.contains(e.target)) b.classList.remove('is-open')
+  }, true)
+}
 export function infoPoint(texte, { onClick = null, classe = '' } = {}) {
   if (!texte) return null
   const b = h('button', {

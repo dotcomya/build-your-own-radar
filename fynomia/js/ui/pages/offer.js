@@ -110,7 +110,7 @@ export function renderOffer(navigate, refresh) {
       figure: chiffres ? null : revenueFigure(s, r),
       guide: stepGuide('clients', journey(store.scenario, store.result), 'offre'),
       views, view, onPick: (k) => { renderOffer.view = k; refresh() },
-      actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
+      actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', 'data-gap': 'ajout-offre', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
     chiffres || gardePage('offre', navigate),
 

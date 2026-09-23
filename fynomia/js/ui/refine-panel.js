@@ -91,6 +91,7 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
                 aFaire ? h('span', { class: 'refinery-why' },
                   it.later ? h('b', { class: 'refinery-latertag' }, 'Plus tard · ')
                     : it.relire ? h('b', { class: 'refinery-latertag' }, 'À relire · ')
+                      : it.aValider ? h('b', { class: 'refinery-latertag' }, 'À valider · ')
                       : it.optionnel ? h('b', { class: 'refinery-latertag' }, 'Facultatif · ') : null,
                   it.why) : null,
               ),

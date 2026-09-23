@@ -69,7 +69,7 @@ export default async function (t) {
   const champs = await p.evaluate(() => [...document.querySelectorAll('.slab')[0].querySelectorAll(':scope > .grid > .field')]
     .map((f) => [f.querySelector('label')?.textContent, Math.round(f.getBoundingClientRect().top)]))
   const ligne = (l) => champs.find((c) => c[0] && c[0].startsWith(l))?.[1]
-  t.verifie(ligne('Nom du projet') === ligne('Cadre juridique'), 'nom et cadre juridique sur la même ligne', champs)
+  t.verifie(ligne('Nom du projet') === ligne('Statut juridique'), 'nom et statut juridique sur la même ligne', champs)
   t.verifie(ligne('Type d') === ligne('Début d') && ligne('Type d') > ligne('Nom du projet'), 'métier et date sur la ligne suivante', champs)
 
   // Le bilan : les deux côtés affichent le même total.

@@ -61,17 +61,17 @@ export function coach(navigate) {
     h('div', { class: 'nextstep-body' },
       // Reproposer une ligne reportée sans le dire donnerait l'impression que
       // le guide n'écoute pas. Il le dit.
-      h('div', { class: `nextstep-tag ${c.again ? 'is-again' : ''} ${c.next.relire ? 'is-relire' : ''}` },
-        c.again ? 'Tu l’avais remis à plus tard' : c.next.relire ? 'À relire' : 'À poser maintenant'),
+      h('div', { class: `nextstep-tag ${c.again ? 'is-again' : ''} ${c.next.relire || c.next.aValider ? 'is-relire' : ''}` },
+        c.again ? 'Tu l’avais remis à plus tard' : c.next.relire ? 'À relire' : c.next.aValider ? 'À valider' : 'À faire maintenant'),
       h('div', { class: 'nextstep-do' }, c.next.label),
       h('div', { class: 'nextstep-unlock' }, c.next.why),
       h('div', { class: 'nextstep-actions' },
         h('button', {
           class: 'btn btn-primary nextstep-go',
           onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
-        }, 'Y aller'),
+        }, c.next.relire || c.next.aValider ? 'Voir' : 'Y aller'),
         // Une réponse du parcours qu'on sait juste se valide sans y aller.
-        c.next.relire
+        c.next.relire || c.next.aValider
           ? h('button', {
               class: 'nextstep-later',
               title: 'Ce chiffre est bon : passer à la suite.',

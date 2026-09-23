@@ -7743,7 +7743,7 @@ details[open] > .refine-head .refine-sign {
 
 /* A · Récit — le titre et sa phrase sur une ligne, l'avis à droite. */
 .pitch-recit .sx.pitch-ligne { margin-top: 34px; }
-.pitch-ligne-corps { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+.pitch-ligne-corps { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
 .pitch-ligne-corps > .pitch-avis { position: sticky; top: calc(var(--header-h) + 64px); }
 @media (max-width: 1100px) { .pitch-ligne-corps { grid-template-columns: minmax(0, 1fr); } .pitch-ligne-corps > .pitch-avis { position: static; } }
 
@@ -7808,3 +7808,97 @@ details[open] > .refine-head .refine-sign {
     position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-width: none; transform: none !important;
   }
 }
+
+/* « Valider » : une valeur posée par défaut, confirmée d'un clic. */
+.valider-chip {
+  margin-left: 10px; padding: 3px 9px; border: 0; border-radius: 999px; cursor: pointer; vertical-align: 1px;
+  background: var(--signal-wash); color: var(--signal-ink); font: 600 11.5px/1.3 var(--sans); letter-spacing: 0; text-transform: none;
+  transition: background .16s, color .16s;
+}
+.valider-chip:hover { background: var(--signal); color: #fff; }
+.tva-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tva-pick {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--rule); background: var(--surface); font: inherit; color: var(--ink-3); transition: border-color .16s, box-shadow .16s;
+}
+.tva-pick > b { font: 700 14px/1.25 var(--display); color: var(--ink); letter-spacing: -.01em; }
+.tva-pick > span { font-size: 12px; line-height: 1.4; color: var(--ink-4); }
+.tva-pick:hover { border-color: var(--ink-4); }
+.tva-pick.is-on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+@media (max-width: 560px) { .tva-picks { grid-template-columns: minmax(0, 1fr); } }
+.setup-libelle { margin: 14px 0 6px; font: 600 14px/1.3 var(--sans); color: var(--ink-2); }
+
+/* ═══════════ Pitch : la couverture, au style de la page de révélation ═══════════ */
+.pitch-cover.pitch-hero {
+  display: block; position: relative; overflow: hidden; margin-top: 4px; padding: 26px clamp(18px, 3vw, 34px) 26px;
+  border-radius: 24px; background: var(--ink); color: #F2F0E8;
+}
+.pitch-hero > * { position: relative; }
+.pitch-hero .rvl-glow { position: absolute; inset: -40% -20% auto auto; width: 60%; height: 140%; }
+.pitch-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pitch-hero .rvl-name { margin-top: 12px; font-size: clamp(38px, 5.6vw, 72px); }
+.pitch-hero .pitch-phrase { max-width: none; }
+.pitch-hero .pitch-manque { display: block; text-align: left; font: 600 15px/1.45 var(--sans); padding: 10px 14px; }
+.pitch-hero .pitch-meta { margin-top: 14px; }
+.pitch-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 250px; gap: 14px; margin-top: 22px; align-items: stretch; }
+.pitch-hero .pitch-ask { grid-column: auto; grid-row: auto; align-self: stretch; justify-content: center; min-width: 0; background: rgba(214, 240, 52, .08); box-shadow: inset 0 0 0 1px rgba(214, 240, 52, .28); }
+.pitch-hero .pitch-ask > span { color: var(--accent); }
+.pitch-hero .rvl-figs { margin-top: 14px; }
+@media (max-width: 1100px) { .pitch-hero-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .pitch-hero .rvl-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Hors de la page de révélation, la couverture ne se joue qu'à l'arrivée :
+   figée tant qu'on ne l'a pas vue, jouée une fois, puis immobile. */
+.pitch-hero .rvl-kicker, .pitch-hero .rvl-name > span, .pitch-hero .rvl-phrase, .pitch-hero .rvl-chart, .pitch-hero .rvl-fig,
+.pitch-hero .rvl-bar, .pitch-hero .rvl-bar-v, .pitch-hero .rvl-line, .pitch-hero .rvl-area, .pitch-hero .rvl-low {
+  animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
+}
+.pitch-hero.rv-watch:not(.is-seen) :is(.rvl-kicker, .rvl-name > span, .rvl-phrase, .rvl-chart, .rvl-fig, .rvl-bar-v, .rvl-area, .rvl-low) { opacity: 0; }
+.pitch-hero.rv-watch:not(.is-seen) .rvl-bar { transform: scaleY(0); }
+.pitch-hero.rv-watch:not(.is-seen) .rvl-line { stroke-dashoffset: 1; }
+.pitch-hero.is-play :is(.rvl-kicker, .rvl-name > span, .rvl-phrase, .rvl-chart, .rvl-fig) { opacity: 0; animation: rvl-rise .65s var(--ease-soft) both; animation-delay: var(--d, 0s); }
+.pitch-hero.is-play .rvl-bar { transform: scaleY(0); animation: rvl-grow .8s cubic-bezier(.2, .9, .25, 1.15) both; animation-delay: calc(.8s + var(--i) * .12s); }
+.pitch-hero.is-play .rvl-bar-v { opacity: 0; animation: rvl-fade .4s ease both; animation-delay: calc(1.2s + var(--i) * .12s); }
+.pitch-hero.is-play .rvl-line { stroke-dashoffset: 1; animation: rvl-draw 1.6s ease-in-out 1s both; }
+.pitch-hero.is-play .rvl-area { opacity: 0; animation: rvl-fade .8s ease 2s both; }
+.pitch-hero.is-play .rvl-low { opacity: 0; animation: rvl-fade .5s ease 2.3s both; }
+
+/* ═══════════ L'avis de Fynomia : une note d'associé ═══════════ */
+.pitch-avis {
+  display: flex; flex-direction: column; gap: 0; margin-top: 16px; padding: 16px 18px 16px; border-radius: 16px;
+  background: var(--surface); color: var(--ink-2); grid-template-columns: none;
+  box-shadow: 0 1px 0 var(--rule), 0 24px 48px -36px rgba(14, 15, 12, .5), inset 0 3px 0 var(--avis-ton, var(--gain));
+}
+.pitch-avis.is-good { --avis-ton: var(--gain); }
+.pitch-avis.is-watch { --avis-ton: #D09A2A; }
+.pitch-avis.is-bad { --avis-ton: var(--loss); }
+.avis-tete { display: flex; align-items: center; gap: 9px; }
+.avis-mono {
+  display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 8px;
+  background: var(--ink); color: var(--accent); font: 800 13px/1 var(--display);
+}
+.avis-qui { font: 600 12px/1.2 var(--sans); color: var(--ink-3); white-space: nowrap; }
+.avis-ton {
+  margin-left: auto; padding: 3px 9px; border-radius: 999px; font: 600 11px/1.3 var(--sans); white-space: nowrap;
+  color: var(--avis-ton); background: color-mix(in srgb, var(--avis-ton) 12%, transparent);
+}
+.pitch-avis .avis-titre { margin: 12px 0 0; font: 700 17px/1.25 var(--display); letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
+.avis-points { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.avis-points li { position: relative; padding-left: 12px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.avis-points li::before { content: ''; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--avis-ton); }
+.avis-points li > b { display: inline; font: 650 13px/1.5 var(--mono); letter-spacing: -.02em; color: var(--ink); text-transform: none; white-space: nowrap; }
+.avis-question { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2, #F4F3EE); }
+.avis-question > span { display: block; font: 600 11.5px/1.2 var(--sans); color: var(--ink-4); }
+.pitch-avis .avis-question > p { margin: 5px 0 0; font: italic 500 14px/1.5 Georgia, 'Times New Roman', serif; color: var(--ink); }
+.avis-action {
+  align-self: flex-start; margin-top: 12px; padding: 8px 13px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--ink); color: var(--accent); font: 600 12.5px/1 var(--sans); transition: transform .16s var(--ease-soft);
+}
+.avis-action:hover { transform: translateY(-1px); }
+.pitch-avis.is-court { padding: 12px 14px; margin-top: 12px; }
+.pitch-avis.is-court .avis-titre { font-size: 15px; margin-top: 9px; }
+.pitch-avis.is-court .avis-points { margin-top: 8px; gap: 6px; }
+.pitch-avis.is-court .avis-question { margin-top: 10px; }
+.pitch-avis.is-court .avis-question > p { font-size: 13px; }
+.pitch-avis.is-cote { margin: 0; }
+.pitch-diapo > .pitch-avis { align-self: start; }

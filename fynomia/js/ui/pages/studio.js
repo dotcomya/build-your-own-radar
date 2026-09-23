@@ -308,7 +308,7 @@ function dossierParAxe(c, navigate) {
   const aFaire = (i) => h('button', { class: `sy-todo ${i === c.next ? 'is-next' : ''} ${i.relire ? 'is-relire' : ''} ${i.optionnel ? 'is-option' : ''}`, onClick: aller(i) },
     h('span', { class: 'sy-todo-label' }, i.label),
     h('span', { class: 'sy-todo-where' },
-      i.relire ? h('b', {}, 'À relire · ') : i.optionnel ? h('b', {}, 'Facultatif · ') : null,
+      i.relire ? h('b', {}, 'À relire · ') : i.aValider ? h('b', {}, 'À valider · ') : i.optionnel ? h('b', {}, 'Facultatif · ') : null,
       destination(i).split(' › ').slice(1).join(' › ') || destination(i)),
   )
   const fait = (i) => h('button', { class: `sy-done ${i.na ? 'is-na' : ''}`, onClick: aller(i), title: i.na ? 'Ne concerne pas ton activité pour l’instant' : 'Revoir' },

@@ -168,9 +168,11 @@ const STEPS = [
     ready: () => answered('depart'),
   },
   {
-    key: 'offre', short: 'Ce que tu vends',
-    question: 'Tu vends quoi ?',
-    help: (s) => `Le nom que tu emploies devant un client. Une ${vocabulary(s).one}, un forfait, un abonnement.`,
+    key: 'offre', short: 'Ton produit phare',
+    question: 'Quel est ton produit phare ?',
+    // Beaucoup ont dix produits et bloquaient ici : lequel mettre ? Le
+    // principal — les autres s'ajoutent ensuite, un par un.
+    help: 'Celui qui te rapportera le plus. Tu en as plusieurs ? Mets le principal ici : tu ajouteras les autres ensuite, dans Offre et revenus.',
     render: (ctx) => {
       vider('offre', (sc) => (sc.activities[0]?.name && sc.activities[0].name !== 'À définir' ? sc.activities[0].name : null), (sc) => { if (sc.activities[0]) sc.activities[0].name = 'À définir' })
       return field(ctx, {
@@ -186,9 +188,12 @@ const STEPS = [
     },
   },
   {
-    key: 'prix', short: 'Le prix',
-    question: 'Comment rentre l’argent ?',
-    help: 'Une vente qui se répète ne vaut pas une vente unique.',
+    key: 'prix', short: 'Son prix',
+    question: (s) => {
+      const nom = (s?.activities?.[0]?.name || '').trim()
+      return nom && nom !== 'À définir' ? `Comment ton client paie « ${nom} » ?` : 'Comment ton client paie ton produit phare ?'
+    },
+    help: 'Choisis comment il paie, puis indique son prix moyen, hors taxes.',
     render: priceScreen,
     ready: (s) => (Number(s?.activities?.[0]?.unitPrice) || 0) > 0 || (Number(s?.activities?.[0]?.recurringPrice) || 0) > 0,
   },
@@ -209,9 +214,9 @@ const STEPS = [
     ready: () => answered('frais'),
   },
   {
-    key: 'clients', short: 'Tes premiers clients',
-    question: 'Combien de clients le premier mois ?',
-    help: "Ce que tu peux livrer et facturer dès le début, pas une ambition.",
+    key: 'clients', short: 'Tes premières ventes',
+    question: 'Combien en vends-tu le premier mois ?',
+    help: "De ton produit phare. Ce que tu peux vraiment livrer et facturer au démarrage, pas une ambition.",
     render: clientsScreen,
     ready: (s) => (Number(s?.activities?.[0]?.volumes?.startUnits) || 0) > 0,
   },
@@ -221,7 +226,7 @@ const STEPS = [
     // ce repère, « ce que ça te coûte de produire » ne veut rien dire pour
     // quelqu'un qui n'a jamais tenu de comptabilité — et la confusion la plus
     // fréquente est justement d'y ranger le loyer ou le comptable.
-    question: 'Et chaque vente, elle te coûte quoi ?',
+    question: 'Et chaque vente, elle te coûte combien ?',
     help: "Ce qui augmente quand tu vends une unité de plus. Ni le loyer, ni le comptable.",
     optional: true,
     render: costScreen,
@@ -453,7 +458,7 @@ function resumeLinks(navigate) {
  * rien d'autre. Un champ recréé à chaque touche perd le curseur — et s'il est
  * resélectionné au passage, chaque lettre efface la précédente.
  */
-function field(ctx, { type, placeholder, value, apply, suffix, repere: indice = null }) {
+function field(ctx, { type, placeholder, value, apply, suffix, libelle = null, repere: indice = null }) {
   const initial = value(ctx.scenario)
   const input = h('input', {
     class: 'setup-input',
@@ -499,6 +504,7 @@ function field(ctx, { type, placeholder, value, apply, suffix, repere: indice = 
   })
 
   return h('div', {},
+    libelle ? h('p', { class: 'setup-libelle' }, libelle) : null,
     h('div', { class: 'setup-field' },
       input,
       suffix ? h('span', { class: 'setup-suffix' }, suffix) : null,
@@ -891,6 +897,7 @@ function priceScreen(ctx) {
     if (m === 'unitaire' || m === 'mixte') {
       nodes.push(field(ctx, {
         type: 'number', placeholder: '500', suffix: m === 'mixte' ? '\u20AC à la signature' : '\u20AC',
+        libelle: m === 'mixte' ? 'Frais d’entrée, payés une fois à la signature (hors taxes)' : 'Prix moyen payé par un client (hors taxes)',
         value: (sc) => (Number(sc.activities[0].unitPrice) > 0 ? sc.activities[0].unitPrice : ''),
         apply: (sc, v) => { sc.activities[0].unitPrice = v },
         repere: repere('prix') ? `Repère dans ton métier : ${repere('prix')}.` : null,
@@ -899,6 +906,7 @@ function priceScreen(ctx) {
     if (recurring) {
       nodes.push(field(ctx, {
         type: 'number', placeholder: '49', suffix: '\u20AC par mois',
+        libelle: 'Prix de l’abonnement, par mois (hors taxes)',
         value: (sc) => (Number(sc.activities[0].recurringPrice) > 0 ? sc.activities[0].recurringPrice : ''),
         apply: (sc, v) => { sc.activities[0].recurringPrice = v },
         repere: m !== 'mixte' && repere('prix') ? `Repère dans ton métier : ${repere('prix')}.` : null,
@@ -917,7 +925,7 @@ function priceScreen(ctx) {
   ctx.onChoice = drawField
   const picker = choice(ctx, [
     {
-      label: 'À la vente', note: 'Le client paie une fois, et c’est réglé.',
+      label: 'Une fois', note: 'Il achète, il paie, c’est réglé. Un repas, un meuble, une prestation.',
       active: () => chosen() && mode() === 'unitaire',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -932,7 +940,7 @@ function priceScreen(ctx) {
       }),
     },
     {
-      label: 'Par abonnement', note: 'Il paie tous les mois tant qu’il reste.',
+      label: 'Chaque mois', note: 'Un abonnement : il paie tant qu’il reste client.',
       active: () => chosen() && mode() === 'abonnement',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -945,7 +953,7 @@ function priceScreen(ctx) {
       }),
     },
     {
-      label: 'Les deux', note: 'Un montant à la signature, puis un abonnement.',
+      label: 'Une fois, puis chaque mois', note: 'Des frais d’entrée à la signature, puis un abonnement.',
       active: () => chosen() && mode() === 'mixte',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -958,7 +966,7 @@ function priceScreen(ctx) {
       }),
     },
     {
-      label: 'À la commission', note: 'Tu prélèves un pourcentage sur ce qui passe par toi.',
+      label: 'Une commission', note: 'Tu touches un pourcentage de chaque vente que tu fais passer.',
       active: () => chosen() && mode() === 'commission',
       pick: () => setMode((sc) => {
         const a = sc.activities[0]
@@ -973,8 +981,8 @@ function priceScreen(ctx) {
       }),
     },
   ], () => {
-    const noms = { unitaire: 'la vente à l\u2019unité', abonnement: 'l\u2019abonnement', commission: 'la commission', mixte: 'le modèle mixte' }
-    return `On garde ${noms[mode()] || 'la vente à l\u2019unité'} pour l\u2019instant, le modèle courant dans ton métier.`
+    const noms = { unitaire: 'un paiement unique', abonnement: 'un abonnement', commission: 'une commission', mixte: 'des frais d\u2019entrée puis un abonnement' }
+    return `Pas encore sûr ? On part sur ${noms[mode()] || 'un paiement unique'}, le plus courant dans ton métier. Tu pourras changer.`
   })
 
   drawField()
@@ -998,13 +1006,12 @@ function commissionFields(ctx) {
   }
   return h('div', {},
     field(ctx, {
-      type: 'number', placeholder: '1200', suffix: '\u20AC par transaction',
+      type: 'number', placeholder: '1200', suffix: '\u20AC par transaction', libelle: 'Montant moyen d’une vente que tu fais passer',
       value: (sc) => (Number(sc.meta.commissionBasket) > 0 ? sc.meta.commissionBasket : ''),
       apply: (sc, v) => { sc.meta.commissionBasket = v; recompute(sc) },
     }),
-    h('p', { class: 'setup-note' }, 'Le montant moyen de ce qui passe par toi.'),
     field(ctx, {
-      type: 'number', placeholder: '10', suffix: '% pour toi',
+      type: 'number', placeholder: '10', suffix: '% pour toi', libelle: 'Ta commission sur chaque vente',
       value: (sc) => (Number(sc.meta.commissionRate) > 0 ? Math.round(sc.meta.commissionRate * 1000) / 10 : ''),
       apply: (sc, v) => { sc.meta.commissionRate = (Number(v) || 0) / 100; recompute(sc) },
     }),

@@ -102,9 +102,11 @@ export function renderProject(navigate, refresh) {
         activityLine(s, refresh),
         (() => {
           const input = h('input', { type: 'date', value: s.meta.startDate })
-          input.addEventListener('change', () => set({ startDate: input.value, startDateChosen: true }, 'Date de démarrage'))
+          input.addEventListener('change', () => set({ startDate: input.value, startDateChosen: true }, 'Date de début d’activité'))
+          const ok = !!s.meta.startDateChosen || !!s.meta.confirmes?.demarrage
           return h('div', { class: 'field', 'data-gap': 'demarrage' },
-            h('label', {}, "Début d’activité"),
+            h('label', {}, "Début d’activité",
+              ok ? null : valider('Valider cette date', () => set({ startDateChosen: true }, 'Date de début d’activité validée'))),
             h('div', { class: 'control' }, input),
             h('div', { class: 'field-hint' }, 'Décale tout le calendrier : volumes, salaires, échéances.'),
           )
@@ -112,9 +114,12 @@ export function renderProject(navigate, refresh) {
       ),
       activityOpen(s) ? h('div', { class: 'legalopen' }, sectorGrid(s, set, refresh)) : null,
 
-      h('div', { 'data-gap': 'calendrier' },
-      refine('projet-cloture', 'Affiner le calendrier',
-        h('div', { class: 'grid grid-2' },
+      // Le régime de TVA, à découvert : il était rangé dans un volet replié
+      // sous la forme juridique, si bien que « choisir ton régime de TVA »
+      // menait à la liste des sociétés. Deux réponses, un clic.
+      h('div', { class: 'grid grid-2 mt' },
+        tvaField(s, set),
+        h('div', { 'data-gap': 'calendrier' },
           selectField({
             label: 'Mois de clôture', value: String(s.meta.fiscalYearEnd ?? 12),
             options: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -123,7 +128,7 @@ export function renderProject(navigate, refresh) {
             onInput: (v) => set({ fiscalYearEnd: Number(v) }, 'Clôture'),
           }),
         ),
-      )),
+      ),
     ),
 
     h('div', { class: 'slab-pair' },
@@ -191,8 +196,10 @@ function legalLine(s, refresh) {
   const ouvert = legalOpen(s)
   const bascule = () => { ouverts.has('forme') ? ouverts.delete('forme') : ouverts.add('forme'); refresh() }
 
+  const ok = !!s.meta.legalFormChosen || !!s.meta.confirmes?.forme
   return h('div', { class: 'field', 'data-gap': 'juridique' },
-    h('label', {}, 'Cadre juridique et fiscal'),
+    h('label', {}, 'Statut juridique',
+      ok || !forme ? null : valider('Valider ce statut', () => store.update((sc) => { sc.meta.legalFormChosen = true }, { label: 'Statut juridique validé' }))),
     h('div', { class: 'control control-bare' },
       h('button', {
         class: `legalline ${forme ? '' : 'is-empty'} ${ouvert ? 'is-open' : ''}`,
@@ -234,12 +241,6 @@ function legalBlock(s, sector, set, refresh) {
           checked: !!s.meta.jeiClaimed,
           hint: "Exonération de cotisations patronales sur les postes affectés à la recherche.",
           onInput: (v) => set({ jeiClaimed: v }, 'Statut JEI'),
-        }),
-        switchField({
-          label: 'Franchise en base de TVA',
-          checked: !!s.meta.vatExempt,
-          hint: "Tu ne factures pas la TVA et ne la récupères pas. Sous les seuils de chiffre d\u2019affaires.",
-          onInput: (v) => set({ vatExempt: v }, 'Régime de TVA'),
         }),
       ),
     ),
@@ -403,8 +404,41 @@ function legalChoices(sector) {
 function applyLegal(key) {
   store.update((sc) => {
     sc.meta.legalForm = key
+    sc.meta.legalFormChosen = true
     sc.founder.majorityManager = ['SARL', 'EURL', 'SELARL'].includes(key)
     const me = sc.team?.find((x) => /fondateur|dirigeant|moi/i.test(x.role || ''))
     if (me) me.contractType = LEGAL_FORMS[key].contract
   }, { label: 'Forme juridique' })
+}
+
+/**
+ * « Valider » : une valeur posée par défaut n'est pas une réponse.
+ *
+ * La forme juridique, la date de début, le régime de TVA ont tous une valeur
+ * dès la création du plan — il en faut une pour que le moteur calcule. Le
+ * fondateur qui la lit et la trouve juste n'avait aucun moyen de le dire :
+ * la ligne restait « à faire » alors que le champ était rempli. Ce bouton le
+ * dit, d'un clic, et disparaît.
+ */
+function valider(texte, onClick) {
+  return h('button', { class: 'valider-chip', type: 'button', onClick: (e) => { e.preventDefault(); onClick() } }, '✓ ', texte)
+}
+
+/** Le régime de TVA : on la facture, ou on est en franchise. */
+function tvaField(s, set) {
+  const choisi = s.meta.vatChecked === true || !!s.meta.confirmes?.tva
+  const exo = !!s.meta.vatExempt
+  const choix = (v) => set({ vatExempt: v, vatChecked: true }, 'Régime de TVA')
+  return h('div', { class: 'field', 'data-gap': 'tva' },
+    h('label', {}, 'Régime de TVA',
+      choisi ? null : valider('Valider ce régime', () => set({ vatChecked: true }, 'Régime de TVA validé'))),
+    h('div', { class: 'control control-bare' },
+      h('div', { class: 'tva-picks', role: 'radiogroup', 'aria-label': 'Régime de TVA' },
+        h('button', { class: `tva-pick ${!exo ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(!exo), onClick: () => choix(false) },
+          h('b', {}, 'Je facture la TVA'), h('span', {}, 'Tu l’ajoutes à tes prix et tu la reverses.')),
+        h('button', { class: `tva-pick ${exo ? 'is-on' : ''}`, role: 'radio', 'aria-checked': String(exo), onClick: () => choix(true) },
+          h('b', {}, 'Franchise en base'), h('span', {}, 'Pas de TVA, sous les seuils de chiffre d’affaires.')),
+      ),
+    ),
+  )
 }

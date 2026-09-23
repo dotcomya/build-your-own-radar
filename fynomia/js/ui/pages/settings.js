@@ -41,13 +41,13 @@ export function renderSettings(navigate, refresh) {
           selectField({
             label: 'Forme juridique', value: s.meta.legalForm,
             options: ['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'Entreprise individuelle'].map((v) => ({ value: v, label: v })),
-            onInput: (v) => store.update((sc) => { sc.meta.legalForm = v }, { label: 'Forme juridique' }),
+            onInput: (v) => store.update((sc) => { sc.meta.legalForm = v; sc.meta.legalFormChosen = true }, { label: 'Forme juridique' }),
           }),
           h('div', { class: 'field' },
-            h('label', {}, "Date de démarrage"),
+            h('label', {}, "Début d’activité"),
             (() => {
               const input = h('input', { type: 'date', value: s.meta.startDate })
-              input.addEventListener('change', () => store.update((sc) => { sc.meta.startDate = input.value }, { label: 'Date de démarrage' }))
+              input.addEventListener('change', () => store.update((sc) => { sc.meta.startDate = input.value; sc.meta.startDateChosen = true }, { label: 'Date de début d’activité' }))
               return h('div', { class: 'control' }, input)
             })(),
             h('div', { class: 'field-hint' }, "Premier mois du prévisionnel."),
@@ -67,7 +67,7 @@ export function renderSettings(navigate, refresh) {
             onInput: (v) => store.update((sc) => { sc.meta.jeiClaimed = v }, { label: 'Statut JEI' }),
           }),
         ),
-        h('div', { class: 'grid grid-2 mt' },
+        h('div', { class: 'grid grid-2 mt', 'data-gap': 'stock' },
           numberField({
             label: 'Stock moyen', field: 'stockDays', value: s.assumptions?.stockDays, suffix: 'jours',
             hint: "Nombre de jours d'achats immobilisés en stock. Augmente le besoin en fonds de roulement.",

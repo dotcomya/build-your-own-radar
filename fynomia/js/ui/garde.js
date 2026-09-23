@@ -37,7 +37,7 @@ export function gardeBloc(liste, navigate, { classe = '', ouvert = false, court 
   const alertes = liste.filter((x) => x.niveau === 'alerte').length
   const d = h('details', {
     class: `garde ${alertes ? 'is-alerte' : 'is-attention'} ${court ? 'is-court' : ''} ${classe}`,
-    open: ouvert || gardeOuverts.has(classe) || null, 'data-garde': String(liste.length),
+    open: ouvert || ouvertIci(classe) || null, 'data-garde': String(liste.length), 'data-cle': classe,
   },
     h('summary', { class: 'garde-pill' },
       h('span', { class: 'garde-sign', 'aria-hidden': 'true' }),
@@ -71,9 +71,38 @@ export function gardeBloc(liste, navigate, { classe = '', ouvert = false, court 
   d.addEventListener('toggle', () => { d.open ? gardeOuverts.add(classe) : gardeOuverts.delete(classe) })
   return d
 }
-// Un bloc déplié le reste d'un rendu à l'autre : corriger un chiffre
-// redessine la page, et le bloc ne doit pas se refermer sous les yeux.
+
+/**
+ * Un bloc déplié le reste d'un rendu à l'autre, sur la même page : corriger
+ * un chiffre redessine la page, et le bloc ne doit pas se refermer sous les
+ * yeux. Mais il se referme dès qu'on change de page — il ne doit pas suivre
+ * le fondateur partout — et dès qu'on clique ailleurs.
+ */
 const gardeOuverts = new Set()
+let pageDesOuverts = null
+const pageCourante = () => String(typeof location !== 'undefined' ? location.hash : '').split('?')[0]
+function ouvertIci(classe) {
+  const page = pageCourante()
+  if (page !== pageDesOuverts) { gardeOuverts.clear(); pageDesOuverts = page }
+  return gardeOuverts.has(classe)
+}
+if (typeof window !== 'undefined') {
+  // Une autre page, et plus rien d'ouvert — même si elle n'a pas d'alerte.
+  window.addEventListener('hashchange', () => { gardeOuverts.clear(); pageDesOuverts = pageCourante() })
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('pointerdown', (e) => {
+    for (const d of document.querySelectorAll('details.garde[open]')) {
+      // L'état retenu s'efface tout de suite : un redessin déclenché par ce
+      // même clic ne doit pas rouvrir le bloc.
+      if (!d.contains(e.target)) { d.open = false; gardeOuverts.delete(d.dataset.cle || '') }
+    }
+  }, true)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return
+    for (const d of document.querySelectorAll('details.garde[open]')) { d.open = false; gardeOuverts.delete(d.dataset.cle || '') }
+  })
+}
 
 /** Le bloc d'une page de saisie : seulement ce qui s'y corrige. */
 export function gardePage(route, navigate, { court = false } = {}) {

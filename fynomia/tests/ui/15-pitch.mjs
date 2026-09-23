@@ -59,9 +59,18 @@ export default async function (t, { rapide } = {}) {
   // La même tête que la synthèse essai, pour comparer les deux onglets.
   t.verifie(await p.locator('.pitch-dossier .sy-hero').count() === 1, 'l’avancement du dossier est en tête, comme dans l’essai')
   t.verifie(await p.locator('.pitch-dossier .sy-dossier').count() === 1, 'ce qui est fait et ce qui reste, page par page')
-  // L'avis d'un consultant pour chaque partie.
-  const avis = await p.$$eval('.pitch-avis p', (e) => e.map((x) => x.textContent.trim()))
-  t.verifie(avis.length === 8 && avis.every((x) => x.length > 40), 'l’avis de Fynomia pour chacune des huit parties', avis.length)
+  // L'avis d'un associé pour chaque partie : un verdict, des chiffres, la
+  // question qu'on te posera — et, s'il y a lieu, le geste suivant.
+  const avis = await p.$$eval('.pitch-avis', (e) => e.map((x) => ({
+    ton: ['is-good', 'is-watch', 'is-bad'].some((c) => x.classList.contains(c)),
+    titre: (x.querySelector('.avis-titre')?.textContent || '').trim(),
+    points: x.querySelectorAll('.avis-points li').length,
+    question: (x.querySelector('.avis-question p')?.textContent || '').trim(),
+  })))
+  t.verifie(avis.length === 8, 'l’avis de Fynomia pour chacune des huit parties', avis.length)
+  t.verifie(avis.every((a) => a.ton && a.titre.length > 10 && a.points >= 1 && a.question.length > 30), 'chaque avis : un ton, un verdict, des chiffres, la question qu’on te posera', avis.map((a) => `${a.titre.slice(0, 30)} · ${a.points}`))
+  t.verifie(/investisseur/i.test(await p.locator('.pitch-hero .rvl-kicker').innerText()), 'un logiciel parle à un investisseur')
+  t.verifie(await p.locator('.pitch-hero .rvl-bar').count() === 5 && await p.locator('.pitch-hero .rvl-line').count() === 1, 'la couverture trace cinq ans de chiffre d’affaires et la trésorerie')
   // Ce qui reste à faire : les colonnes alignées, et un bouton pour voir le reste.
   const dossier = await p.evaluate(() => {
     const cols = [...document.querySelectorAll('.pitch-dossier .sy-dossier-col')]

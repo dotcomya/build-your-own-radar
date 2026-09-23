@@ -84,11 +84,11 @@ const ITEMS = [
   { key: 'equipe', tier: 'credibilite', label: 'Les postes à recruter', why: 'Vendre deux fois plus sans embaucher personne ne paraît pas crédible.',
     done: (s) => (s.team || []).length > 1,
     go: { route: 'equipe', view: 'postes', anchor: 'equipe' } },
-  { key: 'forme', tier: 'credibilite', label: 'La forme juridique', why: 'Elle décide de ce que coûte ta propre rémunération.',
-    done: (s) => !!s.meta?.legalFormChosen || !!s.meta?.legalForm,
+  { key: 'forme', tier: 'credibilite', defaut: true, label: 'La forme juridique', why: 'Ton statut décide de tes cotisations, donc de ce que te coûte ton propre salaire.',
+    done: (s) => !!s.meta?.legalFormChosen || !!s.meta?.confirmes?.forme,
     go: { route: 'projet', anchor: 'juridique' } },
-  { key: 'demarrage', tier: 'credibilite', label: 'Ta date de démarrage', why: 'Tout le calendrier en dépend : premières ventes, salaires, remboursements.',
-    done: (s) => !!s.meta?.startDateChosen || (!!s.meta?.startDate && s.meta.startDate !== '2026-01-01'),
+  { key: 'demarrage', tier: 'credibilite', defaut: true, label: 'Ta date de démarrage', why: 'Tout le calendrier en part : premières ventes, salaires, échéances.',
+    done: (s) => !!s.meta?.startDateChosen || !!s.meta?.confirmes?.demarrage || (!!s.meta?.startDate && s.meta.startDate !== '2026-01-01'),
     go: { route: 'projet', anchor: 'demarrage' } },
   { key: 'emprunt', tier: 'credibilite', label: 'Un emprunt ou une subvention', why: 'La plupart des créations en ont un : c’est ce qui complète ton apport.',
     done: (s) => has(s.financing?.loans) || has(s.financing?.grants),
@@ -103,9 +103,9 @@ const ITEMS = [
   { key: 'capacite', tier: 'credibilite', label: 'Ton plafond de capacité', why: 'Personne ne sert mille couverts dans vingt places.',
     done: (s) => any(s.activities, (a) => n(a.volumes?.cap) > 0 || a.volumes?.mode === 'manual'),
     go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
-  { key: 'croissance', tier: 'credibilite', label: 'Le rythme de croissance',
+  { key: 'croissance', tier: 'credibilite', defaut: true, label: 'Le rythme de croissance',
     why: '8 % de plus par mois, c’est plus du double chaque année : il faut pouvoir le justifier.',
-    done: (s) => !!s.meta?.croissanceChoisie || any(s.activities, (a) => n(a.volumes?.monthlyGrowth) !== 0.08 || a.volumes?.mode === 'manual'),
+    done: (s) => !!s.meta?.croissanceChoisie || !!s.meta?.confirmes?.croissance || any(s.activities, (a) => n(a.volumes?.monthlyGrowth) !== 0.08 || a.volumes?.mode === 'manual'),
     go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
 
   // ── Finition ─────────────────────────────────────────────────────────────
@@ -125,11 +125,11 @@ const ITEMS = [
   { key: 'stock', tier: 'finition', label: 'Ton stock', why: 'Le stock, c’est de l’argent bloqué sur tes étagères avant d’être vendu.',
     done: (s) => n(s.assumptions?.stockDays) > 0 || !needsStock(s),
     na: (s) => !needsStock(s) && !(n(s.assumptions?.stockDays) > 0),
-    go: { route: 'achats', view: 'invest', anchor: 'capex' } },
-  { key: 'tva', tier: 'finition', label: 'Ton régime de TVA',
-    why: 'Facturer ou non la TVA change tes prix et ta trésorerie.',
-    done: (s) => s.meta?.vatChecked === true || s.meta?.vatExempt === true,
-    go: { route: 'projet', anchor: 'juridique' } },
+    go: { route: 'reglages', anchor: 'stock' } },
+  { key: 'tva', tier: 'finition', defaut: true, label: 'Ton régime de TVA',
+    why: 'Avec ou sans TVA, tes prix affichés et ta trésorerie ne sont pas les mêmes.',
+    done: (s) => s.meta?.vatChecked === true || s.meta?.vatExempt === true || !!s.meta?.confirmes?.tva,
+    go: { route: 'projet', anchor: 'tva' } },
   { key: 'delai', tier: 'finition', label: 'Les délais de paiement', why: 'Si tes clients paient à 30 ou 60 jours, c’est de l’argent que tu avances en attendant.',
     done: (s) => any(s.activities, (a) => n(a.paymentLag) > 0 || n(a.deposit) > 0),
     go: { route: 'offre', view: 'offres', sec: 'affiner', openAll: true, anchor: 'tune-paiement' } },
@@ -145,7 +145,7 @@ const ITEMS = [
   { key: 'secondeoffre', tier: 'finition', optionnel: true, label: 'Une deuxième source de revenu',
     why: 'Si tu as une autre offre en tête, ajoute-la : elle protège le plan d’un seul client ou d’un seul produit.',
     done: (s) => (s.activities || []).filter((a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0).length > 1,
-    go: { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'abonnement' } },
+    go: { route: 'offre', view: 'offres', anchor: 'ajout-offre' } },
   { key: 'prixAnnee', tier: 'finition', optionnel: true, label: 'La hausse de tes prix', why: 'Si tu comptes augmenter tes prix d’une année à l’autre, dis-le ici. Sinon, rien à faire.',
     done: (s) => any(s.activities, (a) => (a.priceByYear || []).some((v) => v !== '' && v !== null && v !== undefined)
       || (a.recurringPriceByYear || []).some((v) => v !== '' && v !== null && v !== undefined)),
@@ -163,6 +163,49 @@ const ITEMS = [
     done: (s) => n(s.founder?.dividendPayout) > 0,
     go: { route: 'resultats', view: 'revenu', anchor: 'dividendes' } },
 ]
+
+/**
+ * Ce qu'une ligne dit, selon où elle en est.
+ *
+ * Le guide disait « Ta date de démarrage » : un nom, pas un geste. Le
+ * fondateur ne savait pas s'il fallait la changer, la vérifier ou la
+ * découvrir. Chaque ligne a donc trois écritures :
+ *
+ *   a — ce qu'il y a à faire, à l'infinitif, sans détour ;
+ *   v — ce qu'il y a à relire, pour une réponse donnée dans le parcours ;
+ *   n — ce qui est fait, en un nom, dans la liste des lignes posées.
+ */
+const TEXTES = {
+  metier: { a: 'Choisir ton métier', n: 'Ton métier' },
+  offre: { a: 'Nommer ton produit phare', n: 'Ton produit phare' },
+  prix: { a: 'Fixer ton prix de vente', v: 'Valider ton prix de vente', n: 'Ton prix de vente' },
+  volumes: { a: 'Estimer tes ventes du premier mois', v: 'Valider tes volumes de vente', n: 'Tes volumes de vente' },
+  cout: { a: 'Chiffrer ce que te coûte une vente', v: 'Valider ton coût de revient', n: 'Ton coût de revient' },
+  charges: { a: 'Lister tes charges fixes', v: 'Valider tes charges fixes', n: 'Tes charges fixes' },
+  salaire: { a: 'Fixer ta rémunération', v: 'Valider ta rémunération', n: 'Ta rémunération' },
+  apport: { a: 'Indiquer ton apport', v: 'Valider ton apport', n: 'Ton apport' },
+  equipe: { a: 'Prévoir tes recrutements', n: 'Tes recrutements' },
+  forme: { a: 'Valider ton statut juridique', n: 'Ton statut juridique' },
+  demarrage: { a: 'Valider la date de début d’activité', n: 'Ta date de début d’activité' },
+  emprunt: { a: 'Ajouter un emprunt ou une subvention', n: 'Un emprunt ou une subvention' },
+  acquisition: { a: 'Chiffrer ce que coûte un nouveau client', n: 'Le coût d’un nouveau client' },
+  churn: { a: 'Estimer les clients qui résilient', n: 'Les résiliations' },
+  capacite: { a: 'Fixer ta capacité maximale', n: 'Ta capacité maximale' },
+  croissance: { a: 'Valider ton rythme de croissance', n: 'Ton rythme de croissance' },
+  pitch: { a: 'Décrire ton activité en une phrase', n: 'La description de ton activité' },
+  client: { a: 'Préciser qui sont tes clients', n: 'Tes clients' },
+  capex: { a: 'Lister tes investissements de départ', n: 'Tes investissements' },
+  avantages: { a: 'Valider les avantages salariés', n: 'Les avantages salariés' },
+  stock: { a: 'Estimer ton stock', n: 'Ton stock' },
+  tva: { a: 'Choisir ton régime de TVA', n: 'Ton régime de TVA' },
+  delai: { a: 'Indiquer quand tes clients te paient', n: 'Les délais de paiement clients' },
+  saison: { a: 'Ajouter tes mois creux et tes mois forts', n: 'Ta saisonnalité' },
+  secondeoffre: { a: 'Ajouter un deuxième produit', n: 'Un deuxième produit' },
+  prixAnnee: { a: 'Prévoir une hausse de tes prix', n: 'La hausse de tes prix' },
+  coutannee: { a: 'Prévoir une hausse de tes coûts', n: 'La hausse de tes coûts' },
+  paiefournisseur: { a: 'Indiquer quand tu paies tes fournisseurs', n: 'Tes délais fournisseurs' },
+  dividendes: { a: 'Prévoir tes dividendes', n: 'Tes dividendes' },
+}
 
 /**
  * Ce que le parcours a posé, à relire.
@@ -237,10 +280,15 @@ export function checklist(scenario) {
     let na = false
     try { na = ok && !!it.na?.(s) } catch { na = false }
     const relire = ok && aRelire.has(it.key)
+    const t = TEXTES[it.key] || {}
+    // Une valeur posée par défaut (le statut, la date, la TVA) se valide en
+    // y allant : l'avoir sous les yeux, là où elle se change, suffit.
+    const confirme = relire || (!ok && it.defaut)
     return {
-      ...it, done: ok, na, relire,
+      ...it, done: ok, na, relire, aValider: !ok && !!it.defaut,
+      label: ok && !relire ? (t.n || it.label) : relire ? (t.v || t.a || it.label) : (t.a || it.label),
       why: relire && it.revoir ? it.revoir : it.why,
-      go: relire ? { ...it.go, confirme: it.key } : it.go,
+      go: confirme ? { ...it.go, confirme: it.key } : it.go,
       weight: weightOf(it.tier), rank, lift: liftRank(stage, it.key),
     }
   }).sort((a, b) => (a.lift - b.lift) || (a.rank - b.rank))
@@ -306,22 +354,24 @@ export const AXES = [
   { key: 'financement', label: 'Financement', court: 'Financement', dit: 'D’où vient l’argent du départ' },
 ]
 
-const PAGE = { projet: 'Mon projet', offre: 'Offre et revenus', achats: 'Achats et coûts', equipe: 'Équipe', financement: 'Financement', resultats: 'États financiers' }
+const PAGE = { reglages: 'Réglages', projet: 'Mon projet', offre: 'Offre et revenus', achats: 'Achats et coûts', equipe: 'Équipe', financement: 'Financement', resultats: 'États financiers' }
 const VUE = {
   offres: null, acquisition: 'Acquisition', charges: 'Charges', invest: 'Investissements',
   postes: 'Postes', avantages: 'Avantages', sources: 'Sources', revenu: 'Ce que tu touches',
 }
 const SOUS = { offre: 'Paramètres de base', volumes: 'Volumes', affiner: 'Hypothèses avancées' }
 const REPERE = {
-  secteur: 'Type d’activité', juridique: 'Cadre juridique et fiscal', pitch: 'Décris ce que tu vends', client: 'Le client',
-  demarrage: 'Début d’activité', prix: 'Prix', abonnement: 'Prix', 'tune-paiement': 'Délais de paiement et acomptes',
+  secteur: 'Type d’activité', juridique: 'Statut juridique', stock: 'Stock moyen', 'ajout-offre': 'Ajouter une offre', pitch: 'Décris ce que tu vends', client: 'Le client',
+  demarrage: 'Début d’activité', prix: 'Prix', abonnement: 'Prix', 'tune-paiement': 'Délais de paiement et acomptes', tva: 'Régime de TVA',
   'tune-evolution': 'Hausse des prix', 'tune-contrat': 'Durée d’engagement et résiliations', dividendes: 'Dividendes',
 }
 
 /** L'axe d'une ligne : la page où elle se remplit (la rémunération rejoint l'équipe). */
 export function axeDe(item) {
   const r = item?.go?.route
-  return r === 'resultats' ? 'equipe' : (AXES.some((a) => a.key === r) ? r : 'projet')
+  // La rémunération rejoint l'équipe ; le stock, réglé dans les réglages,
+  // rejoint les achats.
+  return r === 'resultats' ? 'equipe' : r === 'reglages' ? 'achats' : (AXES.some((a) => a.key === r) ? r : 'projet')
 }
 
 /** Où une ligne emmène, en clair : « Offre et revenus › Hypothèses avancées › Délais de paiement et acomptes ». */
