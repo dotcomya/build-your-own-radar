@@ -33,6 +33,7 @@ mise en ligne.
 | `10-pilotage` | une saisie (la description) fait avancer le compteur et coche le pilotage sans changer de page ; Tab garde le curseur |
 | `11-etapes` | chacune des trente lignes du dossier, cliquée, mène à sa page, trouve son champ et l'entoure (métier neuf et exemple) |
 | `12-garde-fous` | un chiffre hors de proportion se dit sous le champ, en tête de page et des synthèses ; le verdict passe à « À vérifier » ; aucun garde-fou sur un plan neuf |
+| `13-ajouts` | charge, investissement, poste, offre : l'ajout fait jaillir ses icônes, la ligne créée arrive éclairée ; la carte ouverte est soulevée, sans halo coloré ni animation en boucle |
 
 ## Options
 

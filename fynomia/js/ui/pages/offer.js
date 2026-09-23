@@ -35,6 +35,7 @@ import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
 import { claim, goToGap } from '../spotlight.js'
 import store from '../../state/store.js'
+import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
 import { gardePrix, gardeAbonnement, gardeCroissance } from '../../engine/plausible.js'
 import { tradeSuggest } from '../trade-suggest.js'
@@ -57,12 +58,15 @@ export function renderOffer(navigate, refresh) {
 
   // Ajouter une offre n'est pas une fonctionnalité avancée : vendre deux choses
   // différentes est le cas courant, pas l'exception. Aucun niveau ne le bloque.
-  const addActivity = () => {
+  const addActivity = (e) => {
     if (s.activities.length >= 8) { toast('Huit offres au maximum.', 'err'); return }
+    let depuis = null
+    try { depuis = e?.currentTarget?.getBoundingClientRect() || null } catch { depuis = null }
     const a = newActivity({ name: `Offre ${s.activities.length + 1}` })
     store.update((sc) => sc.activities.push(a), { label: 'Ajout d\'une offre' })
     focusOffer(a.id)
     refresh()
+    if (depuis) celebrate(depuis, { kind: 'offers', label: a.name, cible: `[data-row="${a.id}"]` })
   }
 
   const duplicate = (src) => {
@@ -294,7 +298,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
       'Commission', opts)
   }
 
-  return h('div', { class: `item ${isOpen ? 'open' : ''}` },
+  return h('div', { class: `item ${isOpen ? 'open' : ''}`, 'data-row': a.id },
     // Une seule offre ouverte à la fois.
     //
     // Plusieurs cartes dépliées s'allumaient ensemble, et la couleur ne

@@ -6131,45 +6131,33 @@ details[open] > .refine-head .refine-sign {
 }
 
 /* ─── La ligne ouverte se voit : on sait où l'on travaille ─── */
-/* Celle qu'on travaille se détache par la lumière, pas par la peinture.
-   Le fond jaune qui la teintait salissait les champs et se lisait comme une
-   alerte. Elle garde son blanc, et trois ombres colorées tournent lentement
-   autour d'elle — le citron de la maison d'un côté, le bleu des renvois de
-   l'autre, une ombre d'encre dessous pour la profondeur. Les voisines restent
-   à plat : le regard sait où il est sans qu'aucune surface ne change de
-   couleur. */
+/* Elle se soulève. Le fond jaune salissait les champs et se lisait comme une
+   alerte ; les ombres colorées qui tournaient autour faisaient halo, pas
+   relief. La carte qu'on travaille garde son blanc, prend un trait d'encre
+   net et monte de quelques pixels au-dessus des autres, portée par trois
+   ombres neutres : une serrée qui dessine le bord, une moyenne qui la
+   décolle, une large et douce qui la pose loin du fond. Le mouvement se joue
+   une fois, à l'ouverture — rien ne bouge pendant qu'on saisit. */
 .item.open {
   position: relative; z-index: 1;
   border-color: var(--ink); border-top-color: var(--ink);
-  animation: card-aura 4.2s ease-in-out infinite;
+  transform: translateY(-4px);
+  box-shadow:
+    0 1px 2px rgba(14, 15, 12, .12),
+    0 14px 28px -12px rgba(14, 15, 12, .30),
+    0 44px 80px -34px rgba(14, 15, 12, .50);
+  animation: card-lift .42s cubic-bezier(.2, .8, .25, 1) both;
 }
 .item.open > .item-head:hover { background: var(--surface-2); }
 .item.open .foldsign { border-color: var(--ink); color: var(--ink); }
-@keyframes card-aura {
-  0%, 100% {
-    box-shadow:
-      -12px -8px 28px -12px rgba(214, 240, 52, .95),
-      14px 10px 32px -14px rgba(27, 59, 255, .38),
-      0 20px 42px -24px rgba(14, 15, 12, .5);
-  }
-  33% {
-    box-shadow:
-      14px -10px 30px -12px rgba(214, 240, 52, .95),
-      -12px 12px 34px -14px rgba(27, 59, 255, .38),
-      0 24px 46px -24px rgba(14, 15, 12, .55);
-  }
-  66% {
-    box-shadow:
-      10px 12px 30px -12px rgba(214, 240, 52, .95),
-      -14px -10px 32px -14px rgba(27, 59, 255, .38),
-      0 22px 44px -24px rgba(14, 15, 12, .5);
+@keyframes card-lift {
+  from {
+    transform: none;
+    box-shadow: 0 0 0 rgba(14, 15, 12, 0), 0 0 0 rgba(14, 15, 12, 0), 0 0 0 rgba(14, 15, 12, 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .item.open {
-    animation: none;
-    box-shadow: -12px -8px 28px -12px rgba(214, 240, 52, .95), 14px 10px 32px -14px rgba(27, 59, 255, .38), 0 20px 42px -24px rgba(14, 15, 12, .5);
-  }
+  .item.open { animation: none; }
 }
 
 /* ─── Sur quelles offres porte une charge indexée ─── */

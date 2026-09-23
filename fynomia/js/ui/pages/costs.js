@@ -10,7 +10,7 @@ import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
-import { pop } from '../spotlight.js'
+import { celebrate } from '../burst.js'
 import store from '../../state/store.js'
 import { gardePage } from '../garde.js'
 
@@ -19,22 +19,41 @@ export function renderCosts(navigate, refresh) {
   const r = store.result
   const level = store.level
 
-  const addFromTemplate = (tpl) => {
-    store.update((sc) => sc.opex.push(newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 })), { label: 'Ajout de charge' })
+  // Chaque ajout se voit comme une suggestion acceptée : des icônes
+  // jaillissent du bouton, une pastille cochée rejoint la ligne créée, et la
+  // ligne s'éclaire en arrivant. Le bouton est mesuré avant le rendu qui va
+  // le remplacer.
+  const ajout = (e, id, label, kind = 'opex') => {
+    let depuis = null
+    try { depuis = e?.currentTarget?.getBoundingClientRect() || null } catch { depuis = null }
     refresh()
+    if (depuis) celebrate(depuis, { kind, label, cible: id ? `[data-row="${id}"]` : null })
   }
-  const addCustom = () => {
-    store.update((sc) => sc.opex.push(newOpex()), { label: 'Ajout de charge' })
-    refresh()
+  const addFromTemplate = (tpl, e) => {
+    const o = newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 })
+    store.update((sc) => sc.opex.push(o), { label: 'Ajout de charge' })
+    ajout(e, o.id, tpl.label)
   }
-  const addAllSuggested = () => {
+  const addCustom = (e) => {
+    // Une charge à soi n'a encore ni nom ni montant juste : elle s'ouvre
+    // directement, prête à être renseignée.
+    const o = newOpex()
+    ;(opexRow.open || (opexRow.open = new Set())).add(o.id)
+    store.update((sc) => sc.opex.push(o), { label: 'Ajout de charge' })
+    ajout(e, o.id, o.label)
+  }
+  const addAllSuggested = (e) => {
+    let premier = null, n = 0
     store.update((sc) => {
       for (const tpl of OPEX_TEMPLATES) {
         if (sc.opex.some((o) => o.label === tpl.label)) continue
-        sc.opex.push(newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 }))
+        const o = newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 })
+        if (!premier) premier = o.id
+        n++
+        sc.opex.push(o)
       }
     }, { label: 'Charges courantes' })
-    refresh()
+    ajout(e, premier, `${n} charge${n > 1 ? 's' : ''} courante${n > 1 ? 's' : ''}`)
   }
 
   const missing = OPEX_TEMPLATES.filter((t) => !s.opex.some((o) => o.label === t.label))
@@ -49,7 +68,11 @@ export function renderCosts(navigate, refresh) {
   const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
   renderCosts.view = view
 
-  const addCapex = () => { store.update((sc) => sc.capex.push(newCapex({ enabled: true })), { label: "Ajout d'investissement" }); refresh() }
+  const addCapex = (e) => {
+    const c = newCapex({ enabled: true })
+    store.update((sc) => sc.capex.push(c), { label: "Ajout d'investissement" })
+    ajout(e, c.id, c.label || 'Nouvel investissement', 'capex')
+  }
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   return h('div', { class: 'content' },
@@ -76,7 +99,7 @@ export function renderCosts(navigate, refresh) {
       tradeSuggest('opex', navigate, refresh)
         || (missing.length > 0 ? h('div', { class: 'suggest', 'data-gap': 'oublis' },
             h('span', { class: 'suggest-tag' }, 'Souvent oublié'),
-            ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: (e) => { pop(e.currentTarget); addFromTemplate(t) } }, `＋ ${t.label}`)),
+            ...missing.slice(0, 6).map((t) => h('button', { class: 'suggest-chip', onClick: (e) => addFromTemplate(t, e) }, `＋ ${t.label}`)),
           ) : null),
 
       s.opex.length === 0

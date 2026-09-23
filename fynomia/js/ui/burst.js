@@ -31,16 +31,19 @@ const ICONES = {
   croix: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z" fill="currentColor"/></svg>',
   piece: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="currentColor"/><path d="M15.4 8.6a4.6 4.6 0 1 0 0 6.8M7 10.8h6M7 13.4h6" fill="none" stroke="#0E0F0C" stroke-width="1.8" stroke-linecap="round"/></svg>',
   anneau: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3.2"/></svg>',
+  personne: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="4.5" fill="currentColor"/><path d="M3.5 21.5c.8-4.6 4.2-7.5 8.5-7.5s7.7 2.9 8.5 7.5z" fill="currentColor"/></svg>',
   outil: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z" fill="currentColor"/><path d="M3 8l9 5 9-5M12 13v8" fill="none" stroke="#0E0F0C" stroke-width="1.5" stroke-linejoin="round"/></svg>',
 }
 const COCHE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
 /* Ce qui jaillit dépend de ce qu'on ajoute : des pièces pour une charge, du
-   matériel pour un investissement, des étincelles pour une offre. */
+   matériel pour un investissement, des étincelles pour une offre, des
+   silhouettes pour un poste. */
 const MELANGE = {
   opex: ['piece', 'etincelle', 'croix', 'anneau', 'piece', 'etincelle'],
   capex: ['outil', 'etincelle', 'croix', 'anneau', 'outil', 'etincelle'],
   offers: ['etincelle', 'piece', 'croix', 'anneau', 'etincelle', 'etincelle'],
+  team: ['personne', 'etincelle', 'croix', 'anneau', 'personne', 'etincelle'],
 }
 const TEINTES = ['is-lime', 'is-ink', 'is-blue', 'is-lime', 'is-dim']
 

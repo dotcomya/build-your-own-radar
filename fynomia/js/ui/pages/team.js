@@ -17,6 +17,7 @@ import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
+import { celebrate } from '../burst.js'
 import { gardePage } from '../garde.js'
 import { gardeSalaire } from '../../engine/plausible.js'
 
@@ -33,12 +34,15 @@ export function renderTeam(navigate, refresh) {
   const level = store.level
   const jeiActive = r?.jei?.some((j) => j.eligible)
 
-  const add = () => {
+  const add = (e) => {
+    let depuis = null
+    try { depuis = e?.currentTarget?.getBoundingClientRect() || null } catch { depuis = null }
     const m = newTeamMember({ role: s.team.length === 0 ? 'Fondateur' : 'Nouveau poste' })
     store.update((sc) => sc.team.push(m), { label: "Ajout d'un poste" })
     renderTeam.openId = m.id
     renderTeam.view = 'postes'
     refresh()
+    if (depuis) celebrate(depuis, { kind: 'team', label: m.role, cible: `[data-row="${m.id}"]` })
   }
 
   const perks = Object.values(store.scenario.hr?.benefits || {}).filter((v) => Number(v) > 0).length
@@ -171,7 +175,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
   const sec = sections.some((x) => x && x.key === memberCard.sec) ? memberCard.sec : 'poste'
 
   const on = m.enabled !== false
-  return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}` },
+  return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}`, 'data-row': m.id },
     h('div', { class: 'item-head', onClick: () => { renderTeam.openId = isOpen ? null : m.id; refresh() } },
       personGlyph(m, count),
       enableToggle(on, (v) => {
