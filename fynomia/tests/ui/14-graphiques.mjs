@@ -123,13 +123,33 @@ export default async function (t, { rapide } = {}) {
   t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, 'cliquer une barre choisit son exercice')
 
   // L'exercice choisi suit sur les pages de saisie, qui ont leurs chiffres.
+  // Trois formes à l'essai : Offre en colonne à droite, Achats en bandeau
+  // d'une ligne, Équipe et Financement en cartes compactes.
   for (const route of ['offre', 'achats', 'equipe', 'financement']) {
     await t.aller(p, route, 900)
-    const n = await p.locator('.sx-card').count()
-    t.verifie(n >= 3, `${route} : la page s’ouvre sur ses chiffres`, String(n))
+    const n = route === 'achats' ? await p.locator('.sx-ribbon-item').count() : await p.locator('.sx-card').count()
+    t.verifie(n >= 3, `${route} : la page montre ses chiffres`, String(n))
     t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, `${route} : l’exercice choisi a suivi`)
     const parts = await p.$$eval('.sx-no > b', (e) => e.map((x) => x.textContent))
-    t.verifie(parts[0] === '01' && parts[1] === '02', `${route} : chiffres en 01, zone de travail en 02`, parts)
+    if (route === 'offre') {
+      t.verifie(parts[0] === '01', 'offre : la zone de travail en 01, les chiffres à côté', parts)
+      const cote = await p.evaluate(() => {
+        const a = document.querySelector('.saisie-aside'), m = document.querySelector('.saisie-main')
+        return a && m ? a.getBoundingClientRect().left > m.getBoundingClientRect().right - 1 && getComputedStyle(a).position === 'sticky' : false
+      })
+      t.verifie(cote, 'offre : les chiffres sont dans une colonne à droite qui reste en vue')
+      const champ = await p.evaluate(() => Math.min(...[...document.querySelectorAll('.saisie-main .item.open .control input')].map((i) => i.getBoundingClientRect().width)))
+      t.verifie(!Number.isFinite(champ) || champ >= 60, 'offre : aucun champ écrasé par la colonne', String(Math.round(champ)))
+    } else {
+      t.verifie(parts[0] === '01' && parts[1] === '02', `${route} : chiffres en 01, zone de travail en 02`, parts)
+    }
+    if (route === 'achats') {
+      const haut = await p.locator('.sx.is-bandeau').evaluate((x) => x.getBoundingClientRect().height)
+      t.verifie(haut < 150, 'achats : les chiffres tiennent sur une ligne tant qu’on ne les déplie pas', `${Math.round(haut)} px`)
+      await p.locator('.sx-ribbon-more').click()
+      await p.waitForTimeout(600)
+      t.verifie(await p.locator('.sx.is-bandeau .sx-card').count() >= 3, 'achats : « Détail » déplie les cartes')
+    }
   }
 
   // Cliquer une année d'une carte descend dans ses douze mois ; « ← 5 ans »

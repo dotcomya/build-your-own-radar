@@ -148,24 +148,41 @@ export function renderStudio(navigate, refresh, goView) {
   const choisir = (k) => { etat.annee = k; refresh() }
   const pilotage = () => (goView ? goView('pilotage') : navigate('#/tableau-de-bord'))
 
-  let c = null
-  try { c = checklist(s) } catch { c = null }
-  const v = verdict(r, s)
   const { actes, sansCA } = synthese(s, r)
-  const complet = !c || !c.open || !c.next
 
   racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
     // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
     // quelque chose. Un dossier complet ouvre directement sur son verdict.
-    guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), 'hero'),
-    complet ? null : guet(verdictLigne(v), 'verdict'),
-    complet ? null : guet(dossierParAxe(c, navigate), 'dossier'),
+    ...teteDossier(navigate, pilotage),
     ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA, navigate)),
     pied(navigate, pilotage),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
     analyse(r, s, y, choisir, navigate, refresh),
   )
   return racine
+}
+
+/**
+ * La tête du dossier : l'avancement (ou le verdict, quand tout est posé), la
+ * ligne de verdict, et ce qui est fait et reste à faire, page par page.
+ *
+ * Le pitch investisseur l'affiche à l'identique : les deux onglets se
+ * comparent d'un coup d'œil, et avancer le dossier fait avancer les deux.
+ * `prefixe` sépare leurs animations — on ne veut pas qu'un bloc déjà vu dans
+ * l'essai arrive figé dans le pitch.
+ */
+export function teteDossier(navigate, pilotage, prefixe = '') {
+  const s = store.scenario
+  const r = store.result
+  let c = null
+  try { c = checklist(s) } catch { c = null }
+  const v = verdict(r, s)
+  const complet = !c || !c.open || !c.next
+  return [
+    guet(complet ? heroVerdict(v, r, navigate) : heroAvancement(c, navigate, pilotage), `${prefixe}hero`),
+    complet ? null : guet(verdictLigne(v), `${prefixe}verdict`),
+    complet ? null : guet(dossierParAxe(c, navigate), `${prefixe}dossier`),
+  ]
 }
 
 /* ─────────────────────────── 1. Où en est le dossier ─────────────────────── */
@@ -431,12 +448,12 @@ function acte(a, i, total, r, s, sansCA, navigate) {
     h('div', { class: 'sy-act-no' },
       h('b', {}, String(i + 1).padStart(2, '0')),
       h('span', {}, nom),
+      // Le titre dit ce que le plan donne tel qu'il est saisi ; un chiffre qui
+      // étonne se signale sur la ligne du numéro, replié, et s'ouvre par-dessus.
+      a.garde ? h('div', { class: 'sx-right-row' }, gardeBloc(a.garde, navigate, { classe: 'sy-garde' })) : null,
       h('em', {}, `${i + 1} / ${total}`),
     ),
     h('h2', { class: 'sy-act-title' }, titre(a.titre)),
-    // Le titre dit ce que le plan donne tel qu'il est saisi ; un chiffre qui
-    // étonne se signale juste dessous, replié, sans prendre sa place.
-    a.garde ? gardeBloc(a.garde, navigate, { classe: 'sy-garde' }) : null,
     h('p', { class: 'sy-act-say' }, titre(a.dit)),
   )
 

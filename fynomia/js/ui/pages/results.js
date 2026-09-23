@@ -54,7 +54,7 @@ export function renderResults(navigate, refresh) {
   // onglets faisait lire le bilan sous un résumé qui n'en parlait pas.
   const tete = view === 'resultat'
     ? section({ no: ++no, nom: 'L’exercice en quatre chiffres', droite: exercices(an, choisir), cle: 'fin-quatre',
-        dit: 'Les quatre montants qu’un banquier ou un investisseur lit avant tout le reste : ce que tu vends, ce que l’activité dégage, ce qu’il reste après impôt, et ce qu’il y a sur le compte.' },
+        dit: 'Les quatre montants qu’un banquier lit en premier : ce que tu vends, ce que l’activité dégage, ce qu’il reste, ce qu’il y a sur le compte.' },
       quatreChiffres(r, an, choisir))
     : view === 'revenu'
       ? (() => { const net = netSummary(r); return net ? section({ no: ++no, nom: 'Ce qui arrive sur ton compte perso', cle: 'fin-net' }, net) : null })()
@@ -105,7 +105,9 @@ function quatreChiffres(r, an, choisir) {
   const ton = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none')
   const low = k.cashLow || {}
   const anBas = low.month != null ? Math.floor(low.month / 12) : -1
-  const part = (v, y) => (p.revenue[y] > 0 ? `${pct(v / p.revenue[y], 0)} du chiffre d’affaires` : null)
+  // Un pourcentage de quelques euros de ventes ne veut rien dire : au-delà
+  // de ±1 000 %, on ne l'écrit pas.
+  const part = (v, y) => (p.revenue[y] > 0 && Math.abs(v / p.revenue[y]) <= 10 ? `${pct(v / p.revenue[y], 0)} du chiffre d’affaires` : null)
   return grandsChiffres([
     {
       cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none',

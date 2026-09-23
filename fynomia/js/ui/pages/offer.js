@@ -100,7 +100,7 @@ export function renderOffer(navigate, refresh) {
   renderOffer.view = view
 
   // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('offre', refresh)
+  const chiffres = chiffresDePage('offre', refresh, navigate, { forme: 'cote' })
 
   return h('div', { class: 'content' },
 
@@ -112,9 +112,12 @@ export function renderOffer(navigate, refresh) {
       views, view, onPick: (k) => { renderOffer.view = k; refresh() },
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
-    gardePage('offre', navigate),
-    chiffres,
-    partieTravail('offre', view, !!chiffres),
+    chiffres ? null : gardePage('offre', navigate),
+    // En colonne à droite, les chiffres restent en vue pendant qu'on saisit ;
+    // la zone de travail garde toute la hauteur de la page.
+    h('div', { class: chiffres ? 'saisie-cote' : 'saisie-plein' },
+      h('div', { class: 'saisie-main' },
+        partieTravail('offre', view, false),
 
     view === 'offres'
       ? h('div', { class: 'view' },
@@ -135,6 +138,9 @@ export function renderOffer(navigate, refresh) {
     todoPanel('offre', store.scenario, navigate),
 
     tutorial('clients', navigate),
+      ),
+      chiffres ? h('aside', { class: 'saisie-aside' }, chiffres) : null,
+    ),
   )
 }
 

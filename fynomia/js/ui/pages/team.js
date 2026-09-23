@@ -61,7 +61,7 @@ export function renderTeam(navigate, refresh) {
   const payrollY = r ? yearly(r.payroll.cost)[0] : 0
 
   // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('equipe', refresh)
+  const chiffres = chiffresDePage('equipe', refresh, navigate, { forme: 'cartes' })
 
   return h('div', { class: 'content' },
 
@@ -75,7 +75,7 @@ export function renderTeam(navigate, refresh) {
       views, view, onPick: (k) => { renderTeam.view = k; refresh() },
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),
-    gardePage('equipe', navigate),
+    chiffres ? null : gardePage('equipe', navigate),
     chiffres,
     partieTravail('equipe', view, !!chiffres),
 

@@ -101,7 +101,7 @@ export function renderDashboard(navigate, refresh) {
     }),
 
     view === 'studio' ? h('div', { class: 'view' }, renderStudio(navigate, refresh, goView)) : null,
-    view === 'pitch' ? h('div', { class: 'view' }, renderPitch(navigate, refresh)) : null,
+    view === 'pitch' ? h('div', { class: 'view' }, renderPitch(navigate, refresh, goView)) : null,
 
     view === 'synthese' ? h('div', { class: 'view board-stack' },
       // Ce qui manque se dit avant ce qu'on a trouvé.

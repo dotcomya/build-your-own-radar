@@ -51,7 +51,7 @@ async function jouer(t, p, plan) {
     await bouton.click()
     // Le voyage, le rendu, puis l'anneau (posé à l'image suivante).
     let arrive = null
-    for (let k = 0; k < 14 && !arrive?.spot; k++) {
+    for (let k = 0; k < 26 && !arrive?.spot; k++) {
       await p.waitForTimeout(150)
       arrive = await p.evaluate((a) => {
         const el = a ? document.querySelector(`[data-gap="${a}"]`) : null

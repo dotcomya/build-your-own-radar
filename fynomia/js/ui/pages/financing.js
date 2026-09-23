@@ -156,7 +156,7 @@ export function renderFinancing(navigate, refresh) {
   renderFinancing.view = view
 
   // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('financement', refresh)
+  const chiffres = chiffresDePage('financement', refresh, navigate, { forme: 'cartes' })
 
   return h('div', { class: 'content' },
 
@@ -174,7 +174,7 @@ export function renderFinancing(navigate, refresh) {
       actions: [view === 'sources' && source && (f[source.key] || []).length
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],
     }),
-    gardePage('financement', navigate),
+    chiffres ? null : gardePage('financement', navigate),
     chiffres,
     partieTravail('financement', view, !!chiffres),
 

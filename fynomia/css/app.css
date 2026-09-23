@@ -3797,6 +3797,20 @@ details[open] > .refine-head .refine-sign {
   animation: spotlit-ring 3.2s var(--ease) 1;
   border-radius: 12px; scroll-margin-top: 90px;
 }
+/* Le reflet de l'arrivée : une lumière qui traverse la zone, de gauche à
+   droite, en une seconde. Elle se pose par-dessus, sans rien déplacer. */
+.is-shine { position: relative; }
+.is-shine::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  background: linear-gradient(100deg, transparent 0%, transparent 38%, rgba(214, 240, 52, .42) 50%, rgba(255, 255, 255, .5) 53%, transparent 64%, transparent 100%);
+  background-size: 260% 100%; background-repeat: no-repeat;
+  animation: shine-sweep 1s cubic-bezier(.45, .05, .3, 1) both;
+}
+@keyframes shine-sweep {
+  from { background-position: 120% 0; opacity: 1; }
+  85%  { opacity: 1; }
+  to   { background-position: -20% 0; opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .spotlit { animation: none; box-shadow: 0 0 0 3px rgba(214, 240, 52, .5); }
 }
@@ -7408,3 +7422,101 @@ details[open] > .refine-head .refine-sign {
   .pitch-ratio { grid-template-columns: minmax(0, 1fr) auto; }
   .pitch-ratio-d { grid-column: 1 / -1; }
 }
+/* L'avis de Fynomia : la note d'un consultant, sous chaque partie du pitch. */
+.pitch-avis {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; align-items: start; margin-top: 16px;
+  padding: 14px 18px; border-radius: 16px; background: var(--ink); color: #E9EBE3;
+}
+.pitch-avis-sign {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: var(--ink); font: 800 16px/1 var(--display);
+}
+.pitch-avis b { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+.pitch-avis p { margin: 5px 0 0; font-size: 14px; line-height: 1.55; color: #E9EBE3; }
+.rv-watch:not(.is-seen) .pitch-avis { opacity: 0; transform: translateY(8px); }
+.rv.is-play .pitch-avis { animation: sy-rise .55s var(--ease-soft) both; animation-delay: .45s; }
+.pitch-dossier { display: flex; flex-direction: column; gap: 28px; margin-bottom: 34px; }
+
+/* Les phrases d'une partie courent sur toute la largeur : une phrase coupée
+   en trois lignes étroites faisait défiler pour rien. */
+.sx-say, .sy-act-say, .sy-sec-say, .sy-note, .garde-say, .plain-act-say, .view-intro, .pitch-foot p, .sy-verdict-body p, .pitch-phrase { max-width: none; }
+.sx-say { font-size: 14.5px; }
+.sy-act-say { font-size: 15.5px; }
+
+/* ─── Les chiffres d'une page de saisie, sans repousser les champs ─── */
+/* L'avertissement se pose sur la ligne de l'exercice et s'ouvre par-dessus. */
+.sx-right-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.sx-right-row .garde { position: relative; font-family: var(--sans); text-transform: none; letter-spacing: 0; }
+.sx-right-row .garde-pill { padding: 4px 10px 4px 5px; font-size: 12px; }
+.sx-right-row .garde-sign { width: 18px; height: 18px; }
+.sx-right-row .garde-sign::before { top: 4px; height: 6px; }
+.sx-right-row .garde-sign::after { top: 11.5px; }
+.sx-right-row .garde-body {
+  position: absolute; right: 0; top: calc(100% + 8px); width: min(680px, 88vw); z-index: 40; margin: 0;
+  box-shadow: inset 3px 0 0 var(--warn), 0 1px 0 var(--rule), 0 26px 50px -20px rgba(14, 15, 12, .45);
+}
+.sx-right-row .garde.is-alerte .garde-body { box-shadow: inset 3px 0 0 var(--loss), 0 1px 0 var(--rule), 0 26px 50px -20px rgba(14, 15, 12, .45); }
+.sy-act-no .sx-right-row { margin-left: auto; }
+.sy-act-no .sx-right-row + em { margin-left: 12px; }
+.sy-act-no .garde.sy-garde { margin: 0; }
+.sy-act-no .garde-pill-more { display: none; }
+
+/* Sous le champ : une ligne ; le texte entier au survol, déplié au clic. */
+.field-garde { cursor: pointer; min-width: 0; }
+.field-garde > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.field-garde.is-open > span { white-space: normal; }
+
+/* Forme « côté » (Offre et revenus) : les chiffres dans une colonne qui reste
+   en vue, les champs gardent toute la hauteur. */
+.saisie-cote { display: grid; grid-template-columns: minmax(0, 1fr) 292px; gap: 26px; align-items: start; }
+.saisie-main { min-width: 0; }
+.saisie-main > .sx-solo:first-child { margin-top: 26px; }
+.saisie-aside {
+  position: sticky; top: calc(var(--header-h) + 14px); max-height: calc(100vh - var(--header-h) - 28px);
+  overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; scrollbar-width: thin;
+}
+.saisie-aside .sx.is-cote { margin-top: 26px; }
+.sx.is-cote .sx-head { margin-bottom: 8px; }
+.sx.is-cote .sx-no { flex-wrap: wrap; row-gap: 10px; }
+.sx.is-cote .sx-right { margin-left: 0; width: 100%; }
+.sx.is-cote .sx-right-row { justify-content: flex-start; }
+.sx.is-cote .sx-say { font-size: 12.5px; margin: 0 0 10px; color: var(--ink-4); }
+.saisie-aside .sx-cards, .saisie-aside .sx-cards.is-4, .saisie-aside .sx-cards.is-3 { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.saisie-aside .sx-card.is-compact { padding: 11px 13px 9px; }
+.saisie-aside .sx-card.is-compact .sx-bars { height: 36px; margin-top: 8px; }
+.saisie-aside .sx-right-row .garde-body { right: auto; left: 0; width: min(560px, 80vw); }
+@media (max-width: 1180px) {
+  .saisie-cote { grid-template-columns: minmax(0, 1fr); }
+  .saisie-aside { position: static; max-height: none; overflow: visible; order: -1; }
+  .saisie-aside .sx-cards, .saisie-aside .sx-cards.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .saisie-aside .sx-cards, .saisie-aside .sx-cards.is-4 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Forme « bandeau » (Achats et coûts) : une ligne de chiffres, qui se déplie. */
+.sx.is-bandeau .sx-head { margin-bottom: 10px; }
+.sx-ribbon {
+  display: flex; align-items: stretch; flex-wrap: wrap; background: var(--surface); border-radius: 14px;
+  padding: 8px 8px 8px 4px; box-shadow: 0 1px 0 var(--rule), 0 18px 36px -32px rgba(14, 15, 12, .45);
+}
+.sx-ribbon-item { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 18px; border-left: 1px solid var(--rule); min-width: 0; cursor: help; }
+.sx-ribbon-item:first-child { border-left: 0; }
+.sx-ribbon-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; }
+.sx-ribbon-val { font-family: var(--mono); font-size: 18px; font-weight: 600; letter-spacing: -.03em; color: var(--ink); white-space: nowrap; }
+.sx-ribbon-delta { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--ink-4); }
+.sx-ribbon-delta.is-up { color: var(--gain); }
+.sx-ribbon-delta.is-down { color: var(--loss); }
+.sx-ribbon-more {
+  margin-left: auto; align-self: center; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  background: var(--surface-2); font: 600 12px/1 var(--sans); color: var(--ink-3);
+}
+.sx-ribbon-more:hover { background: var(--ink); color: var(--accent); }
+.sx.is-bandeau.is-open .sx-cards { margin-top: 10px; }
+@media (max-width: 720px) {
+  .sx-ribbon-item { flex: 1 1 45%; border-left: 0; }
+  .sx-ribbon-more { width: 100%; margin-top: 6px; }
+}
+/* Dans la forme « côté », la colonne des champs est plus étroite : les
+   lignes de quatre champs passent à deux, pour que chaque champ garde sa place. */
+.saisie-cote .saisie-main .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

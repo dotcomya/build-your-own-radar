@@ -77,7 +77,7 @@ export function renderCosts(navigate, refresh) {
   const monthlyTotal = s.opex.filter((o) => o.enabled !== false).reduce((a, o) => a + (Number(o.monthlyAmount) || 0), 0)
 
   // Les chiffres de la page d'abord, la zone de travail ensuite (partie 02).
-  const chiffres = chiffresDePage('achats', refresh)
+  const chiffres = chiffresDePage('achats', refresh, navigate, { forme: 'bandeau' })
 
   return h('div', { class: 'content' },
 
@@ -94,7 +94,7 @@ export function renderCosts(navigate, refresh) {
         view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,
       ],
     }),
-    gardePage('achats', navigate),
+    chiffres ? null : gardePage('achats', navigate),
     chiffres,
     partieTravail('achats', view, !!chiffres),
 

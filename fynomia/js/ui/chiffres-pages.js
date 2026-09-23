@@ -9,18 +9,20 @@
  * partie 02. Tout est lu dans le moteur, rien n'est recalculé ici.
  */
 
-import { euro, pct, num, monthLabel } from './dom.js'
+import { h, euro, pct, num, monthLabel } from './dom.js'
 import store from '../state/store.js'
 import { SECTORS } from '../state/schema.js'
 import { getActivity } from '../state/activities.js'
-import { section, entete, exercices, grandsChiffres, anneeLue, lireAnnee } from './sections.js'
+import { section, entete, exercices, grandsChiffres, anneeLue, lireAnnee, EUROS } from './sections.js'
+import { gardePage } from './garde.js'
 
 const n = (v) => Number(v) || 0
 const ANS = [0, 1, 2, 3, 4]
 /** Cinq sommes annuelles d'une série mensuelle. */
 const parAn = (m) => ANS.map((y) => (m || []).slice(y * 12, y * 12 + 12).reduce((a, v) => a + n(v), 0))
 const absAn = (m) => ANS.map((y) => (m || []).slice(y * 12, y * 12 + 12).reduce((a, v) => a + Math.abs(n(v)), 0))
-const partDuCA = (v, r, y) => (n(r.pnl.revenue[y]) > 0 ? `${pct(v / r.pnl.revenue[y], 0)} du chiffre d’affaires` : null)
+// Au-delà de ±1 000 %, une part du chiffre d'affaires ne veut plus rien dire.
+const partDuCA = (v, r, y) => (n(r.pnl.revenue[y]) > 0 && Math.abs(v / r.pnl.revenue[y]) <= 10 ? `${pct(v / r.pnl.revenue[y], 0)} du chiffre d’affaires` : null)
 const signe = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none')
 
 /** Un nombre qui n'est pas un montant : grand en entier, exact avec son unité. */
@@ -51,7 +53,7 @@ const CARTES = {
       recurrent.some((v) => v > 0)
         ? { cle: 'recurrent', label: 'Revenu des abonnements', valeurs: recurrent, mensuel: recurrentMois, pourquoi: 'Le revenu qui revient chaque mois sans nouvelle vente : c’est lui qui rend l’activité prévisible.', note: (y) => (n(p.revenue[y]) > 0 ? `${pct(recurrent[y] / p.revenue[y], 0)} du chiffre d’affaires, attrition déduite.` : 'Abonnements actifs, attrition déduite.') }
         : { cle: 'panier', label: 'Prix moyen d’une vente', pourquoi: 'À volume égal, quelques euros de plus par vente changent tout le bas du compte de résultat.', valeurs: ANS.map((y) => (ventes[y] > 0 ? n(p.revenue[y]) / ventes[y] : 0)), format: prixUnitaire, note: () => 'Chiffre d’affaires divisé par le nombre de ventes, hors taxes.' },
-      { cle: 'marge', label: 'Marge brute', valeurs: p.grossMargin, mensuel: margeMois, ton: signe, pourquoi: 'C’est ce qui reste pour payer tout le reste : équipe, loyer, remboursements. Sans marge, vendre plus creuse la perte.', note: (y) => (n(p.revenue[y]) > 0 ? `${pct(n(r.kpis.marginRate?.[y]), 0)} de chaque euro vendu, après ce que coûte la vente.` : 'Ce qu’il reste des ventes après leur coût direct.') },
+      { cle: 'marge', label: 'Marge brute', valeurs: p.grossMargin, mensuel: margeMois, ton: signe, pourquoi: 'C’est ce qui reste pour payer tout le reste : équipe, loyer, remboursements. Sans marge, vendre plus creuse la perte.', note: (y) => (n(p.revenue[y]) > 0 && Math.abs(n(r.kpis.marginRate?.[y])) <= 10 ? `${pct(n(r.kpis.marginRate?.[y]), 0)} de chaque euro vendu, après ce que coûte la vente.` : 'Ce qu’il reste des ventes après leur coût direct.') },
     ]
   },
 
@@ -123,10 +125,24 @@ const VUES = {
 }
 
 /**
- * La partie 01 d'une page de saisie : ses chiffres, ou rien si la page est
- * encore vide — des cartes à zéro partout ne diraient rien.
+ * Les chiffres d'une page de saisie, sous l'une de trois formes.
+ *
+ *   « cartes »  — une rangée de cartes compactes en tête de page (Équipe,
+ *                 Financement) ;
+ *   « cote »    — une colonne à droite, qui reste en vue pendant qu'on saisit
+ *                 (Offre et revenus) ;
+ *   « bandeau » — une seule ligne de chiffres, qui se déplie en cartes au
+ *                 clic (Achats et coûts).
+ *
+ * Deux essais pour une même question — comment garder les chiffres sous les
+ * yeux sans qu'ils repoussent les champs — et le fondateur choisira. Dans
+ * les trois, l'avertissement d'un chiffre hors de proportion se pose sur la
+ * même ligne que l'exercice, et s'ouvre par-dessus au lieu de pousser.
+ *
+ * Rien si la page est encore vide : des cartes à zéro partout ne diraient
+ * rien.
  */
-export function chiffresDePage(route, refresh) {
+export function chiffresDePage(route, refresh, navigate, { forme = 'cartes' } = {}) {
   const r = store.result
   const s = store.scenario
   if (!r || !CARTES[route]) return null
@@ -135,8 +151,47 @@ export function chiffresDePage(route, refresh) {
   if (!cartes.some((c) => (c.valeurs || []).some((v) => Math.abs(n(v)) >= 1))) return null
   const an = anneeLue(r)
   const choisir = (k) => { lireAnnee(k); refresh() }
-  return section({ no: 1, nom: NOMS[route], dit: DIT[route], droite: exercices(an, choisir), cle: `page-${route}`, classe: 'is-compact' },
+  const garde = navigate ? gardePage(route, navigate) : null
+  const tete = h('div', { class: 'sx-right-row' }, garde, exercices(an, choisir))
+
+  if (forme === 'bandeau') return bandeau(route, cartes, an, choisir, r, tete, refresh)
+  if (forme === 'cote') {
+    return section({ no: null, nom: NOMS[route], droite: tete, cle: `page-${route}`, classe: 'is-compact is-cote' },
+      h('p', { class: 'sx-say' }, DIT[route]),
+      grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }))
+  }
+  return section({ no: 1, nom: NOMS[route], dit: DIT[route], droite: tete, cle: `page-${route}`, classe: 'is-compact' },
     grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }))
+}
+
+/** Le bandeau : une ligne de chiffres ; « Détail » déplie les cartes. */
+const bandeauxOuverts = new Set()
+function bandeau(route, cartes, an, choisir, r, tete, refresh) {
+  const ouvert = bandeauxOuverts.has(route)
+  return section({ no: 1, nom: NOMS[route], droite: tete, cle: `page-${route}`, classe: `is-compact is-bandeau ${ouvert ? 'is-open' : ''}` },
+    h('div', { class: 'sx-ribbon' },
+      ...cartes.map((c) => {
+        const vals = (c.valeurs || []).map(n)
+        const v = vals[an] || 0
+        const f = (c.format || EUROS)(v)
+        const prev = an > 0 ? vals[an - 1] : null
+        const d = prev === null ? null : v - prev
+        const bien = c.baisseBonne ? d <= 0 : d >= 0
+        return h('div', { class: 'sx-ribbon-item', title: [c.note ? c.note(an) : '', c.pourquoi || ''].filter(Boolean).join(' — ') },
+          h('span', { class: 'sx-ribbon-label' }, c.label),
+          h('b', { class: 'sx-ribbon-val' }, f.court),
+          d !== null && Math.abs(d) >= 1
+            ? h('span', { class: `sx-ribbon-delta ${c.neutre ? '' : bien ? 'is-up' : 'is-down'}` }, `${d >= 0 ? '+' : '−'}${c.format ? (c.format)(Math.abs(d)).court : euro(Math.abs(d), { compact: true })}`)
+            : null,
+        )
+      }),
+      h('button', {
+        class: 'sx-ribbon-more', 'aria-expanded': String(ouvert),
+        onClick: () => { ouvert ? bandeauxOuverts.delete(route) : bandeauxOuverts.add(route); refresh() },
+      }, ouvert ? 'Replier ↑' : 'Détail ↓'),
+    ),
+    ouvert ? grandsChiffres(cartes, an, choisir, { cle: route, compact: true, debut: r.startDate }) : null,
+  )
 }
 
 /** La tête de la zone de travail : 02 si les chiffres la précèdent, 01 sinon. */

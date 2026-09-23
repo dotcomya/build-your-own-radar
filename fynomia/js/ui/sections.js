@@ -56,7 +56,7 @@ export function section({ no, nom, titre = null, dit = null, droite = null, cle 
   const el = h('section', { class: `sx ${classe}` },
     h('header', { class: 'sx-head' },
       h('div', { class: 'sx-no' },
-        h('b', {}, String(no).padStart(2, '0')),
+        no === null || no === undefined ? null : h('b', {}, String(no).padStart(2, '0')),
         h('span', {}, nom),
         droite ? h('div', { class: 'sx-right' }, droite) : null,
       ),

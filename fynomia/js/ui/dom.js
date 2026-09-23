@@ -149,7 +149,9 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
  */
 export function gardeNote(control, garde) {
   const texte = h('span', {})
-  const note = h('div', { class: 'field-garde', role: 'status', 'aria-live': 'polite', hidden: true },
+  // Une ligne, pas trois : le texte entier au survol, et au clic il se déplie.
+  const note = h('div', { class: 'field-garde', role: 'status', 'aria-live': 'polite', hidden: true,
+    onClick: () => note.classList.toggle('is-open') },
     h('i', { 'aria-hidden': 'true' }), texte)
   note.juger = (v) => {
     let g = null
@@ -157,6 +159,7 @@ export function gardeNote(control, garde) {
     note.hidden = !g
     note.className = `field-garde ${g ? `is-${g.niveau}` : ''}`
     texte.textContent = g ? g.texte : ''
+    note.title = g ? g.texte : ''
     control.classList.toggle('is-odd', !!g)
     control.classList.toggle('is-odd-alerte', !!g && g.niveau === 'alerte')
   }

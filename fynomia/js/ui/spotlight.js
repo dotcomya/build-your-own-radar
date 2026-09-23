@@ -66,25 +66,67 @@ export function pop(el, signe = '+') {
 export function claim(route) { return intent.route === route ? intent : null }
 
 /**
- * Entourer la zone, trois secondes.
+ * Arriver, puis montrer.
  *
- * Pas de couleur d'alerte ni de secousse : un anneau qui respire deux fois et
- * s'efface. Assez pour dire « c'est ici », trop discret pour faire sursauter.
+ * Le voyage posait le fondateur directement sur le champ, au milieu d'une
+ * page dont il n'avait pas vu le titre : il savait quoi remplir, pas où il
+ * était. L'arrivée se fait maintenant en trois temps :
+ *
+ *   1. la page s'ouvre en haut, le temps de lire son titre ;
+ *   2. elle descend en douceur jusqu'à la zone visée ;
+ *   3. la zone s'éclaire d'un reflet qui la traverse de gauche à droite,
+ *      en une seconde, entourée du même anneau qu'avant.
+ *
+ * Quand la zone est déjà visible depuis le haut, la descente se réduit à
+ * rien et le reflet vient plus tôt. Qui a demandé moins de mouvement arrive
+ * directement, sans reflet.
  */
 export function settle(root = document) {
   const anchor = intent.anchor
   Object.assign(intent, EMPTY)
   if (!anchor) return
+  const reduit = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } })()
   requestAnimationFrame(() => {
     const el = root.querySelector(`[data-gap="${anchor}"]`)
     if (!el) return
     // Un volet fermé cache le champ visé : on l'ouvre avant de montrer.
     const fold = el.matches('details') ? el : el.querySelector('details')
     if (fold) fold.open = true
-    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }) } catch { /* vieux moteur */ }
-    el.classList.add('spotlit')
-    setTimeout(() => el.classList.remove('spotlit'), 3400)
-    const field = el.querySelector('input:not([type=hidden]), textarea, select')
-    if (field) setTimeout(() => { try { field.focus({ preventScroll: true }) } catch { /* rien */ } }, 500)
+    const eclairer = () => {
+      if (!el.isConnected) return
+      el.classList.remove('spotlit', 'is-shine')
+      void el.offsetWidth
+      el.classList.add('spotlit')
+      if (!reduit) el.classList.add('is-shine')
+      setTimeout(() => el.classList.remove('spotlit'), 3400)
+      setTimeout(() => el.classList.remove('is-shine'), 1300)
+      const field = el.querySelector('input:not([type=hidden]), textarea, select')
+      if (field) setTimeout(() => { try { field.focus({ preventScroll: true }) } catch { /* rien */ } }, 350)
+    }
+    if (reduit) {
+      try { el.scrollIntoView({ block: 'center' }) } catch { /* vieux moteur */ }
+      eclairer()
+      return
+    }
+    // 1. Le haut de la page, le temps de lire le titre.
+    window.scrollTo(0, 0)
+    const r = el.getBoundingClientRect()
+    const visible = r.top >= 0 && r.bottom <= window.innerHeight * 0.92
+    setTimeout(() => {
+      if (!el.isConnected) return
+      if (visible) { eclairer(); return }
+      // 2. La descente, puis 3. le reflet, une fois la page posée.
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }) } catch { el.scrollIntoView() }
+      let dernier = -1, stable = 0
+      const debut = performance.now()
+      const attendre = () => {
+        const y = window.scrollY
+        stable = Math.abs(y - dernier) < 1 ? stable + 1 : 0
+        dernier = y
+        if (stable >= 4 || performance.now() - debut > 1400) { eclairer(); return }
+        requestAnimationFrame(attendre)
+      }
+      requestAnimationFrame(attendre)
+    }, visible ? 380 : 620)
   })
 }

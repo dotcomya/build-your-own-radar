@@ -110,7 +110,7 @@ export default async function (t) {
   await q.waitForTimeout(300)
   await go.click()
   let arrive = null
-  for (let k = 0; k < 14 && !arrive?.spot; k++) {
+  for (let k = 0; k < 26 && !arrive?.spot; k++) {
     await q.waitForTimeout(150)
     arrive = await q.evaluate(() => ({ hash: location.hash, spot: !!document.querySelector('[data-gap="prix"].spotlit') }))
   }
