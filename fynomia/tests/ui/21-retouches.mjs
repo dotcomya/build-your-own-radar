@@ -16,8 +16,8 @@ export default async function (t) {
   // 1. Une charge par vente.
   await t.aller(p, 'achats')
   const sugg = p.locator('button', { hasText: 'Commission de paiement' }).first()
-  if (await sugg.count()) { await sugg.click(); await p.locator('.costblock.is-variable .cost-row').first().waitFor({ timeout: 3000 }).catch(() => {}); await t.pose(p) }
-  const ligne = p.locator('.costblock.is-variable .cost-row').first()
+  if (await sugg.count()) { await sugg.click(); await p.locator('.costblock.is-variable .cost-row:not(.is-revient)').first().waitFor({ timeout: 3000 }).catch(() => {}); await t.pose(p) }
+  const ligne = p.locator('.costblock.is-variable .cost-row:not(.is-revient)').first()
   t.verifie(await ligne.count() === 1, 'la commission arrive dans les charges par vente')
   const choix = await ligne.locator('.cost-seg-opt').allInnerTexts()
   t.verifie(choix.length === 2 && /% du prix/.test(choix[0]) && /par produit vendu/.test(choix[1]), 'deux choix seulement : % du prix, ou € par produit vendu', choix)
@@ -34,7 +34,7 @@ export default async function (t) {
     const st = (await import('./js/state/store.js')).default
     return st.scenario.opex.find((x) => x.label === 'Commission de paiement')?.mode
   })
-  t.verifie(apres === 'perUnit' && await p.locator('.costblock.is-variable .cost-row').first().locator('.cost-extra span', { hasText: 'produit' }).count() === 1, 'l’autre choix se prend d’un clic, en € par produit', apres)
+  t.verifie(apres === 'perUnit' && await p.locator('.costblock.is-variable .cost-row:not(.is-revient)').first().locator('.cost-extra span', { hasText: 'produit' }).count() === 1, 'l’autre choix se prend d’un clic, en € par produit', apres)
 
   // 2. L'avertissement devant le guide flottant.
   await t.aller(p, 'offre')

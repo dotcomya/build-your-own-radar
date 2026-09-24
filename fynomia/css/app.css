@@ -1649,6 +1649,15 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   border: 1px solid var(--rule); border-radius: 4px; padding: 3px 5px; cursor: pointer; flex: none;
 }
 .cost-unit:hover { border-color: var(--ink); color: var(--ink); }
+.cost-unit.is-static { cursor: default; border-color: transparent; }
+.cost-unit.is-static:hover { color: var(--ink-4); }
+/* Le coût de revient d'une offre, en tête des charges par vente. */
+.cost-row.is-revient { background: var(--surface-2); }
+.cost-revient-tag {
+  flex: none; font: 600 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-3); padding: 3px 7px; border: 1px solid var(--rule); border-radius: 999px; background: var(--surface);
+}
+.cost-label.is-fixe { display: block; padding: 4px 2px; overflow-wrap: anywhere; }
 .cost-mode { flex: none; }
 .cost-mode select {
   border: 1px solid var(--rule); background: var(--surface); border-radius: 6px;

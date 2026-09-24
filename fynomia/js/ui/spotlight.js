@@ -13,7 +13,10 @@
 
 import store from '../state/store.js'
 
-const EMPTY = { route: null, view: null, sec: null, openAll: false, anchor: null, confirme: null }
+// `dans` borne la recherche de la zone à un conteneur — la carte d'une offre
+// précise — quand la même zone existe plusieurs fois sur la page ; `ouvrir`
+// dit quelle carte ouvrir.
+const EMPTY = { route: null, view: null, sec: null, openAll: false, ouvrir: null, anchor: null, dans: null, confirme: null }
 
 
 const intent = { ...EMPTY }
@@ -96,11 +99,13 @@ export function claim(route) { return intent.route === route ? intent : null }
  */
 export function settle(root = document) {
   const anchor = intent.anchor
+  const dans = intent.dans
   Object.assign(intent, EMPTY)
   if (!anchor) return
   const reduit = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } })()
   requestAnimationFrame(() => {
-    const el = root.querySelector(`[data-gap="${anchor}"]`)
+    const cadre = (dans && root.querySelector(dans)) || root
+    const el = cadre.querySelector(`[data-gap="${anchor}"]`)
     if (!el) return
     // Un volet fermé cache le champ visé : on l'ouvre avant de montrer.
     const fold = el.matches('details') ? el : el.querySelector('details')

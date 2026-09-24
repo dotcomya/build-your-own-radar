@@ -3,7 +3,7 @@
  *
  * Le dossier bancaire se joue sur une poignée de ratios que le chargé
  * d'affaires recalcule lui-même, dans cet ordre : l'apport, la couverture des
- * échéances par la capacité d'autofinancement, l'endettement en années de CAF,
+ * échéances par la capacité d'autofinancement, l'endettement en années de capacité d'autofinancement,
  * la trésorerie, le point mort. Les dire au fondateur avant le rendez-vous, avec
  * les chiffres de son propre échéancier, c'est lui éviter la question à
  * laquelle il n'a pas de réponse — et lui dire quoi changer quand une ligne
@@ -42,8 +42,8 @@ export function lignesBanquier(r) {
     }
     if (c.cle === 'couverture') {
       return {
-        ...c, titre: 'Ta CAF couvre tes échéances',
-        valeur: c.etat === 'na' ? '—' : c.ratio < 0 ? 'CAF négative' : fois(c.ratio),
+        ...c, titre: 'Ta capacité d’autofinancement couvre tes échéances',
+        valeur: c.etat === 'na' ? '—' : c.ratio < 0 ? 'Négative' : fois(c.ratio),
         lu: c.etat === 'na'
           ? 'Aucun prêt à rembourser.'
           : `En ${an(c.annee)}, ta capacité d’autofinancement (${euro(c.caf)}) face au capital à rembourser (${euro(c.capital)})${c.croisiere !== null && c.anneeCroisiere !== c.annee ? ` ; ${fois(c.croisiere)} en ${an(c.anneeCroisiere)}` : ''}.`,
@@ -55,15 +55,15 @@ export function lignesBanquier(r) {
     }
     if (c.cle === 'endettement') {
       return {
-        ...c, titre: 'Tes dettes en années de CAF',
-        valeur: c.etat === 'na' ? '—' : Number.isFinite(c.annees) ? `${num(c.annees, 1)}\u00a0ans` : 'CAF négative',
+        ...c, titre: 'Tes dettes en années de capacité d’autofinancement',
+        valeur: c.etat === 'na' ? '—' : Number.isFinite(c.annees) ? `${num(c.annees, 1)}\u00a0ans` : 'Négative',
         lu: c.etat === 'na'
           ? 'Aucune dette bancaire à la clôture.'
           : Number.isFinite(c.annees)
-            ? `Fin ${an(c.annee)}, il resterait ${euro(c.dette)} à rembourser, soit ${num(c.annees, 1)} ans de CAF.`
-            : `Fin ${an(c.annee)}, ${euro(c.dette)} restent dus et ta CAF est négative : rien ne rembourse la dette.`,
+            ? `Fin ${an(c.annee)}, il resterait ${euro(c.dette)} à rembourser, soit ${num(c.annees, 1)} ans de capacité d’autofinancement.`
+            : `Fin ${an(c.annee)}, ${euro(c.dette)} restent dus et ta capacité d’autofinancement est négative : rien ne rembourse la dette.`,
         attendu: `${S.endettement} ans au plus, ${S.endettementMax} au-delà de quoi la banque demandera une garantie.`,
-        faire: c.etat === 'ok' || c.etat === 'na' ? null : 'Plus d’apport ou un prêt plus court allègent la dette ; une CAF plus forte la rembourse plus vite.',
+        faire: c.etat === 'ok' || c.etat === 'na' ? null : 'Plus d’apport ou un prêt plus court allègent la dette ; une capacité d’autofinancement plus forte la rembourse plus vite.',
       }
     }
     if (c.cle === 'tresorerie') {
@@ -128,7 +128,7 @@ export function banquierVerifie(r, { titre = 'Ce que ton banquier va vérifier',
 }
 
 /**
- * Les chiffres du banquier, année par année : EBE, CAF, échéances réelles,
+ * Les chiffres du banquier, année par année : EBE, capacité d’autofinancement, échéances réelles,
  * couverture, dette restante. C'est le tableau qu'il refera de son côté.
  */
 export function tableauBanquier(r, yearLabel) {
@@ -141,12 +141,12 @@ export function tableauBanquier(r, yearLabel) {
     h('thead', {}, h('tr', {}, h('th', {}, ''), ...b.cafY.map((_, i) => h('th', {}, yearLabel ? yearLabel(i) : `Année ${i + 1}`)))),
     h('tbody', {},
       ligne('EBE — excédent brut d’exploitation', r.pnl.ebe),
-      ligne('CAF — capacité d’autofinancement', b.cafY, (v) => euro(v), 'highlight'),
+      ligne('Capacité d’autofinancement', b.cafY, (v) => euro(v), 'highlight'),
       emprunte ? ligne('Échéances de prêt (capital + intérêts)', b.annuityY) : null,
       emprunte ? ligne('dont capital remboursé', b.capitalY, (v) => euro(v), 'muted') : null,
-      emprunte ? ligne('Couverture du capital par la CAF', b.coverageY, (v) => `${num(v, 2)}×`) : null,
+      emprunte ? ligne('Couverture du capital par la capacité d’autofinancement', b.coverageY, (v) => `${num(v, 2)}×`) : null,
       emprunte ? ligne('Dette bancaire restante', b.debtEndY) : null,
-      emprunte ? ligne('Dette en années de CAF', b.debtToCafY, (v) => (Number.isFinite(v) ? `${num(v, 1)} ans` : 'CAF < 0')) : null,
+      emprunte ? ligne('Dette en années de capacité d’autofinancement', b.debtToCafY, (v) => (Number.isFinite(v) ? `${num(v, 1)} ans` : 'négative')) : null,
     ),
   )
 }

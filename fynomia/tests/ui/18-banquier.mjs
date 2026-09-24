@@ -9,15 +9,15 @@
  *      la valeur ajoutée, l'autre par le bas, depuis le résultat
  *      d'exploitation — et chacun avec sa définition ;
  *   2. « Ce que ton banquier va vérifier » tient en cinq lignes — apport,
- *      couverture des échéances par la CAF, endettement, trésorerie, point
+ *      couverture des échéances par la capacité d'autofinancement, endettement, trésorerie, point
  *      mort —, chacune « Validé », « Juste » ou « À revoir » ;
  *   3. la couverture vient de l'échéancier du moteur, pas d'une dette
  *      divisée par sept ;
- *   4. le tableau du banquier donne EBE, CAF, échéances, couverture et dette
+ *   4. le tableau du banquier donne EBE, capacité d'autofinancement, échéances, couverture et dette
  *      restante, année par année ;
  *   5. un prêt d'honneur ajouté améliore l'apport.
  */
-export const nom = 'Banquier — EBE et EBITDA, CAF, échéances réelles, cinq vérifications'
+export const nom = 'Banquier — EBE et EBITDA, capacité d’autofinancement, échéances réelles, cinq vérifications'
 
 export default async function (t) {
   const p = await t.page('bureau')
@@ -58,10 +58,10 @@ export default async function (t) {
     return { ratio: c.ratio, cap, echeancier, dette, septieme: dette / 7, caf: r.bank.cafY[c.annee], net: r.pnl.netResult[c.annee], amort: r.pnl.amortisation[c.annee] }
   })
   t.verifie(Math.abs(calc.cap - calc.echeancier) < 1 && Math.abs(calc.cap - calc.septieme) > 100, 'le capital remboursé vient de l’échéancier, pas de la dette divisée par sept', calc)
-  t.verifie(Math.abs(calc.caf - (calc.net + calc.amort)) < 1 && Math.abs(calc.ratio - calc.caf / calc.cap) < 0.001, 'CAF = résultat net + amortissements, couverture = CAF ÷ capital', calc)
+  t.verifie(Math.abs(calc.caf - (calc.net + calc.amort)) < 1 && Math.abs(calc.ratio - calc.caf / calc.cap) < 0.001, 'capacité d’autofinancement = résultat net + amortissements, couverture = capacité ÷ capital', calc)
 
   const tableau = await p.locator('.bk-table').first().innerText().catch(() => '')
-  t.verifie(/CAF/.test(tableau) && /Échéances de prêt/.test(tableau) && /Couverture/.test(tableau) && /Dette bancaire restante/.test(tableau), 'le tableau du banquier donne EBE, CAF, échéances, couverture, dette', tableau.slice(0, 160))
+  t.verifie(/Capacité d.autofinancement/.test(tableau) && !/\bCAF\b/.test(tableau) && /Échéances de prêt/.test(tableau) && /Couverture/.test(tableau) && /Dette bancaire restante/.test(tableau), 'le tableau du banquier donne EBE, capacité d’autofinancement (jamais « CAF »), échéances, couverture, dette', tableau.slice(0, 160))
 
   // Le financement : le même bloc, là où l'on règle l'apport et le prêt.
   await t.aller(p, 'financement')

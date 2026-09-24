@@ -281,7 +281,7 @@ function readiness(s, r, y) {
   const growth = p.revenue[0] > 0 && p.revenue[2] > 0 ? Math.pow(p.revenue[2] / p.revenue[0], 1 / 2) - 1 : null
 
   // La banque lit les ratios de l'échéancier réel : apport, couverture des
-  // échéances par la CAF, endettement en années de CAF, trésorerie, point
+  // échéances par la capacité d'autofinancement, endettement en années de capacité, trésorerie, point
   // mort. Ce qui est sans objet — pas de prêt, pas d'échéance — ne compte pas.
   const banque = lignesBanquier(r).filter((l) => l.etat !== 'na')
 

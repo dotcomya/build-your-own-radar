@@ -89,9 +89,17 @@ export function compute(scenario) {
 
   // ─── 8. Soldes intermédiaires de gestion ───────────────────────────────
   const revenueY = byYear(revenueMonthly)
-  const variableCostY = byYear(rev.totals.variableCost)
+  // Les charges par vente — une commission, un emballage, une matière — sont
+  // des coûts variables. Elles étaient rangées dans les charges externes :
+  // la marge brute les ignorait, le point mort les comptait comme des frais
+  // fixes, et les modifier ne changeait ni le coût de ce qu'on vend ni la
+  // marge d'une offre. Elles rejoignent les achats, dans « Achats et charges
+  // variables ». La valeur ajoutée, l'EBE et le résultat n'en bougent pas :
+  // seul le partage entre marge brute et charges externes change.
+  const variableCostMonthly = rev.totals.variableCost.map((v, m) => v + opex.variable[m])
+  const variableCostY = byYear(variableCostMonthly)
   const grossMarginY = revenueY.map((v, y) => v - variableCostY[y])
-  const opexY = byYear(opex.total)
+  const opexY = byYear(opex.fixe)
   const leaseY = byYear(capex.leaseMonthly)
   const externalY = opexY.map((v, y) => v + leaseY[y])
   const valueAddedY = grossMarginY.map((v, y) => v - externalY[y])
@@ -176,7 +184,7 @@ export function compute(scenario) {
     months: MONTHS, years: YEARS, bank,
     startDate: scenario.meta?.startDate || `${new Date().getFullYear()}-01-01`,
     revenue: { monthly: revenueMonthly, yearly: revenueY, cash: revenueCash, perActivity: rev.perActivity, campaigns: rev.campaigns, units: rev.totals.units },
-    variableCost: { monthly: rev.totals.variableCost, yearly: variableCostY },
+    variableCost: { monthly: variableCostMonthly, yearly: variableCostY },
     payroll, opex, capex, vat, financing, bfr, cash, balance, fundingPlan,
     jei, credits, duties, tax,
     micro: microS ? { ...microS, socialY: byYear(microS.social), trainingY: byYear(microS.trainingSeries), flatTaxY: byYear(microS.flatTax), acreSavingY: byYear(microS.acreSaving), revenueCashY: byYear(revenueCash) } : null,
@@ -280,9 +288,45 @@ export function opexSeries(items, { revenue, headcount, perActivity = [] }) {
       total[m] += v
       if (item.rdApproved) rdSubcontracting[m] += v
     }
-    perItem.push({ id: item.id, label: item.label, series, yearly: byYear(series) })
+    perItem.push({ id: item.id, label: item.label, mode: item.mode || 'fixed', series, yearly: byYear(series) })
   }
-  return { total, perItem, rdSubcontracting, yearly: byYear(total) }
+  // Ce qui suit les ventes, et ce qui tombe quoi qu'il arrive.
+  const variable = zeros()
+  for (const it of perItem) if (it.mode === 'perUnit' || it.mode === 'pctRevenue') it.series.forEach((v, m) => { variable[m] += v })
+  const fixe = total.map((v, m) => v - variable[m])
+  return { total, perItem, rdSubcontracting, yearly: byYear(total), variable, fixe, variableY: byYear(variable), fixeY: byYear(fixe) }
+}
+
+/**
+ * Ce que coûte une vente d'une offre : son coût de revient, et les charges
+ * par vente qui s'y appliquent.
+ *
+ * Les deux vivaient chacun de leur côté : l'offre affichait son coût de
+ * revient, les charges par vente — une commission de 1,5 %, un emballage à
+ * 0,15 € — se réglaient dans Achats et coûts, et modifier l'une ne changeait
+ * rien à ce que l'offre annonçait. On les additionne ici, avec la règle du
+ * moteur : une charge par vente vaut pour les offres qu'elle vise, ou pour
+ * toutes si elle n'en vise aucune.
+ *
+ * Pour un abonnement, le montant est par abonné et par mois.
+ */
+export function coutDUneVente(scenario, activity) {
+  const n = (v) => Number(v) || 0
+  const rec = n(activity.recurringPrice) > 0
+  const prix = rec ? n(activity.recurringPrice) : n(activity.unitPrice)
+  const propre = rec ? n(activity.recurringCost) : n(activity.unitCost)
+  const vise = (item) => {
+    const ids = Array.isArray(item.activityIds) && item.activityIds.length ? item.activityIds : (item.activityId ? [item.activityId] : [])
+    return !ids.length || ids.includes(activity.id)
+  }
+  const lignes = []
+  for (const item of scenario.opex || []) {
+    if (item.enabled === false || !vise(item)) continue
+    if (item.mode === 'perUnit' && n(item.perUnit) > 0) lignes.push({ label: item.label, v: n(item.perUnit) })
+    if (item.mode === 'pctRevenue' && n(item.pctRevenue) > 0) lignes.push({ label: item.label, v: n(item.pctRevenue) * prix, taux: n(item.pctRevenue) })
+  }
+  const charges = lignes.reduce((t, x) => t + x.v, 0)
+  return { prix, propre, charges, total: propre + charges, lignes, abonnement: rec }
 }
 
 // ──────────────────────── Investissements et amortissements ────────────────

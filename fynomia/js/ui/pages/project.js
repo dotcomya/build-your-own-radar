@@ -117,11 +117,11 @@ export function renderProject(navigate, refresh) {
       ),
       activityOpen(s) ? h('div', { class: 'legalopen' }, sectorGrid(s, set, refresh)) : null,
 
-      // La clôture de l'exercice, à côté de rien d'autre : la question du
-      // régime de TVA est partie. Elle doublonnait le statut juridique et le
-      // taux de TVA de chaque offre, et personne ne savait quoi y répondre ;
-      // la franchise, qui ne concerne que les petites affaires, reste dans le
-      // régime fiscal du statut.
+      // La clôture de l'exercice et le droit à l'ACRE, sur une ligne : deux
+      // réglages du premier exercice. La question du régime de TVA est partie ;
+      // elle doublonnait le statut juridique et le taux de TVA de chaque offre,
+      // et la franchise, qui ne concerne que les petites affaires, reste dans
+      // le régime fiscal du statut.
       h('div', { class: 'grid grid-2 mt' },
         h('div', { 'data-gap': 'calendrier' },
           selectField({
@@ -132,6 +132,7 @@ export function renderProject(navigate, refresh) {
             onInput: (v) => set({ fiscalYearEnd: Number(v) }, 'Clôture'),
           }),
         ),
+        h('div', { 'data-gap': 'acre' }, acreSwitch(s, set)),
       ),
     ),
 
@@ -430,13 +431,13 @@ function applyLegal(key) {
 }
 
 /**
- * Le régime social et les aides, sous le statut.
+ * Le régime de la micro-entreprise, sous le statut.
  *
- * Deux choses changent le premier exercice d'un créateur plus que n'importe
- * quel réglage fiscal : la micro-entreprise, qui fait cotiser sur le chiffre
- * d'affaires au lieu d'une paie, et l'ACRE, qui efface une partie des
- * cotisations la première année. Elles sont à côté de la forme juridique,
- * parce que c'est là qu'on les décide.
+ * La micro-entreprise fait cotiser sur le chiffre d'affaires au lieu d'une
+ * paie : sa nature d'activité, son versement libératoire et sa franchise de
+ * TVA se règlent à côté de la forme juridique, parce que c'est là qu'on la
+ * choisit. L'ACRE, qui vaut pour toutes les formes, est à côté du mois de
+ * clôture.
  */
 function regimeBlock(s, sector, set) {
   const micro = s.meta.legalForm === 'MICRO'
@@ -445,11 +446,9 @@ function regimeBlock(s, sector, set) {
   const taux = ctx.get('microSocialRates')
   const vl = ctx.get('microFlatIncomeTax')
   const pctFr = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
-  const acreNote = micro
-    ? `Tes cotisations baissent de ${pctFr(acreMicroReduction(s, ctx))} pendant ${acreMicroMonths(s)} mois — jusqu’à la fin du troisième trimestre civil après ton début d’activité.`
-    : 'Pendant douze mois, 25 % de tes cotisations de base effacées, en entier sous 36 045 € de revenu annuel, puis de moins en moins jusqu’à 48 060 €.'
+  if (!micro) return null
   return h('div', { class: 'regime', 'data-gap': 'regime' },
-    micro ? h('div', { class: 'grid grid-3' },
+    h('div', { class: 'grid grid-3' },
       selectField({
         label: 'Nature de ton activité',
         value: cat,
@@ -469,19 +468,28 @@ function regimeBlock(s, sector, set) {
         hint: 'Tu ne factures pas la TVA et tu ne la récupères pas. Tu la factures dès que tu dépasses le seuil majoré.',
         onInput: (v) => set({ vatExempt: v, vatChecked: true }, 'Régime de TVA'),
       }),
-    ) : null,
-    h('div', { class: `grid ${micro ? 'grid-3' : 'grid-2'} ${micro ? 'mt' : ''}` },
-      // Ce que l'ACRE efface, et à qui elle est ouverte : une seule bulle, à
-      // côté de l'interrupteur, plutôt qu'un paragraphe sous lui.
-      switchField({
-        label: h('span', { class: 'switch-name-i' }, 'J’ai droit à l’ACRE', infoPoint(
-          `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
-          { classe: 'is-champ' })),
-        checked: !!s.meta.acre,
-        onInput: (v) => set({ acre: v }, 'ACRE'),
-      }),
     ),
   )
+}
+
+/**
+ * Le droit à l'ACRE : ce qu'elle efface et à qui elle est ouverte, dans une
+ * seule bulle à côté de l'interrupteur, plutôt qu'un paragraphe sous lui.
+ */
+function acreSwitch(s, set) {
+  const micro = s.meta.legalForm === 'MICRO'
+  const ctx = fiscalContext(s.fiscal || {})
+  const pctFr = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
+  const acreNote = micro
+    ? `Tes cotisations baissent de ${pctFr(acreMicroReduction(s, ctx))} pendant ${acreMicroMonths(s)} mois — jusqu’à la fin du troisième trimestre civil après ton début d’activité.`
+    : 'Pendant douze mois, 25 % de tes cotisations de base effacées, en entier sous 36 045 € de revenu annuel, puis de moins en moins jusqu’à 48 060 €.'
+  return switchField({
+    label: h('span', { class: 'switch-name-i' }, 'J’ai droit à l’ACRE', infoPoint(
+      `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
+      { classe: 'is-champ' })),
+    checked: !!s.meta.acre,
+    onInput: (v) => set({ acre: v }, 'ACRE'),
+  })
 }
 
 /**

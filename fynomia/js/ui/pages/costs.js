@@ -15,6 +15,7 @@ import store from '../../state/store.js'
 import { gardePage, gardeLigne } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
 import { memoire } from '../memoire.js'
+import { uniteOffre } from '../../state/sectors.js'
 
 export function renderCosts(navigate, refresh) {
   const s = store.scenario
@@ -141,9 +142,15 @@ export function renderCosts(navigate, refresh) {
         h('div', { class: 'card' },
           h('div', { class: 'card-head' }, h('h2', {}, 'Évolution')),
           h('div', { class: 'card-body' },
-            barChart({ categories: YEAR_CATEGORIES, series: [{ label: 'Charges externes', values: r.opex.yearly, color: PALETTE[2] }], height: 160 }),
+            // Les charges générales et les charges par vente, séparées comme
+            // dans le compte de résultat : les unes fixent le point mort, les
+            // autres suivent les ventes et entament la marge.
+            barChart({ categories: YEAR_CATEGORIES, series: [
+              { label: 'Charges générales', values: r.opex.fixeY, color: PALETTE[2] },
+              ...(r.opex.variableY.some((v) => v) ? [{ label: 'Charges par vente', values: r.opex.variableY, color: PALETTE[4] }] : []),
+            ], height: 160 }),
             h('div', { class: 'note plain mt' },
-              `Ces charges représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.yearly[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Combinées à la masse salariale, elles fixent ton point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.`),
+              `Les charges générales représentent ${pct(r.pnl.revenue[0] > 0 ? r.opex.fixeY[0] / r.pnl.revenue[0] : 0, 0)} du chiffre d'affaires en année 1. Avec la masse salariale, elles fixent ton point mort à ${r.kpis.breakEven[0] ? euro(r.kpis.breakEven[0]) : '—'}.${r.opex.variableY[0] ? ` Les charges par vente, ${euro(r.opex.variableY[0])} en année 1, sont comptées dans le coût de ce que tu vends.` : ''}`),
           ),
         ),
       ),
@@ -507,27 +514,65 @@ function capexRow(c, r, level, refresh) {
 }
 
 /**
+ * Le coût de revient d'une offre, en tête des charges par vente.
+ *
+ * L'offre affichait un coût de revient qu'aucun écran ne permettait de
+ * modifier : il avait quitté le prix, et le lien disait de le régler « dans
+ * les charges par vente », où il n'était pas. Chaque offre vendue a donc ici
+ * sa ligne, à côté des commissions et des emballages qui s'y ajoutent, et
+ * l'offre lit le total.
+ */
+function coutRevientRow(s, a) {
+  const n = (v) => Number(v) || 0
+  const rec = n(a.recurringPrice) > 0
+  const champ = rec ? 'recurringCost' : 'unitCost'
+  const unite = uniteOffre(s, a)
+  const input = h('input', {
+    class: 'num', inputmode: 'decimal', autocomplete: 'off', value: n(a[champ]) ? String(n(a[champ])).replace('.', ',') : '',
+    placeholder: '0', 'aria-label': `Coût de revient — ${a.name || 'offre'}`,
+  })
+  let dernier = input.value
+  saisieDifferee(input, (texte) => {
+    if (texte === dernier) return
+    const v = lireNombre(texte)
+    if (Number.isNaN(v)) return
+    dernier = texte
+    store.update((sc) => { const t = sc.activities.find((x) => x.id === a.id); if (t) t[champ] = v === '' ? 0 : Math.max(0, v) }, { label: 'Coût de revient' })
+  })
+  return h('div', { class: 'cost-row is-par-vente is-revient', 'data-row': `revient-${a.id}`, 'data-effet': 'revient' },
+    h('div', { class: 'cost-line', 'data-effet-ancre': '' },
+      h('span', { class: 'cost-revient-tag' }, 'Coût de revient'),
+      h('span', { class: 'cost-label is-fixe' }, a.name || 'Offre'),
+      h('div', { class: 'cost-amount' }, input, h('span', { class: 'cost-unit is-static' }, rec ? '€ / abonné / mois' : `€ par ${unite.one}`)),
+    ),
+  )
+}
+
+/**
  * Les charges en deux blocs : ce qui tombe, et ce qui suit les ventes.
  *
- * Un fondateur qui a déjà saisi un coût de revient dans son offre le remet
- * souvent ici, en charge. Le bloc « par vente » porte donc l'avertissement à
- * l'endroit exact où l'erreur se commet.
+ * Le bloc « par vente » s'ouvre sur le coût de revient de chaque offre ; les
+ * commissions, emballages et matières qui s'y ajoutent suivent. Le tout
+ * forme le coût d'une vente, que l'offre affiche et que la marge brute
+ * retranche.
  */
 function costBlocks(s, r, level, refresh) {
   const fixed = s.opex.filter((o) => !o.mode || o.mode === 'fixed' || o.mode === 'perEmployee')
   const variable = s.opex.filter((o) => ['perUnit', 'pctRevenue'].includes(o.mode))
-  const block = (title, note, rows, tone = '') => rows.length
+  const vendues = (s.activities || []).filter((a) => (Number(a.unitPrice) > 0 || Number(a.recurringPrice) > 0) && !(Number(a.commissionRate) > 0 && Number(a.dealValue) > 0))
+  const block = (title, note, rows, tone = '', tete = []) => rows.length || tete.length
     ? h('section', { class: `costblock ${tone}` },
         h('header', { class: 'costblock-head' },
           h('div', { class: 'costblock-title' }, title),
           h('div', { class: 'costblock-note' }, note),
-          h('span', { class: 'costblock-count num' }, `${rows.length}`),
+          h('span', { class: 'costblock-count num' }, `${rows.length + tete.length}`),
         ),
+        ...tete,
         ...rows.map((o) => opexRow(o, r, level, refresh)),
       )
     : null
   return [
     block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed),
-    block('Charges par vente', 'Elles n’existent que s’il y a une vente : commissions, emballage, matière. Si tu as déjà saisi un coût de revient sur ton offre, ne le remets pas ici — il serait compté deux fois.', variable, 'is-variable'),
+    block('Charges par vente', 'Elles n’existent que s’il y a une vente. En tête, le coût de revient de chaque offre — ce que tu achètes ou produis pour la livrer ; dessous, ce qui s’y ajoute : commissions, emballages. Ne mets pas deux fois le même coût.', variable, 'is-variable', vendues.map((a) => coutRevientRow(s, a))),
   ].filter(Boolean)
 }

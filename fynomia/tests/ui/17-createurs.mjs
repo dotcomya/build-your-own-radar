@@ -46,8 +46,15 @@ export default async function (t) {
   await t.pose(p)
   const libelles = await p.locator('[data-gap="regime"] label').allInnerTexts()
   const lu = libelles.join(' | ')
-  t.verifie(/Nature de ton activit/.test(lu) && /Versement lib/.test(lu) && /Franchise de TVA/.test(lu) && /ACRE/.test(lu),
-    'le régime se règle sous le statut : nature, versement libératoire, franchise, ACRE', lu)
+  t.verifie(/Nature de ton activit/.test(lu) && /Versement lib/.test(lu) && /Franchise de TVA/.test(lu),
+    'le régime se règle sous le statut : nature, versement libératoire, franchise', lu)
+  const ligne = await p.evaluate(() => {
+    const cloture = [...document.querySelectorAll('.field')].find((f) => /Mois de clôture/.test(f.querySelector('label')?.textContent || ''))
+    const acre = document.querySelector('[data-gap="acre"] .field-switch')
+    const a = cloture?.getBoundingClientRect(), b = acre?.getBoundingClientRect()
+    return a && b ? { memeLigne: Math.abs(a.top - b.top) < 30 && b.left > a.left } : null
+  })
+  t.verifie(ligne?.memeLigne, 'le droit à l’ACRE est sur la ligne du mois de clôture', ligne)
 
   // 2. Le moteur suit.
   let e = await etat(p)
@@ -64,7 +71,7 @@ export default async function (t) {
   // 4. L'ACRE, déclarée.
   await t.aller(p, 'projet')
   const avant = e.cot0
-  const champAcre = p.locator('[data-gap="regime"] .field-switch', { hasText: 'ACRE' })
+  const champAcre = p.locator('[data-gap="acre"] .field-switch', { hasText: 'ACRE' })
   const bulle = await champAcre.locator('.switch-name .info-point').getAttribute('data-tip').catch(() => '')
   t.verifie(await champAcre.locator('.info-point').count() === 1 && await champAcre.locator('.field-hint').count() === 0
     && /cotisations/.test(bulle || '') && /URSSAF/.test(bulle || ''),

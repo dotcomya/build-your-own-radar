@@ -126,7 +126,9 @@ function added(kind, item, vocab, navigate, refresh, depuis) {
     // d'à côté. Le départ attend que l'éclat ait joué : sinon le voyage
     // l'emporte avant qu'on l'ait vu.
     if (depuis) celebrate(depuis, { kind, label: item.label })
-    setTimeout(() => goToGap({ route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' }, navigate), 420)
+    // Vers la carte de la nouvelle offre, et elle seule : le reflet visait la
+    // première zone « prix » de la page, celle de la première offre.
+    setTimeout(() => goToGap({ route: 'offre', view: 'offres', sec: 'offre', ouvrir: id, anchor: 'prix', dans: `[data-row="${id}"]` }, navigate), 420)
     toast(`${item.label} ajouté. Vérifie son prix.`)
     return
   }

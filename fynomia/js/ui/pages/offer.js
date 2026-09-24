@@ -22,13 +22,14 @@ const perKey = (a) => (a.recurringPeriod === 'semaine' ? 'semaine' : 'mois')
 const perLabel = (a) => (perKey(a) === 'semaine' ? 'hebdomadaire' : 'mensuel')
 const perOf = (a, v) => (perKey(a) === 'semaine' ? (Number(v) || 0) / SEMAINES_PAR_MOIS : Number(v) || 0)
 
-import { h, euro, pct, num, numberField, textField, selectField, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
+import { h, euro, euro as euroEntier, pct, num, numberField, textField, selectField, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
 import { newActivity } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE } from '../charts.js'
 import { vocabulary, uniteOffre, UNITES } from '../../state/sectors.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { valueForYear } from '../../engine/revenue.js'
+import { coutDUneVente } from '../../engine/engine.js'
 import { enableToggle } from '../dom.js'
 import { renderAcquisition } from './marketing.js'
 import { todoPanel } from '../todo.js'
@@ -95,6 +96,7 @@ export function renderOffer(navigate, refresh) {
     if (want.view) memoire.offre.view = want.view
     if (want.sec) activityCard.sec = want.sec
     if (want.openAll) s.activities.forEach((a) => open.add(a.id))
+    if (want.ouvrir) open.add(want.ouvrir)
   }
   const view = views.some((v) => v && v.key === memoire.offre.view) ? memoire.offre.view : 'offres'
   memoire.offre.view = view
@@ -164,16 +166,26 @@ const MODES = [
  * cours s'affiche dessus pour qu'on sache de quoi on parle.
  */
 function costLink(a, voc, navigate) {
-  const has = n(a.unitCost) > 0
+  // Le coût d'une vente se lit en entier : le coût de revient de l'offre et
+  // les charges par vente qui la visent. Il suit donc ce qu'on règle dans
+  // Achats et coûts, au lieu d'afficher un chiffre que rien ne modifie ici.
+  const cv = coutDUneVente(store.scenario, a)
+  const par = cv.abonnement ? 'par abonné et par mois' : `par ${voc.one}`
+  // Au centime : une commission de 1,5 % sur 18 € fait 0,27 €, pas « 0 € ».
+  const euro = (v) => (Math.abs(v) < 100 && Math.round(v * 100) % 100 !== 0 ? `${num(v, 2)}\u00a0€` : euroEntier(v))
+  const detail = [
+    cv.propre > 0 ? `coût de revient ${euro(cv.propre)}` : null,
+    ...cv.lignes.map((x) => `${x.label.toLowerCase()} ${x.taux ? `${pct(x.taux, 1)}, soit ${euro(x.v)}` : euro(x.v)}`),
+  ].filter(Boolean)
   return h('button', {
     class: 'costlink',
     onClick: () => goToGap({ route: 'achats', view: 'charges', anchor: 'charges' }, navigate),
   },
     h('span', { class: 'costlink-text' },
-      h('b', {}, has ? `Co\u00fbt de revient : ${euro(a.unitCost)} par unit\u00e9 vendue` : 'Ce que te co\u00fbte une vente'),
-      h('span', {}, has
-        ? 'Il est compt\u00e9 dans le r\u00e9sultat. Se modifie dans les charges par vente.'
-        : 'Se saisit en charge par vente, avec les autres co\u00fbts.'),
+      h('b', {}, cv.total > 0 ? `Co\u00fbt d\u2019une vente : ${euro(cv.total)} ${par}` : 'Ce que te co\u00fbte une vente'),
+      h('span', {}, cv.total > 0
+        ? `${detail.join(' + ')}. Se r\u00e8gle dans les charges par vente.`
+        : 'Se saisit dans les charges par vente, avec les autres co\u00fbts.'),
     ),
     h('span', { class: 'costlink-go' }, 'Achats et co\u00fbts \u2192'),
   )
@@ -240,7 +252,10 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
     }
   }
 
-  const margin = (Number(a.unitPrice) || 0) > 0 ? 1 - (Number(a.unitCost) || 0) / (Number(a.unitPrice) || 1) : null
+  // La marge d'une vente, avec tout ce qu'elle coûte : son coût de revient et
+  // les charges par vente qui la visent.
+  const cv = coutDUneVente(store.scenario, a)
+  const margin = cv.prix > 0 ? 1 - cv.total / cv.prix : null
 
   // « L'offre » et « Prix et marge » étaient deux onglets pour une seule
   // question : ce que tu vends, et combien. On saisissait un nom d'un côté,
@@ -319,7 +334,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
               : mode === 'recurring' && n(a.recurringPrice) > 0
                 ? `${euro(perOf(a, a.recurringPrice))}/${perKey(a) === 'semaine' ? 'sem.' : 'mois'} pendant ${a.contractMonths} mois`
                 : n(a.unitPrice) > 0 ? `${euro(a.unitPrice)} par ${voc.one}` : null,
-            margin !== null && n(a.unitCost) > 0 ? `${pct(margin, 0)} de marge` : null,
+            margin !== null && cv.total > 0 ? `${pct(margin, 0)} de marge` : null,
           ].filter(Boolean).join(' · ')),
       ),
       detail && h('div', { class: 'right', style: { marginRight: '10px' } },
