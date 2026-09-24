@@ -902,7 +902,7 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
         ],
       }) : null,
       clair: !lead ? [] : [
-        ordre[1] ? `Viennent ensuite ${ordre.slice(1, 3).map((x) => `${x.nom.toLowerCase()} (${surBesoin ? `+${eur(x.dBesoin)}` : `${eur(x.dNet)}`})`).join(' puis ')}.` : null,
+        ordre[1] ? `Ensuite : ${ordre.slice(1, 3).map((x) => `${x.dit}, ${surBesoin ? `+${eur(x.dBesoin)} de besoin` : `${eur(x.dNet)} de résultat`}`).join(' ; puis ')}.` : null,
         peu.length ? `${peu.length > 1 ? 'Ces hypothèses changent' : 'Cette hypothèse change'} peu le plan : ${peu.map((x) => x.nom.toLowerCase()).join(', ')}.` : null,
       ],
       plus: !sens.length ? null : detail([
