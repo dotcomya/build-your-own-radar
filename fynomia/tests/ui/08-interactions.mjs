@@ -11,9 +11,9 @@ export default async function (t) {
   const p = await t.page('bureau')
   await t.exemple(p)
 
-  // Le voyage : depuis l'essai, « Renseigner… » joue une vraie transition.
+  // Le voyage : depuis le pilotage, « Renseigner… » joue une vraie transition.
   await t.aller(p, 'tableau-de-bord', 900)
-  await t.onglet(p, 'essai', 1200)
+  await t.onglet(p, 'Pilotage', 1200)
   await p.locator('.sy-ink .sy-btn.is-accent').click()
   await p.waitForTimeout(250)
   const voyage = await p.evaluate(() => ({
@@ -24,9 +24,9 @@ export default async function (t) {
   await p.waitForTimeout(1500)
   t.verifie(!/tableau-de-bord/.test(await p.evaluate(() => location.hash)), 'on arrive sur une autre page')
 
-  // Les cases de l'avancement : survol, puis clic.
+  // Les cases de l'avancement, dans le pilotage : survol, puis clic.
   await t.aller(p, 'tableau-de-bord', 900)
-  await t.onglet(p, 'essai', 1200)
+  await t.onglet(p, 'Pilotage', 1200)
   const n = await p.locator('.sy-cell').count()
   t.verifie(n >= 20, 'une case par ligne du dossier', `${n}`)
   await p.locator('.sy-cell').nth(2).hover(); await p.waitForTimeout(250)

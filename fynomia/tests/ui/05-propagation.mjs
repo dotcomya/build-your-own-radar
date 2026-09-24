@@ -56,7 +56,7 @@ export default async function (t) {
     await t.aller(p, 'offre', 1000)
     const f = p.locator('.item-body input[inputmode=decimal], .item-body input[inputmode=numeric]').first()
     await f.fill('99'); await f.blur(); await p.waitForTimeout(900)
-  }, ['Compte de résultat/Chiffre d', 'Compte de résultat/EBITDA', 'Compte de résultat/Résultat net', 'Trésorerie/'])
+  }, ['Compte de résultat/Chiffre d', 'Compte de résultat/EBE', 'Compte de résultat/Résultat net', 'Trésorerie/'])
 
   await cas(t, 'Salaire du fondateur → 90 000', async (p) => {
     await t.aller(p, 'equipe', 1000)
@@ -65,12 +65,12 @@ export default async function (t) {
     const i = libelles.findIndex((l) => /brut/i.test(l))
     const f = p.locator('.item.open .item-body input').nth(Math.max(0, i))
     await f.fill('90000'); await f.blur(); await p.waitForTimeout(900)
-  }, ['Compte de résultat/Charges de personnel', 'Compte de résultat/EBITDA', 'Trésorerie/'])
+  }, ['Compte de résultat/Charges de personnel', 'Compte de résultat/EBE', 'Trésorerie/'])
 
   await cas(t, 'Première charge × 10', async (p) => {
     await t.aller(p, 'achats', 1000)
     const f = p.locator('.cost-row input[inputmode=decimal], .cost-row input[inputmode=numeric]').first()
     const v = Number((await f.inputValue()).replace(',', '.')) || 300
     await f.fill(String(v * 10)); await f.blur(); await p.waitForTimeout(900)
-  }, ['Compte de résultat/Charges externes', 'Compte de résultat/EBITDA', 'Trésorerie/'])
+  }, ['Compte de résultat/Charges externes', 'Compte de résultat/EBE', 'Trésorerie/'])
 }
