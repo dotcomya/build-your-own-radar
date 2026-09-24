@@ -7,7 +7,7 @@
  * qu'un salaire se négocie et se compare.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, monthLabel, moduleShell, foldSign } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, monthLabel, moduleShell, foldSign, saisieDifferee, lireNombre } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS, MANDATAIRES } from '../../engine/payroll.js'
 import { isMicro } from '../../engine/micro.js'
@@ -212,40 +212,20 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
       sec === 'poste' ? h('div', { class: 'view' }, (() => {
         // Le coût se recalcule sous les doigts.
         //
-        // Le salaire s'enregistrait « en silence » — le modèle était à jour,
-        // l'écran ne l'apprenait jamais. On tapait 50 000 € et on lisait le
-        // coût de 3 000 €, sans rien pour signaler l'écart. C'est le défaut le
-        // plus grave qu'on puisse avoir dans un outil de chiffrage : il donne
-        // un chiffre faux avec l'assurance d'un chiffre juste.
-        //
-        // Le silence reste — un redessin complet à chaque caractère ferait
-        // perdre le curseur — mais les trois nombres qui dépendent du salaire
-        // sont réécrits à la main, à chaque frappe. Pas de rendu, pas de perte
-        // de focus, et le chiffre est toujours celui qu'on vient de taper.
+        // Le salaire s'écrit une seconde après la dernière frappe (voir
+        // saisieDifferee) : le plan est alors recalculé et la page redessinée,
+        // le curseur rendu à sa place. Les trois nombres qui en dépendent sont
+        // donc toujours ceux du salaire qu'on vient de taper.
         const coutValue = h('strong', { class: 'num' }, preleve ? 'Pas une charge' : `${euro(cost.cost * 12)} / an`)
         const netValue = h('strong', { class: 'num' }, `${euro((m.contractType === 'tns' ? cost.gross : cost.net) * 12)} / an`)
         const plural = h('div', { class: 'paycard-note' },
           count > 1 ? `Pour ${count} personnes : ${euro(cost.cost * count * 12)} par an.` : '')
 
-        const relire = (brut) => {
-          const vivant = { ...m, monthlyGross: brut }
-          let neuf
-          try {
-            neuf = monthlyCost(vivant, {
-              headcount, jeiActive: jeiActive && (Number(m.rdShare) || 0) > 0, micro,
-              fiscal: store.scenario.fiscal, benefits: store.scenario.hr?.benefits,
-            })
-          } catch { return }
-          coutValue.textContent = preleve ? 'Pas une charge' : `${euro(neuf.cost * 12)} / an`
-          netValue.textContent = `${euro((m.contractType === 'tns' ? neuf.gross : neuf.net) * 12)} / an`
-          plural.textContent = count > 1 ? `Pour ${count} personnes : ${euro(neuf.cost * count * 12)} par an.` : ''
-        }
-
         const champSalaire = unitAmount({
           label: preleve ? `${payLabel} — ${annual ? 'par an' : 'par mois'}` : `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
           value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
           onUnit: (k) => { memoire.equipe.unit = k; refresh() },
-          onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
+          onInput: (v) => set({ monthlyGross: v }),
           garde: sansValidee(`salaire:${m.id}`, (v) => `${Number(v) || 0}:${m.contractType || ''}`, (v) => gardeSalaire(v * 12, m.contractType)),
         })
 
@@ -396,7 +376,7 @@ function benefitsPanel(r, refresh) {
     h('div', { class: 'perk-list' }, ...Object.entries(BENEFITS).map(([key, def]) => {
       const amount = Number(chosen[key]) || 0
       const on = amount > 0
-      return h('div', { class: `perk ${on ? 'on' : ''} ${def.legal ? 'is-legal' : ''}` },
+      return h('div', { class: `perk ${on ? 'on' : ''} ${def.legal ? 'is-legal' : ''}`, 'data-effet': 'avantage', 'data-cle': `perk-${key}` },
         enableToggle(on, (v) => { setBenefit(key, v ? def.suggested : 0); refresh() }, `perk-${key}`),
         h('div', { class: 'spacer' },
           h('div', { class: 'perk-name' }, def.label,
@@ -406,10 +386,18 @@ function benefitsPanel(r, refresh) {
         h('div', { class: 'perk-amount' },
           on
             ? h('label', { class: 'perk-box' },
-                h('input', {
-                  class: 'perk-input num', type: 'number', min: '0', step: '5', value: String(amount),
-                  onInput: (e) => setBenefit(key, e.target.value),
-                }),
+                (() => {
+                  // Écrit une seconde après la dernière frappe (voir saisieDifferee).
+                  const input = h('input', { class: 'perk-input num', inputmode: 'decimal', autocomplete: 'off', value: String(amount), 'aria-label': `Montant — ${def.label}` })
+                  let dernier = input.value
+                  saisieDifferee(input, (texte) => {
+                    const v = lireNombre(texte)
+                    if (texte === dernier || Number.isNaN(v)) return
+                    dernier = texte
+                    setBenefit(key, v === '' ? 0 : v)
+                  })
+                  return input
+                })(),
                 h('span', {}, '€'))
             : h('button', { class: 'btn btn-sm btn-ghost', onClick: () => { setBenefit(key, def.suggested); refresh() } }, `+ ${euro(def.suggested)}`),
         ),

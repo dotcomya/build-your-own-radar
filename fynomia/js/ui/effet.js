@@ -51,9 +51,21 @@ export function effetDe(base, r) {
 const texteDe = (label) => [...(label?.childNodes || [])]
   .filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim()
 
-/** Ce qui permet de retrouver le champ après un redessin. */
-function decrire(input) {
-  const champ = input.closest('.field')
+/**
+ * Le champ d'une saisie : un `.field` (libellé, cadre, aide), ou une ligne qui
+ * se déclare `data-effet` — une charge, un avantage — et dont les cases se
+ * nomment par leur `aria-label`.
+ */
+const CHAMP = '.field, [data-effet]'
+const champDe = (el) => el?.closest?.(CHAMP) || null
+const nomDe = (champ, input) => (champ.matches('.field')
+  ? texteDe(champ.querySelector('label'))
+  : `${champ.getAttribute('data-effet') || ''}|${input?.getAttribute?.('aria-label') || ''}`)
+const SAISIES = 'input, select, textarea'
+
+/** Ce qui permet de retrouver le champ — et la case — après un redessin. */
+export function decrire(input) {
+  const champ = champDe(input)
   if (!champ) return null
   const ancres = []
   for (let el = champ.parentElement; el && el !== document.body; el = el.parentElement) {
@@ -61,10 +73,15 @@ function decrire(input) {
       if (el.hasAttribute && el.hasAttribute(a)) ancres.unshift([a, el.getAttribute(a)])
     }
   }
-  const label = texteDe(champ.querySelector('label'))
+  const label = nomDe(champ, input)
   const portee = portee_(ancres)
-  const memes = [...portee.querySelectorAll('.field')].filter((f) => texteDe(f.querySelector('label')) === label)
-  return { route: route(), cle: input.dataset?.fieldKey || null, label, ancres, index: Math.max(0, memes.indexOf(champ)) }
+  const memes = [...portee.querySelectorAll(CHAMP)].filter((f) => nomDe(f, input) === label)
+  const cases = [...champ.querySelectorAll(SAISIES)]
+  return {
+    route: route(), cle: input.dataset?.fieldKey || null, label, ancres,
+    index: Math.max(0, memes.indexOf(champ)), aria: input.getAttribute?.('aria-label') || null,
+    pos: Math.max(0, cases.indexOf(input)),
+  }
 }
 
 function portee_(ancres) {
@@ -80,10 +97,23 @@ function retrouver(d) {
   if (!d || d.route !== route()) return null
   if (d.cle) {
     const i = document.querySelector(`[data-field-key="${CSS.escape(d.cle)}"]`)
-    if (i && i.closest('.field')) return i.closest('.field')
+    if (i && champDe(i)) return champDe(i)
   }
-  const memes = [...portee_(d.ancres).querySelectorAll('.field')].filter((f) => texteDe(f.querySelector('label')) === d.label)
+  const memes = [...portee_(d.ancres).querySelectorAll(CHAMP)].filter((f) => nomDe(f, d.aria ? { getAttribute: () => d.aria } : null) === d.label)
   return memes[d.index] || null
+}
+
+/** La case elle-même, dans le champ retrouvé : pour lui rendre le focus. */
+export function retrouverSaisie(d) {
+  if (!d) return null
+  if (d.cle) {
+    const i = document.querySelector(`[data-field-key="${CSS.escape(d.cle)}"]`)
+    if (i) return i
+  }
+  const champ = retrouver(d)
+  if (!champ) return null
+  const cases = [...champ.querySelectorAll(SAISIES)]
+  return (d.aria && cases.find((c) => c.getAttribute('aria-label') === d.aria)) || cases[d.pos] || null
 }
 
 /** Pose — ou retire — la pastille sous le champ. */
@@ -95,8 +125,9 @@ function poser() {
   let chip = champ.querySelector(':scope > .effet')
   if (!chip) {
     chip = h('span', { class: 'effet', role: 'status', 'aria-live': 'polite' })
-    const control = champ.querySelector(':scope > .control') || champ.querySelector('.control')
-    if (control && control.parentElement === champ) control.after(chip)
+    // Sous le cadre d'un champ ; sous la ligne d'une charge ou d'un avantage.
+    const ancre = champ.querySelector(':scope > .control, :scope > [data-effet-ancre]')
+    if (ancre) ancre.after(chip)
     else champ.appendChild(chip)
   }
   chip.dataset.pour = JSON.stringify(dernier.desc)
@@ -115,7 +146,7 @@ export function installEffet() {
     const el = e.target
     if (!(el instanceof HTMLElement) || !el.matches('input, select, textarea')) return
     if (HORS.has(route())) return
-    if (!el.closest('.field')) return
+    if (!champDe(el)) return
     if (suivi && suivi.el === el) return
     const desc = decrire(el)
     if (!desc) return

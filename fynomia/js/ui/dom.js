@@ -77,19 +77,61 @@ import { BOUNDS, clampField } from '../state/schema.js'
 import { memoire } from './memoire.js'
 
 /**
+ * La saisie différée : ce qu'on tape s'écrit une seconde après la dernière
+ * frappe.
+ *
+ * Écrire à chaque chiffre recalculait le plan, et parfois redessinait la page,
+ * pendant qu'on tapait « 26 843 » : le champ était remplacé sous les doigts,
+ * le curseur revenait au début, et la suite du nombre s'écrivait devant. On
+ * attend donc que la main se pose — une seconde sans frappe, chaque frappe
+ * relançant l'attente — puis on écrit une fois. Quitter le champ ou appuyer
+ * sur Entrée écrit tout de suite : on ne fait jamais attendre celui qui a fini.
+ *
+ * `ecrire(texte, { fin })` reçoit le texte du champ ; `fin` dit si la saisie
+ * est terminée (sortie du champ, Entrée) ou seulement en pause.
+ */
+export const DELAI_SAISIE = 1000
+export function saisieDifferee(input, ecrire, { delai = DELAI_SAISIE } = {}) {
+  let minuteur = null
+  const maintenant = (fin) => { clearTimeout(minuteur); minuteur = null; ecrire(input.value, { fin }) }
+  input.addEventListener('input', () => {
+    clearTimeout(minuteur)
+    minuteur = setTimeout(() => maintenant(false), delai)
+  })
+  input.addEventListener('change', () => maintenant(true))
+  input.addEventListener('blur', () => maintenant(true))
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') maintenant(true) })
+  return () => maintenant(true)
+}
+
+/** Un nombre tapé à la française : « 26 843,50 » → 26843.5 ; vide → '' ; illisible → NaN. */
+export const lireNombre = (texte) => {
+  const t = String(texte ?? '').replace(/[\s\u00a0\u202f]/g, '').replace(',', '.')
+  return t === '' ? '' : Number(t)
+}
+/** Et dans l'autre sens, avec la virgule décimale. */
+const ecrireNombre = (v) => (v === '' || v === null || v === undefined ? '' : String(v).replace('.', ','))
+
+/**
  * Champ numérique borné. La valeur est ramenée dans les limites du schéma
  * à la sortie du champ : l'utilisateur ne peut pas produire un scénario absurde.
+ *
+ * Un champ texte au clavier décimal, pas un `type=number` : un champ numérique
+ * ne dit pas où est le curseur, et quand la page se redessine après un
+ * recalcul, il le remettait au début. Les flèches haut et bas avancent d'un
+ * pas, comme avant.
  */
 export function numberField({ label, value, field, suffix, prefix, hint, help, onInput, percent = false, step, min, max, disabled, fieldKey, placeholder = null, muted = false, garde = null }) {
   const b = BOUNDS[field] || {}
-  const toDisplay = (v) => (v === '' || v === null || v === undefined ? '' : percent ? round(Number(v) * 100, 4) : v)
+  const toDisplay = (v) => (v === '' || v === null || v === undefined ? '' : ecrireNombre(percent ? round(Number(v) * 100, 4) : v))
+  const pas = step ?? (percent ? 0.5 : b.step ?? 1)
+  const lo = min ?? (percent ? (b.min ?? -Infinity) * 100 : b.min ?? -Infinity)
+  const hi = max ?? (percent ? (b.max ?? Infinity) * 100 : b.max ?? Infinity)
   const input = h('input', {
-    type: 'number',
+    type: 'text',
     value: toDisplay(value),
-    step: step ?? (percent ? 0.5 : b.step ?? 1),
-    min: min ?? (percent ? (b.min ?? 0) * 100 : b.min),
-    max: max ?? (percent ? (b.max ?? 1) * 100 : b.max),
     inputmode: 'decimal',
+    autocomplete: 'off',
     disabled,
     placeholder: placeholder === null || placeholder === undefined ? null : String(placeholder),
     'data-field-key': fieldKey || null,
@@ -101,34 +143,55 @@ export function numberField({ label, value, field, suffix, prefix, hint, help, o
     input,
     (suffix || percent) && h('span', { class: 'affix' }, suffix || '%'),
   )
+  const horsBornes = (v) => v !== '' && (Number.isNaN(v) || v < lo || v > hi)
   // Quitter un champ sans l'avoir modifié ne doit rien écrire.
   //
   // Le contraire coûtait un clic : sortir du champ pour appuyer sur un bouton
   // déclenchait un enregistrement, donc un redessin complet, et le bouton
   // visé disparaissait entre l'appui et le relâchement. Le clic était perdu,
   // et il fallait recommencer sans comprendre pourquoi.
-  let last = toDisplay(value)
-  const commit = () => {
-    let raw = input.value === '' ? '' : Number(input.value)
+  // `dernier` : la dernière valeur écrite dans le plan, pour ne pas réécrire
+  // la même ; `affiche` : son texte, rendu si la sortie trouve un illisible.
+  let dernier = value === '' || value === null || value === undefined ? '' : String(Number(value))
+  let affiche = input.value
+  saisieDifferee(input, (texte, { fin }) => {
+    let raw = lireNombre(texte)
+    if (Number.isNaN(raw)) {
+      // Illisible : pendant une pause, on attend la suite ; à la sortie, on
+      // rend la dernière valeur écrite.
+      if (fin) { input.value = affiche; control.classList.remove('invalid') }
+      return
+    }
+    // Hors bornes pendant une pause : on n'écrit rien, le cadre rouge suffit.
+    // À la sortie, la valeur est ramenée dans les bornes, comme avant.
+    if (!fin && horsBornes(raw)) return
     if (raw !== '') {
       if (percent) raw = raw / 100
       raw = clampField(field, raw)
-      input.value = toDisplay(raw)
+      if (fin) input.value = toDisplay(raw)
     }
-    control.classList.remove('invalid')
-    if (String(input.value) === String(last)) return
-    last = input.value
+    if (fin) control.classList.remove('invalid')
+    affiche = input.value
+    const cle = raw === '' ? '' : String(raw)
+    if (cle === dernier) return
+    dernier = cle
     onInput(raw)
-  }
-  input.addEventListener('change', commit)
-  input.addEventListener('blur', commit)
+  })
   const note = garde ? gardeNote(control, garde) : null
   input.addEventListener('input', () => {
-    const v = Number(input.value)
-    const lo = percent ? (b.min ?? -Infinity) * 100 : b.min ?? -Infinity
-    const hi = percent ? (b.max ?? Infinity) * 100 : b.max ?? Infinity
-    control.classList.toggle('invalid', input.value !== '' && (v < lo || v > hi))
-    if (note) note.juger(input.value === '' ? '' : (percent ? v / 100 : v))
+    const v = lireNombre(input.value)
+    control.classList.toggle('invalid', horsBornes(v))
+    if (note) note.juger(v === '' || Number.isNaN(v) ? '' : (percent ? v / 100 : v))
+  })
+  // Les flèches avancent d'un pas, dans les bornes.
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+    const v = lireNombre(input.value)
+    const base = v === '' || Number.isNaN(v) ? 0 : v
+    const next = Math.min(hi, Math.max(lo, round(base + (e.key === 'ArrowUp' ? pas : -pas), 6)))
+    e.preventDefault()
+    input.value = ecrireNombre(next)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   if (note) note.juger(value)
   return h('div', { class: 'field' },
@@ -495,13 +558,17 @@ export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, h
   const shown = def.toDisplay ? def.toDisplay(value) : value
   let note = null
   const input = h('input', {
-    class: 'num', inputmode: 'decimal', value: shown === 0 ? '0' : String(Math.round(shown * 100) / 100),
-    onInput: (e) => {
-      const raw = Number(String(e.target.value).replace(/\s/g, '').replace(',', '.')) || 0
-      const stored = def.fromDisplay ? def.fromDisplay(raw) : raw
-      onInput(stored)
-      if (note) note.juger(stored)
-    },
+    class: 'num', inputmode: 'decimal', autocomplete: 'off', value: shown === 0 ? '0' : ecrireNombre(Math.round(shown * 100) / 100),
+  })
+  const stocke = (texte) => { const raw = lireNombre(texte); const v = Number.isNaN(raw) || raw === '' ? 0 : raw; return def.fromDisplay ? def.fromDisplay(v) : v }
+  // Le garde-fou juge à chaque frappe ; le plan, lui, s'écrit une seconde
+  // après la dernière (voir saisieDifferee).
+  input.addEventListener('input', () => { if (note) note.juger(stocke(input.value)) })
+  let last = input.value
+  saisieDifferee(input, (texte) => {
+    if (texte === last) return
+    last = texte
+    onInput(stocke(texte))
   })
   const control = h('div', { class: 'control unit-control' },
     input,

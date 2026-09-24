@@ -1,5 +1,6 @@
 /**
- * Le coût d'un salaire se recalcule pendant qu'on tape, sans quitter le champ.
+ * Le coût d'un salaire se recalcule dès que la main se pose — une seconde
+ * après la dernière frappe —, sans quitter le champ.
  */
 export const nom = 'Paie en direct'
 

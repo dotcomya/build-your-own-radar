@@ -1,6 +1,6 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, numberField, textField, selectField, monthField, helpButton, monthLabel, moduleShell, PLUS, MINUS } from '../dom.js'
+import { h, euro, num, numberField, textField, selectField, monthField, helpButton, monthLabel, moduleShell, PLUS, MINUS, saisieDifferee, lireNombre } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
@@ -234,14 +234,20 @@ export function renderFinancing(navigate, refresh) {
 
     view === 'sources' ? h('div', { class: 'view' },
       h('div', { class: 'sources', 'data-gap': 'sources' },
-        h('div', { class: 'source source-cash' },
+        h('div', { class: 'source source-cash', 'data-effet': 'tresorerie' },
           h('span', { class: 'source-glyph' }, '●'),
           h('span', { class: 'source-name' }, 'Déjà en caisse'),
           (() => {
             const input = h('input', {
-              class: 'num source-input', inputmode: 'decimal', value: String(f.openingCash ?? 0),
-              'aria-label': 'Trésorerie de départ',
-              onInput: (e) => store.update((sc) => { sc.financing.openingCash = Number(e.target.value.replace(',', '.')) || 0 }, { label: 'Trésorerie initiale', silent: true }),
+              class: 'num source-input', inputmode: 'decimal', autocomplete: 'off', value: String(f.openingCash ?? 0),
+              'aria-label': 'Trésorerie de départ', 'data-field-key': 'treso-depart',
+            })
+            let dernier = input.value
+            saisieDifferee(input, (texte) => {
+              const v = lireNombre(texte)
+              if (texte === dernier || Number.isNaN(v)) return
+              dernier = texte
+              store.update((sc) => { sc.financing.openingCash = v === '' ? 0 : v }, { label: 'Trésorerie initiale' })
             })
             return h('label', { class: 'source-money' }, input, h('span', {}, '€'))
           })(),

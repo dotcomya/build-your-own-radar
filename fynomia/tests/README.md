@@ -26,7 +26,7 @@ mise en ligne.
 | `03-onglets` | chaque onglet de chaque module s'ouvre et devient actif |
 | `04-defilement` | la page ne se raccourcit pas sous le doigt, le défilement va au bout, rien ne déborde |
 | `05-propagation` | un prix, un salaire, une charge qui changent font bouger les états financiers qui en dépendent |
-| `06-paie` | le coût d'un salaire suit la frappe, sans quitter le champ |
+| `06-paie` | le coût d'un salaire se recalcule dès que la main se pose, sans quitter le champ |
 | `07-syntheses` | la synthèse suit le plan ; l'essai dit mot pour mot la même chose ; tout se trace au défilement |
 | `08-interactions` | voyage vers une page, carte ouverte, suggestion acceptée, cases d'avancement, financement, Mon projet, bilan équilibré |
 | `09-livre` | le fichier livré fonctionne seul |
@@ -39,10 +39,11 @@ mise en ligne.
 | `16-parcours` | le parcours d'accueil : aucune question pré-remplie ni cochée, « ton business prend forme » vu une seule fois puis le pitch, un seul ordre de recommandations (relire d'abord, jamais les délais ni la hausse des prix en tête), partagé par le guide et le pilotage |
 | `17-createurs` | la micro-entreprise se choisit sous le statut et règle sa nature d'activité, son versement libératoire et sa franchise ; pas d'IS ni de TVA ; le fondateur devient un prélèvement ; l'ACRE allège la première année ; le prêt d'honneur, avec son réseau, entre en trésorerie ; « Ce que je touche » descend de ce qu'il encaisse à ce qui lui reste |
 | `18-banquier` | le dossier parle d'EBE et de CAF ; « ce que ton banquier va vérifier » tient en cinq lignes validées, justes ou à revoir ; la couverture vient de l'échéancier réel, pas d'une dette divisée par sept ; le tableau du banquier ; un prêt d'honneur améliore l'apport |
-| `19-effet` | la saisie dit ce qu'elle déplace, sous le champ : « +… € de résultat en année N » en vert, en rouge à la baisse, à la frappe pour un salaire ; un autre champ ou une autre page l'efface |
+| `19-effet` | la saisie dit ce qu'elle déplace, sous le champ : « +… € de résultat en année N » en vert, en rouge à la baisse, sans quitter le champ pour un salaire ; un autre champ ou une autre page l'efface |
 | `20-methode` | chaque repère du métier cite sa source et son année ; la page Méthode donne les fourchettes, leur calcul, leur construction, leurs limites et toutes les sources avec lien |
 | `21-retouches` | une charge par vente se chiffre en % du prix ou en € par produit vendu, sans montant mensuel ni forfait caché ; un avertissement ouvert passe devant le guide flottant et tout le reste |
 | `22-unites` | chaque offre compte ce qu'elle vend : le mot du métier pour l'offre principale, « ventes » par défaut pour les autres, un choix (produits, abonnements…) ou un mot écrit à la main ; ce qui additionne les offres dit « ventes » dès qu'elles ne comptent pas la même chose |
+| `23-saisie` | abonnement, salaire, montant d'une charge : rien ne s'écrit pendant la frappe, le plan s'écrit une seconde après la dernière, Tab écrit tout de suite ; le focus, la valeur et le curseur restent en place à travers le recalcul, la suite du nombre s'écrit derrière ; l'effet sur le résultat s'affiche après le recalcul, sous le champ tapé |
 
 ## Options
 

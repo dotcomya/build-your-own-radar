@@ -1,6 +1,6 @@
 /** Charges externes et investissements. */
 
-import { h, euro, pct, num, numberField, textField, switchField, monthField, helpButton, confirmDialog, moduleShell } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, switchField, monthField, helpButton, confirmDialog, moduleShell, saisieDifferee, lireNombre } from '../dom.js'
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
@@ -286,8 +286,22 @@ function opexRow(o, r, level, refresh) {
   }
 
   const parVente = estParVente(o)
-  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''} ${parVente ? 'is-par-vente' : ''}`, 'data-row': o.id },
-    h('div', { class: 'cost-line' },
+  // Un montant de charge s'écrit une seconde après la dernière frappe, comme
+  // tout nombre du plan ; son effet sur le résultat s'affiche sous la ligne.
+  const montant = (attrs, ecrire) => {
+    const input = h('input', { class: 'num', inputmode: 'decimal', autocomplete: 'off', ...attrs })
+    let dernier = input.value
+    saisieDifferee(input, (texte) => {
+      if (texte === dernier) return
+      const v = lireNombre(texte)
+      if (Number.isNaN(v)) return
+      dernier = texte
+      ecrire(v === '' ? 0 : v)
+    })
+    return input
+  }
+  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''} ${parVente ? 'is-par-vente' : ''}`, 'data-row': o.id, 'data-effet': 'charge' },
+    h('div', { class: 'cost-line', 'data-effet-ancre': '' },
       enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }, `opex-${o.id}`),
 
       h('input', {
@@ -300,15 +314,10 @@ function opexRow(o, r, level, refresh) {
       // chaque charge pour savoir ce qu'on regardait. Une charge par vente
       // n'a pas de montant mensuel : elle se chiffre au prix ou à l'unité.
       parVente ? modeParVente(o, set, refresh) : h('div', { class: 'cost-amount' },
-        h('input', {
-          class: 'num', inputmode: 'decimal',
+        montant({
           value: yearly ? String(Math.round((Number(o.monthlyAmount) || 0) * 12) || '') : String(o.monthlyAmount ?? ''),
           'aria-label': yearly ? 'Montant annuel' : 'Montant mensuel',
-          onInput: (e) => {
-            const v = Number(e.target.value.replace(',', '.')) || 0
-            set({ monthlyAmount: yearly ? v / 12 : v }, { silent: true })
-          },
-        }),
+        }, (v) => set({ monthlyAmount: yearly ? v / 12 : v })),
         h('button', {
           class: 'cost-unit', title: yearly ? 'Saisir un montant mensuel' : 'Saisir un montant annuel',
           onClick: () => { yearly ? annual.delete(o.id) : annual.add(o.id); refresh() },
@@ -337,26 +346,20 @@ function opexRow(o, r, level, refresh) {
       ),
 
       o.mode === 'perEmployee' ? h('div', { class: 'cost-extra' },
-        h('input', {
-          class: 'num', inputmode: 'decimal', value: String(o.perEmployee ?? ''), 'aria-label': 'Montant par salarié',
-          onInput: (e) => set({ perEmployee: Number(e.target.value.replace(',', '.')) || 0 }, { silent: true }),
-        }),
+        montant({ value: String(o.perEmployee ?? ''), 'aria-label': 'Montant par salarié' },
+          (v) => set({ perEmployee: v })),
         h('span', {}, '€/sal.'),
       ) : null,
 
       o.mode === 'pctRevenue' ? h('div', { class: 'cost-extra' },
-        h('input', {
-          class: 'num', inputmode: 'decimal', value: String(Math.round((Number(o.pctRevenue) || 0) * 1000) / 10), 'aria-label': 'Part des ventes',
-          onInput: (e) => set({ pctRevenue: (Number(e.target.value.replace(',', '.')) || 0) / 100 }, { silent: true }),
-        }),
+        montant({ value: String(Math.round((Number(o.pctRevenue) || 0) * 1000) / 10), 'aria-label': 'Part des ventes' },
+          (v) => set({ pctRevenue: v / 100 })),
         h('span', {}, '% du prix'),
       ) : null,
 
       o.mode === 'perUnit' ? h('div', { class: 'cost-extra' },
-        h('input', {
-          class: 'num', inputmode: 'decimal', value: String(o.perUnit ?? ''), 'aria-label': 'Montant par unité vendue',
-          onInput: (e) => set({ perUnit: Number(e.target.value.replace(',', '.')) || 0 }, { silent: true }),
-        }),
+        montant({ value: String(o.perUnit ?? ''), 'aria-label': 'Montant par unité vendue' },
+          (v) => set({ perUnit: v })),
         h('span', {}, '€ / produit'),
       ) : null,
 

@@ -8,7 +8,7 @@
 
 import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
-import { installEffet, reposerEffet } from './ui/effet.js'
+import { installEffet, reposerEffet, decrire as decrireSaisie, retrouverSaisie } from './ui/effet.js'
 import { renderMethode } from './ui/pages/methode.js'
 import store from './state/store.js'
 import { getPersona } from './ui/personas.js'
@@ -221,11 +221,18 @@ function curseur() {
   const tous = [...root.querySelectorAll(CHAMPS)]
   let sel = null
   try { sel = [el.selectionStart, el.selectionEnd] } catch { sel = null }
-  return { index: tous.indexOf(el), tag: el.tagName, sel }
+  // Par son identité d'abord — la page, la ligne, le libellé — puis, à
+  // défaut, par sa place : un redessin qui ajoute une note au-dessus du champ
+  // décalerait sinon le curseur d'un cran.
+  let desc = null
+  try { desc = decrireSaisie(el) } catch { desc = null }
+  return { index: tous.indexOf(el), tag: el.tagName, sel, desc }
 }
 function rendreCurseur(c) {
-  if (!c || c.index < 0) return
-  const el = [...root.querySelectorAll(CHAMPS)][c.index]
+  if (!c) return
+  let el = null
+  try { el = c.desc ? retrouverSaisie(c.desc) : null } catch { el = null }
+  if (!el && c.index >= 0) el = [...root.querySelectorAll(CHAMPS)][c.index]
   if (!el || el.tagName !== c.tag || document.activeElement === el) return
   try {
     el.focus({ preventScroll: true })
@@ -263,7 +270,6 @@ function render({ preserveScroll = false } = {}) {
   const key = route()
   currentKey = key
   const scrollY = preserveScroll ? window.scrollY : 0
-  const activeId = preserveScroll ? document.activeElement?.dataset?.fieldKey : null
   const place = preserveScroll ? curseur() : null
   currentRoute = key
 
@@ -349,10 +355,8 @@ function render({ preserveScroll = false } = {}) {
     clear(root).appendChild(shell)
     if (preserveScroll) {
       window.scrollTo(0, scrollY)
-      if (activeId) {
-        const next = document.querySelector(`[data-field-key="${CSS.escape(activeId)}"]`)
-        if (next) next.focus()
-      } else rendreCurseur(place)
+      // Le focus et le curseur, là où ils étaient : même champ, même position.
+      rendreCurseur(place)
     } else {
       window.scrollTo(0, 0)
     }
