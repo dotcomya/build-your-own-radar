@@ -147,6 +147,4 @@ const guideCell = (title, body) => h('div', { class: 'guide-cell' },
   h('p', {}, body),
 )
 
-/** Pour les pages qui ne correspondent à aucune étape du parcours. */
-export const partBanner = (pageKey) => stepBanner(null, null, null, pageKey)
 

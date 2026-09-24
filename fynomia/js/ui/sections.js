@@ -33,11 +33,6 @@ export function lireAnnee(k) { lecture.an = k }
 /** Un montant en euros : abrégé en grand au-delà de cent mille, exact dessous. */
 export const EUROS = (v) => ({ court: euro(v, { compact: Math.abs(v) >= 100000 }), exact: euro(v) })
 
-/** La tête seule d'une partie numérotée, posée au-dessus d'un contenu existant. */
-export function entete({ no, nom, dit = null, droite = null }) {
-  return h('header', { class: 'sx sx-solo sx-head' }, ligneTitre({ no, nom, dit, droite }))
-}
-
 /**
  * La ligne de tête d'une partie : le numéro, le nom, la phrase qui dit à
  * quoi elle sert — sur la même ligne, pour ne pas en coûter trois — et, au

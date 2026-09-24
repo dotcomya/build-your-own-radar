@@ -10,7 +10,7 @@
  * stockage que ses lecteurs peuvent interroger, mentirait.
  */
 
-import { h, euro, toast, confirmDialog } from '../dom.js'
+import { h, toast, confirmDialog } from '../dom.js'
 import { cloud, syncLabel } from '../../state/cloud.js'
 import { journey, points } from '../../engine/journey.js'
 import { relative } from './onboarding.js'

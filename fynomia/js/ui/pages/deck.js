@@ -15,7 +15,7 @@
  * besoin de financement, la demande.
  */
 
-import { h, euro, pct, num, monthLabel, yearLabel, CHEVRON } from '../dom.js'
+import { h, euro, pct, num, monthLabel, CHEVRON } from '../dom.js'
 import { barChart, areaChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getSector, vocabulary } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'

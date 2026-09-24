@@ -610,14 +610,6 @@ export const SECTORS = {
 export const SECTOR_KEYS = Object.keys(SECTORS)
 export const getSector = (key) => SECTORS[key] || null
 
-/** Secteurs regroupés par famille, pour l'écran de choix. */
-export function sectorsByFamily() {
-  return Object.entries(FAMILIES).map(([key, family]) => ({
-    key, ...family,
-    sectors: SECTOR_KEYS.filter((k) => SECTORS[k].family === key).map((k) => ({ key: k, ...SECTORS[k] })),
-  })).filter((f) => f.sectors.length)
-}
-
 /**
  * Le vocabulaire courant, avec repli générique.
  *

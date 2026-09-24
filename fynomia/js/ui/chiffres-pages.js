@@ -20,7 +20,6 @@ const n = (v) => Number(v) || 0
 const ANS = [0, 1, 2, 3, 4]
 /** Cinq sommes annuelles d'une série mensuelle. */
 const parAn = (m) => ANS.map((y) => (m || []).slice(y * 12, y * 12 + 12).reduce((a, v) => a + n(v), 0))
-const absAn = (m) => ANS.map((y) => (m || []).slice(y * 12, y * 12 + 12).reduce((a, v) => a + Math.abs(n(v)), 0))
 // Au-delà de ±1 000 %, une part du chiffre d'affaires ne veut plus rien dire.
 const partDuCA = (v, r, y) => (n(r.pnl.revenue[y]) > 0 && Math.abs(v / r.pnl.revenue[y]) <= 10 ? `${pct(v / r.pnl.revenue[y], 0)} du chiffre d’affaires` : null)
 const signe = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none')

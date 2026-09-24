@@ -1,6 +1,6 @@
 /** Charges externes et investissements. */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, tabs, moduleShell } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, switchField, monthField, helpButton, confirmDialog, moduleShell } from '../dom.js'
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'

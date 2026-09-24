@@ -86,15 +86,6 @@ export function tradeSuggest(kind, navigate, refresh) {
   )
 }
 
-/* Le nom du métier passe devant, et la phrase suit sans article : « une »
-   pizzeria mais « un » food truck, et personne n'a envie d'un dictionnaire de
-   genres pour afficher un sous-titre. */
-const HEAD = {
-  opex: { tag: 'Dans ton métier, on oublie souvent', sub: 'ce qui tombe tous les mois.' },
-  capex: { tag: 'Le matériel du métier', sub: 'ce qu’on achète pour ouvrir.' },
-  offers: { tag: 'Ce que tu pourrais vendre aussi', sub: 'les revenus qu’on oublie de compter.' },
-}
-
 /* ───────────────────────── Ce qui est déjà posé ─────────────────────────── */
 
 function alreadyThere(kind, item, s) {

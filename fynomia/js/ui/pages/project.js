@@ -12,7 +12,7 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleShell, confirmDialog, infoPoint } from '../dom.js'
+import { h, euro, textField, selectField, switchField, refine, moduleShell, confirmDialog, infoPoint } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { stepGuide } from '../tutorial.js'

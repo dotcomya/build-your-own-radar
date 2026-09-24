@@ -1,6 +1,6 @@
 /** États financiers : résultat, trésorerie, bilan, BFR, fiscalité. */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, tabs, moduleShell } from '../dom.js'
+import { h, euro, pct, num, helpButton, monthLabel, yearLabel, moduleShell } from '../dom.js'
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'

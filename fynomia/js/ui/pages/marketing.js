@@ -4,13 +4,11 @@
  * budget publicitaire déplace immédiatement le résultat et la trésorerie.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, tabs, pageBar, fold, foldSign } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, monthField, helpButton, confirmDialog, pageBar, fold, foldSign } from '../dom.js'
 import { newCampaign, CHANNELS } from '../../state/schema.js'
 import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial, stepBanner } from '../tutorial.js'
-import { enableToggle, refine } from '../dom.js'
-import { journey } from '../../engine/journey.js'
+import { enableToggle } from '../dom.js'
 import store from '../../state/store.js'
 
 /**

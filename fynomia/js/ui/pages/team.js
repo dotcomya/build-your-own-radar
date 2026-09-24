@@ -7,7 +7,7 @@
  * qu'un salaire se négocie et se compare.
  */
 
-import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, toast, monthLabel, moduleShell, foldSign } from '../dom.js'
+import { h, euro, pct, num, numberField, textField, selectField, switchField, monthField, helpButton, confirmDialog, monthLabel, moduleShell, foldSign } from '../dom.js'
 import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS, MANDATAIRES } from '../../engine/payroll.js'
 import { isMicro } from '../../engine/micro.js'

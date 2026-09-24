@@ -65,8 +65,6 @@ export const STAGES = [
   },
 ]
 
-export const STAGE_KEYS = STAGES.map((s) => s.key)
-
 /** Le stade du scénario courant. Aucun choix fait : on ne présume rien. */
 export function stageOf(scenario) {
   return STAGES.find((s) => s.key === scenario?.meta?.stage) || null

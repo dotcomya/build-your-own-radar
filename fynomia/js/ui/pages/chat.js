@@ -13,7 +13,7 @@
  */
 
 import { h, euro, num } from '../dom.js'
-import { SECTORS, vocabulary } from '../../state/sectors.js'
+import { vocabulary } from '../../state/sectors.js'
 import { FAMILIES, activitiesOf, getActivity, familyOf } from '../../state/activities.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { compute } from '../../engine/engine.js'

@@ -55,7 +55,6 @@ export const clear = (el) => {
   try { el.replaceChildren() } catch { el.innerHTML = '' }
   return el
 }
-export const qs = (sel, root = document) => root.querySelector(sel)
 
 /**
  * Vrai sur un écran étroit — téléphone en portrait, fenêtre réduite.
@@ -427,16 +426,13 @@ export const CROSS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 
 export const COPY = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.6" y="5.6" width="7.4" height="7.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 3.6H4.4a1.4 1.4 0 0 0-1.4 1.4v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
 
 /**
- * Ce qu'on fait derrière un onglet : écrire, ou lire.
+ * Un onglet où l'on lit ce que le modèle calcule.
  *
  * Le mot « lecture » sous le libellé demandait d'être lu pour être compris.
- * Un crayon et un œil se reconnaissent sans lecture, et disent la même chose
- * dans toutes les langues.
+ * Un œil se reconnaît sans lecture, et dit la même chose dans toutes les
+ * langues.
  */
-export const PENCIL = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.1 2.6a1.5 1.5 0 0 1 2.1 2.1l-7.3 7.3-2.8.7.7-2.8 7.3-7.3Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'
 export const EYE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 8s2.4-4.2 6.4-4.2S14.4 8 14.4 8s-2.4 4.2-6.4 4.2S1.6 8 1.6 8Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.9" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
-
-export const INFO = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 7.2v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="4.8" r=".95" fill="currentColor"/></svg>'
 
 export const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6.5 8 10.5l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 

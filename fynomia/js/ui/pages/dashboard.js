@@ -7,12 +7,12 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, helpButton, narrow, monthLabel, yearLabel, refine, fold, tabs, moduleShell, foldSign } from '../dom.js'
+import { h, euro, pct, num, narrow, yearLabel, refine, moduleShell, foldSign } from '../dom.js'
 import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getPersona } from '../personas.js'
 import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
-import { referenceYear } from '../impact.js'
+import { referenceYear } from '../../format.js'
 import { renderPitch } from './pitch.js'
 import { teteDossier } from './studio.js'
 import { storyline, gauge } from '../story.js'

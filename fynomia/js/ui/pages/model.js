@@ -14,11 +14,11 @@
 
 import { h, euro, pct, num, monthLabel, tabs, pageBar } from '../dom.js'
 import { vocabulary, getSector } from '../../state/sectors.js'
-import { referenceYear } from '../impact.js'
+import { referenceYear } from '../../format.js'
 import { journey } from '../../engine/journey.js'
 import { compute } from '../../engine/engine.js'
 import { tutorial, stepBanner } from '../tutorial.js'
-import { areaChart, PALETTE, STATUS } from '../charts.js'
+import { areaChart, PALETTE } from '../charts.js'
 import store from '../../state/store.js'
 
 /**

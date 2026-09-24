@@ -13,7 +13,7 @@
  * module.
  */
 
-import { h, euro, num, pct, toast, fold } from '../dom.js'
+import { h, euro, num, toast, fold } from '../dom.js'
 import { goToGap } from '../spotlight.js'
 import { simLevers, SIM_GROUPS } from '../sim-levers.js'
 import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'

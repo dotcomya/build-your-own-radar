@@ -202,26 +202,6 @@ function barChartShapes({ x, y, w, h, categories, series, formatter }) {
   return shapes
 }
 
-/** Courbe de trésorerie approchée par de fines colonnes. */
-function areaChartShapes({ x, y, w, h, values, color }) {
-  const shapes = []
-  const max = Math.max(0, ...values), min = Math.min(0, ...values)
-  const span = max - min || 1
-  const zeroY = y + h * (max / span)
-  const step = w / values.length
-  shapes.push(rect({ x, y: zeroY, w, h: pt(0.75), fill: LINE }))
-  values.forEach((v, i) => {
-    const barH = Math.abs(v) / span * h
-    if (barH < 800) return
-    shapes.push(rect({
-      x: Math.round(x + step * i), y: Math.round(v >= 0 ? zeroY - barH : zeroY),
-      w: Math.max(20000, Math.round(step * 0.82)), h: Math.round(barH),
-      fill: v >= 0 ? color : ROSE,
-    }))
-  })
-  return shapes
-}
-
 /**
  * Courbe de trésorerie annotée — la frise du tableau de bord, en OpenXML.
  *

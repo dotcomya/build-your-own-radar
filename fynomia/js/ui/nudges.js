@@ -22,20 +22,6 @@ export function position(value, [low, high]) {
   return 'inside'
 }
 
-/** Puce de comparaison, à poser à côté d'un chiffre. */
-export function benchmarkChip(value, range, { format = (v) => pct(v), invert = false } = {}) {
-  if (!range) return null
-  const [low, high] = range
-  const where = value < low ? 'below' : value > high ? 'above' : 'inside'
-  // `invert` : pour un coût, être au-dessus de la fourchette est mauvais.
-  const good = where === 'inside' ? 'ok' : (where === 'below') === invert ? 'high' : 'low'
-  const label = where === 'inside' ? 'dans la norme' : where === 'below' ? 'sous la norme' : 'au-dessus'
-  return h('span', {
-    class: `bench bench-${good}`,
-    title: `Repère du secteur : ${format(low)} à ${format(high)}`,
-  }, h('span', { class: 'bench-dot' }), `${label} · ${format(low)}–${format(high)}`)
-}
-
 /**
  * Alertes contextuelles pour le scénario courant.
  * Chacune porte un constat, sa raison d'être, et l'endroit où agir.

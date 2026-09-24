@@ -133,5 +133,3 @@ export function icon(key, cls = 'ico3d') {
   return png ? `<img src="${png}" alt="" class="${cls}" loading="lazy" decoding="async">` : ''
 }
 
-/** La liste des familles couvertes — pour vérifier qu'aucune n'est orpheline. */
-export const ICON_KEYS = Object.keys(SHAPES)

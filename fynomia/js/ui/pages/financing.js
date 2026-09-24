@@ -1,8 +1,8 @@
 /** Financement : capital, emprunts, subventions, avances. */
 
-import { h, euro, num, pct, numberField, textField, selectField, monthField, helpButton, confirmDialog, monthLabel, tabs, moduleShell, PLUS, MINUS } from '../dom.js'
+import { h, euro, num, numberField, textField, selectField, monthField, helpButton, monthLabel, moduleShell, PLUS, MINUS } from '../dom.js'
 import { uid } from '../../state/schema.js'
-import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
+import { areaChart, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'

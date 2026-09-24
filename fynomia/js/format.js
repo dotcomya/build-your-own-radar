@@ -22,7 +22,6 @@ const lisible = (fmt) => ({ format: (v) => fmt.format(v).replace(/\u202f/g, '\u0
 
 const nf0 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }))
 const nf1 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }))
-const nf2 = lisible(new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 }))
 
 export function euro(n, { sign = false, compact = false } = {}) {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'

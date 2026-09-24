@@ -217,13 +217,12 @@ fynomia/
       store.js            plans, sauvegarde locale, historique, réconciliation
       cloud.js            compte, espace privé, synchronisation multi-appareils
     ui/
-      personas.js         vues métier : leviers, indicateurs, périmètre
+      personas.js         vues métier : indicateurs, périmètre
       story.js            frise des cinq ans, repères annotés, jauges de métier
       tutorial.js         bandeau d'étape et micro-tutos, sur chaque page du parcours
       persona-switch.js   les vues métier, reléguées dans les réglages
       nudges.js           repères sectoriels, alertes, pièges, cadre réglementaire
-      levers.js           curseurs branchés sur le modèle, recalcul pendant le geste
-      impact.js           repère, écarts, rail d'impact, valeurs animées
+      levers.js           tableau d'indicateurs d'une vue métier
       charts.js           graphiques SVG, palette catégorielle validée
       glossary.js         définitions, formules, usage
       pages/              une fonction de rendu par page

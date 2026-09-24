@@ -138,14 +138,6 @@ export async function pushProfile(profile) {
   } catch { return false }
 }
 
-export async function pullProfile() {
-  if (!isOnline()) return null
-  try {
-    const snap = await root.get()
-    return snap.exists ? snap.data() : null
-  } catch { return null }
-}
-
 /**
  * Surveille les écritures faites depuis un autre appareil.
  * `fn` reçoit la liste des plans à chaque changement côté serveur.

@@ -11,7 +11,7 @@
  */
 
 import { h, toast } from './dom.js'
-import { PERSONAS, getPersona } from './personas.js'
+import { PERSONAS } from './personas.js'
 import store from '../state/store.js'
 
 /**
@@ -35,5 +35,3 @@ export function personaPicker(onPick) {
   )
 }
 
-/** Le persona courant, pour l'afficher ailleurs sans importer tout le module. */
-export const currentPersona = () => getPersona(store.persona)

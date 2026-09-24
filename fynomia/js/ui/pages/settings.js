@@ -1,6 +1,6 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
-import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, helpButton, moduleShell } from '../dom.js'
+import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, moduleShell } from '../dom.js'
 import { stepGuide } from '../tutorial.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'

@@ -9,25 +9,6 @@
  */
 
 export const SCHEMA_VERSION = 1
-export const LEVELS = ['easy', 'intermediate', 'advanced']
-
-export const LEVEL_META = {
-  easy: {
-    label: 'Facile', short: 'Facile',
-    tagline: 'Une offre, quelques clients, un résultat.',
-    description: "Le strict nécessaire pour chiffrer une idée : ce que tu vends, à quel prix, à combien de clients, et ce que ça coûte. Les délais de paiement, la TVA et les cotisations sont calculés avec des valeurs de marché que tu n'as pas à connaître.",
-  },
-  intermediate: {
-    label: 'Intermédiaire', short: 'Inter.',
-    tagline: 'Plusieurs offres, des campagnes, du financement.',
-    description: "Tu pilotes plusieurs sources de revenus, tu branches tes campagnes marketing sur ton acquisition client, tu gères tes investissements et tes emprunts. Les conditions de paiement deviennent modifiables.",
-  },
-  advanced: {
-    label: 'Expert', short: 'Expert',
-    tagline: 'Bilan, BFR, CIR, JEI, analyse par activité.',
-    description: "Le modèle complet : besoin en fonds de roulement mois par mois, bilan prévisionnel, plan de financement, crédits d'impôt recherche et innovation, statut jeune entreprise innovante, et rentabilité comparée de chaque activité.",
-  },
-}
 
 /** Bornes de saisie. La validation les applique systématiquement. */
 export const BOUNDS = {
@@ -113,7 +94,6 @@ export function newActivity(overrides = {}) {
     ...overrides,
   }
 }
-
 
 /**
  * Les formes juridiques que le modèle sait distinguer.
@@ -284,32 +264,6 @@ function blankFromSector(s, sector) {
   s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [], honourLoans: [] }
 }
 
-/** Charges de fonctionnement types, pour qu'un modèle ne démarre jamais à zéro. */
-function baseOpex(profile) {
-  const sets = {
-    software: [
-      ['Comptable et juridique', 320], ['Logiciels et hébergement', 260],
-      ['Assurances', 90], ['Banque et paiement', 70],
-    ],
-    office: [
-      ['Loyer et charges', 900], ['Comptable et juridique', 300],
-      ['Logiciels et informatique', 180], ['Assurances', 110],
-      ['Téléphonie et connexion', 90], ['Déplacements', 200],
-    ],
-    shop: [
-      ['Loyer et charges', 2200], ['Comptable et juridique', 260],
-      ['Énergie et fluides', 450], ['Assurances', 180],
-      ['Encaissement et logiciels', 140], ['Entretien', 150],
-    ],
-    lab: [
-      ['Loyer et laboratoire', 1600], ['Comptable et juridique', 380],
-      ['Consommables de recherche', 700], ['Propriété intellectuelle', 450],
-      ['Logiciels et calcul', 300], ['Assurances', 160],
-    ],
-  }
-  return (sets[profile] || sets.software).map(([label, monthlyAmount]) =>
-    newOpex({ label, mode: 'fixed', monthlyAmount }))
-}
 
 /**
  * Un plan fondé sur un métier.

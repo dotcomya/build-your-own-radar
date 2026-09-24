@@ -32,7 +32,6 @@ const n = (v) => Number(v) || 0
 
 /** Combien de lignes du dossier restent à poser. */
 const left = () => { try { const c = checklist(store.scenario); return c.total - c.done } catch { return 0 } }
-const YEARS = ['année 1', 'année 2', 'année 3', 'année 4', 'année 5']
 
 /**
  * Le récit de la synthèse, sans sa mise en page.

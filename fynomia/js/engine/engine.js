@@ -9,7 +9,7 @@
  * relancer à chaque frappe sans risque d'incohérence.
  */
 
-import { MONTHS, YEARS, zeros, byYear, revenueModel, valueForYear } from './revenue.js'
+import { MONTHS, YEARS, zeros, byYear, revenueModel } from './revenue.js'
 import { payrollSeries } from './payroll.js'
 import { vatModel, taxesAndDuties, jeiStatus, researchCredits, corporateTax } from './taxes.js'
 import { fiscalContext } from './fiscal-fr-2026.js'

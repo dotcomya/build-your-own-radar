@@ -7,10 +7,9 @@
  * effectivement dépenser.
  */
 
-import { h, euro, pct, num, numberField, selectField, switchField, helpButton, yearLabel } from '../dom.js'
+import { h, euro, pct, num, numberField, selectField, switchField, yearLabel } from '../dom.js'
 import { founderIncome } from '../../engine/founder.js'
-import { barChart, PALETTE, STATUS, YEAR_CATEGORIES } from '../charts.js'
-import { getSector } from '../../state/sectors.js'
+import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
@@ -382,35 +381,6 @@ function detailTable(income, r) {
 }
 
 /* ────────────────────────────── Présentation ──────────────────────────── */
-
-function bigNumber(label, value, sub, tone) {
-  return h('div', { class: `takehome-hero ${tone || ''}` },
-    h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)' } }, label),
-    h('div', { class: 'takehome-value num' }, euro(value)),
-    h('div', { class: 'takehome-sub' }, sub),
-  )
-}
-
-function splitCell(label, value, sub, negative) {
-  return h('div', { class: 'takehome-cell' },
-    h('div', { class: 'eyebrow', style: { color: 'var(--ink-4)' } }, label),
-    h('div', { class: `takehome-cell-value num ${negative ? 'neg' : ''}` }, euro(value)),
-    h('div', { class: 'takehome-sub' }, sub),
-  )
-}
-
-function headline(income, r, y) {
-  const row = income.rows[y]
-  const sector = getSector(store.scenario.meta.sectorKey)
-  if (row.disposable <= 0) {
-    return "Rien ne remonte encore jusqu'à toi. Tant que l'entreprise ne dégage pas de résultat et que tu ne te verses pas de rémunération, ton revenu est nul — beaucoup de dirigeants passent une à deux années dans cette situation, mais il faut alors savoir de quoi on vit."
-  }
-  const parts = []
-  parts.push(`${euro(row.monthly)} par mois, net de tout : cotisations, impôt sur les sociétés, prélèvements sur dividendes et impôt sur le revenu.`)
-  if (row.costPerEuro) parts.push(`L'entreprise produit ${num(row.costPerEuro, 2)} € de valeur pour chaque euro qui arrive chez toi.`)
-  if (sector) parts.push(`Référence ${sector.label.toLowerCase()}.`)
-  return parts.join(' ')
-}
 
 /** Premier exercice où le dirigeant se verse quelque chose, sinon la troisième. */
 function pickYear(income, r) {

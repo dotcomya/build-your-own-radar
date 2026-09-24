@@ -20,7 +20,7 @@
  * ensuite dans les pages détaillées.
  */
 
-import { h, euro, num, pct, toast, keystone } from '../dom.js'
+import { h, euro, num, pct, keystone } from '../dom.js'
 import { getSector, vocabulary } from '../../state/sectors.js'
 import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
@@ -102,7 +102,6 @@ function vider(key, lire, effacer) {
 const repere = (key) => flow.reperes[key] || store.scenario?.meta?.parcoursReperes?.[key] || null
 
 const pad = (n) => String(n).padStart(2, '0')
-
 
 /**
  * Une étape a-t-elle reçu une réponse ?
@@ -435,18 +434,6 @@ function stepList(s, jump, navigate) {
   )
 }
 
-/** Les plans déjà commencés, pour y revenir sans passer par une page d'accueil. */
-function resumeLinks(navigate) {
-  const plans = store.list().filter((p) => p.id !== store.currentId)
-  if (!plans.length) return null
-  return h('div', { class: 'setup-resume' },
-    h('span', { class: 'setup-resume-tag' }, 'Reprendre'),
-    ...plans.slice(0, 3).map((p) => h('button', {
-      class: 'setup-resume-item',
-      onClick: () => { store.load(p.id); navigate('#/tableau-de-bord') },
-    }, p.name)),
-  )
-}
 
 /* ────────────────────────────── Les contrôles ───────────────────────────── */
 

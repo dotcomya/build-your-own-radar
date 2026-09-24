@@ -11,13 +11,12 @@ import { GLOSSARY } from './ui/glossary.js'
 import { installEffet, reposerEffet } from './ui/effet.js'
 import { renderMethode } from './ui/pages/methode.js'
 import store from './state/store.js'
-import { PERSONAS, getPersona } from './ui/personas.js'
-import { resetLiveNumbers } from './ui/impact.js'
+import { getPersona } from './ui/personas.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderHome } from './ui/pages/home.js'
 import { renderChat } from './ui/pages/chat.js'
-import { renderDeck, resetDeck } from './ui/pages/deck.js'
+import { renderDeck } from './ui/pages/deck.js'
 import { installMotion, travel, takeTravel, armTravel } from './ui/motion.js'
 import { coach, setCoachHost } from './ui/coach.js'
 import { checklist } from './ui/checklist.js'
@@ -30,14 +29,12 @@ import { renderFinancing } from './ui/pages/financing.js'
 import { renderResults } from './ui/pages/results.js'
 import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
-import { renderFounder } from './ui/pages/founder.js'
 import { renderProject } from './ui/pages/project.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
 import { renderReveal, revelationPermise } from './ui/pages/reveal.js'
 import { journey, points } from './engine/journey.js'
 import { buildState } from './engine/build.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
-import { renderAccount } from './ui/pages/account.js'
 
 /**
  * Les neuf modules.
@@ -629,7 +626,7 @@ function celebrate() {
 }
 
 store.subscribe((_, reason) => {
-  if (reason === 'scenario' || reason === 'profile') { markJourney(); resetLiveNumbers(); render() }
+  if (reason === 'scenario' || reason === 'profile') { markJourney(); render() }
   // Une modification de données relance le calcul : on redessine la page pour
   // que les indicateurs suivent, en conservant la position de lecture.
   else if (reason === 'data') { celebrate(); render({ preserveScroll: true }) }

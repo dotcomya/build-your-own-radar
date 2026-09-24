@@ -3,7 +3,7 @@
  * C'est la page qu'on montre à un banquier ou à un jury.
  */
 
-import { h, euro, pct, num, helpButton, monthLabel, yearLabel, toast, textField, moduleShell } from '../dom.js'
+import { h, euro, pct, num, monthLabel, yearLabel, toast, moduleShell } from '../dom.js'
 import { resetDeck } from './deck.js'
 import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'

@@ -14,7 +14,7 @@
 
 import { emptyScenario, scenarioFromTemplate, SCHEMA_VERSION, validate } from './schema.js'
 import { compute } from '../engine/engine.js'
-import { connect, isOnline, pullPlans, pushPlan, deletePlan, pushProfile, watchPlans, cloud } from './cloud.js'
+import { connect, isOnline, pullPlans, pushPlan, deletePlan, pushProfile, watchPlans } from './cloud.js'
 
 const KEY_PROFILE = 'fynomia.profile'
 const KEY_SCENARIOS = 'fynomia.scenarios'

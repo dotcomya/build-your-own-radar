@@ -22,11 +22,10 @@ const perKey = (a) => (a.recurringPeriod === 'semaine' ? 'semaine' : 'mois')
 const perLabel = (a) => (perKey(a) === 'semaine' ? 'hebdomadaire' : 'mensuel')
 const perOf = (a, v) => (perKey(a) === 'semaine' ? (Number(v) || 0) / SEMAINES_PAR_MOIS : Number(v) || 0)
 
-
-import { h, euro, pct, num, numberField, textField, selectField, helpButton, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
-import { newActivity, BOUNDS } from '../../state/schema.js'
-import { sparkline, areaChart, PALETTE, STATUS } from '../charts.js'
-import { vocabulary, getSector } from '../../state/sectors.js'
+import { h, euro, pct, num, numberField, textField, selectField, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
+import { newActivity } from '../../state/schema.js'
+import { sparkline, areaChart, PALETTE } from '../charts.js'
+import { vocabulary } from '../../state/sectors.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { valueForYear } from '../../engine/revenue.js'
@@ -861,12 +860,6 @@ function comparisonCard(r) {
   )
 }
 
-function marginAdvice(margin) {
-  if (margin < 0) return "Tu vends à perte : chaque vente supplémentaire aggrave le résultat. Revois le prix ou le coût de revient."
-  if (margin < 0.2) return "Marge faible : il faudra un volume important pour couvrir tes frais fixes. Vérifie que tes volumes projetés sont atteignables."
-  if (margin < 0.5) return "Marge correcte, typique du négoce et de la production. Ton point mort dépendra surtout de tes frais fixes."
-  return "Marge élevée, caractéristique des services et du logiciel. Chaque nouveau client contribue fortement à couvrir tes frais fixes."
-}
 
 const sumRange = (arr, a, b) => arr.slice(a, b).reduce((x, y) => x + y, 0)
 const yearly = (arr) => Array.from({ length: 5 }, (_, y) => sumRange(arr, y * 12, y * 12 + 12))

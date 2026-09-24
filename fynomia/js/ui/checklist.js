@@ -252,9 +252,6 @@ export function defer(key) {
 /** Tout reprendre maintenant : la file est vidée. */
 export function resumeAll() { later.length = 0 }
 
-/** Combien de lignes attendent leur tour. */
-export function deferredCount() { return later.length }
-
 /**
  * L'état de la liste : chaque ligne, son palier, et l'avancement pondéré.
  */

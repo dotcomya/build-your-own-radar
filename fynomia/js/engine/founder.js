@@ -298,15 +298,3 @@ function activeMonths(member, year) {
 
 const clamp01 = (n) => Math.min(1, Math.max(0, Number(n) || 0))
 
-/** Valeurs par défaut du volet dirigeant. */
-export function defaultFounder() {
-  return {
-    memberId: null,
-    equityShare: 1,
-    taxParts: 1,
-    dividendPayout: 0,
-    dividendRegime: 'pfu',
-    majorityManager: false,
-    otherIncome: 0,
-  }
-}
