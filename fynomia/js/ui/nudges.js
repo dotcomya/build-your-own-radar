@@ -143,7 +143,7 @@ export function nudges(scenario, result) {
     const a = (scenario.activities || [])[0]
     if (a && a.volumes?.mode !== 'manual' && !a.volumes?.seasonality) {
       push('info', 'Ton activité est saisonnière, ton projection ne l\'est pas',
-        "Une courbe régulière lisse précisément les mois creux, ceux où la trésorerie casse. Passe en saisie mois par mois dans l'onglet Offre pour refléter les creux et les pics.", 'offre')
+        "Une courbe régulière lisse précisément les mois creux, ceux où la trésorerie casse. Choisis le profil de ton métier dans Offre et revenus, onglet Volumes : il répartit tes ventes sans en changer le total.", 'offre')
     }
   }
 

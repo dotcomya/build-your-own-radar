@@ -9,7 +9,7 @@
  * relancer à chaque frappe sans risque d'incohérence.
  */
 
-import { MONTHS, YEARS, zeros, byYear, revenueModel } from './revenue.js'
+import { MONTHS, YEARS, zeros, byYear, revenueModel, moisDebut } from './revenue.js'
 import { payrollSeries } from './payroll.js'
 import { vatModel, taxesAndDuties, jeiStatus, researchCredits, corporateTax } from './taxes.js'
 import { fiscalContext } from './fiscal-fr-2026.js'
@@ -26,7 +26,7 @@ export function compute(scenario) {
   const team = scenario.team || []
 
   // ─── 1. Produits et charges variables ──────────────────────────────────
-  const rev = revenueModel(activities, scenario.marketing)
+  const rev = revenueModel(activities, scenario.marketing, { moisDebut: moisDebut(scenario.meta?.startDate) })
   const revenueMonthly = rev.totals.total
   const revenueCash = rev.totals.cash
 

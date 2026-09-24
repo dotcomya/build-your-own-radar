@@ -137,7 +137,7 @@ const ITEMS = [
   { key: 'saison', tier: 'finition', optionnel: true, label: 'Ta saisonnalité',
     why: 'Si ton activité a des mois creux, dis-le : ils ne se voient pas dans une moyenne, mais ils vident le compte.',
     done: (s) => any(s.activities, (a) => a.volumes?.mode === 'manual' || !!a.volumes?.seasonality),
-    go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' } },
+    go: { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'saison' } },
   { key: 'secondeoffre', tier: 'finition', optionnel: true, label: 'Une deuxième source de revenu',
     why: 'Si tu as une autre offre en tête, ajoute-la : elle protège le plan d’un seul client ou d’un seul produit.',
     done: (s) => (s.activities || []).filter((a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0).length > 1,

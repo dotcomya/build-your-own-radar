@@ -30,7 +30,13 @@ export function valueForYear(base, perYear, y) {
  * Volumes commandés par mois, hors marketing.
  * Deux modes : courbe de croissance paramétrique, ou saisie manuelle.
  */
-export function baseVolumes(activity) {
+/** Le mois du calendrier où commence le plan : 0 pour janvier. */
+export function moisDebut(startDate) {
+  const m = Number(String(startDate || '').slice(5, 7))
+  return Number.isFinite(m) && m >= 1 && m <= 12 ? m - 1 : 0
+}
+
+export function baseVolumes(activity, { moisDebut: debut = 0 } = {}) {
   const v = zeros()
   const cfg = activity.volumes || {}
   if (cfg.mode === 'manual' && Array.isArray(cfg.manual)) {
@@ -41,7 +47,12 @@ export function baseVolumes(activity) {
   const growth = Number(cfg.monthlyGrowth) || 0
   const launch = Math.max(0, Number(cfg.launchMonth) || 0)
   const cap = cfg.cap === null || cfg.cap === undefined || cfg.cap === '' ? Infinity : Number(cfg.cap)
-  const seasonality = Array.isArray(cfg.seasonality) && cfg.seasonality.length === 12 ? cfg.seasonality : null
+  // La saisonnalité suit le calendrier — juillet est juillet, que le plan
+  // commence en janvier ou en avril — et répartit les ventes sans en changer
+  // le total : les coefficients sont ramenés à une moyenne de 1.
+  const brut = Array.isArray(cfg.seasonality) && cfg.seasonality.length === 12 ? cfg.seasonality.map((x) => Math.max(0, Number(x) || 0)) : null
+  const moyenne = brut ? brut.reduce((a, b) => a + b, 0) / 12 : 0
+  const seasonality = brut && moyenne > 0 ? brut.map((x) => x / moyenne) : null
   // Décélération : une croissance mensuelle ne se maintient jamais cinq ans au
   // même rythme. Le taux s'érode géométriquement, ce qui produit une courbe en S
   // au lieu d'une exponentielle intenable.
@@ -50,8 +61,9 @@ export function baseVolumes(activity) {
   let level = start
   for (let m = launch; m < MONTHS; m++) {
     if (m > launch) level *= 1 + growth * Math.pow(decay, m - launch - 1)
-    const season = seasonality ? Number(seasonality[m % 12]) || 1 : 1
-    v[m] = Math.min(cap, level) * season
+    const season = seasonality ? seasonality[(m + debut) % 12] : 1
+    // Le plafond de capacité tient aussi le mois de pointe.
+    v[m] = Math.min(cap, level * season)
   }
   return v
 }
@@ -239,13 +251,13 @@ export function activityVariableCosts(activity, volumes) {
 }
 
 /** Agrège toutes les activités. */
-export function revenueModel(activities, campaigns) {
+export function revenueModel(activities, campaigns, { moisDebut: debut = 0 } = {}) {
   const mk = marketingVolumes(campaigns, activities)
   const perActivity = []
   const totals = { oneOff: zeros(), recurring: zeros(), total: zeros(), cash: zeros(), variableCost: zeros(), variableCash: zeros(), units: zeros(), badDebt: zeros() }
 
   for (const a of activities) {
-    const base = baseVolumes(a)
+    const base = baseVolumes(a, { moisDebut: debut })
     const fromMarketing = mk.volumes[a.id] || zeros()
     const volumes = base.map((v, i) => v + fromMarketing[i])
     const rev = activityRevenue(a, volumes)

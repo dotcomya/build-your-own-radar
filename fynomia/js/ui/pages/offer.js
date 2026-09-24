@@ -28,7 +28,8 @@ import { sparkline, areaChart, PALETTE } from '../charts.js'
 import { vocabulary, uniteOffre, UNITES } from '../../state/sectors.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
-import { valueForYear } from '../../engine/revenue.js'
+import { valueForYear, baseVolumes, moisDebut } from '../../engine/revenue.js'
+import { SAISONS, SAISON_METIER, MOIS, profilDe } from '../../state/saisons.js'
 import { coutDUneVente } from '../../engine/engine.js'
 import { enableToggle } from '../dom.js'
 import { renderAcquisition } from './marketing.js'
@@ -725,6 +726,7 @@ function volumesEditor(a, setVolumes, level, detail, refresh = () => {}, set = n
             numberField({ label: 'Croissance mensuelle', field: 'monthlyGrowth', value: v.monthlyGrowth, percent: true, hint: '10 % par mois triple le volume en un an.', garde: sansValidee(`crois:${a.id}`, (x) => Number(x) || 0, (x) => gardeCroissance(store.scenario, x)), onInput: (x) => setVolumes({ monthlyGrowth: x }) }),
             numberField({ label: 'Plafond de capacité', field: 'startUnits', value: v.cap, suffix: voc.many, hint: "Ce que tu ne peux physiquement pas dépasser. Vide = pas de limite.", onInput: (x) => setVolumes({ cap: x }) }),
           ),
+          saisonEditor(a, setVolumes),
           // Ce qui affine vient après ce qui décide.
           //
           // Trois nombres suffisent à poser une courbe de ventes : quand ça
@@ -811,7 +813,9 @@ function manualGrid(a, setVolumes) {
   }
   return h('div', { class: 'table-wrap' },
     h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Année'), ...Array.from({ length: 12 }, (_, m) => h('th', {}, ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][m])), h('th', {}, 'Total'))),
+      // Les colonnes suivent le calendrier depuis le mois de démarrage : un
+      // plan qui commence en avril n'appelle pas son premier mois « janvier ».
+      h('thead', {}, h('tr', {}, h('th', {}, 'Année'), ...Array.from({ length: 12 }, (_, m) => h('th', {}, MOIS[(moisDebut(store.scenario?.meta?.startDate) + m) % 12])), h('th', {}, 'Total'))),
       h('tbody', {},
         ...Array.from({ length: 5 }, (_, y) => h('tr', {},
           h('td', {}, `A${y + 1}`),
@@ -921,12 +925,71 @@ function comparisonCard(r) {
 
 const sumRange = (arr, a, b) => arr.slice(a, b).reduce((x, y) => x + y, 0)
 const yearly = (arr) => Array.from({ length: 5 }, (_, y) => sumRange(arr, y * 12, y * 12 + 12))
+/**
+ * La saisie mois par mois part de la courbe du moteur, telle quelle.
+ *
+ * Elle recalculait sa propre courbe, sans le freinage, le plafond ni la
+ * saisonnalité : un plan à 1,3 M€ de chiffre d'affaires en année 5 passait à
+ * 17 M€ au simple clic sur « Saisie mois par mois ». Le point de départ est
+ * désormais exactement ce que le moteur calculait.
+ */
 function buildManual(a) {
-  const out = new Array(60).fill(0)
-  const v = a.volumes || {}
-  let level = Number(v.startUnits) || 0
-  for (let m = Number(v.launchMonth) || 0; m < 60; m++) { out[m] = Math.round(level); level *= 1 + (Number(v.monthlyGrowth) || 0) }
-  return out
+  const v = baseVolumes({ ...a, volumes: { ...(a.volumes || {}), mode: 'growth' } }, { moisDebut: moisDebut(store.scenario?.meta?.startDate) })
+  return v.map((x) => Math.round(x))
+}
+
+/**
+ * La saisonnalité d'une offre : un profil courant, ou douze mois réglés un à un.
+ *
+ * Le profil du métier vient en premier. Les coefficients se lisent en
+ * pourcentage d'un mois moyen ; ils répartissent les ventes dans l'année sans
+ * en changer le total, et suivent le calendrier.
+ */
+function saisonEditor(a, setVolumes) {
+  const s = store.scenario
+  const brut = Array.isArray(a.volumes?.seasonality) && a.volumes.seasonality.length === 12 ? a.volumes.seasonality.map((x) => Math.max(0, Number(x) || 0)) : null
+  const moy = brut ? brut.reduce((t, x) => t + x, 0) / 12 : 0
+  const coefs = brut && moy > 0 ? brut.map((x) => x / moy) : Array(12).fill(1)
+  const profil = brut ? profilDe(brut) : 'plate'
+  const metier = SAISON_METIER[s?.meta?.sectorKey]
+  const choix = [
+    { cle: 'plate', nom: 'Aucune', dit: 'Chaque mois pèse autant.' },
+    ...(metier ? [{ cle: metier, nom: `${SAISONS[metier].nom} · ton métier`, dit: SAISONS[metier].dit }] : []),
+    ...Object.entries(SAISONS).filter(([k]) => k !== metier).map(([k, x]) => ({ cle: k, nom: x.nom, dit: x.dit })),
+  ]
+  const poser = (k) => setVolumes({ seasonality: k === 'plate' ? null : SAISONS[k].coefs.slice() })
+  // Une échelle d'au moins 150 % d'un mois moyen : un profil doux reste lisible.
+  const haut = Math.max(...coefs, 1.5)
+  const debut = moisDebut(s?.meta?.startDate)
+  return h('section', { class: 'saison', 'data-gap': 'saison' },
+    h('div', { class: 'saison-tete' },
+      h('div', { class: 'saison-titre' }, 'Saisonnalité'),
+      h('p', { class: 'saison-sous' }, 'Comment tes ventes se répartissent dans l’année. Le total ne change pas : ce qu’un mois prend, un autre le perd.'),
+    ),
+    h('div', { class: 'saison-profils', role: 'radiogroup', 'aria-label': 'Profil de saisonnalité' },
+      ...choix.map((c) => h('button', {
+        type: 'button', role: 'radio', 'aria-checked': String(profil === c.cle), title: c.dit,
+        class: `saison-profil ${profil === c.cle ? 'is-on' : ''}`, onClick: () => poser(c.cle),
+      }, c.nom))),
+    profil !== 'plate' ? h('p', { class: 'saison-dit' }, profil === 'perso' ? 'Profil sur mesure : les mois se règlent un à un.' : SAISONS[profil].dit) : null,
+    h('div', { class: 'saison-mois' },
+      ...MOIS.map((nom, i) => {
+        const input = h('input', {
+          class: 'num', inputmode: 'numeric', value: String(Math.round(coefs[i] * 100)), 'aria-label': `Coefficient de ${nom}`,
+        })
+        input.addEventListener('change', () => {
+          const x = Math.max(0, Number(String(input.value).replace(',', '.')) || 0) / 100
+          const next = coefs.slice()
+          next[i] = x
+          setVolumes({ seasonality: next.every((c) => Math.abs(c - 1) < 1e-9) ? null : next })
+        })
+        return h('label', { class: `saison-m ${i === debut ? 'is-debut' : ''}`, title: i === debut ? 'Le plan commence ce mois-ci' : null },
+          h('span', { class: 'saison-barre' }, h('i', { style: { height: `${Math.max(4, (coefs[i] / haut) * 100)}%` } })),
+          h('span', { class: 'saison-nom' }, nom),
+          h('span', { class: 'saison-champ' }, input, h('small', {}, '%')),
+        )
+      })),
+  )
 }
 
 /** Le chiffre du module : ce que les offres saisies rapportent la première année. */

@@ -288,6 +288,13 @@ export function scenarioFromTemplate(key, name, { sample = true } = {}) {
   s.meta.legalForm = sector.legal.forms[0]
   if (sample) sector.build(s)
   else blankFromSector(s, sector)
+  // Un exemple de métier saisonnier montre sa saison : un glacier aux ventes
+  // égales en janvier et en juillet serait un mauvais exemple.
+  if (sample && SAISON_METIER[key]) {
+    for (const a of s.activities) {
+      if (a.volumes && a.volumes.mode !== 'manual' && !a.volumes.seasonality) a.volumes.seasonality = SAISONS[SAISON_METIER[key]].coefs.slice()
+    }
+  }
 
   // Le régime de TVA du secteur prime sur les valeurs par défaut de l'offre.
   if (sector.vat.exempt) s.meta.vatExempt = true
@@ -404,4 +411,5 @@ const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).
 // Importé en fin de module : sectors.js consomme les fabriques ci-dessus.
 import { SECTORS } from './sectors.js'
 import { pfuTotal } from '../engine/fiscal-fr-2026.js'
+import { SAISONS, SAISON_METIER } from './saisons.js'
 export { SECTORS }

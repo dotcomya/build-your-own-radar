@@ -1932,6 +1932,25 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ───────────────── Offre : les volumes, en courbe et en barres ───────────── */
 .vol { border: 1px solid var(--rule); background: var(--surface); margin-top: 16px; }
+/* La saisonnalité : un profil, puis douze mois qui se règlent un à un. */
+.saison { margin-top: 18px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); }
+.saison-titre { font: 700 15px/1.3 var(--display); color: var(--ink); }
+.saison-sous { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.saison-profils { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.saison-profil { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: 600 12.5px/1.2 var(--sans); color: var(--ink-2); }
+.saison-profil:hover { border-color: var(--ink); color: var(--ink); }
+.saison-profil.is-on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.saison-dit { margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.saison-mois { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.saison-m { display: grid; gap: 4px; justify-items: center; min-width: 0; }
+.saison-barre { display: flex; align-items: flex-end; width: 100%; height: 56px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.saison-barre i { display: block; width: 100%; background: var(--ink); border-radius: 4px 4px 0 0; transition: height .2s; }
+.saison-m.is-debut .saison-nom { color: var(--ink); font-weight: 700; }
+.saison-nom { font: 600 11px/1.2 var(--mono); color: var(--ink-4); }
+.saison-champ { display: inline-flex; align-items: baseline; gap: 2px; }
+.saison-champ input { width: 44px; padding: 3px 4px; border: 1px solid var(--rule); border-radius: 6px; text-align: right; font-size: 12px; background: var(--surface); color: var(--ink); }
+.saison-champ small { font-size: 10.5px; color: var(--ink-4); }
+@media (max-width: 640px) { .saison-mois { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .vol-head {
   display: flex; align-items: baseline; gap: 8px; padding: 10px 14px;
   border-bottom: 1px solid var(--rule); background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--ink-3);
