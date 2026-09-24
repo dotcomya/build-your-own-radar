@@ -36,6 +36,9 @@ import { revenueSentence, costsSentence, mixSentence, cashSentence, bfrSentence,
 import { suggestActions } from '../../engine/simulate.js'
 import { verdict } from '../../engine/verdict.js'
 import { referenceYear } from '../../format.js'
+import { SECTORS } from '../../state/schema.js'
+import { uniteOffre } from '../../state/sectors.js'
+import { mentionCourte } from '../../state/reperes.js'
 import store from '../../state/store.js'
 
 const n = (v) => Number(v) || 0
@@ -157,6 +160,7 @@ export function renderStudio(navigate, refresh, goView) {
     ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA, navigate)),
     pied(navigate, pilotage),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
+    guet(hypotheses(r, s, navigate), 'hypotheses'),
     analyse(r, s, y, choisir, navigate, refresh),
   )
   return racine
@@ -754,12 +758,12 @@ function leviersChiffres(s, r) {
  * on saute à ce qu'on cherche.
  */
 function sommaire(actes, sansCA) {
-  const noms = [...(sansCA ? SECTIONS.avant : SECTIONS.plein), 'Les chiffres clés', 'Le détail des comptes']
-  const cibles = ['sy-partie-1', 'sy-partie-2', 'sy-partie-3', 'sy-chiffres', 'sy-comptes']
+  const noms = [...(sansCA ? SECTIONS.avant : SECTIONS.plein), 'Les chiffres clés', 'Les hypothèses', 'Le détail des comptes']
+  const cibles = ['sy-partie-1', 'sy-partie-2', 'sy-partie-3', 'sy-chiffres', 'sy-hypotheses', 'sy-comptes']
   return h('nav', { class: 'sy-sommaire', 'aria-label': 'Sommaire du détail' },
     h('span', { class: 'sy-sommaire-t' }, 'Dans ce détail'),
     h('ol', {},
-      ...noms.slice(0, 5).map((nm, i) => h('li', {},
+      ...noms.slice(0, 6).map((nm, i) => h('li', {},
         h('button', {
           type: 'button',
           onClick: () => document.getElementById(cibles[i])?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
@@ -782,6 +786,128 @@ function pied(navigate, pilotage) {
         onClick: () => goToGap({ route: 'resultats' }, navigate),
       }, 'Voir les états financiers'),
     ),
+  )
+}
+
+/* ───────────────────────────── 5. Les hypothèses ───────────────────────────── */
+
+/**
+ * Les hypothèses du plan, et ce qui les justifie.
+ *
+ * Tout ce que le détail explique découle d'une poignée de choix : un prix, un
+ * point de départ, une pente, ce qu'on garde sur chaque vente, ce que coûte
+ * l'équipe, le temps que les clients mettent à payer, l'argent réuni. Les
+ * voici, avec leur valeur exacte et ce qui les fonde : le repère du métier et
+ * sa source quand il existe, et sinon ce qu'il faudra apporter pour les
+ * défendre. Une hypothèse hors des repères n'est pas fausse ; elle demande
+ * une preuve.
+ */
+const majuscule = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t)
+function hypotheses(r, s, navigate) {
+  const p = r.pnl, k = r.kpis
+  const n = (v) => Number(v) || 0
+  const bm = SECTORS[s.meta?.sectorKey]?.benchmarks || {}
+  const src = mentionCourte(s.meta?.sectorKey)
+  const offres = (s.activities || []).filter((a) => n(a.unitPrice) > 0 || n(a.recurringPrice) > 0)
+  const a = offres[0]
+  const f = s.financing || {}
+  const somme = (xs) => (xs || []).reduce((t, x) => t + n(x?.amount), 0)
+  const ca3 = n(p.revenue[2])
+  const fourchette = (b, fmt) => `${fmt(b[0])} – ${fmt(b[1])}`
+  // Situer une valeur dans la fourchette du métier : dedans, au-dessus, en dessous.
+  const situer = (v, b, fmt, { plusHaut = 'au-dessus', plusBas = 'en dessous' } = {}) => {
+    if (!b) return null
+    const rep = `repère du métier ${fourchette(b, fmt)} (${src})`
+    if (v < b[0]) return { etat: 'watch', j: `${plusBas.charAt(0).toUpperCase()}${plusBas.slice(1)} du ${rep} : à justifier.` }
+    if (v > b[1]) return { etat: 'watch', j: `${plusHaut.charAt(0).toUpperCase()}${plusHaut.slice(1)} du ${rep} : à justifier.` }
+    return { etat: 'ok', j: `Dans le ${rep}.` }
+  }
+  const lignes = []
+
+  if (a) {
+    const rec = n(a.recurringPrice) > 0
+    const prix = rec ? n(a.recurringPrice) : n(a.unitPrice)
+    const unite = uniteOffre(s, a)
+    const panier = !rec && bm.ticket ? situer(prix, bm.ticket, (v) => euro(v), { plusHaut: 'au-dessus', plusBas: 'en dessous' }) : null
+    lignes.push({
+      h: `Prix de « ${a.name || 'l’offre principale'} »`, v: rec ? `${euro(prix)} par mois HT` : `${euro(prix)} HT par ${unite.one}`,
+      etat: panier?.etat || 'none',
+      j: panier ? panier.j.replace('repère du métier', 'panier moyen du métier') : 'Fixé par toi : à appuyer sur les prix de la concurrence, des devis signés ou une première vente.',
+    })
+    const v = a.volumes || {}
+    if (v.mode === 'manual') {
+      lignes.push({ h: 'Volumes', v: 'saisis mois par mois', etat: 'none', j: 'À rattacher à ce qui les fonde : carnet de commandes, capacité de production, contrats.' })
+    } else {
+      lignes.push({
+        h: 'Point de départ des ventes', v: `${num(n(v.startUnits))} ${n(v.startUnits) > 1 ? unite.many : unite.one} au mois ${n(v.launchMonth) + 1}`,
+        etat: 'none', j: 'Saisi par toi : à appuyer sur des précommandes, une liste d’attente, des lettres d’intention ou la capacité réelle.',
+      })
+      const campagnes = (s.marketing || []).filter((c) => c.enabled !== false)
+      const budget = campagnes.reduce((t, c) => t + n(c.monthlyBudget), 0)
+      lignes.push({
+        h: 'Croissance des volumes', v: `${pct(n(v.monthlyGrowth), 1)} par mois${n(v.growthDecay) > 0 && n(v.growthDecay) < 1 ? `, ralentie de ${pct(1 - n(v.growthDecay), 0)} chaque mois` : ''}`,
+        etat: campagnes.length ? 'ok' : 'watch',
+        j: campagnes.length
+          ? `Portée par ${campagnes.length} campagne${campagnes.length > 1 ? 's' : ''} : ${euro(budget)} par mois${k.cac ? `, soit ${euro(n(k.cac))} pour acquérir un client` : ''}.`
+          : 'Aucune campagne chiffrée : la pente repose sur le bouche-à-oreille et la prospection, à démontrer par les premiers mois de vente.',
+      })
+    }
+    if (rec) {
+      const attr = situer(n(a.churnMonthly), bm.churn, (x) => pct(x, 1), { plusHaut: 'au-dessus', plusBas: 'en dessous' })
+      lignes.push({ h: 'Attrition des abonnés', v: `${pct(n(a.churnMonthly), 1)} par mois`, etat: attr?.etat || 'none',
+        j: attr?.j || 'Saisie par toi : à mesurer sur les premiers abonnés, cohorte par cohorte.' })
+    }
+    const delai = n(a.paymentLag), acompte = n(a.deposit)
+    lignes.push({
+      h: 'Encaissement des ventes', v: `${delai === 0 ? 'comptant' : `à ${num(delai)} mois`}${acompte > 0 ? `, acompte de ${pct(acompte, 0)}` : ''}`,
+      etat: 'none', j: 'Conditions de paiement saisies : elles déplacent le besoin de trésorerie, pas le résultat.',
+    })
+  }
+  if (ca3 > 0) {
+    const marge = n(k.marginRate?.[2])
+    const m = situer(marge, bm.grossMargin, (x) => pct(x, 0))
+    lignes.push({ h: 'Marge brute, année 3', v: pct(marge, 1), etat: m?.etat || 'none',
+      j: m?.j || 'Découle de tes prix et de tes coûts de revient : à appuyer sur des devis fournisseurs.' })
+    const masse = Math.abs(n(p.payroll[2])) / ca3
+    const ms = masse <= 10 ? situer(masse, bm.payrollRatio, (x) => pct(x, 0)) : null
+    lignes.push({ h: 'Masse salariale / chiffre d’affaires, année 3', v: masse <= 10 ? pct(masse, 1) : '—', etat: ms?.etat || 'none',
+      j: ms?.j || 'Découle des postes et de leurs dates d’arrivée : chaque embauche doit suivre un palier de ventes.' })
+  }
+  const apports = n(f.openingCash) + somme(f.equityFounders)
+  const dettes = somme(f.loans) + somme(f.honourLoans) + somme(f.shareholderLoans) + somme(f.advances)
+  const leve = somme(f.equityInvestors)
+  const aides = somme(f.grants)
+  lignes.push({
+    h: 'Financement réuni', v: euro(apports + dettes + leve + aides),
+    etat: n(k.fundingNeed) > 0 ? 'watch' : 'ok',
+    j: `${majuscule([apports ? `apports ${euro(apports)}` : null, dettes ? `emprunts ${euro(dettes)}` : null, leve ? `levée ${euro(leve)}` : null, aides ? `aides ${euro(aides)}` : null].filter(Boolean).join(', ')) || 'Rien de réuni'}. `
+      + (n(k.fundingNeed) > 0 ? `Il manque ${euro(n(k.fundingNeed))} au point bas : un montant à couvrir par un accord écrit — offre de prêt, lettre d’intention.` : 'Suffisant pour ne jamais passer sous zéro : chaque montant reste à confirmer par écrit.'),
+  })
+  lignes.push({
+    h: 'Fiscalité et cotisations', v: 'barèmes 2026',
+    etat: 'ok', j: 'Impôt sur les sociétés, cotisations sociales, TVA et taxes locales appliqués par le moteur aux règles en vigueur — détail dans la page Méthode.',
+  })
+
+  const ETAT = { ok: 'Étayée', watch: 'À justifier', none: 'À documenter' }
+  return h('section', { class: 'sy-hyp sy-act sy-chapitre', id: 'sy-hypotheses' },
+    numero(5, 'Les hypothèses'),
+    h('div', { class: 'sy-sec-head' },
+      h('div', {},
+        h('h2', { class: 'sy-act-title' }, 'Les hypothèses du plan, et ce qui les justifie'),
+        h('p', { class: 'sy-act-say' }, 'Chaque chiffre de ce détail découle de ces choix. Un repère du métier les situe quand il existe ; sinon, il faudra les défendre par une preuve — contrat, devis, historique, précommandes.'),
+      ),
+    ),
+    h('div', { class: 'table-wrap' },
+      h('table', { class: 'data sy-hyp-table' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Hypothèse'), h('th', {}, 'Valeur retenue'), h('th', {}, 'Ce qui la justifie'))),
+        h('tbody', {}, ...lignes.map((l) => h('tr', {},
+          h('td', {}, h('b', {}, l.h)),
+          h('td', { class: 'num' }, l.v),
+          h('td', {}, h('span', { class: `sy-hyp-etat is-${l.etat}` }, ETAT[l.etat]), ' ', l.j),
+        ))),
+      ),
+    ),
+    h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'methode' }, navigate) }, 'Voir la méthode et les sources →'),
   )
 }
 
@@ -808,7 +934,7 @@ function sixChiffres(r, s, y, choisir, navigate) {
     numero(4, 'Les chiffres clés'),
     h('div', { class: 'sy-sec-head' },
       h('div', {},
-        h('h2', { class: 'sy-act-title' }, 'Les six chiffres qu’un banquier te demandera'),
+        h('h2', { class: 'sy-act-title' }, 'Les six chiffres à connaître par cœur'),
         h('p', { class: 'sy-act-say' }, 'EBE, point mort, trésorerie au plus bas, montant à financer, marge brute, autonomie : clique sur chacun pour savoir ce qu’il veut dire, pourquoi on te le demande, et où le corriger.'),
       ),
       anneeChips(y, choisir),
@@ -893,7 +1019,7 @@ function analyse(r, s, y, choisir, navigate, refresh) {
   const neuve = etat.analyseNeuve
   etat.analyseNeuve = false
   return h('section', { class: `sy-deep sy-act sy-chapitre ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}`, id: 'sy-comptes' },
-    numero(5, 'Le détail des comptes'),
+    numero(6, 'Le détail des comptes'),
     h('h2', { class: 'sy-act-title' }, 'D’où viennent tous ces chiffres'),
     h('p', { class: 'sy-act-say' }, 'Pour vérifier un chiffre ou répondre à une question précise : le compte de résultat de chaque année, ce qui fait passer du chiffre d’affaires au bénéfice, et le compte en banque mois par mois.'),
     h('button', {

@@ -21,12 +21,12 @@ import { trajectorySentence } from '../explain.js'
 import store from '../../state/store.js'
 import { SECTORS } from '../../state/schema.js'
 import { goToGap } from '../spotlight.js'
-import { section, exercices, grandsChiffres, anneeLue, lireAnnee } from '../sections.js'
+import { exercices, grandsChiffres, anneeLue, lireAnnee } from '../sections.js'
 import { barres, courbe, compter } from '../vitrine.js'
 import { gardesDuPlan, gardeBloc } from '../garde.js'
 import { renderStudio } from './studio.js'
 import { analyseStrategique } from './analyse.js'
-import { periodeAnnee } from '../../format.js'
+import { periodeAnnee, referenceYear } from '../../format.js'
 
 const n = (v) => Number(v) || 0
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -51,26 +51,31 @@ const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des e
 /**
  * Quatre façons de lire le même pitch.
  *
- *   « Récit »     — un texte qu'on lit : chaque partie s'ouvre sur une phrase
- *                   qui la raconte, les images suivent, l'avis de Fynomia se
- *                   tient à droite ;
- *   « Tableau »   — un cockpit : tout le pitch sur un écran, une tuile par
- *                   partie avec son chiffre, sa courbe et le verdict ; une
- *                   tuile s'ouvre au clic sur tout son contenu ;
- *   « Diapos »    — le deck qu'on présentera : une idée par diapositive, au
- *                   format d'un écran, l'avis en note d'orateur ;
- *   « En détail » — tout le raisonnement, acte par acte, avec « en clair »
- *                   ce que chaque chiffre veut dire pour toi.
+ * Les mêmes faits et les mêmes chiffres, sortis du même calcul ; ce qui
+ * change d'une forme à l'autre, c'est l'écriture et le niveau de détail.
+ * Chaque forme a été écrite en pensant à un lecteur — une équipe ou un
+ * business angel pour le récit, un consultant en finance pour le tableau,
+ * une salle qui a trois minutes pour les diapos, un fonds ou une banque pour
+ * le détail —, mais aucun n'est nommé à l'écran, et personne n'y parle :
  *
- * Les trois premières disent exactement la même chose — mêmes parties, mêmes
- * chiffres, mêmes avis — sous trois formes ; on passe de l'une à l'autre d'un
- * clic, sans rien perdre. Le choix est retenu sur cet appareil.
+ *   « Récit »     — une explication accessible et convaincante : cinq
+ *                   chapitres, un diagnostic et une courbe chacun, puis
+ *                   l'essentiel en mots simples ;
+ *   « Tableau »   — une lecture financière structurée : chaque partie en
+ *                   métriques exactes, avec leur période et leur base de
+ *                   calcul ;
+ *   « Diapos »    — une synthèse immédiate : une phrase et un chiffre par
+ *                   diapositive, de quoi tenir un elevator pitch ;
+ *   « En détail » — l'analyse approfondie : chaque chiffre expliqué, les
+ *                   hypothèses du plan et ce qui les justifie.
+ *
+ * Le choix est retenu sur cet appareil.
  */
 const MISES = [
-  { key: 'recit', label: 'Récit', dit: 'l’analyse stratégique' },
-  { key: 'tableau', label: 'Tableau', dit: 'tout sur un écran' },
-  { key: 'diapos', label: 'Diapos', dit: 'à présenter' },
-  { key: 'detail', label: 'En détail', dit: 'tout le raisonnement' },
+  { key: 'recit', label: 'Récit', dit: 'le projet expliqué' },
+  { key: 'tableau', label: 'Tableau', dit: 'la lecture financière' },
+  { key: 'diapos', label: 'Diapos', dit: 'l’essentiel à présenter' },
+  { key: 'detail', label: 'En détail', dit: 'hypothèses et justifications' },
 ]
 const CLE_MISE = 'fynomia:pitch-mise'
 let mise = (() => { try { return localStorage.getItem(CLE_MISE) || 'recit' } catch { return 'recit' } })()
@@ -218,7 +223,7 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
     ...(SECTORS[s.meta?.sectorKey]?.traps || []).map((t) => t.title.toLowerCase()),
   ].filter(Boolean)
 
-  return [
+  const parties = [
     { cle: 'trajectoire', nom: 'La trajectoire sur cinq ans',
       dit: 'Ta trésorerie mois par mois, et les moments qui comptent : l’histoire qu’on lit en premier.',
       recit: trajectorySentence(r),
@@ -291,36 +296,128 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
       chiffre: { v: String(Math.min(5, risquesNoms.length)), l: 'risques à nommer' },
       mini: () => h('div', { class: 'pz-points', 'aria-hidden': 'true' }, ...risquesNoms.slice(0, 5).map(() => h('i'))),
       corps: () => risques(s, r), avis: a.risques, tuile: [6, 1] },
-    { cle: 'ratios', nom: 'Les chiffres qu’on te demandera',
+    { cle: 'ratios', nom: 'Les chiffres à connaître par cœur',
       dit: 'Ceux qu’on compare d’un dossier à l’autre.',
       recit: 'Huit chiffres à savoir par cœur : chiffre d’affaires, croissance, marges, EBITDA, premier bénéfice, besoin et autonomie.',
       chiffre: { v: mois >= 0 ? `Année ${mois + 1}` : 'Pas atteint', l: 'le point mort' },
       mini: () => null,
       corps: () => ratios(s, r), avis: a.ratios, tuile: [6, 1] },
   ]
+
+  // Les mêmes faits, écrits pour chaque forme. Le tableau les donne en
+  // métriques exactes — la période, la base de calcul — ; les diapositives
+  // en une phrase qu'on peut dire d'une traite.
+  const yr = referenceYear(r)
+  const pm = n(k.breakEven?.[yr]), caY = n(p.revenue[yr])
+  const securite = caY > 0 && pm > 0 ? (caY - pm) / caY : null
+  const partPhare = total3 > 0 && phare ? phare.v / total3 : null
+  const autonomie = k.runwayMonths === null || k.runwayMonths === undefined ? null : n(k.runwayMonths)
+  const ca3 = n(p.revenue[2])
+  const masse3 = Math.abs(n(p.payroll[2]))
+  const signe = (v) => (v >= 0 ? '+' : '\u2212')
+  const pct1 = (v) => pct(v, 1)
+  const moisBas = monthLabel(n(bas.month), r.startDate)
+  const pluriel = (q, mot) => `${q} ${mot}${q > 1 ? 's' : ''}`
+  const rentable = aPremier ? `rentable dès l’année ${premier + 1}` : 'sans bénéfice sur cinq ans'
+  const formes = {
+    trajectoire: {
+      constat: manque > 0 ? `Besoin de trésorerie de ${euro(manque)} au point bas (${moisBas}, mois ${n(bas.month) + 1}).`
+        : `Trésorerie positive sur les soixante mois ; ${euro(n(r.cash.yearEnd?.[4]))} à la clôture de l’année 5.`,
+      fiche: [
+        { l: 'Point bas de trésorerie', v: euro(n(bas.value)), b: `${moisBas} · mois ${n(bas.month) + 1}` },
+        { l: 'Trésorerie à la clôture A5', v: euro(n(r.cash.yearEnd?.[4])), b: `fin ${monthLabel(59, r.startDate)}` },
+        { l: 'Premier exercice bénéficiaire', v: aPremier ? `Année ${premier + 1}` : 'Aucun sur 5 ans', b: aPremier ? `résultat net ${euro(n(p.netResult[premier]))}` : '' },
+      ],
+      pitch: `${eur(a5)} de chiffre d’affaires en année 5, ${rentable}${manque > 0 ? ` : il faut ${eur(manque)} avant ${moisBas}.` : ', sans besoin de financement.'}`,
+    },
+    offre: {
+      constat: phare ? `« ${phare.nom} » : ${partPhare !== null ? `${pct1(partPhare)} du chiffre d’affaires de l’année 3, ` : ''}à ${prixPhare} HT.` : 'Aucune offre tarifée.',
+      fiche: [
+        { l: 'Offre principale', v: phare ? `« ${phare.nom} »` : '—', b: phare ? `${prixPhare} HT` : '' },
+        { l: 'Part du chiffre d’affaires A3', v: partPhare !== null ? pct1(partPhare) : '—', b: partPhare !== null ? `${euro(phare.v)} sur ${euro(total3)}` : '' },
+        { l: 'Offres tarifées', v: String(offres.length) },
+      ],
+      pitch: String(s.meta?.pitch || '').trim()
+        || (phare ? `« ${phare.nom} », à ${prixPhare} HT${partPhare !== null ? ` : ${pct(partPhare, 0)} des ventes` : ''}.` : 'Ce que tu vends reste à chiffrer.'),
+    },
+    croissance: {
+      constat: `Chiffre d’affaires de ${euro(a1)} en année 1 et de ${euro(a5)} en année 5${cagr !== null ? `, soit une croissance annuelle moyenne de ${signe(cagr)}${pct1(Math.abs(cagr))}` : ''}.`,
+      fiche: [
+        { l: 'Chiffre d’affaires A1 → A5', v: `${euro(a1)} → ${euro(a5)}` },
+        { l: 'Croissance annuelle moyenne', v: cagr !== null ? `${signe(cagr)}${pct1(Math.abs(cagr))}` : '—', b: '(CA A5 ÷ CA A1) puissance ¼, moins 1' },
+        { l: 'Résultat net A5', v: euro(n(p.netResult[4])), b: n(p.revenue[4]) > 0 ? `marge nette ${taux(k.netMargin?.[4], p.revenue[4]) === '—' ? '—' : pct1(n(k.netMargin?.[4]))}` : '' },
+      ],
+      pitch: `De ${eur(a1)} à ${eur(a5)} de chiffre d’affaires en cinq ans${cagr !== null ? ` : ${signe(cagr)}${pct(Math.abs(cagr), 0)} par an` : ''}.`,
+    },
+    modele: {
+      constat: margeOk ? `Taux de marge brute de ${pct1(marge)} en année 3${bm.grossMargin ? `, pour un repère métier de ${pct(bm.grossMargin[0], 0)} à ${pct(bm.grossMargin[1], 0)}` : ''}.`
+        : 'Taux de marge brute non significatif : chiffre d’affaires insuffisant en année 3.',
+      fiche: [
+        { l: 'Marge brute A3', v: euro(n(p.grossMargin[2])), b: margeOk ? `${pct1(marge)} de ${euro(ca3)}` : '' },
+        { l: 'Point mort', v: mois >= 0 ? `Année ${mois + 1}, mois ${k.breakEvenMonth[mois]}` : 'Non atteint', b: mois >= 0 ? `seuil de ${euro(n(k.breakEven[mois]))} de chiffre d’affaires` : '' },
+        bm.grossMargin ? { l: 'Repère du métier', v: `${pct(bm.grossMargin[0], 0)} – ${pct(bm.grossMargin[1], 0)}`, b: 'taux de marge brute' } : null,
+      ],
+      pitch: margeOk && marge > 0 ? `${Math.round(marge * 100)} € gardés sur 100 € vendus ; ${mois >= 0 ? `tous les frais couverts dès l’année ${mois + 1}` : 'les frais ne sont pas encore couverts'}.`
+        : 'Les ventes ne couvrent pas encore ce qu’elles coûtent.',
+    },
+    besoin: {
+      constat: manque > 0 ? `Besoin de financement de ${euro(manque)} au point bas (${moisBas}) ; ressources réunies : ${euro(finance)}.`
+        : `Aucun besoin de financement ; ressources réunies : ${euro(finance)}.`,
+      fiche: [
+        { l: 'Besoin de financement', v: manque > 0 ? euro(manque) : 'Aucun', b: manque > 0 ? `point bas, ${moisBas}` : '' },
+        { l: 'Ressources réunies', v: euro(finance), b: 'apports, emprunts, levées, aides' },
+        { l: 'Autonomie', v: autonomie === null ? 'Illimitée' : `${num(autonomie, 1)} mois`, b: 'au rythme de dépense actuel' },
+      ],
+      pitch: manque > 0 ? `${eur(manque)} à trouver avant ${moisBas} ; ${eur(finance)} déjà réunis.` : `Aucun financement à trouver : les ${eur(finance)} réunis suffisent.`,
+    },
+    equipe: {
+      constat: team.length ? `${pluriel(team.length, 'poste')} ; charges de personnel de ${euro(masse1)} en année 1${ca3 > 0 && masse3 / ca3 <= 10 ? `, soit ${pct1(masse3 / ca3)} du chiffre d’affaires en année 3` : ''}.` : 'Aucun poste saisi.',
+      fiche: [
+        { l: 'Postes', v: String(team.length) },
+        { l: 'Charges de personnel A1', v: euro(masse1), b: 'salaires et cotisations' },
+        { l: 'Masse salariale / CA A3', v: ca3 > 0 && masse3 / ca3 <= 10 ? pct1(masse3 / ca3) : '—', b: bm.payrollRatio ? `repère du métier ${pct(bm.payrollRatio[0], 0)} – ${pct(bm.payrollRatio[1], 0)}` : '' },
+      ],
+      pitch: team.length ? `${pluriel(team.length, 'poste')}, ${eur(masse1)} de salaires la première année.` : 'L’équipe reste à constituer.',
+    },
+    risques: {
+      constat: `${pluriel(Math.min(5, risquesNoms.length), 'risque')} relevé${risquesNoms.length > 1 ? 's' : ''} par le modèle${partPhare !== null ? ` ; ${pct1(partPhare)} du chiffre d’affaires de l’année 3 repose sur « ${phare.nom} »` : ''}.`,
+      fiche: [
+        { l: 'Risques relevés', v: String(Math.min(5, risquesNoms.length)), b: risquesNoms.slice(0, 2).join(' ; ') },
+        { l: 'Marge de sécurité', v: securite !== null && Math.abs(securite) <= 10 ? pct1(securite) : '—', b: `année ${yr + 1} · (CA − point mort) ÷ CA` },
+        partPhare !== null ? { l: 'Concentration du CA A3', v: pct1(partPhare), b: `sur « ${phare.nom} »` } : null,
+      ],
+      pitch: risquesNoms.length ? `Premier risque, nommé d’emblée : ${risquesNoms[0]}.` : 'Aucun risque particulier dans les chiffres.',
+    },
+    ratios: {
+      constat: `EBE de ${euro(n(p.ebe[2]))} en année 3${taux(k.ebeMargin?.[2], p.revenue[2]) !== '—' ? ` (${pct1(n(k.ebeMargin?.[2]))} du chiffre d’affaires)` : ''} ; point mort ${mois >= 0 ? `en année ${mois + 1}` : 'non atteint'}.`,
+      fiche: [
+        { l: 'EBE A3', v: euro(n(p.ebe[2])), b: 'valeur ajoutée + subventions − impôts et taxes − personnel' },
+        { l: 'EBITDA A3', v: euro(n(p.ebitda[2])), b: 'résultat d’exploitation + amortissements' },
+        { l: 'Premier exercice bénéficiaire', v: aPremier ? `Année ${premier + 1}` : 'Aucun sur 5 ans' },
+      ],
+      pitch: `Point mort ${mois >= 0 ? `en année ${mois + 1}` : 'non atteint'}${taux(k.ebeMargin?.[2], p.revenue[2]) !== '—' ? `, marge d’EBE de ${taux(k.ebeMargin?.[2], p.revenue[2])} en année 3` : ''}.`,
+    },
+  }
+  return parties.map((x) => ({ ...x, ...(formes[x.cle] || {}) }))
 }
 
-/**
- * Récit : un texte qu'on lit.
- *
- * Chaque partie s'ouvre sur la phrase qui la raconte, en grand, comme le
- * chapeau d'un article ; les images et le détail suivent ; l'avis de
- * Fynomia se tient dans la marge de droite.
- */
-function recit(parties) {
-  return h('div', { class: 'pitch-recit' },
-    ...parties.map((x, i) => section({ no: i + 1, nom: x.nom, dit: x.dit, droite: x.droite || null, cle: `pitch-${x.cle}`, classe: 'pitch-ligne' },
-      h('div', { class: 'pitch-ligne-corps' },
-        h('div', { class: 'pitch-ligne-main' },
-          h('p', { class: 'pitch-chapeau' }, insecable(x.recit)),
-          x.corps()),
-        conseil(x.avis, { cote: true }),
-      ),
+/** Les métriques d'une partie : l'intitulé, la valeur exacte, la période ou la base de calcul. */
+function fiche(lignes) {
+  const l = (lignes || []).filter(Boolean)
+  if (!l.length) return null
+  return h('dl', { class: 'pz-fiche' },
+    ...l.map((x) => h('div', { class: 'pz-fiche-l' },
+      h('dt', {}, x.l),
+      h('dd', {}, h('b', { class: 'num' }, insecable(x.v)), x.b ? h('small', {}, x.b) : null),
     )))
 }
 
 /**
- * Tableau : un cockpit.
+ * Tableau : la lecture financière.
+ *
+ * Chaque partie en métriques exactes — la valeur au plus près, sa période,
+ * sa base de calcul — et le constat qui les résume, sans adjectif. Une tuile
+ * s'ouvre au clic sur tout son contenu et se referme.
  *
  * Tout le pitch sur un écran, sur fond sombre : une tuile par partie, avec
  * son chiffre, sa courbe et le verdict en une ligne. Une tuile s'ouvre au
@@ -353,7 +450,8 @@ function tableau(parties) {
             h('span', {}, x.chiffre?.l || ''),
           ),
           x.mini ? h('div', { class: 'pz-dessin' }, x.mini()) : null,
-          h('p', { class: 'pz-verdict' }, insecable(x.avis?.titre || '')),
+          h('p', { class: 'pz-verdict' }, insecable(x.constat || x.avis?.titre || '')),
+          fiche(x.fiche),
           o ? h('div', { class: 'pitch-tuile-corps' },
             h('p', { class: 'pitch-chapeau' }, insecable(x.recit)),
             x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null, x.corps()) : null,
@@ -382,7 +480,7 @@ const CHAPITRES_DECK = [
   { titre: 'Le projet', dit: 'Ce que tu vends, à qui, et l’histoire des cinq prochaines années.', parties: ['trajectoire', 'offre'] },
   { titre: 'L’économie', dit: 'Jusqu’où ça peut aller, et ce que chaque vente rapporte.', parties: ['croissance', 'modele'] },
   { titre: 'Le financement', dit: 'Ce qu’il faut réunir, et qui fait le travail.', parties: ['besoin', 'equipe'] },
-  { titre: 'Les risques et les chiffres', dit: 'Ce qui peut mal tourner, et ce qu’on te demandera.', parties: ['risques', 'ratios'] },
+  { titre: 'Les risques et les chiffres', dit: 'Ce qui peut mal tourner, et les chiffres à connaître par cœur.', parties: ['risques', 'ratios'] },
 ]
 
 function diapos(parties) {
@@ -420,7 +518,7 @@ function diapos(parties) {
         h('div', { class: 'pz-diapo-grille' },
           h('div', { class: 'pz-diapo-texte' },
             h('h3', {}, x.nom),
-            h('p', { class: 'pz-diapo-recit' }, insecable(x.recit)),
+            h('p', { class: 'pz-diapo-recit' }, insecable(x.pitch || x.recit)),
             h('div', { class: 'pz-diapo-chiffre' },
               h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
               h('span', {}, x.chiffre?.l || ''),
@@ -432,7 +530,8 @@ function diapos(parties) {
           h('span', { class: 'avis-mono', 'aria-hidden': 'true' }, 'F'),
           h('div', {},
             h('b', {}, 'Note d’orateur · ', TONS[x.avis?.ton || 'good']),
-            h('p', {}, insecable(x.avis?.titre || ''), x.avis?.question ? ` — on te demandera : « ${x.avis.question} »` : ''),
+            h('p', {}, insecable(x.avis?.titre || '')),
+            x.avis?.question ? h('p', { class: 'pz-note-q' }, 'Question à préparer : ', insecable(x.avis.question)) : null,
           ),
         ),
       )
@@ -485,6 +584,8 @@ function diapos(parties) {
  * tracée d'un trait, des montants qui comptent jusqu'à leur valeur. Le
  * pitch s'ouvre maintenant ainsi — et se joue quand on arrive dessus.
  */
+/** Ce que la couverture annonce : la forme qu'on lit, pas un lecteur. */
+const ACCROCHES = { recit: 'le projet expliqué', tableau: 'la lecture financière', diapos: 'l’essentiel à présenter' }
 function couverture(s, r, navigate) {
   const nom = s.meta?.company || s.meta?.name || 'Ton projet'
   const phrase = String(s.meta?.pitch || '').trim()
@@ -492,7 +593,6 @@ function couverture(s, r, navigate) {
   const leve = somme(s.financing?.equityInvestors)
   const p = r.pnl, k = r.kpis
   const besoin = n(k.fundingNeed)
-  const lecteur = lecteurDe(s)
   const premier = k.firstProfitableYear
   const figs = [
     { l: 'Chiffre d’affaires en année 5', v: n(p.revenue[4]) },
@@ -503,7 +603,7 @@ function couverture(s, r, navigate) {
   const el = h('section', { class: 'pitch-cover pitch-hero' },
     h('div', { class: 'rvl-glow', 'aria-hidden': 'true' }),
     h('div', { class: 'pitch-hero-top' },
-      h('span', { class: 'rvl-kicker', style: { '--d': '0s' } }, `Pitch · ${lecteur.retient}`),
+      h('span', { class: 'rvl-kicker', style: { '--d': '0s' } }, `Pitch · ${ACCROCHES[mise] || ACCROCHES.recit}`),
       h('span', { class: 'sy-live' }, h('i', { 'aria-hidden': 'true' }), 'Live'),
     ),
     h('h2', { class: 'rvl-name pitch-hero-name' },
@@ -655,7 +755,7 @@ function besoin(s, r, navigate) {
 
 function equipe(s, r) {
   const team = s.team || []
-  if (!team.length) return h('p', { class: 'pitch-vide' }, 'Aucun poste saisi : un investisseur voudra savoir qui fait le travail.')
+  if (!team.length) return h('p', { class: 'pitch-vide' }, 'Aucun poste saisi : qui fait le travail est la première question sur l’équipe.')
   return h('div', { class: 'pitch-equipe' },
     ...team.map((m) => h('div', { class: 'pitch-poste' },
       h('b', {}, m.role || 'Poste'),
@@ -823,7 +923,7 @@ function avis(s, r) {
         ton: cagr > 1 ? 'watch' : cagr < 0.25 && L.inv ? 'watch' : 'good',
         titre: cagr > 1 ? `+${pct(cagr, 0)} par an : une pente qu’on va challenger`
           : cagr > 0.25 ? `+${pct(cagr, 0)} par an : ambitieux et défendable`
-            : L.inv ? `+${pct(Math.max(0, cagr), 0)} par an : lent pour un investisseur` : `+${pct(Math.max(0, cagr), 0)} par an : une croissance prudente, qui rassure`,
+            : L.inv ? `+${pct(Math.max(0, cagr), 0)} par an : lent pour une levée de fonds` : `+${pct(Math.max(0, cagr), 0)} par an : une croissance prudente, qui rassure`,
         points: [
           { v: `${eur(a1)} → ${eur(a5)}`, t: 'de chiffre d’affaires, de l’année 1 à l’année 5.' },
           n(p.revenue[4]) > 0 && Math.abs(em5) <= 10 ? { v: pct(em5, 0), t: 'de marge d’EBE en année 5 : ce que l’activité garde une fois tout payé.' } : null,
@@ -962,8 +1062,8 @@ function conseil(a, { cote = false, court = false } = {}) {
       ...points.map((x) => h('li', {}, h('b', {}, insecable(x.v)), ' ', h('span', {}, insecable(x.t)),
         x.src ? [' ', sourceRepere()] : null))) : null,
     a.question ? h('div', { class: 'avis-question' },
-      h('span', {}, 'On te demandera'),
-      h('p', {}, `« ${a.question} »`),
+      h('span', {}, 'Question à préparer'),
+      h('p', {}, a.question),
     ) : null,
     a.action && navigateur ? h('button', { class: 'avis-action', onClick: (e) => goToGap(a.action.go, navigateur, e.currentTarget) }, `${a.action.label} →`) : null,
   )

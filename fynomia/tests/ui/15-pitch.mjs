@@ -18,8 +18,8 @@ export default async function (t, { rapide } = {}) {
   await t.onglet(p, 'Pitch investisseur')
 
   // « Récit » (par défaut) : l'analyse stratégique, en cinq chapitres qui
-  // ont chacun un objectif, deux cartes — le diagnostic et la courbe — et la
-  // phrase à dire au banquier, à l'investisseur, à l'équipe.
+  // ont chacun un objectif, deux cartes — le diagnostic et la courbe — et
+  // l'essentiel dit en clair, sans lecteur nommé ni personnage qui parle.
   t.verifie(await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).count() === 1, 'le récit est la mise en page par défaut')
   const chapitres = await p.$$eval('.as-chap', (e) => e.map((x) => ({
     titre: (x.querySelector('.as-titre')?.textContent || '').trim(),
@@ -27,14 +27,15 @@ export default async function (t, { rapide } = {}) {
     meta: (x.querySelector('.as-meta')?.textContent || '').trim(),
     diag: !!x.querySelector('.as-diag'), courbe: !!x.querySelector('.as-courbe'),
     cote: (() => { const d = x.querySelector('.as-diag'), c = x.querySelector('.as-courbe'); return !!d && !!c && c.getBoundingClientRect().left >= d.getBoundingClientRect().right - 1 })(),
-    dire: x.querySelectorAll('.as-dire-case').length,
+    clair: (x.querySelector('.as-clair')?.textContent || '').trim(),
+    personnages: x.querySelectorAll('.as-dire-case, .as-dire-qui').length,
   })))
   t.verifie(chapitres.length === 5, 'cinq chapitres d’analyse stratégique', chapitres.map((c) => c.titre))
   t.verifie(/modèle/i.test(chapitres[0]?.titre) && /coûts/i.test(chapitres[1]?.titre) && /financement/i.test(chapitres[2]?.titre) && /équipe/i.test(chapitres[3]?.titre) && /risques/i.test(chapitres[4]?.titre),
     'le modèle, les coûts, le financement, l’équipe, les risques', chapitres.map((c) => c.titre))
   t.verifie(chapitres.every((c) => c.objectif > 30 && /facteur/.test(c.meta)), 'chaque chapitre a un objectif et compte ses facteurs bloquants', chapitres.map((c) => c.meta))
   t.verifie(chapitres.every((c) => c.diag && c.courbe && c.cote), 'deux cartes par chapitre : le diagnostic à gauche, la courbe à droite')
-  t.verifie(chapitres.every((c) => c.dire >= 2), 'chaque chapitre dit quoi dire au banquier, à l’investisseur, à l’équipe', chapitres.map((c) => c.dire))
+  t.verifie(chapitres.every((c) => c.clair.length > 60 && /\d/.test(c.clair) && c.personnages === 0), 'chaque chapitre dit l’essentiel en clair, chiffré, sans personnage', chapitres.map((c) => c.clair.slice(0, 60)))
   const diags = await p.$$eval('.as-diag', (e) => e.map((x) => ({
     tag: (x.querySelector('.as-tag')?.textContent || '').trim(),
     titre: (x.querySelector('.as-carte-titre')?.textContent || '').trim(),
@@ -47,8 +48,8 @@ export default async function (t, { rapide } = {}) {
   t.verifie(await p.locator('.as-chap[data-chapitre="1"] .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
   t.verifie(await p.locator('.as-chap[data-chapitre="3"] .as-bk-ligne').count() === 5, 'le financement donne les cinq vérifications du banquier')
   t.verifie(await p.locator('.as-chap[data-chapitre="5"] .as-courbe .as-barre').count() === 4, 'les risques sont rejoués en stress test : quatre imprévus')
-  const questions = await p.$$eval('.as-question em', (e) => e.map((x) => x.textContent.trim().length))
-  t.verifie(questions.length >= 4 && questions.every((l) => l > 25), 'la question qu’on te posera, chapitre par chapitre', questions)
+  const questions = await p.$$eval('.as-question', (e) => e.map((x) => ({ l: x.querySelector('em')?.textContent.trim().length || 0, t: x.textContent })))
+  t.verifie(questions.length >= 4 && questions.every((q) => q.l > 25 && /^Question à préparer/.test(q.t) && !/[«»]/.test(q.t)), 'la question à préparer, chapitre par chapitre, sans questionneur entre guillemets', questions.map((q) => q.t.slice(0, 50)))
   t.verifie(!(await p.locator('.module-nav .hnav-tab', { hasText: 'essai' }).count()), 'la synthèse essai n’est plus un onglet à part')
   t.verifie(!(await p.locator('.pitch .sy-hero, .pitch .pitch-dossier').count()), 'l’avancement du dossier a quitté le pitch pour le Pilotage')
 
@@ -59,7 +60,8 @@ export default async function (t, { rapide } = {}) {
   })
   const ask = (await p.locator('.pitch-ask b').innerText()).replace(/\D/g, '')
   t.verifie(besoin > 0 && Number(ask) === besoin, 'le montant de la couverture est le besoin calculé', `${ask} / ${besoin}`)
-  t.verifie(/investisseur/i.test(await p.locator('.pitch-hero .rvl-kicker').innerText()), 'un logiciel parle à un investisseur')
+  t.verifie(/le projet expliqué/i.test(await p.locator('.pitch-hero .rvl-kicker').innerText()) && !/investisseur|banquier|financeur/i.test(await p.locator('.pitch-hero .rvl-kicker').innerText()),
+    'la couverture annonce la forme qu’on lit, pas un lecteur', await p.locator('.pitch-hero .rvl-kicker').innerText())
   t.verifie(await p.locator('.pitch-hero .rvl-bar').count() === 5 && await p.locator('.pitch-hero .rvl-line').count() === 1, 'la couverture trace cinq ans de chiffre d’affaires et la trésorerie')
   // Aucun pourcentage absurde.
   const absurdes = await p.evaluate(() => (document.querySelector('.pitch').innerText.match(/-?\d[\d \u00a0\u202f]{3,}[ \u00a0]?%/g) || []).filter((x) => Math.abs(Number(x.replace(/[^\d-]/g, ''))) > 1000))
@@ -123,7 +125,7 @@ export default async function (t, { rapide } = {}) {
     pourquoi: document.querySelectorAll('.pitch.is-detail details.sy-why').length,
     ouverts: document.querySelectorAll('.pitch.is-detail details.sy-why[open]').length,
   }))
-  t.verifie(detail.sommaire === 5 && detail.chapitres >= 5, '« En détail » : un sommaire de cinq parties, chacune dans son panneau', detail)
+  t.verifie(detail.sommaire === 6 && detail.chapitres >= 6, '« En détail » : un sommaire de six parties — hypothèses comprises —, chacune dans son panneau', detail)
   t.verifie(detail.clairs >= 3 && detail.pourquoi >= 3 && detail.ouverts === 0, '« en clair » sous chaque acte, « pourquoi c’est important » replié', detail)
   await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
   await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).waitFor({ timeout: 3000 }).catch(() => {})

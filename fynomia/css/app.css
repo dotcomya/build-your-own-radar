@@ -5625,6 +5625,18 @@ details[open] > .refine-head .foldsign {
 /* ─── 4. Les six chiffres ─── */
 .sy-sec-head { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
 .sy-sec-head > div:first-child { flex: 1; min-width: 260px; }
+/* Les hypothèses du plan : ce qui est retenu, et ce qui le fonde. */
+.sy-hyp .table-wrap { margin-top: 18px; }
+table.data.sy-hyp-table th, table.data.sy-hyp-table td { text-align: left; }
+table.data.sy-hyp-table td { vertical-align: top; line-height: 1.5; font-family: var(--sans); font-size: 13.5px; }
+table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
+.sy-hyp-table td:first-child { min-width: 180px; white-space: normal; }
+.sy-hyp-table td:nth-child(2) { white-space: nowrap; }
+.sy-hyp-table td:last-child { white-space: normal; min-width: 280px; color: var(--ink-2); }
+.sy-hyp-etat { display: inline-block; margin-right: 4px; padding: 2px 7px; border-radius: 999px; font: 600 10.5px/1.4 var(--sans); background: var(--surface-2); color: var(--ink-3); }
+.sy-hyp-etat.is-ok { background: var(--gain-wash); color: var(--gain); }
+.sy-hyp-etat.is-watch { background: var(--warn-wash, #FFF3D6); color: var(--warn, #8A6100); }
+.sy-hyp .sy-btn { margin-top: 14px; }
 .sy-sec-title {
   display: block; margin: 0; font-family: var(--display); font-weight: 750; font-size: 24px;
   letter-spacing: -.03em; color: var(--ink);
@@ -6878,6 +6890,13 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pz-points > i { width: 12px; height: 12px; border-radius: 50%; background: #F2C46B; }
 .pz-verdict { margin: 10px 0 0; font: 600 13.5px/1.4 var(--sans); color: #E9EBE3; }
 .pitch-tuile.is-open .pz-verdict { color: var(--ink); }
+/* La fiche d'une tuile : métrique, valeur exacte, période ou base de calcul. */
+.pz-fiche { margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--rule); display: grid; gap: 7px; }
+.pz-fiche-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; }
+.pz-fiche dt { font-size: 12.5px; color: var(--ink-3); min-width: 0; }
+.pz-fiche dd { margin: 0; text-align: right; min-width: 0; }
+.pz-fiche dd b { font: 600 13px/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
+.pz-fiche dd small { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-4); }
 .pz-ouvrir {
   align-self: flex-start; margin-top: 10px; padding: 6px 12px; border: 0; border-radius: 999px; cursor: pointer;
   background: rgba(255, 255, 255, .08); color: #E9EBE3; font: 600 12px/1 var(--sans);
@@ -6913,6 +6932,7 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pz-note { display: flex; align-items: flex-start; gap: 10px; padding-top: 12px; border-top: 1px solid currentColor; border-top-color: color-mix(in srgb, currentColor 18%, transparent); }
 .pz-note b { display: block; font: 600 11.5px/1.3 var(--sans); opacity: .7; }
 .pz-note p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.45; }
+.pz-note p.pz-note-q { font-size: 12.5px; opacity: .8; }
 .pitch-diapo.is-sombre .pz-note .avis-mono { background: var(--accent); color: var(--ink); }
 .pz-plein { margin-left: 8px; padding: 8px 14px; border: 0; border-radius: 999px; cursor: pointer; background: var(--surface-2); font: 600 12px/1 var(--sans); color: var(--ink-3); }
 .pz-plein:hover { background: var(--ink); color: var(--accent); }
@@ -7140,15 +7160,12 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .as-dire { margin-top: 16px; padding: 16px 18px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--rule); }
 .as-dire-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 10px; }
 .as-dire-titre { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
-.as-question { font-size: 13px; color: var(--ink-3); }
+.as-clair { margin: 0; font-size: 15px; line-height: 1.65; color: var(--ink-2); max-width: 82ch; }
+.as-question { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
 .as-question em { font-style: normal; color: var(--ink); font-weight: 600; }
-.as-dire-cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.as-dire-case { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--rule); }
-.as-dire-case p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
-.as-dire-qui { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
 
 @media (max-width: 980px) {
-  .as-cartes, .as-dire-cases { grid-template-columns: minmax(0, 1fr); }
+  .as-cartes { grid-template-columns: minmax(0, 1fr); }
   .as-chap-tete { grid-template-columns: auto minmax(0, 1fr); }
   .as-meta { grid-column: 1 / -1; }
   .as-objectif { grid-column: 1 / -1; }

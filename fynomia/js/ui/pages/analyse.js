@@ -1,10 +1,9 @@
 /**
  * Le récit du pitch, en analyse stratégique.
  *
- * Un fondateur ne va pas voir un banquier, un business angel, un fonds, ses
- * associés ou son équipe avec une liste de chiffres. Il y va avec une lecture :
- * ce qui marche, ce qui bloque, pourquoi, et ce qu'il fait. Cette page la lui
- * donne, en cinq chapitres qui ont chacun un objectif :
+ * Le récit est la lecture la plus accessible du plan : ce qui marche, ce qui
+ * bloque, pourquoi, et ce qu'on y fait, dit avec des mots simples. Il avance
+ * en cinq chapitres qui ont chacun un objectif :
  *
  *   01  le modèle      — prouver que chaque vente gagne de l'argent ;
  *   02  les coûts      — savoir ce qui pèse, et quand la trésorerie remonte ;
@@ -14,9 +13,8 @@
  *
  * Chaque chapitre porte deux cartes : un diagnostic — sa gravité, son ratio,
  * une phrase qui le dit, la décomposition qui le montre, le geste qui le
- * corrige — et une courbe qui le situe dans le temps, avec le chiffre qu'un
- * lecteur extérieur retiendra. Puis la phrase à dire à chacun : au banquier,
- * à l'investisseur, à l'équipe.
+ * corrige — et une courbe qui le situe dans le temps. Puis l'essentiel, en
+ * clair, et la question à préparer.
  *
  * Tout vient du moteur. Rien n'est écrit à la main : si un chiffre change,
  * le diagnostic change avec lui.
@@ -261,22 +259,30 @@ function carteCourbe({ domaine, periode, titre, texte, dessin, pied }) {
   )
 }
 
-/** Ce qu'il faut dire, à qui. */
-function direA(dits, question) {
+/**
+ * L'essentiel du chapitre, dit simplement.
+ *
+ * Ce bloc s'appelait « Le dire à » : une phrase pour le banquier, une pour
+ * l'investisseur, une pour l'équipe, chacune à la première personne. Les
+ * lecteurs imaginés servaient à écrire juste ; ils n'avaient rien à faire à
+ * l'écran. Le récit dit désormais les mêmes faits une seule fois, en clair,
+ * sans personnage ; les autres formats du pitch les disent à leur façon —
+ * chiffrés au plus près dans le Tableau, en une phrase dans les Diapos,
+ * hypothèses à l'appui dans En détail.
+ */
+function essentiel(phrases, question) {
+  const texte = (phrases || []).filter(Boolean)
+  if (!texte.length && !question) return null
   return h('div', { class: 'as-dire' },
     h('div', { class: 'as-dire-tete' },
-      h('span', { class: 'as-dire-titre' }, 'Le dire à'),
-      question ? h('span', { class: 'as-question' }, 'On te demandera : ', h('em', {}, `« ${question} »`)) : null,
+      h('span', { class: 'as-dire-titre' }, 'L’essentiel'),
     ),
-    h('div', { class: 'as-dire-cases' },
-      ...dits.filter((d) => d && d.t).map((d) => h('div', { class: 'as-dire-case' },
-        h('span', { class: 'as-dire-qui' }, d.qui),
-        h('p', {}, d.t),
-      ))),
+    texte.length ? h('p', { class: 'as-clair' }, texte.join(' ')) : null,
+    question ? h('p', { class: 'as-question' }, 'Question à préparer : ', h('em', {}, question)) : null,
   )
 }
 
-function chapitre({ no, titre, objectif, bloquants, diag, courbe, dits, question }) {
+function chapitre({ no, titre, objectif, bloquants, diag, courbe, clair, question }) {
   return h('section', { class: 'as-chap', 'data-chapitre': String(no) },
     h('header', { class: 'as-chap-tete' },
       h('span', { class: 'as-no' }, String(no).padStart(2, '0')),
@@ -287,7 +293,7 @@ function chapitre({ no, titre, objectif, bloquants, diag, courbe, dits, question
       h('p', { class: 'as-objectif' }, h('b', {}, 'Objectif · '), objectif),
     ),
     h('div', { class: 'as-cartes' }, diag, courbe),
-    direA(dits, question),
+    essentiel(clair, question),
   )
 }
 
@@ -370,10 +376,12 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       ],
     }),
     question: avis.modele?.question,
-    dits: [
-      { qui: 'Banquier', t: margeOk && marge > 0 ? `Sur 100 € vendus, il m’en reste ${Math.round(marge * 100)} une fois les achats payés ; mes ventes couvrent tous mes frais ${moisPM >= 0 ? `dès l’année ${moisPM + 1}` : 'plus tard que le plan'}.` : 'Je revois mon prix : aujourd’hui mes ventes ne couvrent pas ce qu’elles coûtent.' },
-      { qui: 'Investisseur', t: cagr !== null ? `${eur(a1)} la première année, ${eur(a5)} la cinquième : ${cagr >= 0 ? '+' : '−'}${pct(Math.abs(cagr), 0)} par an, avec ${margeOk ? pct(marge, 0) : 'une'} de marge brute.` : null },
-      { qui: 'Équipe', t: phare ? `Notre produit phare, « ${phare.name} », finance tout le reste : c’est lui qu’on soigne en premier.` : null },
+    clair: [
+      margeOk && marge > 0 ? `Sur 100 € vendus, il reste ${Math.round(marge * 100)} € une fois payé ce que la vente coûte.`
+        : 'Aujourd’hui, les ventes ne couvrent pas ce qu’elles coûtent : le prix est le premier chiffre à revoir.',
+      moisPM >= 0 ? `Les ventes couvrent tous les frais dès l’année ${moisPM + 1}.` : 'Sur cinq ans, les ventes ne couvrent pas encore tous les frais.',
+      cagr !== null ? `Le chiffre d’affaires passe de ${eur(a1)} la première année à ${eur(a5)} la cinquième, soit ${cagr >= 0 ? '+' : '−'}${pct(Math.abs(cagr), 0)} par an.` : null,
+      phare ? `« ${phare.name} » est l’offre phare : c’est elle qu’il faut soigner en premier.` : null,
     ],
   })
 
@@ -424,15 +432,20 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
           J.remonte !== null ? `Le cumul redevient positif en ${M(J.remonte)} : l’activité a remboursé ce qu’elle a coûté.` : 'Il ne redevient pas positif sur cinq ans.'],
       dessin: dessinJ(J, fenetre, r.startDate),
       pied: [
-        { l: 'Couverture banquier', v: couvV !== null ? `${num(couvV, 2)}×` : 'Sans emprunt', ton: couvV === null ? '' : couvV >= 1.3 ? 'good' : couvV >= 1 ? 'watch' : 'bad' },
+        { l: 'Couverture des échéances', v: couvV !== null ? `${num(couvV, 2)}×` : 'Sans emprunt', ton: couvV === null ? '' : couvV >= 1.3 ? 'good' : couvV >= 1 ? 'watch' : 'bad' },
         { l: 'Solvabilité A1', v: solv ? 'Valide' : 'À revoir', ton: solv ? 'good' : 'bad' },
       ],
     }),
     question: avis.tresorerie?.question,
-    dits: [
-      { qui: 'Banquier', t: J.valeurBas < 0 ? `Le démarrage consomme ${eur(-J.valeurBas)} jusqu’en ${M(J.bas)}${J.remonte !== null ? ` ; l’activité l’a remboursé en ${M(J.remonte)}` : ''}. ${manque > 0 ? `Il me manque ${eur(manque)} pour passer ce creux.` : 'Mon financement couvre ce creux.'}` : 'Mon activité se finance dès les premiers mois : je ne demande pas d’argent pour le démarrage.' },
-      { qui: 'Investisseur', t: J.valeurBas < 0 ? `Chaque euro levé finance le creux de ${eur(-J.valeurBas)} : au-delà, il accélère.` : 'La croissance peut s’accélérer sans brûler de cash : l’argent levé ira à la conquête.' },
-      { qui: 'Équipe', t: st.ratio !== null && st.ratio >= 0.7 ? `Les premiers mois sont serrés : chaque dépense compte jusqu’en ${M(J.remonte ?? J.bas)}.` : 'Nos charges sont tenues : on peut investir dans ce qui fait vendre.' },
+    clair: [
+      J.valeurBas < 0
+        ? `Le démarrage coûte ${eur(-J.valeurBas)} avant que l’activité ne rapporte : le creux est atteint au mois ${J.bas + 1} (${monthLabel(J.bas, r.startDate)}).`
+        : 'L’activité se finance dès les premiers mois : le démarrage ne demande pas d’argent en plus.',
+      J.valeurBas < 0 ? (J.remonte !== null ? `L’activité a remboursé ce qu’elle a coûté au mois ${J.remonte + 1}.` : 'Sur cinq ans, elle ne rembourse pas encore ce qu’elle a coûté.') : null,
+      J.valeurBas < 0 ? (manque > 0 ? `Il manque ${eur(manque)} pour passer ce creux ; au-delà, chaque euro réuni sert à accélérer.` : 'Le financement réuni couvre ce creux.') : null,
+      st.ratio !== null && st.ratio >= 0.7
+        ? `Les premiers mois sont serrés ; premier poste de dépense : ${posteNom}, ${euro(st.postes[dom].v)} par mois.`
+        : 'Les charges fixes restent tenues : il reste de la place pour ce qui fait vendre.',
     ],
   })
 
@@ -454,7 +467,7 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
   const faire = (aRevoir[0] || comptees.find((l) => l.etat === 'juste'))?.faire
 
   const financement = chapitre({
-    no: 3, titre: 'Le financement', objectif: 'arriver au rendez-vous avec le bon montant, et les ratios qu’on te demandera.',
+    no: 3, titre: 'Le financement', objectif: 'arriver au rendez-vous avec le bon montant, et les ratios à connaître.',
     bloquants: aRevoir.length + (manque > 0 && !aRevoir.some((l) => l.cle === 'tresorerie') ? 1 : 0),
     diag: carteDiagnostic({
       domaine: 'Financement', gravite: g3, navigate,
@@ -469,8 +482,8 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       lien: va('Ajuster ton financement', { route: 'financement', view: 'sources', anchor: 'sources' }),
     }),
     courbe: carteCourbe({
-      domaine: 'Ce que ton banquier va vérifier', periode: 'Échéancier réel',
-      titre: aRevoir.length ? `${aRevoir.length} point${aRevoir.length > 1 ? 's' : ''} à revoir avant le rendez-vous` : 'Ton dossier passe la grille du banquier',
+      domaine: 'Les cinq contrôles d’un prêt', periode: 'Échéancier réel',
+      titre: aRevoir.length ? `${aRevoir.length} point${aRevoir.length > 1 ? 's' : ''} à revoir avant le rendez-vous` : 'Ton dossier passe les cinq contrôles',
       texte: null,
       dessin: h('ul', { class: 'as-bk' }, ...bank.map((l) => h('li', { class: `as-bk-ligne is-${l.etat}` },
         h('span', { class: 'as-bk-etat' }, l.etat === 'ok' ? 'Validé' : l.etat === 'juste' ? 'Juste' : l.etat === 'revoir' ? 'À revoir' : '—'),
@@ -483,10 +496,13 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       ],
     }),
     question: avis.besoin?.question,
-    dits: [
-      { qui: 'Banquier', t: apport && apport.etat !== 'na' ? `J’apporte ${pct(apport.part, 0)} du projet ; ma capacité d’autofinancement couvre ${couvV !== null ? `${num(couvV, 1)} fois` : 'mes'} échéances.` : manque > 0 ? `Je cherche ${eur(manque)} pour passer le point bas de ${monthLabel(bas.month, r.startDate)}.` : null },
-      { qui: 'Investisseur', t: manque > 0 ? `Je lève ${eur(manque)} : de quoi tenir jusqu’au point mort${moisPM >= 0 ? `, en année ${moisPM + 1}` : ''}.` : 'Je n’ai pas besoin de lever pour tenir : un investisseur accélérerait, il ne sauverait pas.' },
-      { qui: 'Associés', t: `Nous avons réuni ${eur(reuni)}${manque > 0 ? ` et il manque ${eur(manque)}` : ', suffisants pour tout le plan'}.` },
+    clair: [
+      reuni > 0 ? `${eur(reuni)} sont déjà réunis.` : 'Aucun financement n’est encore réuni.',
+      apport && apport.etat !== 'na' ? `L’apport des fondateurs représente ${pct(apport.part, 0)} du projet.` : null,
+      couvV !== null ? `Ce que l’activité dégage couvre ${num(couvV, 1)} fois les remboursements d’emprunt.` : null,
+      manque > 0
+        ? `Il manque ${eur(manque)} pour passer le point bas de ${monthLabel(bas.month, r.startDate)} : de quoi tenir jusqu’au point mort${moisPM >= 0 ? `, en année ${moisPM + 1}` : ''}.`
+        : 'Le plan se finance jusqu’au bout avec ce qui est réuni : un apport de plus accélérerait, il ne sauverait rien.',
     ],
   })
 
@@ -538,10 +554,12 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       ],
     }),
     question: avis.equipe?.question,
-    dits: [
-      { qui: 'Banquier', t: nonPaye ? 'Je me verserai un salaire dès que les ventes le permettront — et le plan le montre.' : `Je me verse ${euro(n(moi?.monthlyGross))} brut par mois : le plan le finance.` },
-      { qui: 'Investisseur', t: team.length > 1 ? `${team.length} postes, ${eur(Math.abs(n(p.payroll[0])))} la première année : chaque embauche suit un palier de ventes.` : 'Je porte le projet seul au départ ; les premières embauches suivent les premières ventes.' },
-      { qui: 'Équipe', t: team.length > 1 ? `Nous serons ${team.reduce((a, m) => a + (n(m.count) || 1), 0)} ; chaque arrivée est financée dans le plan.` : null },
+    clair: [
+      nonPaye ? 'Aucune rémunération n’est encore prévue pour toi : elle viendra avec les ventes, et le plan doit le montrer.'
+        : `Ta rémunération, ${euro(n(moi?.monthlyGross))} brut par mois, est financée par le plan.`,
+      team.length > 1 ? `${team.length} postes coûtent ${eur(Math.abs(n(p.payroll[0])))} la première année ; chaque embauche suit un palier de ventes.`
+        : 'Le projet démarre avec une seule personne ; les premières embauches suivront les premières ventes.',
+      dispo[1] > 0 ? `En année 2, il te reste ${euro(dispo[1] / 12)} par mois, net de tout.` : null,
     ],
   })
 
@@ -589,10 +607,14 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       ],
     }),
     question: avis.risques?.question,
-    dits: [
-      { qui: 'Banquier', t: pire ? `Même avec ${pire.nom.toLowerCase()}, ${pire.bas >= 0 ? 'ma trésorerie reste positive' : `il manquerait ${eur(-pire.bas)} : je prévois cette marge dans ma demande`}.` : null },
-      { qui: 'Investisseur', t: securite !== null && securite >= 0 ? `Mes ventes peuvent baisser de ${pct(securite, 0)} avant que je perde de l’argent.` : 'Je sais ce qui manque pour couvrir mes frais, et comment l’atteindre.' },
-      { qui: 'Équipe', t: pieges[0] ? `Le piège de notre métier : ${pieges[0].title.toLowerCase()}. On le surveille ensemble.` : null },
+    clair: [
+      securite !== null
+        ? (securite >= 0 ? `Les ventes peuvent baisser de ${pct(securite, 0)} avant que l’entreprise ne perde de l’argent en année ${y + 1}.`
+          : `Il manque ${pct(-securite, 0)} de ventes pour couvrir les frais en année ${y + 1}.`)
+        : null,
+      pire ? (pire.bas >= 0 ? `Même dans le pire des quatre imprévus testés — ${pire.nom.toLowerCase()} —, la trésorerie reste positive.`
+        : `Dans le pire des quatre imprévus testés — ${pire.nom.toLowerCase()} —, il manquerait ${eur(-pire.bas)} : une marge à prévoir dans la demande de financement.`) : null,
+      pieges[0] ? `Le piège propre au métier : ${pieges[0].title.toLowerCase()}.` : null,
     ],
   })
 
