@@ -22,7 +22,7 @@ import { refinePanel } from '../refine-panel.js'
 import { plainBoard } from '../plain.js'
 import { deckBoard } from './deck.js'
 import { breakEvenBoard } from './model.js'
-import { vocabulary } from '../../state/sectors.js'
+import { vocabulaireDuPlan } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
 import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
@@ -163,7 +163,7 @@ export function renderDashboard(navigate, refresh) {
         document.querySelector('.refinery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 'pilote-')),
       refinePanel(navigate, { refresh }),
-      breakEvenBoard(r, s, vocabulary(s)),
+      breakEvenBoard(r, s, vocabulaireDuPlan(s)),
       actionsPanel(r, s, navigate, refresh),
       gaugePanel(r, s, sector, y),
       nudgesSection(s, r, navigate),

@@ -42,6 +42,7 @@ mise en ligne.
 | `19-effet` | la saisie dit ce qu'elle déplace, sous le champ : « +… € de résultat en année N » en vert, en rouge à la baisse, à la frappe pour un salaire ; un autre champ ou une autre page l'efface |
 | `20-methode` | chaque repère du métier cite sa source et son année ; la page Méthode donne les fourchettes, leur calcul, leur construction, leurs limites et toutes les sources avec lien |
 | `21-retouches` | une charge par vente se chiffre en % du prix ou en € par produit vendu, sans montant mensuel ni forfait caché ; un avertissement ouvert passe devant le guide flottant et tout le reste |
+| `22-unites` | chaque offre compte ce qu'elle vend : le mot du métier pour l'offre principale, « ventes » par défaut pour les autres, un choix (produits, abonnements…) ou un mot écrit à la main ; ce qui additionne les offres dit « ventes » dès qu'elles ne comptent pas la même chose |
 
 ## Options
 

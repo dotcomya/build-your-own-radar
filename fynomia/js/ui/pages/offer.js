@@ -25,7 +25,7 @@ const perOf = (a, v) => (perKey(a) === 'semaine' ? (Number(v) || 0) / SEMAINES_P
 import { h, euro, pct, num, numberField, textField, selectField, toast, confirmDialog, monthLabel, tabs, refine, moduleShell, unitAmount, MINUS, CROSS, COPY, foldSign } from '../dom.js'
 import { newActivity } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE } from '../charts.js'
-import { vocabulary } from '../../state/sectors.js'
+import { vocabulary, uniteOffre, UNITES } from '../../state/sectors.js'
 import { tutorial, stepGuide } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import { valueForYear } from '../../engine/revenue.js'
@@ -222,7 +222,7 @@ export function focusOffer(id) {
 }
 
 function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
-  const voc = vocabulary(store.scenario)
+  const voc = uniteOffre(store.scenario, a)
   const isOpen = open.has(a.id)
   const detail = r?.revenue.perActivity.find((x) => x.id === a.id)
   const totalRevenue = detail ? detail.total.reduce((x, y) => x + y, 0) : 0
@@ -318,7 +318,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
               ? `${pct(a.commissionRate, 1)} de ${euro(a.dealValue)}, soit ${euro(a.unitPrice)} par affaire`
               : mode === 'recurring' && n(a.recurringPrice) > 0
                 ? `${euro(perOf(a, a.recurringPrice))}/${perKey(a) === 'semaine' ? 'sem.' : 'mois'} pendant ${a.contractMonths} mois`
-                : n(a.unitPrice) > 0 ? `${euro(a.unitPrice)} l'unité` : null,
+                : n(a.unitPrice) > 0 ? `${euro(a.unitPrice)} par ${voc.one}` : null,
             margin !== null && n(a.unitCost) > 0 ? `${pct(margin, 0)} de marge` : null,
           ].filter(Boolean).join(' · ')),
       ),
@@ -410,7 +410,7 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
 
       sec === 'volumes' ? h('div', { class: 'view', 'data-gap': 'volumes' },
 
-        volumesEditor(a, setVolumes, level, detail, refresh)
+        volumesEditor(a, setVolumes, level, detail, refresh, set)
       ) : null,
 
       // Un seul onglet pour tout ce qui affine.
@@ -648,11 +648,50 @@ function paymentTimeline(a) {
   )
 }
 
-function volumesEditor(a, setVolumes, level, detail, refresh = () => {}) {
+/**
+ * Ce que compte l'offre.
+ *
+ * Une garde d'animaux vend des heures, mais aussi des laisses à la pièce, une
+ * formule au mois, une promenade à la sortie : chaque offre choisit son mot,
+ * et ses volumes se lisent dans ce mot. « Autre mot » laisse écrire le sien.
+ */
+function uniteChoix(a, set) {
+  const s = store.scenario
+  const voc = uniteOffre(s, a)
+  const metier = vocabulary(s)
+  const valeur = a.unite === 'libre' || a.unite === 'metier' || UNITES[a.unite] ? a.unite
+    : Object.entries(UNITES).find(([, u]) => u.one === voc.one)?.[0] || 'metier'
+  const options = [
+    ...(Object.values(UNITES).some((u) => u.one === metier.one) ? [] : [{ value: 'metier', label: `${cap(metier.many)} — le mot de ton métier` }]),
+    { value: 'heure', label: 'Heures' },
+    { value: 'journee', label: 'Journées' },
+    { value: 'prestation', label: 'Prestations — séance, sortie, visite' },
+    { value: 'produit', label: 'Produits vendus à la pièce' },
+    { value: 'abonnement', label: 'Abonnements' },
+    { value: 'affaire', label: 'Affaires apportées' },
+    { value: 'vente', label: 'Ventes' },
+    { value: 'libre', label: 'Autre mot…' },
+  ]
+  return h('div', { class: 'grid grid-4 mb' },
+    selectField({
+      label: 'Tu comptes en', value: valeur, options,
+      onInput: (k) => set({ unite: k }, 'Unité de l’offre'),
+    }),
+    valeur === 'libre' ? textField({
+      label: 'Ton mot, au singulier', value: a.uniteLibre, placeholder: 'sortie',
+      onInput: (t, o) => set({ uniteLibre: t }, 'Unité de l’offre', o),
+    }) : null,
+  )
+}
+
+const cap = (t) => `${t[0].toUpperCase()}${t.slice(1)}`
+
+function volumesEditor(a, setVolumes, level, detail, refresh = () => {}, set = null) {
   const v = a.volumes || {}
-  const voc = vocabulary(store.scenario)
+  const voc = uniteOffre(store.scenario, a)
   const isManual = v.mode === 'manual'
   return h('div', {},
+    set ? uniteChoix(a, set) : null,
     h('div', { class: 'row mb' },
       h('div', { class: 'seg' },
         h('button', { class: `seg-btn ${!isManual ? 'active' : ''}`, onClick: () => setVolumes({ mode: 'growth' }) }, 'Courbe de croissance'),
@@ -723,7 +762,7 @@ function volumeVisual(detail, voc) {
 
   return h('div', { class: 'vol' },
     h('div', { class: 'vol-head' },
-      h('span', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)} ${voc.verb}, mois par mois`),
+      h('span', {}, `${voc.many[0].toUpperCase()}${voc.many.slice(1)}${voc.verb ? ` ${voc.verb}` : ''}, mois par mois`),
       h('span', { class: 'spacer' }),
       h('span', { class: 'tiny muted' }, `sommet à ${num(peak)} en ${monthLabel(peakMonth, store.result?.startDate)}`),
     ),

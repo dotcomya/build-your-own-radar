@@ -17,7 +17,7 @@
 
 import { h, euro, pct, num, monthLabel, CHEVRON } from '../dom.js'
 import { barChart, areaChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
-import { getSector, vocabulary } from '../../state/sectors.js'
+import { getSector, uniteOffre, vocabulaireDuPlan } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { founderIncome } from '../../engine/founder.js'
 import { changed } from '../motion.js'
@@ -58,9 +58,10 @@ const headline = (value, note) => h('div', { class: 'slide-headline' },
 
 function build(s, r) {
   const sector = getSector(s.meta?.sectorKey)
-  const voc = vocabulary(s)
+  const voc = vocabulaireDuPlan(s)
   const p = r.pnl, k = r.kpis
   const a = s.activities?.[0] || {}
+  const unite = uniteOffre(s, a)
   const forme = LEGAL_FORMS[s.meta?.legalForm]
   const camp = r.revenue.campaigns || []
   const nom = s.meta?.company || s.meta?.name || 'Mon projet'
@@ -118,7 +119,7 @@ function build(s, r) {
           h('span', { class: 'slide-bar-margin' }),
         ),
         facts(
-          { tag: `Prix d’une ${voc.one}`, value: euro(prix) },
+          { tag: `Prix par ${unite.one}`, value: euro(prix) },
           { tag: 'Coût direct', value: euro(prix - marge) },
           { tag: 'Marge', value: euro(marge), note: prix > 0 ? `${pct(tauxMarge, 0)} du prix` : null },
         ),

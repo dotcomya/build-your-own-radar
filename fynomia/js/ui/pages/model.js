@@ -13,7 +13,7 @@
  */
 
 import { h, euro, pct, num, monthLabel, tabs, pageBar } from '../dom.js'
-import { vocabulary, getSector } from '../../state/sectors.js'
+import { vocabulaireDuPlan, getSector } from '../../state/sectors.js'
 import { referenceYear } from '../../format.js'
 import { journey } from '../../engine/journey.js'
 import { compute } from '../../engine/engine.js'
@@ -33,7 +33,7 @@ const ME = new RegExp('fondateur|dirigeant|g\u00E9rant|moi', 'i')
 export function renderModel(navigate, refresh) {
   const s = store.scenario
   const r = store.result
-  const voc = vocabulary(s)
+  const voc = vocabulaireDuPlan(s)
   const sector = getSector(s.meta.sectorKey)
 
   if (!r || !s.activities.length) {

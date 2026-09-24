@@ -623,6 +623,57 @@ export function vocabulary(scenario) {
   return scenario?.meta?.unit || sector?.unit || { one: 'unité', many: 'unités', verb: 'vendues', client: 'client' }
 }
 
+/**
+ * Ce qu'une offre compte, au choix.
+ *
+ * Le mot du métier convient à l'offre principale — une garde d'animaux vend
+ * des heures — mais pas à tout ce qu'on vend à côté : des laisses se vendent à
+ * la pièce, une formule mensuelle à l'abonnement, une promenade à la sortie.
+ * Chaque offre choisit donc ce qu'elle compte ; sans choix, l'offre principale
+ * garde le mot du métier et les autres un mot neutre, selon leur façon de se
+ * vendre.
+ */
+export const UNITES = {
+  heure: { one: 'heure', many: 'heures', verb: 'vendues' },
+  journee: { one: 'journée', many: 'journées', verb: 'vendues' },
+  prestation: { one: 'prestation', many: 'prestations', verb: 'vendues' },
+  produit: { one: 'produit', many: 'produits', verb: 'vendus' },
+  abonnement: { one: 'abonnement', many: 'abonnements', verb: 'souscrits' },
+  affaire: { one: 'affaire', many: 'affaires', verb: 'apportées' },
+  vente: { one: 'vente', many: 'ventes', verb: 'réalisées' },
+}
+
+/** Le pluriel d'un mot saisi à la main : « sortie » → « sorties ». */
+const pluriel = (mot) => (/[sxz]$/i.test(mot) ? mot : /(au|eu)$/i.test(mot) ? `${mot}x` : `${mot}s`)
+
+/** Ce que compte une offre : son choix, sinon le mot du métier ou un mot neutre. */
+export function uniteOffre(scenario, activity) {
+  const choix = activity?.unite
+  const libre = String(activity?.uniteLibre || '').trim()
+  if (choix === 'libre' && libre) return { one: libre, many: pluriel(libre), verb: '' }
+  if (choix === 'metier') return vocabulary(scenario)
+  if (UNITES[choix]) return UNITES[choix]
+  const principale = (scenario?.activities || [])[0]
+  if (!principale || principale.id === activity?.id) return vocabulary(scenario)
+  if (Number(activity?.recurringPrice) > 0 || activity?.priceMode === 'recurring') return UNITES.abonnement
+  if (Number(activity?.commissionRate) > 0 || activity?.priceMode === 'commission') return UNITES.affaire
+  return UNITES.vente
+}
+
+/**
+ * Le mot des volumes de tout le plan.
+ *
+ * Additionner des heures et des laisses ne donne ni des heures ni des
+ * laisses : dès que les offres ne comptent pas la même chose, ce qui parle du
+ * total dit « ventes ».
+ */
+export function vocabulaireDuPlan(scenario) {
+  const offres = scenario?.activities || []
+  if (!offres.length) return vocabulary(scenario)
+  const unites = offres.map((a) => uniteOffre(scenario, a))
+  return unites.every((u) => u.one === unites[0].one) ? unites[0] : UNITES.vente
+}
+
 /** Le nom du métier tel que le fondateur l'a dit, sinon celui du modèle. */
 export function tradeName(scenario) {
   return scenario?.meta?.activityLabel || getSector(scenario?.meta?.sectorKey)?.label || ''

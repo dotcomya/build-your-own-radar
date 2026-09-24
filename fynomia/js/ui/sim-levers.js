@@ -16,7 +16,7 @@
  */
 
 import { newTeamMember } from '../state/schema.js'
-import { vocabulary } from '../state/sectors.js'
+import { vocabulaireDuPlan, uniteOffre } from '../state/sectors.js'
 
 const n = (v) => Number(v) || 0
 const pctFmt = (v) => `${Math.round(v * 1000) / 10} %`.replace('.', ',')
@@ -38,7 +38,7 @@ function around(v, { floor = 0, ceil = null, mult = 2 } = {}) {
  * modèle, donc celui dans lequel il veut le bousculer.
  */
 export function simLevers(s) {
-  const voc = vocabulary(s)
+  const voc = vocabulaireDuPlan(s)
   const out = []
 
   // ── Ce que tu vends ─────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ export function simLevers(s) {
     if (v.mode !== 'manual') {
       out.push(lever({
         id: `vol-${a.id}`, group: 'offre', line: a.name || 'Offre',
-        label: `${voc.many[0].toUpperCase()}${voc.many.slice(1)} le premier mois`,
+        label: `${uniteOffre(s, a).many[0].toUpperCase()}${uniteOffre(s, a).many.slice(1)} le premier mois`,
         read: (sc) => n(find(sc.activities, a.id)?.volumes?.startUnits),
         write: (sc, v2) => { const t = find(sc.activities, a.id); if (t) t.volumes.startUnits = Math.round(v2) },
         fmt: unitFmt, ...around(n(v.startUnits) || 10, { mult: 3 }),

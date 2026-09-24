@@ -17,7 +17,7 @@
 
 import { h, euro, num } from '../dom.js'
 import { barres, courbe, compter } from '../vitrine.js'
-import { vocabulary } from '../../state/sectors.js'
+import { uniteOffre } from '../../state/sectors.js'
 import { checklist, parAxe } from '../checklist.js'
 import { openPitch, openPilotage } from './dashboard.js'
 import store from '../../state/store.js'
@@ -46,7 +46,7 @@ export function renderReveal(navigate) {
   const p = r.pnl, k = r.kpis
   const nom = s.meta.company || s.meta.name || 'Ton projet'
   const a0 = (s.activities || [])[0] || {}
-  const voc = vocabulary(s)
+  const voc = uniteOffre(s, a0)
   const prix = n(a0.recurringPrice) > 0 ? `${euro(n(a0.recurringPrice))} par mois` : n(a0.unitPrice) > 0 ? euro(n(a0.unitPrice)) : null
   const offre = a0.name && a0.name !== 'À définir' ? a0.name : null
   const clients = n(a0.volumes?.startUnits)
