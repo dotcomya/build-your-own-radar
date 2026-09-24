@@ -23,13 +23,13 @@
  */
 
 import { h, svg, euro, pct, num, monthLabel } from '../dom.js'
-import { barChart } from '../charts.js'
+import { barChart, hot } from '../charts.js'
 import { goToGap } from '../spotlight.js'
 import { compute } from '../../engine/engine.js'
 import { founderIncome } from '../../engine/founder.js'
 import { lignesBanquier } from '../banquier.js'
 import { SECTORS } from '../../state/schema.js'
-import { referenceYear } from '../../format.js'
+import { referenceYear, periodeAnnee, periodeMois } from '../../format.js'
 
 const n = (v) => Number(v) || 0
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -93,6 +93,7 @@ function structureDemarrage(s, r) {
   const k = mois.length || 1
   return {
     periode: `${M(mois[0] ?? 0)}-${M(mois[mois.length - 1] ?? 2)}`,
+    mois: `${monthLabel(mois[0] ?? 0, r.startDate)} – ${monthLabel(mois[mois.length - 1] ?? 2, r.startDate)}`,
     ca: caQ, fixes, ratio: caQ > 0 ? fixes / caQ : null,
     postes: [
       { nom: 'Loyer', v: loyer / k },
@@ -109,10 +110,13 @@ function structureDemarrage(s, r) {
  * lancement qui glisse : on recalcule tout — paie, TVA, impôt, trésorerie —
  * et on lit ce que chacun coûte au point bas et au résultat.
  */
-const memoire = { cle: null, val: null }
+// Retenu pour le résultat qui l'a produit : chaque recalcul en fabrique un
+// neuf, donc le stress test ne peut pas survivre au plan qu'il décrit. La
+// date de modification, qui servait de clé, ne changeait pas entre deux
+// saisies de la même milliseconde.
+const memoire = { r: null, val: null }
 function stressTest(s, r) {
-  const cle = `${s.meta?.id}:${s.meta?.updatedAt}`
-  if (memoire.cle === cle) return memoire.val
+  if (memoire.r === r) return memoire.val
   const base = r.kpis.cashLow?.value ?? 0
   const y = referenceYear(r)
   const rejouer = (nom, mut) => {
@@ -120,7 +124,7 @@ function stressTest(s, r) {
     mut(c)
     let x
     try { x = compute(c) } catch { return null }
-    return { nom, bas: n(x.kpis.cashLow?.value), dBas: n(x.kpis.cashLow?.value) - n(base), dNet: n(x.pnl.netResult[y]) - n(r.pnl.netResult[y]) }
+    return { nom, bas: n(x.kpis.cashLow?.value), mois: x.kpis.cashLow?.month ?? 0, dBas: n(x.kpis.cashLow?.value) - n(base), dNet: n(x.pnl.netResult[y]) - n(r.pnl.netResult[y]) }
   }
   const volumes = (a, f) => {
     if (!a.volumes) return
@@ -138,32 +142,42 @@ function stressTest(s, r) {
       else a.volumes.launchMonth = n(a.volumes.launchMonth) + 3
     })),
   ].filter(Boolean)
-  memoire.cle = cle
+  memoire.r = r
   memoire.val = val
   return val
 }
 
 /* ─────────────────────────────── Les dessins ─────────────────────────────── */
 
-/** Des barres horizontales, chacune avec sa part : le poste qui pèse, en rouge. */
-function barres(postes, { total = null, alerte = null, format = (v) => euro(v), part = true } = {}) {
+/**
+ * Des barres horizontales, chacune avec sa part : le poste qui pèse, en rouge.
+ *
+ * Chaque barre se consulte au survol : la période qu'elle couvre, son
+ * intitulé, son montant exact — et ce qu'il précise, quand il y a lieu.
+ * `periode` vaut pour toutes les barres ; un poste peut porter la sienne.
+ */
+function barres(postes, { total = null, alerte = null, format = (v) => euro(v), part = true, periode = '', exact = (v) => euro(v), detail = null } = {}) {
   const t = total ?? postes.reduce((a, x) => a + Math.max(0, n(x.v)), 0)
   const max = Math.max(1, ...postes.map((x) => Math.abs(n(x.v))))
   return h('div', { class: 'as-barres' },
     ...postes.filter((x) => x && Number.isFinite(n(x.v))).map((x, i) => {
       const w = Math.min(100, (Math.abs(n(x.v)) / (part && t > 0 ? t : max)) * 100)
-      return h('div', { class: `as-barre ${alerte === i || x.alerte ? 'is-alerte' : ''} ${n(x.v) < 0 ? 'is-neg' : ''}`, style: { '--i': String(i) } },
+      return hot(h('div', { class: `as-barre ${alerte === i || x.alerte ? 'is-alerte' : ''} ${n(x.v) < 0 ? 'is-neg' : ''}`, style: { '--i': String(i) } },
         h('div', { class: 'as-barre-tete' },
           h('span', { class: 'as-barre-nom' }, x.nom),
           h('span', { class: 'as-barre-val' }, format(x.v), part && t > 0 ? ` (${pct(Math.max(0, n(x.v)) / t, 0)})` : ''),
         ),
         h('div', { class: 'as-barre-piste' }, h('i', { style: { width: `${Math.max(1.5, w)}%` } })),
-      )
+      ), x.periode || periode, () => [
+        { label: x.nom, value: exact(n(x.v)), strong: true },
+        part && t > 0 && n(x.v) > 0 ? { label: 'Part du total', value: pct(n(x.v) / t, 1) } : null,
+        ...(detail ? detail(x) : []),
+      ])
     }))
 }
 
-/** La courbe en J, avec son aire, son point bas et son retour à zéro. */
-function dessinJ(J, fenetre) {
+/** La courbe en J, avec son aire, son point bas et son retour à zéro ; chaque mois se consulte au survol. */
+function dessinJ(J, fenetre, debut) {
   const v = J.serie.slice(0, fenetre)
   const W = 560, H = 200, pad = { l: 44, r: 14, t: 16, b: 26 }
   const hi = Math.max(0, ...v), lo = Math.min(0, ...v)
@@ -177,6 +191,20 @@ function dessinJ(J, fenetre) {
   const ticks = [0, ...Array.from({ length: Math.floor((fenetre - 1) / pas) }, (_, i) => (i + 1) * pas - 1)].filter((m) => m < v.length)
   const bas = J.bas < v.length ? J.bas : null
   const remonte = J.remonte !== null && J.remonte < v.length ? J.remonte : null
+  const repere = svg('circle', { cx: x(0), cy: y(v[0] || 0), r: 4.5, class: 'as-j-repere' })
+  const bande = (W - pad.l - pad.r) / Math.max(1, v.length - 1)
+  const zones = v.map((val, i) => hot(
+    svg('rect', { x: x(i) - bande / 2, y: 0, width: bande, height: H, fill: 'transparent', class: 'chart-hot' }),
+    periodeMois(i, debut),
+    () => [
+      { label: 'Cumul des flux d’exploitation', value: euro(val), strong: true },
+      i > 0 ? { label: 'Flux du mois', value: euro(val - v[i - 1], { sign: true }) } : null,
+      i === bas && val < 0 ? { label: 'Le point bas : ce que coûte le démarrage', value: '' } : null,
+      i === remonte ? { label: 'Le cumul redevient positif', value: '' } : null,
+    ],
+    () => { repere.setAttribute('cx', x(i).toFixed(1)); repere.setAttribute('cy', y(val).toFixed(1)); repere.classList.add('is-on') },
+    () => repere.classList.remove('is-on'),
+  ))
   return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'as-j', role: 'img', 'aria-label': 'Cumul des flux d’exploitation, mois par mois' },
     svg('line', { x1: pad.l, x2: W - pad.r, y1: y(0), y2: y(0), class: 'as-j-zero' }),
     svg('text', { x: pad.l - 6, y: y(hi) + 4, class: 'as-j-y', 'text-anchor': 'end' }, kEur(hi)),
@@ -191,6 +219,8 @@ function dessinJ(J, fenetre) {
     remonte !== null ? svg('g', { class: 'as-j-haut' },
       svg('circle', { cx: x(remonte), cy: y(v[remonte]), r: 5 }),
       svg('text', { x: x(remonte) + (remonte > v.length * 0.7 ? -10 : 10), y: y(v[remonte]) - 10, 'text-anchor': remonte > v.length * 0.7 ? 'end' : 'start' }, `Positif ${M(remonte)}`)) : null,
+    repere,
+    ...zones,
   )
 }
 
@@ -317,7 +347,8 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         { nom: 'Salaires et cotisations', v: sur100.salaires * 100 },
         { nom: 'Frais de structure', v: sur100.frais * 100 },
         { nom: sur100.reste >= 0 ? 'Bénéfice' : 'Perte', v: sur100.reste * 100 },
-      ], { total: 100, format: (v) => `${num(v, 0)}\u00a0€`, part: false }) : null,
+      ], { total: 100, format: (v) => `${num(v, 0)}\u00a0€`, part: false, periode: `Sur 100 € vendus · ${periodeAnnee(2, r.startDate)}`,
+        exact: (v) => `${num(v, 2)}\u00a0€`, detail: (x) => [{ label: 'En euros sur l’année', value: euro((x.v / 100) * ca3) }] }) : null,
       conseil: sousRepere ? `chaque point de marge vaut ${eur(0.01 * ca3)} par an : revois ton prix ou tes achats.`
         : marge > 0 ? 'protège ta marge avant de chercher du volume : c’est elle qui paie tout le reste.' : 'commence par le prix de ton produit phare.',
       lien: va(sousRepere || marge <= 0 ? 'Ajuster ton prix' : 'Voir tes offres', { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' }),
@@ -331,6 +362,7 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         series: [{ label: 'Chiffre d’affaires', values: p.revenue.map(n), color: '#0E0F0C' }],
         line: { label: 'Résultat net', values: p.netResult.map(n), color: '#1B7F4B' },
         categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 200, largeur: 560,
+        periodes: [0, 1, 2, 3, 4].map((i) => periodeAnnee(i, r.startDate)),
       }),
       pied: [
         { l: 'Point mort', v: moisPM >= 0 ? `Année ${moisPM + 1}` : 'Non atteint', ton: moisPM >= 0 && moisPM <= 1 ? 'good' : 'bad' },
@@ -374,7 +406,9 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         ? ['Pour chaque 100 € encaissés durant le premier trimestre de ventes, ', h('b', {}, `${Math.round(st.ratio * 100)} € de frais de structure fixes`),
           ` sortent. Le premier poste est ${posteNom} : ${euro(st.postes[dom].v)} par mois.`]
         : [`Tes charges fixes coûtent ${euro(st.fixes / 3)} par mois avant la première vente.`],
-      postes: barres(st.postes.map((x, i) => ({ ...x, alerte: i === dom && g2 !== 'good' })), { format: (v) => `${euro(v)}/mois` }),
+      postes: barres(st.postes.map((x, i) => ({ ...x, alerte: i === dom && g2 !== 'good' })), { format: (v) => `${euro(v)}/mois`,
+        periode: `Moyenne mensuelle · ${st.periode} (${st.mois})`, exact: (v) => `${euro(v)} par mois`,
+        detail: (x) => [{ label: 'Sur les trois mois', value: euro(x.v * 3) }] }),
       conseil: dom === 0 ? 'négocie trois mois de franchise de loyer avec le bailleur.'
         : dom === 1 && salarie ? `décaler l’arrivée de « ${salarie.role} » de trois mois soulage le démarrage.`
           : 'passe tes abonnements et honoraires en revue : 100 € par mois font 1 200 € par an.',
@@ -388,7 +422,7 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         ? ['Sans aucun apport, le cumul de ce que l’activité encaisse et dépense ne passe jamais sous zéro.']
         : [`Hors financement, l’activité consomme jusqu’à `, h('b', {}, euro(-J.valeurBas)), ` : point bas en ${M(J.bas)} (${monthLabel(J.bas, r.startDate)}). `,
           J.remonte !== null ? `Le cumul redevient positif en ${M(J.remonte)} : l’activité a remboursé ce qu’elle a coûté.` : 'Il ne redevient pas positif sur cinq ans.'],
-      dessin: dessinJ(J, fenetre),
+      dessin: dessinJ(J, fenetre, r.startDate),
       pied: [
         { l: 'Couverture banquier', v: couvV !== null ? `${num(couvV, 2)}×` : 'Sans emprunt', ton: couvV === null ? '' : couvV >= 1.3 ? 'good' : couvV >= 1 ? 'watch' : 'bad' },
         { l: 'Solvabilité A1', v: solv ? 'Valide' : 'À revoir', ton: solv ? 'good' : 'bad' },
@@ -430,7 +464,7 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         ? ['Ton projet mobilise ', h('b', {}, eur(reuni)), sources.length ? ` : ${sources.map((x) => `${x.nom.toLowerCase()} ${eur(x.v)}`).join(', ')}. ` : '. ',
           manque > 0 ? `Au plus bas, en ${monthLabel(bas.month, r.startDate)}, il manque encore ${eur(manque)}.` : `Au plus bas, ton compte garde ${eur(n(bas.value))}.`]
         : [manque > 0 ? `Sans financement, ton compte descend à ${euro(-manque)} en ${monthLabel(bas.month, r.startDate)}.` : 'Ton activité se finance seule.'],
-      postes: sources.length ? barres(sources, { format: (v) => eur(v) }) : null,
+      postes: sources.length ? barres(sources, { format: (v) => eur(v), periode: `Réuni sur le plan · ${monthLabel(0, r.startDate)} – ${monthLabel(59, r.startDate)}` }) : null,
       conseil: faire || (manque > 0 ? `demande ${eur(Math.ceil((manque * 1.2) / 1000) * 1000)} plutôt que ${eur(manque)} : une marge pour l’imprévu.` : 'garde trois mois de charges en réserve.'),
       lien: va('Ajuster ton financement', { route: 'financement', view: 'sources', anchor: 'sources' }),
     }),
@@ -484,7 +518,9 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         ? h('span', {}, 'Les salaires représentent ', h('b', {}, `${pct(ratioMasse, 0)} du chiffre d’affaires en année 3`), bm.payrollRatio ? `, pour ${pct(bm.payrollRatio[0], 0)} à ${pct(bm.payrollRatio[1], 0)} dans ton métier. ` : '. ')
         : 'Pas encore de ventes pour situer ta masse salariale. ',
       bm.payrollRatio && source ? source() : null],
-      postes: postesEquipe.length ? barres(postesEquipe.map((x, i) => ({ ...x, alerte: lourd && i === 0 })), { format: (v) => `${eur(v)}/an` }) : null,
+      postes: postesEquipe.length ? barres(postesEquipe.map((x, i) => ({ ...x, alerte: lourd && i === 0 })), { format: (v) => `${eur(v)}/an`,
+        periode: `Coût chargé · ${periodeAnnee(1, r.startDate)}`, exact: (v) => `${euro(v)} par an`,
+        detail: (x) => [{ label: 'Par mois', value: euro(x.v / 12) }] }) : null,
       conseil: nonPaye ? 'un plan où le fondateur ne vit pas n’est pas prudent, il est incomplet.'
         : lourd ? 'échelonne les embauches sur les paliers de chiffre d’affaires.'
           : team.length <= 1 ? 'dis qui te remplace deux semaines : c’est la question qu’on te posera.' : 'montre qui vend et qui livre.',
@@ -494,7 +530,8 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       domaine: 'Ce que tu gagnes, toi', periode: 'Net de tout, par an',
       titre: dispo[1] > 0 ? `${euro(dispo[1] / 12)} par mois pour toi en année 2` : 'Rien ne remonte encore jusqu’à toi',
       texte: [inc?.micro ? 'Net de cotisations et d’impôt sur le revenu' : 'Net de cotisations, d’impôt sur les sociétés et d’impôt sur le revenu', dispo.some((v, i) => inc?.rows[i]?.honourRepayment > 0) ? ', prêt d’honneur remboursé.' : '.'],
-      dessin: barres(dispo.map((v, i) => ({ nom: `Année ${i + 1}`, v })), { format: (v) => `${eur(v)}`, part: false }),
+      dessin: barres(dispo.map((v, i) => ({ nom: 'Ce qui te reste, net de tout', v, periode: periodeAnnee(i, r.startDate), an: i })), { format: (v) => `${eur(v)}`, part: false,
+        detail: (x) => [{ label: 'Par mois', value: euro(x.v / 12) }] }),
       pied: [
         { l: 'Revenu net A2', v: `${euro(dispo[1] / 12)}/mois`, ton: dispo[1] > 0 ? 'good' : 'bad' },
         inc?.rows?.[1]?.costPerEuro ? { l: 'Coût d’un euro net', v: `${num(inc.rows[1].costPerEuro, 2)} €` } : { l: 'Postes', v: String(team.length) },
@@ -534,7 +571,7 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
         ? [securite >= 0 ? 'Tes ventes peuvent baisser de ' : 'Il te manque ', h('b', {}, pct(Math.abs(securite), 0)), securite >= 0 ? ` avant que tu ne perdes de l’argent en année ${y + 1}. ` : ` de ventes pour couvrir tes frais en année ${y + 1}. `,
           concentre ? `« ${parts[0].nom} » fait ${pct(parts[0].v / totalParts, 0)} de tes ventes : c’est ton premier risque.` : '']
         : ['Fixe tes prix et tes volumes : le moteur mesurera ta marge de sécurité.'],
-      postes: parts.length > 1 ? barres(parts.slice(0, 4).map((x, i) => ({ ...x, alerte: concentre && i === 0 })), { format: (v) => eur(v) }) : null,
+      postes: parts.length > 1 ? barres(parts.slice(0, 4).map((x, i) => ({ ...x, alerte: concentre && i === 0 })), { format: (v) => eur(v), periode: `Chiffre d’affaires · ${periodeAnnee(y, r.startDate)}` }) : null,
       extra: pieges.length ? h('ul', { class: 'as-pieges' }, ...pieges.map((t) => h('li', {}, h('b', {}, t.title), ' — ', t.body.split('. ')[0], '.'))) : null,
       conseil: concentre ? 'une deuxième offre, même petite, rassure plus qu’une croissance plus forte.' : 'prépare ta réponse au pire cas ci-contre : c’est elle qu’on attend.',
       lien: va('Voir tes offres', { route: 'offre', view: 'offres' }),
@@ -543,7 +580,9 @@ export function analyseStrategique(s, r, navigate, { avis = {}, source = null } 
       domaine: 'Stress test', periode: 'Rejoué par le moteur',
       titre: pire ? `Le pire cas : ${pire.nom.toLowerCase()}` : 'Ce que coûte un imprévu',
       texte: pire ? ['Point bas de trésorerie : ', h('b', {}, euro(pire.bas)), ` au lieu de ${euro(n(bas.value))}.`] : null,
-      dessin: barres(stress.map((x) => ({ nom: x.nom, v: x.dBas, alerte: x === pire })), { format: (v) => `${v >= 0 ? '+' : ''}${eur(v)} au point bas`, part: false }),
+      dessin: barres(stress.map((x) => ({ nom: x.nom, v: x.dBas, alerte: x === pire, periode: `Point bas · ${periodeMois(x.mois, r.startDate)}`, bas: x.bas })), {
+        format: (v) => `${v >= 0 ? '+' : ''}${eur(v)} au point bas`, part: false, exact: (v) => `${euro(v, { sign: true })} au point bas`,
+        detail: (x) => [{ label: 'Point bas de trésorerie', value: euro(x.bas) }, { label: 'Dans ton plan', value: euro(n(bas.value)) }] }),
       pied: [
         { l: 'Pire point bas', v: pire ? eur(pire.bas) : '—', ton: pire && pire.bas < 0 ? 'bad' : 'good' },
         { l: 'Tient sans nouvel apport', v: pire && pire.bas >= 0 ? 'Oui' : 'Non', ton: pire && pire.bas >= 0 ? 'good' : 'bad' },

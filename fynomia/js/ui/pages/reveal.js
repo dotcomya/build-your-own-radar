@@ -85,7 +85,7 @@ export function renderReveal(navigate) {
       h('div', { class: 'rvl-charts' },
         h('figure', { class: 'rvl-chart', style: { '--d': '1.2s' } },
           h('figcaption', {}, h('b', {}, 'Ton chiffre d’affaires'), ' année par année'),
-          barres(p.revenue),
+          barres(p.revenue, { debut: r.startDate }),
         ),
         h('figure', { class: 'rvl-chart', style: { '--d': '1.6s' } },
           h('figcaption', {}, h('b', {}, 'Ta trésorerie'), ' mois par mois'),

@@ -26,6 +26,7 @@ import { barres, courbe, compter } from '../vitrine.js'
 import { gardesDuPlan, gardeBloc } from '../garde.js'
 import { renderStudio } from './studio.js'
 import { analyseStrategique } from './analyse.js'
+import { periodeAnnee } from '../../format.js'
 
 const n = (v) => Number(v) || 0
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -248,6 +249,7 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
           series: [{ label: 'Chiffre d’affaires', values: p.revenue.map(n), color: '#0E0F0C' }],
           line: { label: 'Résultat net', values: p.netResult.map(n), color: '#1B7F4B' },
           categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 220,
+          periodes: [0, 1, 2, 3, 4].map((i) => periodeAnnee(i, r.startDate)),
         })),
         grandsChiffres([
           { cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none', note: () => croissance(p.revenue) },
@@ -518,7 +520,7 @@ function couverture(s, r, navigate) {
     h('div', { class: 'pitch-hero-grid' },
       h('figure', { class: 'rvl-chart', style: { '--d': '.5s' } },
         h('figcaption', {}, h('b', {}, 'Chiffre d’affaires'), ' année par année'),
-        barres(p.revenue),
+        barres(p.revenue, { debut: r.startDate }),
       ),
       h('figure', { class: 'rvl-chart', style: { '--d': '.7s' } },
         h('figcaption', {}, h('b', {}, 'Trésorerie'), ' mois par mois'),

@@ -7091,6 +7091,9 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .as-barre.is-alerte .as-barre-piste i { background: var(--loss); }
 .as-barre.is-alerte .as-barre-val, .as-barre.is-alerte .as-barre-nom { color: var(--loss); }
 @keyframes as-pousse { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* Une barre se consulte au survol : elle se détache, l'infobulle dit le reste. */
+.as-barre { cursor: default; border-radius: 6px; transition: background .12s; }
+.as-barre:hover { background: var(--surface-2); box-shadow: 0 0 0 5px var(--surface-2); }
 
 .as-pied { margin-top: auto; padding-top: 13px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-3); }
 .as-conseil { flex: 1 1 260px; line-height: 1.5; }
@@ -7113,6 +7116,13 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .as-j-bas circle { fill: var(--loss); stroke: #fff; stroke-width: 2; }
 .as-j-haut circle { fill: var(--gain); stroke: #fff; stroke-width: 2; }
 .as-j-bas text, .as-j-haut text { font-family: var(--mono); font-size: 10.5px; font-weight: 700; fill: var(--ink-2); }
+/* Le mois survolé, posé sur le trait. */
+.as-j-repere, .rvl-repere { opacity: 0; pointer-events: none; transition: opacity .1s; }
+.as-j-repere { fill: #fff; stroke: var(--ink); stroke-width: 2.2; }
+.rvl-repere { fill: var(--accent); stroke: var(--ink); stroke-width: 2.5; }
+.as-j-repere.is-on, .rvl-repere.is-on { opacity: 1; }
+.rvl-bar { transition: opacity .15s; }
+.rvl-bar.is-dim { opacity: .35; }
 
 .as-bk { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 .as-bk-ligne { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }

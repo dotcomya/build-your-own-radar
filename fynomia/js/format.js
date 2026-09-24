@@ -75,6 +75,10 @@ export function monthLabel(index, startDate) {
 }
 
 export const yearLabel = (y) => `Année ${y + 1}`
+/** Un exercice et ses mois : « Année 2 · janv. 27 – déc. 27 ». */
+export const periodeAnnee = (y, debut) => `Année ${y + 1} · ${monthLabel(y * 12, debut)} – ${monthLabel(y * 12 + 11, debut)}`
+/** Un mois du plan : « nov. 26 · mois 11 ». */
+export const periodeMois = (m, debut) => `${monthLabel(m, debut)} · mois ${m + 1}`
 
 /**
  * L'exercice sur lequel on juge le modèle : le premier bénéficiaire, ou la

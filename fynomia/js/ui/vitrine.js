@@ -8,25 +8,43 @@
  */
 
 import { h, svg, euro, monthLabel } from './dom.js'
+import { hot } from './charts.js'
+import { periodeAnnee, periodeMois } from '../format.js'
 
 const n = (v) => Number(v) || 0
 
-/** Cinq barres qui montent l'une après l'autre. */
-export function barres(valeurs) {
+/**
+ * Cinq barres qui montent l'une après l'autre.
+ *
+ * Chacune se consulte au survol : l'exercice et ses mois, le montant exact —
+ * la barre n'affiche que son arrondi.
+ */
+export function barres(valeurs, { debut = null, libelle = 'Chiffre d’affaires' } = {}) {
   const vals = (valeurs || []).map(n)
   const max = Math.max(1, ...vals)
   const W = 460, H = 210, base = 180, larg = 58, pas = 88, x0 = 34
-  return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'rvl-svg', role: 'img', 'aria-label': 'Chiffre d’affaires sur cinq ans' },
+  const rects = []
+  return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'rvl-svg', role: 'img', 'aria-label': `${libelle} sur cinq ans` },
     svg('line', { x1: 10, x2: W - 10, y1: base, y2: base, class: 'rvl-axis' }),
     ...vals.flatMap((v, i) => {
       const hh = Math.max(2, (Math.max(0, v) / max) * 150)
       const x = x0 + i * pas
+      const rect = svg('rect', { x, y: base - hh, width: larg, height: hh, rx: 6, class: 'rvl-bar', style: `--i:${i}` })
+      rects.push(rect)
       return [
-        svg('rect', { x, y: base - hh, width: larg, height: hh, rx: 6, class: 'rvl-bar', style: `--i:${i}` }),
+        rect,
         svg('text', { x: x + larg / 2, y: base - hh - 9, class: 'rvl-bar-v', style: `--i:${i}`, 'text-anchor': 'middle' }, euro(v, { compact: true })),
         svg('text', { x: x + larg / 2, y: base + 20, class: 'rvl-bar-y', 'text-anchor': 'middle' }, `A${i + 1}`),
       ]
     }),
+    // Une bande par exercice, toute la hauteur : on vise l'année, pas le pixel.
+    ...vals.map((v, i) => hot(
+      svg('rect', { x: x0 + i * pas - (pas - larg) / 2, y: 0, width: pas, height: H, fill: 'transparent', class: 'chart-hot' }),
+      periodeAnnee(i, debut),
+      () => [{ label: libelle, value: euro(v), strong: true }],
+      () => rects.forEach((r, j) => r.classList.toggle('is-dim', j !== i)),
+      () => rects.forEach((r) => r.classList.remove('is-dim')),
+    )),
   )
 }
 
@@ -42,6 +60,9 @@ export function courbe(serie, bas, debut) {
   const d = vals.map((v, m) => `${m ? 'L' : 'M'}${x(m).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
   const aire = `${d} L${x(vals.length - 1).toFixed(1)},${y(0).toFixed(1)} L${x(0).toFixed(1)},${y(0).toFixed(1)} Z`
   const mb = Number.isInteger(bas?.month) ? bas.month : vals.indexOf(Math.min(...vals))
+  // Le mois survolé : un point sur le trait, et l'infobulle avec son solde.
+  const repere = svg('circle', { cx: x(0), cy: y(vals[0]), r: 5, class: 'rvl-repere' })
+  const bande = (W - 28) / Math.max(1, vals.length - 1)
   return svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'rvl-svg', role: 'img', 'aria-label': 'Trésorerie sur soixante mois' },
     svg('line', { x1: 10, x2: W - 10, y1: y(0), y2: y(0), class: 'rvl-axis' }),
     svg('path', { d: aire, class: 'rvl-area' }),
@@ -51,6 +72,17 @@ export function courbe(serie, bas, debut) {
       svg('circle', { cx: x(mb), cy: y(vals[mb]), r: 6 }),
       svg('text', { x: Math.min(W - 120, x(mb) + 10), y: Math.min(H - 20, y(vals[mb]) + 4), class: 'rvl-low-t' }, `Point bas ${monthLabel(mb, debut)}`),
     ) : null,
+    repere,
+    ...vals.map((v, m) => hot(
+      svg('rect', { x: x(m) - bande / 2, y: 0, width: bande, height: H, fill: 'transparent', class: 'chart-hot' }),
+      periodeMois(m, debut),
+      () => [
+        { label: 'Trésorerie en fin de mois', value: euro(v), strong: true },
+        m === mb && v < 0 ? { label: 'Le point bas du plan', value: '' } : null,
+      ],
+      () => { repere.setAttribute('cx', x(m).toFixed(1)); repere.setAttribute('cy', y(v).toFixed(1)); repere.classList.add('is-on') },
+      () => repere.classList.remove('is-on'),
+    )),
   )
 }
 

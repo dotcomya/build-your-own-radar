@@ -45,6 +45,7 @@ mise en ligne.
 | `22-unites` | chaque offre compte ce qu'elle vend : le mot du métier pour l'offre principale, « ventes » par défaut pour les autres, un choix (produits, abonnements…) ou un mot écrit à la main ; ce qui additionne les offres dit « ventes » dès qu'elles ne comptent pas la même chose |
 | `23-saisie` | abonnement, salaire, montant d'une charge : rien ne s'écrit pendant la frappe, le plan s'écrit une seconde après la dernière, Tab écrit tout de suite ; le focus, la valeur et le curseur restent en place à travers le recalcul, la suite du nombre s'écrit derrière ; l'effet sur le résultat s'affiche après le recalcul, sous le champ tapé |
 | `24-coherence` | un prix qui change : le chiffre d'affaires de l'offre suit exactement le rapport des prix, le résultat affiché est celui d'un calcul neuf, aucun écran (synthèse, pitch, états financiers, dossier) ne garde un ancien montant ; une rafale prix → croissance → autre page sans pause ; la simulation suit le plan sans changement fantôme ; un redessin pendant la frappe écrit d'abord ce qui est tapé ; l'infobulle s'éteint quand son graphique est redessiné |
+| `25-survol` | dans le récit du pitch, chaque donnée se consulte au survol : les cinq barres et les soixante mois de tête, la trajectoire, la courbe en J, chaque barre des chapitres ; l'infobulle dit la période (« Année 2 · janv. 27 – déc. 27 », « nov. 26 · mois 11 »), l'intitulé et la valeur exacte du moteur |
 
 ## Options
 

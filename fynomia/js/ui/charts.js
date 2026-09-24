@@ -199,7 +199,7 @@ export const A_PLAT = { largeur: 1180, height: 170 }
  * on lit le chiffre sans viser la barre. Plusieurs séries : les valeurs se
  * lisent au survol, qui éteint les autres années.
  */
-export function barChart({ series, categories, height = 220, line = null, formatter = (v) => euro(v, { compact: true }), largeur = 720 }) {
+export function barChart({ series, categories, height = 220, line = null, formatter = (v) => euro(v, { compact: true }), largeur = 720, periodes = null }) {
   const width = largeur
   const seule = series.length === 1 && !line
   const pad = { t: seule ? 24 : 14, r: 14, b: 30, l: 58 }
@@ -268,7 +268,9 @@ export function barChart({ series, categories, height = 220, line = null, format
       x: cx - groupW / 2, y: pad.t, width: groupW, height: height - pad.t - pad.b,
       fill: 'transparent', class: 'chart-hot',
     })
-    hot(band, cat, () => [
+    // L'infobulle dit la période en entier — « Année 2 · janv. 27 – déc. 27 » —
+    // quand on la connaît ; l'axe, lui, garde son libellé court.
+    hot(band, periodes?.[i] ?? cat, () => [
       ...series.map((s, j) => ({ label: s.label, value: euro(s.values[i] || 0), color: s.color || PALETTE[j % PALETTE.length] })),
       line ? { label: line.label, value: euro(line.values[i] || 0), color: line.color || '#0B0E10' } : null,
     ], () => focaliser(groupes, fonds, i), () => focaliser(groupes, fonds, null))
