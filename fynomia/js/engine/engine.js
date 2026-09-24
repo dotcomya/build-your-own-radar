@@ -39,7 +39,15 @@ export function compute(scenario) {
   const payroll0 = payrollSeries(team, { fiscal, benefits: scenario.hr?.benefits, acreByMonth, micro })
 
   // ─── 3. Charges externes ───────────────────────────────────────────────
-  const opex = opexSeries(scenario.opex || [], { revenue: revenueMonthly, headcount: payroll0.headcount, perActivity: rev.perActivity })
+  // Les campagnes marketing apportaient des clients sans rien coûter : leur
+  // budget n'entrait ni dans le résultat ni dans la trésorerie. Chacune est
+  // désormais une charge externe, à son budget mensuel et sur sa durée — le
+  // compte 623, publicité — avec sa TVA déductible.
+  const campagnes = (rev.campaigns || []).filter((c) => c.budget > 0).map((c) => ({
+    id: c.id, label: c.name ? `Campagne — ${c.name}` : 'Campagne marketing', mode: 'fixed', campagne: true,
+    monthlyAmount: c.budget, startMonth: c.start, endMonth: c.start + c.duration - 1,
+  }))
+  const opex = opexSeries([...(scenario.opex || []), ...campagnes], { revenue: revenueMonthly, headcount: payroll0.headcount, perActivity: rev.perActivity })
 
   // ─── 4. Investissements et amortissements ──────────────────────────────
   const capex = capexSeries(scenario.capex || [])
@@ -288,7 +296,7 @@ export function opexSeries(items, { revenue, headcount, perActivity = [] }) {
       total[m] += v
       if (item.rdApproved) rdSubcontracting[m] += v
     }
-    perItem.push({ id: item.id, label: item.label, mode: item.mode || 'fixed', series, yearly: byYear(series) })
+    perItem.push({ id: item.id, label: item.label, mode: item.mode || 'fixed', campagne: !!item.campagne, series, yearly: byYear(series) })
   }
   // Ce qui suit les ventes, et ce qui tombe quoi qu'il arrive.
   const variable = zeros()

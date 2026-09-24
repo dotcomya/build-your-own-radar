@@ -87,6 +87,7 @@ export function marketingVolumes(campaigns, activities) {
       id: c.id,
       name: c.name,
       activityId: target,
+      start, duration, budget,
       series,
       totalClients,
       totalSpend,

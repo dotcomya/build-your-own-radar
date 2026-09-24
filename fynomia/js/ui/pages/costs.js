@@ -8,7 +8,7 @@ import { tutorial, stepGuide } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
 import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
-import { claim } from '../spotlight.js'
+import { claim, goToGap } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
 import { celebrate } from '../burst.js'
 import store from '../../state/store.js'
@@ -123,7 +123,7 @@ export function renderCosts(navigate, refresh) {
             // n'existe que s'il y a une vente. La première fixe le nombre de
             // clients qu'il te faut, la seconde rogne la marge de chacun — ce
             // ne sont pas les mêmes questions, et on les range à part.
-            ...costBlocks(s, r, level, refresh)),
+            ...costBlocks(s, r, level, refresh, navigate)),
     ) : null,
 
     view === 'invest' ? h('div', { class: 'view', 'data-gap': 'capex' },
@@ -549,6 +549,29 @@ function coutRevientRow(s, a) {
 }
 
 /**
+ * Une campagne marketing, lue ici, réglée dans Acquisition.
+ *
+ * Son budget est une charge comme une autre : il pèse sur le résultat et sort
+ * de la trésorerie. Il se lit donc avec les charges générales — sinon leur
+ * total ne correspondrait pas aux charges externes du bandeau — mais il se
+ * règle avec la campagne, là où l'on voit les clients qu'il apporte.
+ */
+function campagneRow(c, navigate) {
+  const debut = Number(c.startMonth) || 0
+  const duree = Math.max(1, Number(c.durationMonths) || 1)
+  return h('div', { class: 'cost-row is-campagne', 'data-row': `campagne-${c.id}` },
+    h('div', { class: 'cost-line' },
+      h('span', { class: 'cost-revient-tag' }, 'Campagne'),
+      h('span', { class: 'cost-label is-fixe' }, c.name || 'Campagne marketing'),
+      h('div', { class: 'cost-amount' },
+        h('b', { class: 'num cost-fige' }, euro(Number(c.monthlyBudget) || 0)),
+        h('span', { class: 'cost-unit is-static' }, `€/mois · M${debut + 1}–M${Math.min(60, debut + duree)}`)),
+      h('button', { class: 'cost-lien', type: 'button', onClick: () => goToGap({ route: 'offre', view: 'acquisition' }, navigate) }, 'Régler dans Acquisition →'),
+    ),
+  )
+}
+
+/**
  * Les charges en deux blocs : ce qui tombe, et ce qui suit les ventes.
  *
  * Le bloc « par vente » s'ouvre sur le coût de revient de chaque offre ; les
@@ -556,7 +579,7 @@ function coutRevientRow(s, a) {
  * forme le coût d'une vente, que l'offre affiche et que la marge brute
  * retranche.
  */
-function costBlocks(s, r, level, refresh) {
+function costBlocks(s, r, level, refresh, navigate) {
   const fixed = s.opex.filter((o) => !o.mode || o.mode === 'fixed' || o.mode === 'perEmployee')
   const variable = s.opex.filter((o) => ['perUnit', 'pctRevenue'].includes(o.mode))
   const vendues = (s.activities || []).filter((a) => (Number(a.unitPrice) > 0 || Number(a.recurringPrice) > 0) && !(Number(a.commissionRate) > 0 && Number(a.dealValue) > 0))
@@ -572,7 +595,8 @@ function costBlocks(s, r, level, refresh) {
       )
     : null
   return [
-    block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed),
+    block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed, '',
+      (s.marketing || []).filter((c) => c.enabled !== false && Number(c.monthlyBudget) > 0).map((c) => campagneRow(c, navigate))),
     block('Charges par vente', 'Elles n’existent que s’il y a une vente. En tête, le coût de revient de chaque offre — ce que tu achètes ou produis pour la livrer ; dessous, ce qui s’y ajoute : commissions, emballages. Ne mets pas deux fois le même coût.', variable, 'is-variable', vendues.map((a) => coutRevientRow(s, a))),
   ].filter(Boolean)
 }

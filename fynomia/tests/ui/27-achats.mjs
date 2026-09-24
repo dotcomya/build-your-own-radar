@@ -15,7 +15,9 @@
  *   3. le coût de revient d'une offre se saisit dans Achats et coûts, et
  *      l'offre l'affiche aussitôt ;
  *   4. couper une charge générale baisse les charges externes, pas la marge
- *      brute.
+ *      brute ;
+ *   5. le budget d'une campagne marketing se lit avec les charges générales,
+ *      et compte dans le résultat.
  */
 export const nom = 'Achats — une charge coupée ou rechiffrée se lit partout'
 
@@ -103,13 +105,25 @@ export default async function (t) {
     'le coût de revient saisi entre dans le plan, dans le coût des ventes et dans le coût d’une vente', { avant: avant.cout, apres: apres.cout, cible })
 
   // 4. Une charge générale : les charges externes bougent, pas la marge brute.
-  const generale = p.locator('.costblock:not(.is-variable) .cost-row').first()
+  const generale = p.locator('.costblock:not(.is-variable) .cost-row:not(.is-campagne)').first()
   const g0 = await lire(p)
   await generale.locator('.onoff').click()
   await t.pose(p)
   const g1 = await lire(p)
   t.verifie(!proche(g0.externe, g1.externe) && proche(g0.marge, g1.marge) && !proche(g0.ebe, g1.ebe),
     'une charge générale coupée ou rallumée : les charges externes et l’EBE bougent, la marge brute non', { externe: [g0.externe, g1.externe], marge: [g0.marge, g1.marge] })
+
+  // 5. Le budget d'une campagne marketing se lit avec les charges générales,
+  // et il compte : il apportait des clients sans rien coûter.
+  const camp = await p.evaluate(async () => {
+    const st = (await import('./js/state/store.js')).default
+    const c = (st.scenario.marketing || []).find((x) => x.enabled !== false && Number(x.monthlyBudget) > 0)
+    const it = c && st.result.opex.perItem.find((x) => x.id === c.id)
+    return { budget: Number(c?.monthlyBudget) || 0, annee2: it ? it.yearly[1] : 0 }
+  })
+  const lignesCamp = await p.locator('.costblock:not(.is-variable) .cost-row.is-campagne').count()
+  t.verifie(camp.budget > 0 && lignesCamp >= 1 && Math.abs(camp.annee2 - camp.budget * 12) < 0.01,
+    'le budget d’une campagne se lit avec les charges générales, et il compte : douze mois en année 2', { ...camp, lignesCamp })
 
   t.verifie(p.erreurs.length === 0, 'aucune erreur JavaScript', p.erreurs.slice(0, 2))
   await p.fermer()
