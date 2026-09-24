@@ -471,7 +471,7 @@ export const SECTORS = {
     family: 'personal', label: 'Service à la personne', glyph: '◌',
     tagline: "Tu vends des heures : le prix et le nombre d'intervenants sont tes deux seuls leviers.",
     unit: { one: 'heure', many: 'heures', verb: 'facturées', client: 'client' },
-    vat: { sales: 0, label: 'Exonéré de TVA', note: "Les services à la personne rendus par un organisme déclaré sont exonérés de TVA. En contrepartie, la TVA sur les achats n'est pas récupérable : raisonne en montants TTC. La déclaration ouvre au client le crédit d'impôt de 50 %, qui divise son prix perçu par deux." },
+    vat: { sales: 0, exempt: true, label: 'Exonéré de TVA', note: "Les services à la personne rendus par un organisme déclaré sont exonérés de TVA. En contrepartie, la TVA sur les achats n'est pas récupérable : raisonne en montants TTC. La déclaration ouvre au client le crédit d'impôt de 50 %, qui divise son prix perçu par deux." },
     legal: { forms: ['EI', 'MICRO', 'EURL', 'SARL', 'SAS'], regime: 'TNS ou assimilé salarié', note: "La déclaration en préfecture ouvre le crédit d'impôt au client ; l'agrément, obligatoire pour la garde d'enfants de moins de trois ans et l'assistance aux personnes dépendantes, va plus loin et se renouvelle." },
     benchmarks: { grossMargin: [0.28, 0.45], payrollRatio: [0.55, 0.7], ticket: [25, 40] },
     metrics: ['revenue', 'payrollRatio', 'breakEven', 'cashLow'],
