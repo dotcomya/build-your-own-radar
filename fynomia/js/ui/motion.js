@@ -113,12 +113,21 @@ export function armTravel(mode = 'page') { pending = mode }
 /** Le mode du rendu en cours, une seule fois. */
 export function takeTravel() { const t = pending; pending = null; return t }
 
+let voyageEnCours = 0
 export function travel(mutate, mode = 'page') {
   if (reduced() || typeof document.startViewTransition !== 'function') { mutate(); return }
   const root = document.documentElement
-  const cls = `is-travelling is-move-${mode}`
-  const done = () => root.classList.remove('is-travelling', `is-move-${mode}`)
-  root.classList.add(...cls.split(' '))
+  // Chaque voyage ne retire que sa propre classe.
+  //
+  // Le filet de sécurité d'un voyage précédent — un onglet ouvert une seconde
+  // plus tôt — tombait au milieu du suivant et lui retirait « is-travelling » :
+  // les images du nouveau voyage perdaient leurs règles en plein vol et
+  // retombaient sur le fondu par défaut. Un jeton dit quel voyage est en cours ;
+  // les autres n'y touchent plus.
+  const jeton = ++voyageEnCours
+  for (const c of [...root.classList]) if (c.startsWith('is-move-')) root.classList.remove(c)
+  const done = () => { if (jeton === voyageEnCours) root.classList.remove('is-travelling', `is-move-${mode}`) }
+  root.classList.add('is-travelling', `is-move-${mode}`)
 
   // La mutation doit avoir lieu, transition ou pas.
   //

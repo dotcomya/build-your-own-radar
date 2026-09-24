@@ -91,17 +91,38 @@ import { memoire } from './memoire.js'
  * est terminée (sortie du champ, Entrée) ou seulement en pause.
  */
 export const DELAI_SAISIE = 1000
+/** Les saisies tapées mais pas encore écrites, pour qu'un redessin les écrive d'abord. */
+const enAttente = new Set()
 export function saisieDifferee(input, ecrire, { delai = DELAI_SAISIE } = {}) {
   let minuteur = null
-  const maintenant = (fin) => { clearTimeout(minuteur); minuteur = null; ecrire(input.value, { fin }) }
+  const pause = () => maintenant(false)
+  const maintenant = (fin) => { clearTimeout(minuteur); minuteur = null; enAttente.delete(pause); ecrire(input.value, { fin }) }
   input.addEventListener('input', () => {
     clearTimeout(minuteur)
-    minuteur = setTimeout(() => maintenant(false), delai)
+    minuteur = setTimeout(pause, delai)
+    enAttente.add(pause)
   })
   input.addEventListener('change', () => maintenant(true))
   input.addEventListener('blur', () => maintenant(true))
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') maintenant(true) })
   return () => maintenant(true)
+}
+
+/**
+ * Écrire tout de suite ce qui attend encore sa seconde.
+ *
+ * Un redessin qui arrive pendant la frappe — la synchronisation d'un autre
+ * appareil, le guide qu'on ouvre, la fenêtre qu'on tourne — remplace le
+ * champ par un neuf, rempli avec la valeur du plan : ce qu'on venait de taper
+ * disparaissait de l'écran, puis revenait une seconde plus tard, et la suite
+ * de la frappe s'écrivait dans l'ancien nombre. L'application appelle ceci
+ * avant chaque redessin : le plan prend d'abord ce qui est tapé.
+ */
+export function ecrireEnAttente() {
+  const liste = [...enAttente]
+  enAttente.clear()
+  for (const f of liste) f()
+  return liste.length > 0
 }
 
 /** Un nombre tapé à la française : « 26 843,50 » → 26843.5 ; vide → '' ; illisible → NaN. */

@@ -6,9 +6,10 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow } from './ui/dom.js'
+import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow, ecrireEnAttente } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import { installEffet, reposerEffet, decrire as decrireSaisie, retrouverSaisie } from './ui/effet.js'
+import { cacherInfobulle } from './ui/charts.js'
 import { renderMethode } from './ui/pages/methode.js'
 import store from './state/store.js'
 import { getPersona } from './ui/personas.js'
@@ -260,6 +261,7 @@ function calcFail() {
   )
 }
 
+let enRendu = false
 function render({ preserveScroll = false } = {}) {
   if (holding) {
     // On retient la demande la plus exigeante : si l'une d'elles veut garder
@@ -267,6 +269,14 @@ function render({ preserveScroll = false } = {}) {
     heldScroll = heldScroll === false ? { preserveScroll } : { preserveScroll: heldScroll.preserveScroll || preserveScroll }
     return
   }
+  // Ce qui est tapé et attend encore sa seconde s'écrit d'abord : le rendu
+  // qui suit le montre, au lieu de redessiner le champ avec l'ancien nombre.
+  // Le redessin demandé par cette écriture est celui-ci.
+  if (!enRendu) {
+    enRendu = true
+    try { ecrireEnAttente() } finally { enRendu = false }
+  }
+  cacherInfobulle()
   const key = route()
   currentKey = key
   const scrollY = preserveScroll ? window.scrollY : 0
@@ -352,6 +362,7 @@ function render({ preserveScroll = false } = {}) {
   // Le projecteur lit le DOM d'arrivée : il doit donc passer après le
   // remplacement, y compris quand celui-ci est différé par la transition.
   const swap = () => {
+    cacherInfobulle()
     clear(root).appendChild(shell)
     if (preserveScroll) {
       window.scrollTo(0, scrollY)
@@ -634,7 +645,7 @@ store.subscribe((_, reason) => {
   if (reason === 'scenario' || reason === 'profile') { markJourney(); render() }
   // Une modification de données relance le calcul : on redessine la page pour
   // que les indicateurs suivent, en conservant la position de lecture.
-  else if (reason === 'data') { celebrate(); render({ preserveScroll: true }) }
+  else if (reason === 'data') { celebrate(); if (!enRendu) render({ preserveScroll: true }) }
 })
 
 markJourney()

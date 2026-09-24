@@ -20,13 +20,41 @@ import { areaChart, barChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 
-/** La copie de travail, et l'écran en cours : le bac à sable ou la validation. */
-const sandbox = { draft: null, stage: 'jeu', forId: null }
+/**
+ * La copie de travail, le plan dont elle part, et l'écran en cours : le bac à
+ * sable ou la validation.
+ */
+const sandbox = { draft: null, base: null, stage: 'jeu', forId: null }
 
 /** Repartir du plan réel. */
-export function resetSandbox() { sandbox.draft = null; sandbox.stage = 'jeu'; sandbox.forId = null }
+export function resetSandbox() { sandbox.draft = null; sandbox.base = null; sandbox.stage = 'jeu'; sandbox.forId = null }
 
 const clone = (x) => JSON.parse(JSON.stringify(x))
+
+/**
+ * La copie suit le plan.
+ *
+ * Elle était prise une fois pour toutes : un prix changé dans Offre, puis un
+ * retour ici, et la simulation repartait de l'ancien prix — elle annonçait
+ * un « changement » que personne n'avait fait, et ses courbes mêlaient
+ * l'ancien plan au nouveau. Quand le plan a bougé, on reprend donc une copie
+ * fraîche, et l'on y rejoue seulement les curseurs que tu as déplacés ici.
+ */
+function suivrePlan(s, levers) {
+  const plan = JSON.stringify(s)
+  if (sandbox.base === plan) return
+  const avant = sandbox.base ? JSON.parse(sandbox.base) : null
+  const draft = clone(s)
+  if (avant && sandbox.draft) {
+    for (const lever of levers) {
+      const depart = Number(lever.read(avant)) || 0
+      const joue = Number(lever.read(sandbox.draft)) || 0
+      if (Math.abs(joue - depart) > 1e-9) lever.write(draft, joue)
+    }
+  }
+  sandbox.draft = draft
+  sandbox.base = plan
+}
 
 /** Les valeurs qui diffèrent entre la copie et le plan, levier par levier. */
 function changes(levers) {
@@ -45,9 +73,10 @@ function changes(levers) {
 export function renderSimulation(persona, refresh, navigate) {
   const s = store.scenario
   if (sandbox.forId !== s.meta.id) resetSandbox()
-  if (!sandbox.draft) { sandbox.draft = clone(s); sandbox.forId = s.meta.id }
+  sandbox.forId = s.meta.id
 
   const levers = simLevers(store.scenario)
+  suivrePlan(s, levers)
   if (!levers.length) {
     return h('div', { class: 'card' }, h('div', { class: 'empty' },
       h('div', { class: 'empty-icon' }, '◇'),

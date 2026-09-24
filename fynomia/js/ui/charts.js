@@ -68,6 +68,16 @@ function hideTip() {
 }
 
 /**
+ * Retirer l'infobulle quand la page se redessine.
+ *
+ * Elle vit hors de la page, et ne s'éteint qu'à la sortie de la zone survolée.
+ * Un recalcul qui remplace le graphique sous le pointeur retire cette zone
+ * sans qu'on la quitte : l'infobulle restait affichée, avec les montants
+ * d'avant, par-dessus un graphique qui disait déjà les nouveaux.
+ */
+export const cacherInfobulle = hideTip
+
+/**
  * Rend une zone sensible : elle appelle `rows()` au survol et fait disparaître
  * l'infobulle quand on la quitte. Le pointeur reste fin — la zone est
  * transparente, elle ne se voit pas, elle s'utilise.
