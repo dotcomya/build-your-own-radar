@@ -8335,3 +8335,21 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
   .pitch.is-detail .sy-chapitre { padding: 20px 16px; border-radius: 18px; }
   .sy-sommaire { position: static; }
 }
+
+/* ═══════════ Un avertissement ouvert passe devant tout ═══════════
+   La bulle « à vérifier » s'ouvrait sous le guide flottant (« Prochaine
+   étape », en bas à droite) et sous la barre du haut : on lisait la moitié
+   d'une phrase. Ouverte, elle et le bloc qui la porte passent au-dessus de
+   tous les calques de la page — seules les fenêtres de dialogue restent
+   devant. */
+.sx:has(.garde[open]), .sy-act:has(.garde[open]), .sx-right-row:has(.garde[open]), .sx-ribbon:has(.garde[open]) { position: relative; z-index: 150; }
+.sx-right-row .garde-body, .sx-ribbon-ctrl .garde-body { z-index: 150; }
+
+/* Charges par vente : deux choix, côte à côte. */
+.cost-seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); flex: none; }
+.cost-seg-opt { border: 0; background: none; cursor: pointer; padding: 6px 11px; border-radius: 8px; font: 600 12.5px/1.2 var(--sans); color: var(--ink-3); white-space: nowrap; }
+.cost-seg-opt:hover { color: var(--ink); }
+.cost-seg-opt.is-on { background: var(--ink); color: var(--accent); }
+.cost-forfait { border: 0; cursor: pointer; padding: 4px 9px; border-radius: 999px; background: var(--warn-wash); color: var(--warn); font: 600 11.5px/1.2 var(--sans); white-space: nowrap; }
+.cost-forfait:hover { background: var(--warn); color: #fff; }
+@media (max-width: 640px) { .cost-seg { width: 100%; } .cost-seg-opt { flex: 1; } }

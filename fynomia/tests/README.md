@@ -41,6 +41,7 @@ mise en ligne.
 | `18-banquier` | le dossier parle d'EBE et de CAF ; « ce que ton banquier va vérifier » tient en cinq lignes validées, justes ou à revoir ; la couverture vient de l'échéancier réel, pas d'une dette divisée par sept ; le tableau du banquier ; un prêt d'honneur améliore l'apport |
 | `19-effet` | la saisie dit ce qu'elle déplace, sous le champ : « +… € de résultat en année N » en vert, en rouge à la baisse, à la frappe pour un salaire ; un autre champ ou une autre page l'efface |
 | `20-methode` | chaque repère du métier cite sa source et son année ; la page Méthode donne les fourchettes, leur calcul, leur construction, leurs limites et toutes les sources avec lien |
+| `21-retouches` | une charge par vente se chiffre en % du prix ou en € par produit vendu, sans montant mensuel ni forfait caché ; un avertissement ouvert passe devant le guide flottant et tout le reste |
 
 ## Options
 

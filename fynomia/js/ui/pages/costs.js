@@ -31,7 +31,7 @@ export function renderCosts(navigate, refresh) {
     if (depuis) celebrate(depuis, { kind, label, cible: id ? `[data-row="${id}"]` : null })
   }
   const addFromTemplate = (tpl, e) => {
-    const o = newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 })
+    const o = newOpex(depuisModele(tpl))
     store.update((sc) => sc.opex.push(o), { label: 'Ajout de charge' })
     ajout(e, o.id, tpl.label)
   }
@@ -48,7 +48,7 @@ export function renderCosts(navigate, refresh) {
     store.update((sc) => {
       for (const tpl of OPEX_TEMPLATES) {
         if (sc.opex.some((o) => o.label === tpl.label)) continue
-        const o = newOpex({ label: tpl.label, mode: tpl.mode, monthlyAmount: tpl.monthlyAmount, perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0 })
+        const o = newOpex(depuisModele(tpl))
         if (!premier) premier = o.id
         n++
         sc.opex.push(o)
@@ -212,6 +212,54 @@ function scopePicker(o, set, refresh) {
   return d
 }
 
+/** Les deux façons de chiffrer une charge par vente — et seulement elles. */
+const PAR_VENTE = ['pctRevenue', 'perUnit']
+const estParVente = (o) => PAR_VENTE.includes(o.mode)
+
+/**
+ * Une charge proposée, prête à entrer dans le plan.
+ *
+ * Une charge par vente n'a pas de montant mensuel fixe : elle est un
+ * pourcentage du prix, ou un montant par produit vendu. Le modèle d'une
+ * commission de paiement portait un forfait mensuel en plus de son
+ * pourcentage — c'était une charge fixe et une charge variable dans la même
+ * ligne, et le forfait ne se voyait nulle part.
+ */
+function depuisModele(tpl) {
+  const parVente = PAR_VENTE.includes(tpl.mode)
+  return {
+    label: tpl.label, mode: tpl.mode,
+    monthlyAmount: parVente ? 0 : tpl.monthlyAmount,
+    perEmployee: tpl.perEmployee || 0, pctRevenue: tpl.pctRevenue || 0, perUnit: tpl.perUnit || 0,
+  }
+}
+
+/**
+ * Une charge par vente : deux choix, pas quatre.
+ *
+ * Elle n'existe que s'il y a une vente. Elle se chiffre donc soit en part du
+ * prix — une commission de 1,5 % —, soit en montant fixe par produit vendu —
+ * un emballage à 0,15 €. Un montant par mois ou par salarié n'a pas de sens
+ * ici : c'est une charge générale, elle vit dans le bloc du dessus.
+ */
+function modeParVente(o, set, refresh) {
+  const choisir = (mode) => {
+    if (mode === o.mode) return
+    set({ mode, monthlyAmount: 0 })
+    refresh()
+  }
+  return h('div', { class: 'cost-seg', role: 'radiogroup', 'aria-label': 'Comment se chiffre cette charge' },
+    ...[
+      { mode: 'pctRevenue', label: '% du prix' },
+      { mode: 'perUnit', label: '€ par produit vendu' },
+    ].map((x) => h('button', {
+      type: 'button', role: 'radio', 'aria-checked': String(o.mode === x.mode),
+      class: `cost-seg-opt ${o.mode === x.mode ? 'is-on' : ''}`,
+      onClick: () => choisir(x.mode),
+    }, x.label)),
+  )
+}
+
 /**
  * Une charge, sur une ligne.
  *
@@ -236,7 +284,8 @@ function opexRow(o, r, level, refresh) {
     }
   }
 
-  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''}`, 'data-row': o.id },
+  const parVente = estParVente(o)
+  return h('div', { class: `cost-row ${on ? '' : 'is-off'} ${isOpen ? 'open' : ''} ${parVente ? 'is-par-vente' : ''}`, 'data-row': o.id },
     h('div', { class: 'cost-line' },
       enableToggle(on, (v) => { set({ enabled: v }, { label: v ? 'Charge réactivée' : 'Charge en pause' }); refresh() }, `opex-${o.id}`),
 
@@ -247,8 +296,9 @@ function opexRow(o, r, level, refresh) {
 
       // Le montant et son unité se lisent et se changent sur la ligne. Cacher
       // « par an » ou « % du CA » derrière trois points obligeait à ouvrir
-      // chaque charge pour savoir ce qu'on regardait.
-      h('div', { class: 'cost-amount' },
+      // chaque charge pour savoir ce qu'on regardait. Une charge par vente
+      // n'a pas de montant mensuel : elle se chiffre au prix ou à l'unité.
+      parVente ? modeParVente(o, set, refresh) : h('div', { class: 'cost-amount' },
         h('input', {
           class: 'num', inputmode: 'decimal',
           value: yearly ? String(Math.round((Number(o.monthlyAmount) || 0) * 12) || '') : String(o.monthlyAmount ?? ''),
@@ -264,17 +314,23 @@ function opexRow(o, r, level, refresh) {
         }, yearly ? '€/an' : '€/mois'),
       ),
 
-      h('div', { class: 'cost-mode' },
+      // Une charge générale : un montant fixe, ou un montant par salarié. La
+      // passer « par vente » l'envoie dans le bloc du dessous, sans forfait
+      // mensuel caché.
+      parVente ? null : h('div', { class: 'cost-mode' },
         (() => {
           const sel = h('select', { 'aria-label': 'Mode de calcul' },
             ...[
               { value: 'fixed', label: 'montant fixe' },
               { value: 'perEmployee', label: '+ par salarié' },
-              { value: 'pctRevenue', label: '+ % des ventes' },
-              { value: 'perUnit', label: '+ par unité vendue' },
+              { value: 'pctRevenue', label: 'par vente : % du prix' },
+              { value: 'perUnit', label: 'par vente : € par produit' },
             ].map((opt) => h('option', { value: opt.value, selected: o.mode === opt.value || null }, opt.label)),
           )
-          sel.addEventListener('change', () => { set({ mode: sel.value }); refresh() })
+          sel.addEventListener('change', () => {
+            set(PAR_VENTE.includes(sel.value) ? { mode: sel.value, monthlyAmount: 0 } : { mode: sel.value })
+            refresh()
+          })
           return sel
         })(),
       ),
@@ -292,7 +348,7 @@ function opexRow(o, r, level, refresh) {
           class: 'num', inputmode: 'decimal', value: String(Math.round((Number(o.pctRevenue) || 0) * 1000) / 10), 'aria-label': 'Part des ventes',
           onInput: (e) => set({ pctRevenue: (Number(e.target.value.replace(',', '.')) || 0) / 100 }, { silent: true }),
         }),
-        h('span', {}, '%'),
+        h('span', {}, '% du prix'),
       ) : null,
 
       o.mode === 'perUnit' ? h('div', { class: 'cost-extra' },
@@ -300,8 +356,15 @@ function opexRow(o, r, level, refresh) {
           class: 'num', inputmode: 'decimal', value: String(o.perUnit ?? ''), 'aria-label': 'Montant par unité vendue',
           onInput: (e) => set({ perUnit: Number(e.target.value.replace(',', '.')) || 0 }, { silent: true }),
         }),
-        h('span', {}, '€/unité'),
+        h('span', {}, '€ / produit'),
       ) : null,
+
+      // Un forfait mensuel resté d'une ancienne saisie : il compte encore, il
+      // se voit donc, et se retire d'un clic.
+      parVente && (Number(o.monthlyAmount) || 0) > 0 ? h('button', {
+        class: 'cost-forfait', type: 'button', title: 'Retirer ce forfait mensuel',
+        onClick: () => { set({ monthlyAmount: 0 }); refresh() },
+      }, `+ ${euro(Number(o.monthlyAmount))}/mois fixes ×`) : null,
 
       // Sur quelle offre ? Une commission de 1 % ne porte pas forcément sur
       // tout ce qu'on vend : elle porte sur la glace, pas sur le café servi au
@@ -336,6 +399,7 @@ function opexRow(o, r, level, refresh) {
           h('span', { class: 'small' }, 'Dépense de recherche (CIR)'),
         ),
         h('span', { class: 'spacer' }),
+        parVente ? h('button', { class: 'btn btn-sm', onClick: () => { set({ mode: 'fixed' }); refresh() } }, 'En faire une charge générale') : null,
         h('button', { class: 'btn btn-sm btn-danger', onClick: remove }, 'Supprimer'),
       ),
     ),
