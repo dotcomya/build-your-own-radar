@@ -15,7 +15,9 @@ for (const tpl of ['logiciel','conseil','ecommerce','restaurant','coiffeur']) {
     // EBE, par le haut : le solde intermédiaire de gestion.
     const ebe = p.revenue[y] - p.variableCost[y] - p.external[y] - p.duties[y] - p.payroll[y] + p.grants[y]
     if (!near(ebe, p.ebe[y], 2)) { idOk=false; console.log(`   y${y+1} EBE calc=${ebe.toFixed(0)} vs ${p.ebe[y].toFixed(0)}`) }
-    const ebit = p.ebe[y] - p.amortisation[y]
+    // Le résultat d'exploitation : l'EBE, moins les amortissements et les
+    // pertes sur créances irrécouvrables (les impayés prévus).
+    const ebit = p.ebe[y] - p.amortisation[y] - (p.badDebts?.[y] || 0)
     if (!near(ebit, p.ebit[y], 2)) { idOk=false; console.log(`   y${y+1} EBIT`) }
     const net = p.preTax[y] - p.corporateTax[y] + p.credits[y]
     if (!near(net, p.netResult[y], 2)) { idOk=false; console.log(`   y${y+1} net calc=${net.toFixed(0)} vs ${p.netResult[y].toFixed(0)}`) }
@@ -23,11 +25,11 @@ for (const tpl of ['logiciel','conseil','ecommerce','restaurant','coiffeur']) {
   ok('compte de résultat cohérent', idOk)
   // 1 bis. EBITDA, par le bas : résultat d'exploitation + dotations aux
   // amortissements. Il ne s'écarte de l'EBE que des autres produits et
-  // charges de gestion courante et des provisions, que le plan ne modélise
-  // pas : l'écart doit être nul, année par année.
+  // charges de gestion courante et des provisions ; le plan n'en modélise
+  // qu'une, les pertes sur créances : l'écart vaut exactement les impayés.
   const parLeBas = p.ebit.map((v, y) => v + p.amortisation[y])
   ok('EBITDA = résultat d’exploitation + amortissements', parLeBas.every((v, y) => near(v, p.ebitda[y], 0.01)))
-  ok('EBITDA − EBE = autres produits et charges de gestion (aucun) = 0', p.ebitda.every((v, y) => near(v - p.ebe[y], 0, 0.01)),
+  ok('EBITDA − EBE = − pertes sur créances, et rien d’autre', p.ebitda.every((v, y) => near(v - p.ebe[y], -(p.badDebts?.[y] || 0), 0.01)),
     p.ebitda.map((v, y) => Math.round(v - p.ebe[y])).join(' / '))
   ok('marges d’EBE et d’EBITDA sur le même chiffre d’affaires', r.kpis.ebeMargin.every((m, y) => p.revenue[y] <= 0 || near(m * p.revenue[y], p.ebe[y], 1)) && r.kpis.ebitdaMargin.every((m, y) => p.revenue[y] <= 0 || near(m * p.revenue[y], p.ebitda[y], 1)))
   // 2. Trésorerie = solde cumulé des flux

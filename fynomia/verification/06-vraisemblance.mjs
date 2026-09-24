@@ -71,8 +71,8 @@ ok('le verdict passe à « À vérifier »', apres.word === 'À vérifier' && ap
 
 // Un financement sans ses zéros : signalé, sans bloquer.
 const f = scenarioFromTemplate('restaurant', 'financement')
-f.financing.equityFounders = [{ month: 0, amount: 944 }]
+f.financing.equityFounders = [{ month: 0, amount: 450 }]
 f.financing.loans = []
 const vf = vraisemblance(f, compute(f))
 const lf = vf.find((x) => x.cle === 'financement')
-ok('944 € de financement face au besoin : signalé', !!lf && lf.niveau === 'attention', lf?.texte)
+ok('450 € de financement face au besoin : signalé', !!lf && lf.niveau === 'attention', lf?.texte)

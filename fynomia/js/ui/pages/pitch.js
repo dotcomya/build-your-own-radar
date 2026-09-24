@@ -99,7 +99,9 @@ export function renderPitch(navigate, refresh, goView) {
     if (document.startViewTransition && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       document.documentElement.classList.add('is-bascule')
       const tr = document.startViewTransition(() => refresh())
-      tr.finished.finally(() => document.documentElement.classList.remove('is-bascule'))
+      tr.finished.catch(() => {}).finally(() => document.documentElement.classList.remove('is-bascule'))
+      tr.ready.catch(() => {})
+      tr.updateCallbackDone.catch(() => {})
     } else refresh()
   }
   const selecteur = h('div', { class: 'pitch-mises', role: 'radiogroup', 'aria-label': 'Façon de lire le pitch' },

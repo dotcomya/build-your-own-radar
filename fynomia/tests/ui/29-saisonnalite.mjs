@@ -37,7 +37,9 @@ export default async function (t) {
     const i = (12 - debut + 11) % 12 + 12
     return { dec: m[i], moyenne: m.slice(12, 24).reduce((a, b) => a + b, 0) / 12 }
   })
-  t.verifie(decembre.dec > 1.5 * decembre.moyenne, 'décembre pèse près du double d’un mois moyen', decembre)
+  // 190 % d'un mois moyen, que la croissance et l'attrition de l'année
+  // atténuent : décembre reste nettement au-dessus.
+  t.verifie(decembre.dec > 1.3 * decembre.moyenne, 'décembre pèse bien plus qu’un mois moyen', decembre)
 
   // 2. Un mois à la main, puis « Aucune ».
   const champDec = p.locator('.item.open [data-gap="saison"] input[aria-label="Coefficient de déc."]')

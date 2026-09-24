@@ -142,7 +142,9 @@ export default async function (t) {
     const n2 = noteDe(sal)
     await n2.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {})
     const txt = (await n2.isVisible()) ? await n2.innerText() : ''
-    t.verifie(/SMIC/.test(txt) && /44\s000/.test(txt), 'un salaire de 44 € propose 44 000 €', txt)
+    // Le repère : le SMIC pour un salarié, ce qu'on verse d'ordinaire pour un
+    // dirigeant, qui n'y est pas soumis.
+    t.verifie(/SMIC|verse d.ordinaire/.test(txt) && /44\s000/.test(txt), 'un salaire de 44 € propose 44 000 €', txt)
   }
 
   // 7. Une charge hors de proportion se dit sur sa ligne ; « Je valide » la

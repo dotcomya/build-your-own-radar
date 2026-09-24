@@ -81,7 +81,15 @@ export default async function (t) {
   e = await etat(p)
   t.verifie(e.acre && e.remise > 0 && e.cot0 < avant, 'l’ACRE allège les cotisations de la première année', `${Math.round(avant)} → ${Math.round(e.cot0)}`)
 
-  // 5. Le prêt d'honneur, une source de financement.
+  // 5. Le prêt d'honneur, une source de financement. L'exemple en porte
+  // déjà un : on repart d'un plan qui n'en a pas, pour le poser comme un
+  // fondateur le ferait.
+  await p.evaluate(async () => {
+    const st = (await import('./js/state/store.js')).default
+    st.update((sc) => { sc.financing.honourLoans = [] }, { label: 'Sans prêt d’honneur' })
+  })
+  await t.pose(p)
+  e = await etat(p)
   await t.aller(p, 'financement')
   const tuile = p.locator('.source', { hasText: 'Prêt d’honneur' }).or(p.locator('.source', { hasText: "Prêt d'honneur" }))
   t.verifie(await tuile.count() >= 1, 'le prêt d’honneur figure parmi les sources')

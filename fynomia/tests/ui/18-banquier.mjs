@@ -26,6 +26,13 @@ export default async function (t) {
   await t.exemple(p, 'Restaurant')
 
   // Un prêt bancaire de 90 000 € sur sept ans, saisi comme un fondateur.
+  // L'exemple porte déjà un prêt bancaire et un prêt d'honneur : on repart
+  // d'un plan sans emprunt.
+  await p.evaluate(async () => {
+    const st = (await import('./js/state/store.js')).default
+    st.update((sc) => { sc.financing.loans = []; sc.financing.honourLoans = [] }, { label: 'Sans emprunt' })
+  })
+  await t.pose(p)
   await t.aller(p, 'financement')
   const pret = p.locator('.source', { hasText: 'Emprunt bancaire' }).first()
   if (!(await pret.evaluate((e) => e.classList.contains('is-on')))) await pret.locator('.source-act').click()

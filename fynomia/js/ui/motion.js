@@ -159,6 +159,12 @@ export function travel(mutate, mode = 'page') {
     // oubliée bloquerait l'outil — mais il est plus long que la plus longue
     // des animations.
     vt.finished.catch(() => {}).finally(done)
+    // Une transition lancée pendant qu'une autre joue fait sauter la
+    // précédente : ses promesses « ready » et « updateCallbackDone » sont
+    // alors rejetées. Rien d'anormal — mais non rattrapées, elles remontaient
+    // en erreur dans la console.
+    vt.ready.catch(() => {})
+    vt.updateCallbackDone.catch(() => {})
     setTimeout(jouer, 120)
     setTimeout(done, 2600)
   } catch {
