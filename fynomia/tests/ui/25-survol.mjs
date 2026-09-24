@@ -2,9 +2,10 @@
  * Dans le récit du pitch, chaque donnée se consulte au survol.
  *
  * Les deux dessins de tête (cinq barres de chiffre d'affaires, soixante mois
- * de trésorerie), la trajectoire du chiffre d'affaires, la courbe en J et
- * chaque barre des cinq chapitres : au survol, une infobulle dit la période,
- * l'intitulé et la valeur exacte — celle du moteur, pas l'arrondi affiché.
+ * de trésorerie), la trajectoire du chiffre d'affaires, la cascade du
+ * résultat, la courbe de trésorerie et chaque barre des chapitres : au
+ * survol, une infobulle dit la période, l'intitulé et la valeur exacte —
+ * celle du moteur, pas l'arrondi affiché.
  */
 export const nom = 'Survol — chaque donnée du récit dit sa période, son intitulé, sa valeur exacte'
 
@@ -65,21 +66,30 @@ export default async function (t) {
     'chaque mois : sa date, la trésorerie exacte en fin de mois', treso.map((b) => b && `${b.tete} ${b.lignes[0]?.join(' ')}`))
 
   // La trajectoire du chiffre d'affaires (chapitre 1).
-  const traj = p.locator('.as-chap .as-dessin .chart').first().locator('.chart-hot')
+  const traj = p.locator('.as-chap[data-chapitre="1"] .as-dessin .chart').first().locator('.chart-hot')
   const a3 = await lire(traj.nth(2))
-  t.verifie(bien(a3) && a3.tete.includes('Année 3') && a3.lignes.some(([l, v]) => /Chiffre/.test(l) && v === attendu.ca[2]) && a3.lignes.some(([l, v]) => /Résultat net/.test(l) && v === attendu.net[2]),
-    'la trajectoire : l’année 3, son chiffre d’affaires et son résultat net exacts', a3)
+  t.verifie(bien(a3) && a3.tete.includes('Année 3') && a3.lignes.some(([l, v]) => /Chiffre/.test(l) && v === attendu.ca[2]),
+    'la trajectoire : l’année 3 et son chiffre d’affaires exact', a3)
 
-  // La courbe en J : un mois par zone, le cumul exact.
-  const j = p.locator('svg.as-j .chart-hot')
+  // La cascade du résultat (chapitre 2) : chaque étape, son montant exact.
+  const etapes = p.locator('.as-chap[data-chapitre="2"] .as-cascade-l')
+  const ne = await etapes.count()
+  const derniere = ne ? await lire(etapes.nth(ne - 1)) : null
+  const premiere = ne ? await lire(etapes.nth(0)) : null
+  t.verifie(ne >= 5 && bien(premiere) && premiere.lignes[0][1] === attendu.ca[0] && bien(derniere) && /Résultat net/.test(derniere.lignes[0][0]) && derniere.lignes[0][1] === attendu.net[0],
+    'la cascade : du chiffre d’affaires au résultat net, montants exacts', { premiere, derniere })
+
+  // La trésorerie (chapitre 7) : un mois par zone, le solde exact.
+  const j = p.locator('.as-chap[data-chapitre="7"] > .as-dessin svg.as-j .chart-hot')
   const nj = await j.count()
   const j0 = nj ? await lire(j.nth(0)) : null
   const jn = nj ? await lire(j.nth(nj - 1)) : null
-  t.verifie(nj >= 12 && nj % 12 === 0 && bien(j0) && bien(jn) && j0.tete.includes(attendu.mois[0]) && jn.tete.includes(attendu.mois[nj - 1]) && /Cumul/.test(j0.lignes[0][0]),
-    'la courbe en J : chaque mois de la fenêtre, sa date et son cumul', { nj, j0, jn })
+  t.verifie(nj >= 12 && nj % 12 === 0 && bien(j0) && bien(jn) && j0.tete.includes(attendu.mois[0]) && jn.tete.includes(attendu.mois[nj - 1])
+    && /Trésorerie/.test(j0.lignes[0][0]) && j0.lignes[0][1] === attendu.treso[0] && jn.lignes[0][1] === attendu.treso[nj - 1],
+    'la trésorerie : chaque mois de la fenêtre, sa date et son solde exact', { nj, j0, jn })
 
-  // Chaque barre des chapitres.
-  const barres = p.locator('.as-barre')
+  // Chaque barre visible des chapitres ; le détail replié attend qu'on l'ouvre.
+  const barres = p.locator('.as-chap .as-barre:visible')
   const nb = await barres.count()
   const lues = []
   for (let i = 0; i < nb; i++) lues.push(await lire(barres.nth(i)))

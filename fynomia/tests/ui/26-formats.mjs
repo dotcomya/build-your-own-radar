@@ -76,9 +76,12 @@ export default async function (t) {
 
   // 3. Chaque forme a son registre.
   await choisir('Récit')
-  const clairs = await p.$$eval('.as-chap .as-clair', (e) => e.map((x) => x.textContent.trim()))
-  t.verifie(clairs.length === 5 && clairs.every((c) => c.length > 60 && !/\bje\b|\bj’|\bnous\b|\bnotre\b/i.test(c)),
-    'récit : l’essentiel de chaque chapitre, en clair, sans « je » ni « nous »', clairs.map((c) => c.slice(0, 50)))
+  const clairs = await p.$$eval('.as-chap > .as-clair', (e) => e.map((x) => x.textContent.trim()))
+  const conclusions = await p.$$eval('.as-chap > .as-conclusion', (e) => e.map((x) => x.textContent.trim()))
+  t.verifie(clairs.length === 9 && conclusions.length === 9 && clairs.every((c) => c.length > 40 && !/\bje\b|\bj’|\bnous\b|\bnotre\b/i.test(c)),
+    'récit : une conclusion et une phrase d’interprétation par chapitre, sans « je » ni « nous »', clairs.map((c) => c.slice(0, 50)))
+  t.verifie(conclusions.every((c) => c.split(/[.!?](\s|$)/).filter((x) => x && x.trim()).every((ph) => ph.split(/\s+/).length <= 34)),
+    'récit : des phrases courtes, une idée chacune', conclusions.map((c) => c.slice(0, 40)))
 
   await choisir('Tableau')
   const fiches = await p.$$eval('.pz-cockpit .pitch-tuile', (e) => e.map((x) => ({

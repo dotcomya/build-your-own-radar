@@ -17,39 +17,61 @@ export default async function (t, { rapide } = {}) {
   await t.aller(p, 'tableau-de-bord')
   await t.onglet(p, 'Pitch investisseur')
 
-  // « Récit » (par défaut) : l'analyse stratégique, en cinq chapitres qui
-  // ont chacun un objectif, deux cartes — le diagnostic et la courbe — et
-  // l'essentiel dit en clair, sans lecteur nommé ni personnage qui parle.
+  // « Récit » (par défaut) : le projet expliqué en neuf chapitres, dans
+  // l'ordre où on le demande — d'abord ce que tout le monde veut savoir, puis
+  // pourquoi. Chacun : une conclusion, deux à quatre chiffres, une phrase qui
+  // l'interprète, le détail replié.
   t.verifie(await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).count() === 1, 'le récit est la mise en page par défaut')
+  const TITRES = ['Chiffre d’affaires', 'Résultat et rentabilité', 'Répartition des ventes', 'Économie d’une vente', 'Masse salariale',
+    'Structure des coûts', 'Trésorerie', 'Besoin de financement', 'Principales hypothèses']
   const chapitres = await p.$$eval('.as-chap', (e) => e.map((x) => ({
     titre: (x.querySelector('.as-titre')?.textContent || '').trim(),
-    objectif: (x.querySelector('.as-objectif')?.textContent || '').trim().length,
-    meta: (x.querySelector('.as-meta')?.textContent || '').trim(),
-    diag: !!x.querySelector('.as-diag'), courbe: !!x.querySelector('.as-courbe'),
-    cote: (() => { const d = x.querySelector('.as-diag'), c = x.querySelector('.as-courbe'); return !!d && !!c && c.getBoundingClientRect().left >= d.getBoundingClientRect().right - 1 })(),
-    clair: (x.querySelector('.as-clair')?.textContent || '').trim(),
-    personnages: x.querySelectorAll('.as-dire-case, .as-dire-qui').length,
+    sous: (x.querySelector('.as-sous-titre')?.textContent || '').trim(),
+    conclusion: (x.querySelector('.as-conclusion')?.textContent || '').trim(),
+    chiffres: x.querySelectorAll(':scope > .as-chiffres-bloc .as-chiffre').length,
+    clair: (x.querySelector(':scope > .as-clair')?.textContent || '').trim(),
+    detail: (() => { const d = x.querySelector(':scope > .as-detail'); return d ? { ouvert: d.open, dit: d.querySelector('summary')?.textContent.trim() } : null })(),
+    rupture: (x.querySelector('.as-rupture')?.textContent || '').trim(),
   })))
-  t.verifie(chapitres.length === 5, 'cinq chapitres d’analyse stratégique', chapitres.map((c) => c.titre))
-  t.verifie(/modèle/i.test(chapitres[0]?.titre) && /coûts/i.test(chapitres[1]?.titre) && /financement/i.test(chapitres[2]?.titre) && /équipe/i.test(chapitres[3]?.titre) && /risques/i.test(chapitres[4]?.titre),
-    'le modèle, les coûts, le financement, l’équipe, les risques', chapitres.map((c) => c.titre))
-  t.verifie(chapitres.every((c) => c.objectif > 30 && /facteur/.test(c.meta)), 'chaque chapitre a un objectif et compte ses facteurs bloquants', chapitres.map((c) => c.meta))
-  t.verifie(chapitres.every((c) => c.diag && c.courbe && c.cote), 'deux cartes par chapitre : le diagnostic à gauche, la courbe à droite')
-  t.verifie(chapitres.every((c) => c.clair.length > 60 && /\d/.test(c.clair) && c.personnages === 0), 'chaque chapitre dit l’essentiel en clair, chiffré, sans personnage', chapitres.map((c) => c.clair.slice(0, 60)))
-  const diags = await p.$$eval('.as-diag', (e) => e.map((x) => ({
-    tag: (x.querySelector('.as-tag')?.textContent || '').trim(),
-    titre: (x.querySelector('.as-carte-titre')?.textContent || '').trim(),
-    lien: !!x.querySelector('.as-lien'),
-  })))
-  t.verifie(diags.every((d) => /\/\//.test(d.tag) && d.titre.length > 10 && d.lien), 'chaque diagnostic : sa gravité, son titre, le module où agir', diags.map((d) => d.tag))
-  const couts = await p.locator('.as-chap[data-chapitre="2"] .as-ratio').first().innerText().catch(() => '')
-  t.verifie(/charges fixes \/ CA/i.test(couts), 'les coûts se lisent en ratio charges fixes / chiffre d’affaires', couts)
-  t.verifie(await p.locator('.as-chap[data-chapitre="2"] svg.as-j .as-j-aire').count() === 1, 'la trésorerie se dessine en courbe en J, avec son aire')
-  t.verifie(await p.locator('.as-chap[data-chapitre="1"] .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
-  t.verifie(await p.locator('.as-chap[data-chapitre="3"] .as-bk-ligne').count() === 5, 'le financement donne les cinq vérifications du banquier')
-  t.verifie(await p.locator('.as-chap[data-chapitre="5"] .as-courbe .as-barre').count() === 4, 'les risques sont rejoués en stress test : quatre imprévus')
-  const questions = await p.$$eval('.as-question', (e) => e.map((x) => ({ l: x.querySelector('em')?.textContent.trim().length || 0, t: x.textContent })))
-  t.verifie(questions.length >= 4 && questions.every((q) => q.l > 25 && /^Question à préparer/.test(q.t) && !/[«»]/.test(q.t)), 'la question à préparer, chapitre par chapitre, sans questionneur entre guillemets', questions.map((q) => q.t.slice(0, 50)))
+  t.verifie(chapitres.length === 9 && chapitres.every((c, i) => c.titre === TITRES[i]), 'neuf chapitres, dans l’ordre demandé', chapitres.map((c) => c.titre))
+  t.verifie(chapitres.every((c) => c.sous.length > 30 && c.conclusion.length > 30 && /\d/.test(c.conclusion)), 'chaque chapitre : ce qu’il couvre, et une conclusion chiffrée', chapitres.map((c) => c.conclusion.slice(0, 50)))
+  t.verifie(chapitres.every((c) => c.chiffres >= 2 && c.chiffres <= 4), 'deux à quatre chiffres au premier niveau', chapitres.map((c) => c.chiffres))
+  t.verifie(chapitres.every((c) => c.clair.length > 40 && !/\bje\b|\bj’|\bnous\b/i.test(c.clair)), 'une phrase qui interprète, sans « je » ni « nous »', chapitres.map((c) => c.clair.slice(0, 40)))
+  t.verifie(chapitres.every((c) => c.detail && !c.detail.ouvert && c.detail.dit === 'Voir le détail'), 'le détail est replié sous « Voir le détail »')
+  t.verifie(new Set(chapitres.map((c) => c.conclusion)).size === 9, 'aucune conclusion ne se répète')
+  t.verifie(/^Être rentable et avoir de la trésorerie sont deux choses différentes/.test(chapitres[6]?.rupture), 'la trésorerie s’ouvre sur la rupture : rentable n’est pas en caisse', chapitres[6]?.rupture)
+  t.verifie(!/trésorerie|financement|BFR/i.test(chapitres[0]?.conclusion + chapitres[0]?.clair), 'le chiffre d’affaires ne parle ni de trésorerie ni de financement')
+  const recit = await p.evaluate(() => {
+    const as = document.querySelector('.as')
+    const vus = [...as.querySelectorAll('.as-chap > :not(.as-detail)')].map((x) => x.innerText).join(' ')
+    return { mots: vus.split(/\s+/).filter((m) => /[a-zà-ÿ]{2,}/i.test(m)).length, texte: as.innerText }
+  })
+  t.verifie(recit.mots > 350 && recit.mots < 1100, 'la première lecture tient en deux à trois minutes', `${recit.mots} mots hors détail`)
+  t.verifie(!/\bCAF\b/.test(recit.texte) && !/Ce n’est pas|Pas seulement|mais aussi/i.test(recit.texte), 'ni « CAF », ni formules toutes faites')
+  t.verifie(/avant amortissements, intérêts et impôts/.test(recit.texte) && /Ce qui reste des ventes après leurs coûts directs/.test(recit.texte) && /couvre toutes les charges fixes/.test(recit.texte),
+    'EBE, marge brute et point mort expliqués à leur première apparition')
+
+  // Les chiffres des dessins sont ceux du moteur.
+  const moteur = await p.evaluate(async () => {
+    const { euro } = await import('./js/ui/dom.js')
+    const r = (await import('./js/state/store.js')).default.result
+    const c = (v) => euro(v, { compact: Math.abs(v) >= 100000 })
+    return { net: c(r.pnl.netResult[0]), besoin: euro(r.kpis.fundingNeed), besoinC: c(r.kpis.fundingNeed) }
+  })
+  const finCascade = await p.locator('.as-chap[data-chapitre="2"] .as-cascade-l').last().locator('.as-cascade-val').innerText()
+  t.verifie(finCascade === moteur.net, 'la cascade du résultat tombe sur le résultat net', { finCascade, net: moteur.net })
+  const sous = await p.$$eval('.as-chap[data-chapitre="3"] .as-barre-sous', (e) => e.map((x) => x.textContent))
+  t.verifie(sous.length >= 1 && sous.every((x) => /×.*=/.test(x)), 'chaque offre : prix × volume = revenu', sous)
+  t.verifie(await p.locator('.as-chap[data-chapitre="4"] .as-equation .as-eq-bloc').count() === 3, 'l’économie d’une vente : prix − coût direct = marge')
+  t.verifie(await p.locator('.as-chap[data-chapitre="7"] > .as-dessin svg.as-j .as-j-aire').count() === 1 && await p.locator('.as-chap[data-chapitre="7"] > .as-dessin svg.as-j .as-j-neg').count() === 1,
+    'la trésorerie : ce qui passe sous zéro se voit')
+  const resteFin = await p.locator('.as-chap[data-chapitre="8"] .as-cascade-l').last().locator('.as-cascade-val').innerText().catch(() => '')
+  t.verifie((resteFin === moteur.besoinC || resteFin === moteur.besoin) && chapitres[7].conclusion.includes(`Il faut donc financer ${moteur.besoin}`),
+    'le besoin : consommation − ressources = reste à financer, celui du moteur', { resteFin, besoin: moteur.besoin })
+  const hyp = await p.$$eval('.as-chap[data-chapitre="9"] .as-barre', (e) => e.map((x) => x.querySelector('.as-barre-sous')?.textContent || ''))
+  t.verifie(hyp.length >= 4 && hyp.every((x) => /^Plan : .+ · test : /.test(x)), 'les hypothèses : la valeur du plan, la variation testée, l’effet', hyp)
+  await p.locator('.as-chap[data-chapitre="5"] .as-detail summary').click()
+  t.verifie(await p.locator('.as-chap[data-chapitre="5"] .as-detail[open] table').count() >= 1, 'le détail s’ouvre sur ses tableaux')
   t.verifie(!(await p.locator('.module-nav .hnav-tab', { hasText: 'essai' }).count()), 'la synthèse essai n’est plus un onglet à part')
   t.verifie(!(await p.locator('.pitch .sy-hero, .pitch .pitch-dossier').count()), 'l’avancement du dossier a quitté le pitch pour le Pilotage')
 

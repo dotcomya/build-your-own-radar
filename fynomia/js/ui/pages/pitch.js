@@ -127,7 +127,7 @@ export function renderPitch(navigate, refresh, goView) {
     garde.length ? gardeBloc(garde, navigate, { classe: 'is-page' }) : null,
     mise === 'tableau' ? tableau(parties)
       : mise === 'diapos' ? diapos(parties)
-        : analyseStrategique(s, r, navigate, { avis: avis(s, r), source: () => sourceRepere() }),
+        : analyseStrategique(s, r, navigate, { source: () => sourceRepere() }),
     h('div', { class: 'pitch-foot' },
       h('p', {}, 'Tous ces chiffres viennent du même calcul que les états financiers : un chiffre qui te surprend se corrige dans la page où il se saisit, et tout le pitch suit.'),
       h('div', { class: 'pitch-foot-go' },
