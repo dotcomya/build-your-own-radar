@@ -127,8 +127,14 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   Le détail est affiché ligne par ligne.
 - **Marketing.** Chaque campagne convertit un budget en clients selon un
   entonnoir explicite (CPC, CPM, CPL ou CAC connu), et ces clients alimentent
-  l'offre à laquelle la campagne est rattachée.
-- **Indicateurs expliqués.** Point mort, EBITDA, BFR, CAF, autonomie, LTV/CAC :
+  l'offre à laquelle la campagne est rattachée. Le budget, lui, se paie : il
+  entre dans les charges externes et sort de la trésorerie.
+- **Saisonnalité et impayés.** Chaque offre prend un profil de saisonnalité
+  (celui du métier d'abord) ou douze mois réglés un à un, alignés sur le
+  calendrier et sans changer le total de l'année ; et une part d'impayés, qui
+  passe en pertes sur créances sous l'EBE et n'entre jamais en caisse.
+- **Indicateurs expliqués.** Point mort, EBE et EBITDA, BFR, capacité
+  d'autofinancement, autonomie, LTV/CAC :
   chaque notion s'ouvre sur une fiche qui dit ce que c'est, comment Fynomia la
   calcule, à quoi elle sert, et rappelle la valeur du scénario en cours.
 - **Exports.** Une présentation PowerPoint d'une douzaine de diapositives prête

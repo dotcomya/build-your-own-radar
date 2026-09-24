@@ -50,16 +50,36 @@ export const SECTORS = {
       { title: "L'attrition mange la croissance", body: "À 3 % d'attrition mensuelle, tu perds 30 % de ta base chaque année. Il faut donc courir pour rester immobile : avant d'augmenter le budget d'acquisition, mesure ce que tu retiens." },
       { title: 'Le CIR se mérite', body: "Développer un produit n'est pas faire de la recherche au sens fiscal. Le CIR suppose une incertitude scientifique ou technique levée par des travaux méthodiques. Un rescrit vaut mieux qu'un redressement." },
     ],
+    // L'exemple d'un logiciel : un plan qu'un investisseur ou un banquier
+    // lirait sans sourciller. Vingt clients pilotes au lancement, une
+    // croissance qui ralentit, 2,5 % d'attrition par mois, une équipe qui
+    // grandit avec les clients — la masse salariale reste dans la fourchette
+    // du métier —, un budget d'acquisition qui se paie, 1 % d'impayés, et un
+    // financement réuni avant le point bas.
     build(s) {
-      s.activities = [newActivity({ name: 'Abonnement', unitPrice: 0, recurringPrice: 49, contractMonths: 24, churnMonthly: 0.025, unitCost: 0, recurringCost: 6, paymentLag: 0, deposit: 1, volumes: { mode: 'growth', launchMonth: 1, startUnits: 8, monthlyGrowth: 0.12, growthDecay: 0.96, cap: '', manual: [] } })]
+      s.activities = [newActivity({ name: 'Abonnement', unitPrice: 0, recurringPrice: 49, contractMonths: 24, churnMonthly: 0.025, unitCost: 0, recurringCost: 6, paymentLag: 0, deposit: 1, badDebtRate: 0.01, volumes: { mode: 'growth', launchMonth: 1, startUnits: 20, monthlyGrowth: 0.08, growthDecay: 0.95, cap: '', manual: [] } })]
       s.marketing = [newCampaign({ name: 'Acquisition payante', channel: 'ads', activityId: s.activities[0].id, monthlyBudget: 2000, model: 'cpc', cpc: 1.8, visitToLead: 0.04, leadToClient: 0.15, startMonth: 1, durationMonths: 59 })]
       s.team = [
+        newTeamMember({ role: 'Fondatrice — direction et ventes', contractType: 'dirigeant', status: 'cadre', monthlyGross: 3000 }),
         newTeamMember({ role: 'Fondateur — produit', contractType: 'cdi', status: 'cadre', monthlyGross: 3200, rdShare: 0.6, innovShare: 0.2 }),
         newTeamMember({ role: 'Développeur', contractType: 'cdi', status: 'cadre', monthlyGross: 3800, startMonth: 3, rdShare: 0.8 }),
+        newTeamMember({ role: 'Chargée de succès client', contractType: 'cdi', status: 'non-cadre', monthlyGross: 2800, startMonth: 12 }),
+        newTeamMember({ role: 'Commercial', contractType: 'cdi', status: 'cadre', monthlyGross: 3400, startMonth: 18 }),
+        newTeamMember({ role: 'Développeuse', contractType: 'cdi', status: 'cadre', monthlyGross: 4000, startMonth: 24, rdShare: 0.7 }),
+        newTeamMember({ role: 'Responsable marketing', contractType: 'cdi', status: 'cadre', monthlyGross: 3600, startMonth: 30 }),
+        newTeamMember({ role: 'Support client', contractType: 'cdi', status: 'non-cadre', monthlyGross: 2500, startMonth: 36 }),
+        newTeamMember({ role: 'Développeur senior', contractType: 'cdi', status: 'cadre', monthlyGross: 4500, startMonth: 42, rdShare: 0.7 }),
+        newTeamMember({ role: 'Commerciale', contractType: 'cdi', status: 'cadre', monthlyGross: 3400, startMonth: 48 }),
       ]
-      s.opex = opexSet([['Hébergement et logiciels', 320], ['Comptable et juridique', 300], ['Assurances', 90], ['Banque et paiement', 80]])
+      s.opex = [
+        ...opexSet([['Hébergement et logiciels', 320], ['Comptable et juridique', 300], ['Assurances', 90], ['Banque et paiement', 80]]),
+        newOpex({ label: 'Bureaux partagés', mode: 'fixed', monthlyAmount: 1400, startMonth: 12 }),
+        newOpex({ label: 'Logiciels par salarié', mode: 'perEmployee', monthlyAmount: 0, perEmployee: 90 }),
+      ]
       s.capex = [newCapex({ label: 'Postes de travail', amount: 6000, amortYears: 3, rdShare: 0.7 })]
       s.financing.equityFounders = [{ month: 0, amount: 20000 }]
+      s.financing.honourLoans = [{ id: uid('hon'), label: "Prêt d'honneur", network: 'initiative', amount: 15000, month: 0, months: 60, graceMonths: 6 }]
+      s.financing.loans = [{ id: uid('loan'), label: 'Prêt bancaire', amount: 50000, month: 2, rate: 0.045, months: 60, graceMonths: 6 }]
       s.meta.jeiClaimed = true
     },
   },

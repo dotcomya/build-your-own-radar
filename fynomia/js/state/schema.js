@@ -306,7 +306,11 @@ export function scenarioFromTemplate(key, name, { sample = true } = {}) {
   s.founder.majorityManager = ['SARL', 'EURL'].includes(s.meta.legalForm)
   // Un micro-entrepreneur démarre en franchise de TVA : c'est le cas courant.
   if (s.meta.legalForm === 'MICRO') s.meta.vatExempt = true
-  for (const a of s.activities) rangerHypotheses(a)
+  // Un plan neuf s'ouvre sans hypothèse que le fondateur n'a pas formulée ;
+  // un exemple, lui, montre un plan complet : l'attrition, les délais et les
+  // acomptes du métier y restent posés, leurs blocs allumés.
+  if (sample) for (const a of s.activities) a.refine = {}
+  else for (const a of s.activities) rangerHypotheses(a)
   return s
 }
 

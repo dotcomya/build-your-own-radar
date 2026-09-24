@@ -1,0 +1,45 @@
+# Les contrôles de Fynomia, à chaque push qui touche l'application.
+#
+# La configuration CircleCI du dépôt appartient au projet d'origine et ne
+# joue aucun test de Fynomia. Celle-ci joue tout : le paquet (construit et en
+# ASCII pur), les contrôles comptables de verification/, puis chaque suite
+# d'interface dans un vrai navigateur — le Chrome déjà installé sur les
+# machines Ubuntu de GitHub.
+name: Fynomia — contrôles
+
+on:
+  push:
+    paths:
+      - 'fynomia/**'
+      - '.github/workflows/fynomia.yml'
+  pull_request:
+    paths:
+      - 'fynomia/**'
+      - '.github/workflows/fynomia.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: fynomia-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  controles:
+    name: Paquet, comptes, interface
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: fynomia/tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: fynomia/tests/package-lock.json
+      - name: Installer playwright-core
+        run: npm ci
+      - name: Tous les contrôles
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: node run.mjs
