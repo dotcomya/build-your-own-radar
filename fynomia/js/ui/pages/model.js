@@ -20,6 +20,7 @@ import { compute } from '../../engine/engine.js'
 import { tutorial, stepBanner } from '../tutorial.js'
 import { areaChart, PALETTE } from '../charts.js'
 import store from '../../state/store.js'
+import { memoire } from '../memoire.js'
 
 /**
  * Qui est le fondateur dans l'équipe.
@@ -50,8 +51,8 @@ export function renderModel(navigate, refresh) {
     { key: 'seuil', label: 'Combien de clients' },
     { key: 'sensibilite', label: 'Ce qui change tout' },
   ]
-  const view = views.some((v) => v.key === renderModel.view) ? renderModel.view : 'seuil'
-  renderModel.view = view
+  const view = views.some((v) => v.key === memoire.modele.view) ? memoire.modele.view : 'seuil'
+  memoire.modele.view = view
 
   const host = h('div', { class: 'view' })
   // Le premier rendu a lieu avant que le nœud ne rejoigne le document ; on ne
@@ -70,7 +71,7 @@ export function renderModel(navigate, refresh) {
 
     pageBar('Ton modèle', headline(r, s, voc)),
 
-    tabs(views, view, (k) => { renderModel.view = k; refresh() }),
+    tabs(views, view, (k) => { memoire.modele.view = k; refresh() }),
 
     knobs(s, voc, paint, refresh),
 

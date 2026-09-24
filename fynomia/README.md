@@ -225,6 +225,7 @@ fynomia/
       levers.js           tableau d'indicateurs d'une vue métier
       charts.js           graphiques SVG, palette catégorielle validée
       glossary.js         définitions, formules, usage
+      memoire.js          onglets, volets et exercice retenus d'un dessin à l'autre
       pages/              une fonction de rendu par page
         setup.js          les onze questions, hors de la charpente de l'app
     export/               écriture ZIP et génération PowerPoint (OOXML)

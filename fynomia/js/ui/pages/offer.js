@@ -39,20 +39,21 @@ import { gardePage, sansValidee } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
 import { gardePrix, gardeAbonnement, gardeCroissance } from '../../engine/plausible.js'
 import { tradeSuggest } from '../trade-suggest.js'
+import { memoire } from '../memoire.js'
 
 export function renderOffer(navigate, refresh) {
   const s = store.scenario
   const r = store.result
   const level = store.level
-  const open = renderOffer.open || (renderOffer.open = new Set())
+  const open = memoire.offre.open || (memoire.offre.open = new Set())
   // La première ligne s'ouvre à l'arrivée, pas à chaque rendu.
   //
   // « Si rien n'est ouvert, ouvre la première » se rejouait à chaque passage :
   // refermer la seule ligne de la liste était donc impossible — elle se
   // rouvrait dans la foulée, et le chevron ne servait à rien. On ne l'amorce
   // qu'une fois par dossier ouvert.
-  if (renderOffer.seeded !== store.currentId) {
-    renderOffer.seeded = store.currentId
+  if (memoire.offre.seeded !== store.currentId) {
+    memoire.offre.seeded = store.currentId
     if (s.activities[0]) open.add(s.activities[0].id)
   }
 
@@ -91,12 +92,12 @@ export function renderOffer(navigate, refresh) {
   // et la section où se trouve le champ manquant.
   const want = claim('offre')
   if (want) {
-    if (want.view) renderOffer.view = want.view
+    if (want.view) memoire.offre.view = want.view
     if (want.sec) activityCard.sec = want.sec
     if (want.openAll) s.activities.forEach((a) => open.add(a.id))
   }
-  const view = views.some((v) => v && v.key === renderOffer.view) ? renderOffer.view : 'offres'
-  renderOffer.view = view
+  const view = views.some((v) => v && v.key === memoire.offre.view) ? memoire.offre.view : 'offres'
+  memoire.offre.view = view
 
   // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
   const chiffres = chiffresDePage('offre', refresh, navigate)
@@ -108,7 +109,7 @@ export function renderOffer(navigate, refresh) {
       lede: "Tes offres : leur prix, leurs volumes et leurs conditions de paiement.",
       figure: chiffres ? null : revenueFigure(s, r),
       guide: stepGuide('clients', journey(store.scenario, store.result), 'offre'),
-      views, view, onPick: (k) => { renderOffer.view = k; refresh() },
+      views, view, onPick: (k) => { memoire.offre.view = k; refresh() },
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', 'data-gap': 'ajout-offre', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),
     chiffres || gardePage('offre', navigate),
@@ -215,7 +216,7 @@ function commissionRead(a, voc) {
  */
 export function focusOffer(id) {
   activityCard.sec = 'offre'
-  const open = renderOffer.open || (renderOffer.open = new Set())
+  const open = memoire.offre.open || (memoire.offre.open = new Set())
   open.clear()
   if (id) open.add(id)
 }

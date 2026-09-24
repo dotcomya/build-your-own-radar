@@ -96,7 +96,8 @@ export function compute(scenario) {
   const externalY = opexY.map((v, y) => v + leaseY[y])
   const valueAddedY = grossMarginY.map((v, y) => v - externalY[y])
   const payrollY = byYear(payroll.cost)
-  const grantsY = byYear(financingSeries(scenario).grants)
+  const financing = financingSeries(scenario)
+  const grantsY = byYear(financing.grants)
 
   const duties = taxesAndDuties({
     payrollGross: payroll.gross,
@@ -112,7 +113,6 @@ export function compute(scenario) {
   const amortisationY = byYear(capex.amortisationMonthly)
   const ebitY = ebitdaY.map((v, y) => v - amortisationY[y])
 
-  const financing = financingSeries(scenario)
   const interestY = byYear(financing.interest)
   const preCreditY = ebitY.map((v, y) => v - interestY[y])
 

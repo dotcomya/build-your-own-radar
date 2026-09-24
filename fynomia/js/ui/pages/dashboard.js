@@ -36,6 +36,7 @@ import { journey } from '../../engine/journey.js'
 import { svg } from '../dom.js'
 import { figureSet, PAGE_NAME, avancement } from '../figures.js'
 import store from '../../state/store.js'
+import { memoire } from '../memoire.js'
 
 // Le jugement vient du moteur : l'écran et le PowerPoint exporté disent la
 // même chose parce qu'ils lisent la même fonction.
@@ -49,9 +50,9 @@ export const assess = (r, s) => verdict(r, s)
  * que les douze questions ont produit, pas l'onglet qu'on regardait la fois
  * d'avant.
  */
-export function openSynthesis() { renderDashboard.view = 'synthese' }
-export function openPitch() { renderDashboard.view = 'pitch' }
-export function openPilotage() { renderDashboard.view = 'pilotage' }
+export function openSynthesis() { memoire.tableau.view = 'synthese' }
+export function openPitch() { memoire.tableau.view = 'pitch' }
+export function openPilotage() { memoire.tableau.view = 'pilotage' }
 
 export function renderDashboard(navigate, refresh) {
   const r = store.result
@@ -67,9 +68,9 @@ export function renderDashboard(navigate, refresh) {
   // L'année regardée est un choix, pas une fatalité : les chiffres clés et la
   // cascade suivent la puce qu'on sélectionne, et le tableau devient un
   // instrument qu'on manipule au lieu d'une photographie.
-  const y = renderDashboard.year ?? referenceYear(r)
-  renderDashboard.year = y
-  const pickYearFn = (next) => { renderDashboard.year = next; refresh() }
+  const y = memoire.tableau.year ?? referenceYear(r)
+  memoire.tableau.year = y
+  const pickYearFn = (next) => { memoire.tableau.year = next; refresh() }
 
   // Trois temps, trois onglets.
   //
@@ -87,10 +88,10 @@ export function renderDashboard(navigate, refresh) {
     { key: 'pitch', read: true, label: 'Pitch investisseur' },
     { key: 'simulation', label: 'Simulation' },
   ]
-  if (renderDashboard.view === 'studio') renderDashboard.view = 'pitch'
-  const view = views.some((v) => v.key === renderDashboard.view) ? renderDashboard.view : 'synthese'
-  renderDashboard.view = view
-  const goView = (k) => { renderDashboard.view = k; refresh() }
+  if (memoire.tableau.view === 'studio') memoire.tableau.view = 'pitch'
+  const view = views.some((v) => v.key === memoire.tableau.view) ? memoire.tableau.view : 'synthese'
+  memoire.tableau.view = view
+  const goView = (k) => { memoire.tableau.view = k; refresh() }
 
   return h('div', { class: 'content content-wide' },
     s.meta.isDemo && demoBanner(navigate, refresh),
@@ -352,7 +353,7 @@ function finishBanner(s, navigate) {
       }, `Renseigner « ${c.next.label} » →`),
       h('button', {
         class: 'btn btn-lg finish-list',
-        onClick: () => { renderDashboard.view = 'pilotage'; navigate('#/tableau-de-bord') },
+        onClick: () => { memoire.tableau.view = 'pilotage'; navigate('#/tableau-de-bord') },
       }, t.parcourir),
     ),
     h('div', { class: 'finish-meter', 'aria-hidden': 'true' },
@@ -402,7 +403,7 @@ function verdictCard(health, navigate) {
 function kpiBoard(r, s, y, navigate) {
   const figures = figureSet(r, s, y)
   const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
-  const memory = kpiBoard.open || (kpiBoard.open = new Set())
+  const memory = memoire.indicateurs.open || (memoire.indicateurs.open = new Set())
 
   return h('section', { class: 'kpis6' },
     h('header', { class: 'kpis6-head' },

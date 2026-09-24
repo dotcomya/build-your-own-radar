@@ -74,6 +74,7 @@ export { euro, num, pct, monthName, monthLabel, yearLabel }
 
 // ────────────────────────────── Champ de saisie ───────────────────────────
 import { BOUNDS, clampField } from '../state/schema.js'
+import { memoire } from './memoire.js'
 
 /**
  * Champ numérique borné. La valeur est ramenée dans les limites du schéma
@@ -539,7 +540,7 @@ export function unitAmount({ label, value, units, unit, onUnit, onInput, hint, h
 export function refine(id, label, ...children) {
   const body = children.flat(4).filter(Boolean)
   if (!body.length) return null
-  const memory = refine.open || (refine.open = new Set())
+  const memory = memoire.affiner.open || (memoire.affiner.open = new Set())
   const el = h('details', { class: 'refine', open: memory.has(id) || null },
     h('summary', { class: 'refine-head' },
       foldSign(),

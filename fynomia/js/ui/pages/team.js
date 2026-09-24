@@ -22,13 +22,14 @@ import { celebrate } from '../burst.js'
 import { gardePage, sansValidee } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
 import { gardeSalaire } from '../../engine/plausible.js'
+import { memoire } from '../memoire.js'
 
 /** Un salaire se dit à l'année ; le modèle, lui, raisonne au mois. */
 const PAY_UNITS = [
   { key: 'year', label: '€ / an', title: 'Brut annuel', toDisplay: (v) => (Number(v) || 0) * 12, fromDisplay: (v) => v / 12 },
   { key: 'month', label: '€ / mois', title: 'Brut mensuel', toDisplay: (v) => Number(v) || 0, fromDisplay: (v) => v },
 ]
-const payUnit = () => renderTeam.unit || (renderTeam.unit = 'year')
+const payUnit = () => memoire.equipe.unit || (memoire.equipe.unit = 'year')
 
 export function renderTeam(navigate, refresh) {
   const s = store.scenario
@@ -41,8 +42,8 @@ export function renderTeam(navigate, refresh) {
     try { depuis = e?.currentTarget?.getBoundingClientRect() || null } catch { depuis = null }
     const m = newTeamMember({ role: s.team.length === 0 ? 'Fondateur' : 'Nouveau poste' })
     store.update((sc) => sc.team.push(m), { label: "Ajout d'un poste" })
-    renderTeam.openId = m.id
-    renderTeam.view = 'postes'
+    memoire.equipe.openId = m.id
+    memoire.equipe.view = 'postes'
     refresh()
     if (depuis) celebrate(depuis, { kind: 'team', label: m.role, cible: `[data-row="${m.id}"]` })
   }
@@ -55,9 +56,9 @@ export function renderTeam(navigate, refresh) {
     s.team.length > 0 ? { key: 'jei', read: true, label: 'Recherche et JEI' } : null,
   ]
   const want = claim('equipe')
-  if (want && want.view) renderTeam.view = want.view
-  const view = views.some((v) => v && v.key === renderTeam.view) ? renderTeam.view : 'postes'
-  renderTeam.view = view
+  if (want && want.view) memoire.equipe.view = want.view
+  const view = views.some((v) => v && v.key === memoire.equipe.view) ? memoire.equipe.view : 'postes'
+  memoire.equipe.view = view
 
   const payrollY = r ? yearly(r.payroll.cost)[0] : 0
 
@@ -73,7 +74,7 @@ export function renderTeam(navigate, refresh) {
         ? { value: euro(payrollY), note: 'la première année, avantages compris' }
         : null,
       guide: stepGuide('equipe', journey(store.scenario, store.result)),
-      views, view, onPick: (k) => { renderTeam.view = k; refresh() },
+      views, view, onPick: (k) => { memoire.equipe.view = k; refresh() },
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),
     chiffres || gardePage('equipe', navigate),
@@ -147,7 +148,7 @@ function personGlyph(m, count) {
  * vraiment pour ce contrat et ce niveau de détail s'y trouvent.
  */
 function memberCard(m, index, r, level, refresh, jeiActive) {
-  const isOpen = renderTeam.openId === m.id
+  const isOpen = memoire.equipe.openId === m.id
   const set = (patch, label = 'Modification du poste', opts = {}) =>
     store.update((sc) => Object.assign(sc.team.find((x) => x.id === m.id), patch), { label, ...opts })
 
@@ -186,7 +187,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
 
   const on = m.enabled !== false
   return h('div', { class: `item ${isOpen ? 'open' : ''} ${on ? '' : 'is-off'}`, 'data-row': m.id },
-    h('div', { class: 'item-head', onClick: () => { renderTeam.openId = isOpen ? null : m.id; refresh() } },
+    h('div', { class: 'item-head', onClick: () => { memoire.equipe.openId = isOpen ? null : m.id; refresh() } },
       personGlyph(m, count),
       enableToggle(on, (v) => {
         store.update((sc) => { const t = sc.team.find((x) => x.id === m.id); if (t) t.enabled = v },
@@ -243,7 +244,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
         const champSalaire = unitAmount({
           label: preleve ? `${payLabel} — ${annual ? 'par an' : 'par mois'}` : `${payLabel} — ${annual ? 'brut annuel' : 'brut mensuel'}`,
           value: m.monthlyGross, units: PAY_UNITS, unit, help: 'superBrut',
-          onUnit: (k) => { renderTeam.unit = k; refresh() },
+          onUnit: (k) => { memoire.equipe.unit = k; refresh() },
           onInput: (v) => { set({ monthlyGross: v }, undefined, { silent: true }); relire(v) },
           garde: sansValidee(`salaire:${m.id}`, (v) => `${Number(v) || 0}:${m.contractType || ''}`, (v) => gardeSalaire(v * 12, m.contractType)),
         })
@@ -318,7 +319,7 @@ function memberCard(m, index, r, level, refresh, jeiActive) {
 function costBreakdown(cost, count, member) {
   // Le détail ligne à ligne est une vérification, pas une lecture courante :
   // il reste disponible, replié, et seulement au niveau expert.
-  const open = costBreakdown.open || (costBreakdown.open = new Set())
+  const open = memoire.coutPoste.open || (memoire.coutPoste.open = new Set())
   const id = member.id
   const details = h('details', { class: 'fold', open: open.has(id) || null },
     h('summary', { class: 'fold-summary' },

@@ -11,6 +11,7 @@ import store from '../../state/store.js'
 import { gardePage } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
 import { banquierVerifie, tableauBanquier } from '../banquier.js'
+import { memoire } from '../memoire.js'
 
 /**
  * Les sources de financement.
@@ -156,17 +157,17 @@ export function renderFinancing(navigate, refresh) {
   const level = store.level
 
   const visible = SOURCES.filter((src) => LEVEL_RANK[src.level] <= LEVEL_RANK[level])
-  const picked = renderFinancing.picked && visible.some((x) => x.key === renderFinancing.picked)
-    ? renderFinancing.picked
+  const picked = memoire.financement.picked && visible.some((x) => x.key === memoire.financement.picked)
+    ? memoire.financement.picked
     : (visible.find((src) => (f[src.key] || []).length > 0) || visible[0]).key
-  renderFinancing.picked = picked
+  memoire.financement.picked = picked
   const source = visible.find((x) => x.key === picked)
 
   const totalRaised = SOURCES.reduce((acc, src) => acc + sum(f[src.key]), 0)
 
   const add = (src) => {
     store.update((sc) => { (sc.financing[src.key] = sc.financing[src.key] || []).push(src.make()) }, { label: `Ajout : ${src.label}` })
-    renderFinancing.picked = src.key
+    memoire.financement.picked = src.key
     refresh()
   }
   const drop = (key, id) => {
@@ -194,7 +195,7 @@ export function renderFinancing(navigate, refresh) {
         delete paused[src.key]
       }
     }, { label: on ? `Sans ${src.label.toLowerCase()}` : `Avec ${src.label.toLowerCase()}` })
-    if (!on) renderFinancing.picked = src.key
+    if (!on) memoire.financement.picked = src.key
     refresh()
   }
   const setField = (key, id, patch, opts = {}) =>
@@ -206,9 +207,9 @@ export function renderFinancing(navigate, refresh) {
     r ? { key: 'plan', label: 'Plan de financement', read: true } : null,
   ]
   const want = claim('financement')
-  if (want && want.view) renderFinancing.view = want.view
-  const view = views.some((v) => v && v.key === renderFinancing.view) ? renderFinancing.view : 'sources'
-  renderFinancing.view = view
+  if (want && want.view) memoire.financement.view = want.view
+  const view = views.some((v) => v && v.key === memoire.financement.view) ? memoire.financement.view : 'sources'
+  memoire.financement.view = view
 
   // Les chiffres de la page d'abord, en une ligne ; la zone de travail ensuite.
   const chiffres = chiffresDePage('financement', refresh, navigate)
@@ -225,7 +226,7 @@ export function renderFinancing(navigate, refresh) {
           : 'réunis · trésorerie couverte',
       },
       guide: stepGuide('financement', journey(store.scenario, store.result), 'financement'),
-      views, view, onPick: (k) => { renderFinancing.view = k; refresh() },
+      views, view, onPick: (k) => { memoire.financement.view = k; refresh() },
       actions: [view === 'sources' && source && (f[source.key] || []).length
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],
     }),
@@ -254,8 +255,8 @@ export function renderFinancing(navigate, refresh) {
           return h('div', {
             class: `source ${picked === src.key ? 'is-open' : ''} ${on ? 'is-on' : ''}`,
             role: 'button', tabindex: '0',
-            onClick: () => { if (on) { renderFinancing.picked = src.key; refresh() } else toggle(src) },
-            onKeydown: (e) => { if (e.key === 'Enter') { if (on) { renderFinancing.picked = src.key; refresh() } else toggle(src) } },
+            onClick: () => { if (on) { memoire.financement.picked = src.key; refresh() } else toggle(src) },
+            onKeydown: (e) => { if (e.key === 'Enter') { if (on) { memoire.financement.picked = src.key; refresh() } else toggle(src) } },
           },
             h('span', { class: 'source-glyph' }, src.glyph),
             h('span', { class: 'source-name' }, src.label),

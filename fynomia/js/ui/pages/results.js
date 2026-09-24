@@ -11,6 +11,7 @@ import { refine } from '../dom.js'
 import { claim } from '../spotlight.js'
 import { referenceYear } from '../../format.js'
 import { section, exercices, grandsChiffres } from '../sections.js'
+import { memoire } from '../memoire.js'
 
 const TABS = {
   resultat: 'Compte de résultat',
@@ -27,23 +28,23 @@ export function renderResults(navigate, refresh) {
   const available = Object.entries(TABS)
   // Une étape du dossier qui vise « ce que tu touches » ouvre cet onglet.
   const want = claim('resultats')
-  if (want && want.view) renderResults.tab = want.view
-  const current = available.some(([k]) => k === renderResults.tab) ? renderResults.tab : 'resultat'
+  if (want && want.view) memoire.resultats.tab = want.view
+  const current = available.some(([k]) => k === memoire.resultats.tab) ? memoire.resultats.tab : 'resultat'
 
   const views = [
     // Les états financiers se lisent : rien ne s'y saisit, tout y est calculé.
     ...available.map(([k, label]) => ({ key: k, label, read: true })),
     { key: 'revenu', label: 'Ce que tu touches' },
   ]
-  const view = views.some((v) => v.key === renderResults.tab) ? renderResults.tab : 'resultat'
-  renderResults.tab = view
+  const view = views.some((v) => v.key === memoire.resultats.tab) ? memoire.resultats.tab : 'resultat'
+  memoire.resultats.tab = view
 
   // L'exercice lu : le même pour les quatre chiffres, les colonnes des
   // tableaux et la photo du bilan. On l'ouvre sur le premier exercice
   // bénéficiaire, celui qu'on regarde d'abord.
-  const an = Number.isInteger(renderResults.an) && renderResults.an >= 0 && renderResults.an < 5 ? renderResults.an : referenceYear(r)
+  const an = Number.isInteger(memoire.resultats.an) && memoire.resultats.an >= 0 && memoire.resultats.an < 5 ? memoire.resultats.an : referenceYear(r)
   bilanAn = an
-  const choisir = (k) => { renderResults.an = k; bilanAn = k; refresh() }
+  const choisir = (k) => { memoire.resultats.an = k; bilanAn = k; refresh() }
 
   let no = 0
   const [nomVue, ditVue] = VUES[view] || [TABS[view] || '', '']
@@ -65,7 +66,7 @@ export function renderResults(navigate, refresh) {
       no: '07', title: 'États financiers',
       lede: "Le format que comprennent un comptable, une banque et un investisseur. Tout est calculé à partir de ce que tu as saisi : aucune ligne n’est à remplir ici.",
       guide: stepGuide(null, null, 'resultats'),
-      views, view, onPick: (k) => { renderResults.tab = k; refresh() },
+      views, view, onPick: (k) => { memoire.resultats.tab = k; refresh() },
     }),
 
     tete,
@@ -318,7 +319,7 @@ function cashView(r, level, refresh) {
     h('td', {}, label),
     ...series.map((v) => h('td', { class: `num ${negate ? 'muted' : ''}` }, v === 0 ? '—' : euro(negate ? -v : v))),
   )
-  const view = renderResults.cashView || 'annual'
+  const view = memoire.resultats.cashView || 'annual'
 
   return h('div', {},
     h('div', { class: 'card mb' },
@@ -332,8 +333,8 @@ function cashView(r, level, refresh) {
         h('h2', {}, 'Plan de trésorerie'),
         h('span', { class: 'spacer' }),
         h('div', { class: 'levels' },
-          h('button', { class: `level-btn ${view === 'annual' ? 'active' : ''}`, onClick: () => { renderResults.cashView = 'annual'; refresh() } }, 'Par année'),
-          h('button', { class: `level-btn ${view === 'monthly' ? 'active' : ''}`, onClick: () => { renderResults.cashView = 'monthly'; refresh() } }, 'Mois par mois'),
+          h('button', { class: `level-btn ${view === 'annual' ? 'active' : ''}`, onClick: () => { memoire.resultats.cashView = 'annual'; refresh() } }, 'Par année'),
+          h('button', { class: `level-btn ${view === 'monthly' ? 'active' : ''}`, onClick: () => { memoire.resultats.cashView = 'monthly'; refresh() } }, 'Mois par mois'),
         ),
       ),
       h('div', { class: 'table-wrap' },
@@ -530,7 +531,7 @@ function balanceView(r, refresh) {
           type: 'button',
           role: 'tab',
           'aria-selected': y === an ? 'true' : 'false',
-          onClick: () => { bilanAn = y; renderResults.an = y; refresh && refresh() },
+          onClick: () => { bilanAn = y; memoire.resultats.an = y; refresh && refresh() },
         }, yearLabel(y))),
         h('span', { class: 'bil-years-dit' }, `Photo au 31 décembre de l’année ${an + 1}`),
       ),

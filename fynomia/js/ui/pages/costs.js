@@ -14,6 +14,7 @@ import { celebrate } from '../burst.js'
 import store from '../../state/store.js'
 import { gardePage, gardeLigne } from '../garde.js'
 import { chiffresDePage } from '../chiffres-pages.js'
+import { memoire } from '../memoire.js'
 
 export function renderCosts(navigate, refresh) {
   const s = store.scenario
@@ -65,9 +66,9 @@ export function renderCosts(navigate, refresh) {
     r && s.opex.length > 0 ? { key: 'repartition', read: true, label: 'Répartition' } : null,
   ]
   const want = claim('achats')
-  if (want && want.view) renderCosts.view = want.view
-  const view = views.some((v) => v && v.key === renderCosts.view) ? renderCosts.view : 'charges'
-  renderCosts.view = view
+  if (want && want.view) memoire.achats.view = want.view
+  const view = views.some((v) => v && v.key === memoire.achats.view) ? memoire.achats.view : 'charges'
+  memoire.achats.view = view
 
   const addCapex = (e) => {
     const c = newCapex({ enabled: true })
@@ -88,7 +89,7 @@ export function renderCosts(navigate, refresh) {
         ? { value: `${euro(monthlyTotal)}/mois`, note: `soit ${euro(monthlyTotal * 12)} par an` }
         : null,
       guide: stepGuide('charges', journey(store.scenario, store.result), 'achats'),
-      views, view, onPick: (k) => { renderCosts.view = k; refresh() },
+      views, view, onPick: (k) => { memoire.achats.view = k; refresh() },
       actions: [
         view === 'charges' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCustom }, '＋ Ajouter une charge') : null,
         view === 'invest' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCapex }, '＋ Ajouter un investissement') : null,

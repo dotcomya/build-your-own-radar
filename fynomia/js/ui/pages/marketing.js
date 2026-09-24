@@ -10,6 +10,7 @@ import { clientsFromBudget } from '../../engine/revenue.js'
 import { barChart, donut, PALETTE, YEAR_CATEGORIES } from '../charts.js'
 import { enableToggle } from '../dom.js'
 import store from '../../state/store.js'
+import { memoire } from '../memoire.js'
 
 /**
  * L'acquisition, en onglet de « Offre & revenus ».
@@ -22,15 +23,15 @@ export function renderAcquisition(navigate, refresh) {
   const s = store.scenario
   const r = store.result
   const level = store.level
-  const open = renderAcquisition.open || (renderAcquisition.open = new Set())
+  const open = memoire.acquisition.open || (memoire.acquisition.open = new Set())
   // La première ligne s'ouvre à l'arrivée, pas à chaque rendu.
   //
   // « Si rien n'est ouvert, ouvre la première » se rejouait à chaque passage :
   // refermer la seule ligne de la liste était donc impossible — elle se
   // rouvrait dans la foulée, et le chevron ne servait à rien. On ne l'amorce
   // qu'une fois par dossier ouvert.
-  if (renderAcquisition.seeded !== store.currentId) {
-    renderAcquisition.seeded = store.currentId
+  if (memoire.acquisition.seeded !== store.currentId) {
+    memoire.acquisition.seeded = store.currentId
     if (s.marketing[0]) open.add(s.marketing[0].id)
   }
 
