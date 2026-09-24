@@ -81,6 +81,29 @@ const base = () => {
   ok('dette éteinte en fin d’échéancier', near(r.balance[4].debt, 0, 2), `${Math.round(r.balance[4].debt)} €`)
 }
 
+// ── Différé : le capital attend, les intérêts courent ──
+{
+  const s = base()
+  s.activities = [newActivity({ name:'Presta', unitPrice: 8000, unitCost: 0, paymentLag: 0,
+    volumes:{ mode:'manual', manual: Array.from({length:60},()=> 3) } })]
+  s.financing.loans = [{ id:'l1', label:'Prêt', amount: 160000, month: 0, months: 96, rate: 0.04, graceMonths: 6 }]
+  const r = compute(s)
+  const mensuel = 160000 * 0.04 / 12   // 533,33 € d'intérêts par mois de différé
+  ok('pendant le différé, les intérêts du mois sont payés', r.financing.interest.slice(0, 6).every((v) => near(v, mensuel, 0.01)),
+     r.financing.interest.slice(0, 6).map((v) => v.toFixed(2)).join(' / '))
+  ok('pendant le différé, aucun capital remboursé', r.financing.repayment.slice(0, 6).every((v) => v === 0))
+  ok('l’échéancier démarre après le différé', r.financing.repayment[6] > 0 && near(r.financing.interest[6], mensuel, 0.01),
+     `capital ${Math.round(r.financing.repayment[6])} €, intérêts ${r.financing.interest[6].toFixed(2)} €`)
+  // Sur un prêt qui s'éteint dans l'horizon, le différé coûte exactement ses
+  // mois d'intérêts : l'échéancier qui suit est le même, décalé.
+  const total = (x) => x.financing.interest.reduce((a, b) => a + b, 0)
+  const pret48 = (g) => compute({ ...s, financing: { ...s.financing, loans: [{ ...s.financing.loans[0], months: 48, graceMonths: g }] } })
+  const avec = pret48(6), sans = pret48(0)
+  ok('le différé coûte ses mois d’intérêts, et rien d’autre', near(total(avec) - total(sans), 6 * mensuel, 0.01),
+     `${(total(avec) - total(sans)).toFixed(2)} € pour ${(6 * mensuel).toFixed(2)} € attendus`)
+  ok('le bilan tient avec un différé', r.balance.every((b) => Math.abs(b.gap) < 1), r.balance.map((b) => Math.round(b.gap)).join(' / '))
+}
+
 // ── Créances clients : ce qui est facturé et pas encore encaissé ──
 {
   const s = base()

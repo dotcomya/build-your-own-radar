@@ -376,6 +376,15 @@ export function financingSeries(scenario) {
     const start = Math.max(0, Number(loan.month) || 0)
     const grace = Math.max(0, Number(loan.graceMonths) || 0)
     push(loanDrawdown, start, principal)
+    // Le différé d'amortissement : le capital attend, les intérêts courent.
+    // C'est le différé que proposent les banques — on paie chaque mois les
+    // intérêts sur tout ce qu'on doit, puis l'échéancier démarre. Le compter
+    // gratuit rendait la première année plus belle qu'elle ne sera.
+    for (let k = 0; k < grace; k++) {
+      const m = start + k
+      if (m >= MONTHS) break
+      interest[m] += principal * rate
+    }
     const payment = rate > 0 ? (principal * rate) / (1 - Math.pow(1 + rate, -n)) : principal / n
     let outstanding = principal
     for (let k = 0; k < n; k++) {

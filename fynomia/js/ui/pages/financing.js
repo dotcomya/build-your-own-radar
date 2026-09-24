@@ -386,8 +386,11 @@ function loanSummary(l) {
   const n = Math.max(1, Number(l.months) || 1)
   const rate = (Number(l.rate) || 0) / 12
   const payment = rate > 0 ? (principal * rate) / (1 - Math.pow(1 + rate, -n)) : principal / n
-  const totalInterest = payment * n - principal
-  return `Mensualité de ${euro(payment)} pendant ${n} mois, soit ${euro(totalInterest)} d'intérêts au total.`
+  // Un différé : les intérêts seuls, chaque mois, avant la première mensualité.
+  const grace = Math.max(0, Number(l.graceMonths) || 0)
+  const totalInterest = payment * n - principal + principal * rate * grace
+  const differe = grace > 0 ? `Différé de ${grace} mois : ${euro(principal * rate)} d'intérêts par mois, sans capital. Puis m` : 'M'
+  return `${differe}ensualité de ${euro(payment)} pendant ${n} mois, soit ${euro(totalInterest)} d'intérêts au total.`
 }
 
 function tile(label, value, sub, glossaryKey, tone) {
