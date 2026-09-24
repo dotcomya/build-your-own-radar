@@ -731,7 +731,7 @@ function leviersChiffres(s, r) {
     h('div', { class: 'sy-levers-rows' },
       ...best.map((a, i) => {
         const tresor = -n(a.delta.fundingNeed) > 0
-        const gain = tresor ? -n(a.delta.fundingNeed) : n(a.delta.ebitda)
+        const gain = tresor ? -n(a.delta.fundingNeed) : n(a.delta.ebe)
         return h('div', { class: 'sy-lever', style: { '--i': String(i) } },
           h('span', { class: 'sy-lever-no' }, String(i + 1)),
           h('span', { class: 'sy-lever-txt' },
@@ -982,7 +982,7 @@ function cinqAns(r, y, choisir) {
   const k = r.kpis
   const series = [
     { cle: 'ca', nom: 'Chiffre d’affaires', vals: p.revenue },
-    { cle: 'ebitda', nom: 'EBE', vals: p.ebitda },
+    { cle: 'ebe', nom: 'EBE', vals: p.ebe },
     { cle: 'net', nom: 'Résultat net', vals: p.netResult },
   ]
   const seuils = (k.breakEven || []).map((v) => n(v))
@@ -1051,7 +1051,7 @@ function compteAnnee(r, y) {
     n(p.duties[y]) ? l('− Impôts et taxes', p.duties[y]) : null,
     n(p.grants[y]) ? l('+ Subventions', p.grants[y]) : null,
     l('− Salaires et cotisations', p.payroll[y]),
-    l('= EBE', p.ebitda[y], true),
+    l('= EBE', p.ebe[y], true),
     n(p.amortisation[y]) ? l('− Amortissements', p.amortisation[y]) : null,
     l('= Résultat d’exploitation', p.ebit[y], true),
     n(p.interest[y]) ? l('− Intérêts', p.interest[y]) : null,
@@ -1084,7 +1084,7 @@ function cascade(r, y) {
     { nom: 'Charges externes', v: -Math.abs(n(p.external[y])) },
     { nom: 'Impôts et taxes', v: -Math.abs(n(p.duties[y])) },
     { nom: 'Personnel', v: -Math.abs(n(p.payroll[y])) },
-    { nom: 'EBE', v: n(p.ebitda[y]), solde: true },
+    { nom: 'EBE', v: n(p.ebe[y]), solde: true },
     { nom: 'Amortissements', v: -Math.abs(n(p.amortisation[y])) },
     { nom: 'Frais financiers', v: -Math.abs(n(p.interest[y])) },
     { nom: 'Impôt sur les sociétés', v: -Math.abs(n(p.corporateTax[y])) },
@@ -1214,7 +1214,7 @@ function ratios(r, y) {
   const rien = '—'
   const lignes = [
     { nom: 'Marge brute', v: ca > 0 ? pct(n(k.marginRate[y])) : rien, dit: 'Ce qui reste après les achats' },
-    { nom: 'Marge d’EBE', v: ca > 0 ? pct(n(k.ebitdaMargin[y])) : rien, dit: 'Ce que dégage l’exploitation' },
+    { nom: 'Marge d’EBE', v: ca > 0 ? pct(n(k.ebeMargin[y])) : rien, dit: 'Ce que dégage l’exploitation' },
     { nom: 'Marge nette', v: ca > 0 ? pct(n(k.netMargin[y])) : rien, dit: 'Ce qui reste, tout payé' },
     { nom: 'Masse salariale', v: ca > 0 ? pct(n(k.payrollRatio[y])) : rien, dit: 'Part du CA versée en salaires' },
     { nom: 'Point mort', v: k.breakEven[y] ? euro(n(k.breakEven[y]), { compact: true }) : rien, dit: 'CA qui couvre les charges' },

@@ -40,13 +40,21 @@ export const GLOSSARY = {
     use: "C'est le premier chiffre que regarde un banquier. S'il est très supérieur à ta prévision de ventes, ton modèle ne tient pas : soit tu augmentes tes prix, soit tu réduis tes coûts fixes, soit tu améliores ta marge.",
     watch: "Certaines charges fixes de Fynomia sont calculées en pourcentage du chiffre d'affaires. Le point mort varie donc légèrement d'une année sur l'autre : retiens l'ordre de grandeur, pas la décimale.",
   },
-  ebitda: {
+  ebe: {
     title: "EBE — Excédent brut d'exploitation",
     what: "Ce que ton activité génère réellement, avant de tenir compte de la façon dont tu l'as financée, de tes investissements passés et de l'impôt. C'est la mesure la plus proche de « est-ce que mon métier gagne de l'argent ? ».",
     formula: "EBE = Valeur ajoutée + Subventions − Impôts et taxes − Charges de personnel",
     how: "Fynomia part du chiffre d'affaires, retire les achats directement liés aux ventes (marge brute), puis les charges externes (valeur ajoutée), puis les impôts de production et la masse salariale chargée.",
-    use: "L'EBE sert à comparer deux entreprises indépendamment de leur structure financière. C'est aussi la base de la plupart des valorisations : une société se négocie souvent en multiple de son EBE. Les investisseurs anglo-saxons disent EBITDA : c'est, à quelques retraitements près, le même chiffre.",
+    use: "L'EBE sert à comparer deux entreprises indépendamment de leur structure financière. C'est le solde du plan comptable français, celui que lit ton banquier. Les investisseurs parlent plutôt d'EBITDA, qui mesure la même chose par un autre chemin.",
     watch: "L'EBE n'est pas de la trésorerie. Tu peux afficher un EBE positif et manquer d'argent en banque si tes clients paient à 60 jours. Regarde toujours les deux ensemble.",
+  },
+  ebitda: {
+    title: 'EBITDA — résultat avant intérêts, impôts, dotations aux amortissements et provisions',
+    what: "La mesure anglo-saxonne de ce que dégage l'exploitation, avant la façon dont tu l'as financée, l'usure de ce que tu as acheté et l'impôt. C'est le chiffre que citent les investisseurs, et celui sur lequel se calculent la plupart des multiples de valorisation.",
+    formula: "EBITDA = Résultat d'exploitation + Dotations aux amortissements et provisions",
+    how: "Fynomia le calcule par le bas : il part du résultat d'exploitation et y rajoute les dotations aux amortissements de tes investissements. L'EBE, lui, se calcule par le haut, depuis la valeur ajoutée. Les loyers de crédit-bail restent des charges, comme le veulent les normes françaises.",
+    use: "EBE et EBITDA s'écartent des autres produits et charges de gestion courante — redevances de marque ou de licence, pertes sur créances irrécouvrables — et des provisions, que l'EBITDA garde et que l'EBE laisse de côté. Ton plan n'en comporte pas : les deux tombent sur le même montant, et c'est le signe que le compte de résultat est cohérent.",
+    watch: "L'EBITDA n'est ni un bénéfice ni de la trésorerie : il ignore l'usure du matériel, le coût de la dette et l'impôt. Un investisseur le lit avec le besoin de financement ; un banquier lui préfère l'EBE et la CAF.",
   },
   caf: {
     title: "CAF — Capacité d'autofinancement",

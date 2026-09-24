@@ -103,7 +103,7 @@ export const ACTIONS = [
  * Évalue toutes les actions applicables et renvoie les meilleures.
  *
  * Le classement dépend de la situation : quand il manque de l'argent, ce qui
- * compte est le besoin de financement ; sinon, c'est l'EBITDA.
+ * compte est le besoin de financement ; sinon, c'est l'EBE.
  */
 export function suggestActions(scenario, baseResult, { limit = 3 } = {}) {
   const y = referenceYear(baseResult)
@@ -123,7 +123,7 @@ export function suggestActions(scenario, baseResult, { limit = 3 } = {}) {
     const after = measure(draft, result, y)
 
     const delta = {
-      ebitda: after.ebitda - base.ebitda,
+      ebe: after.ebe - base.ebe,
       breakEven: after.breakEven !== null && base.breakEven !== null ? after.breakEven - base.breakEven : null,
       fundingNeed: after.fundingNeed - base.fundingNeed,
       founderMonthly: after.founderMonthly - base.founderMonthly,
@@ -132,15 +132,15 @@ export function suggestActions(scenario, baseResult, { limit = 3 } = {}) {
 
     // Score : ce qui manque le plus pèse le plus lourd.
     const score = shortOfCash
-      ? -delta.fundingNeed * 2 + delta.ebitda * 0.5
-      : delta.ebitda + Math.max(0, -delta.fundingNeed) * 0.5
+      ? -delta.fundingNeed * 2 + delta.ebe * 0.5
+      : delta.ebe + Math.max(0, -delta.fundingNeed) * 0.5
 
     evaluated.push({
       key: action.key, label: action.label, rationale: action.rationale,
       detail: safeDescribe(action, scenario),
       delta, score, apply: action.apply,
       // Une action peut se retourner contre toi : on le dit.
-      harmful: delta.ebitda < 0 && delta.fundingNeed > 0,
+      harmful: delta.ebe < 0 && delta.fundingNeed > 0,
     })
   }
 
@@ -162,7 +162,7 @@ function measure(scenario, result, y) {
     founderMonthly = income.rows[y]?.monthly || 0
   } catch { /* le revenu du dirigeant n'est pas indispensable au classement */ }
   return {
-    ebitda: result.pnl.ebitda[y],
+    ebe: result.pnl.ebe[y],
     revenue: result.pnl.revenue[y],
     breakEven: result.kpis.breakEven[y],
     fundingNeed: result.kpis.fundingNeed,

@@ -362,7 +362,7 @@ export function buildDeck(scenario, result, profile) {
     ...slideHeader('Les chiffres clés', `Exercice de référence : ${YEARS[refYear].toLowerCase()}`),
     ...kpiRow([
       { label: "CHIFFRE D'AFFAIRES", value: eurC(p.revenue[refYear]), sub: YEARS[refYear] },
-      { label: 'EBE', value: eurC(p.ebitda[refYear]), sub: `${formatPct(k.ebitdaMargin[refYear])} du CA`, color: p.ebitda[refYear] >= 0 ? MINT : ROSE },
+      { label: 'EBE', value: eurC(p.ebe[refYear]), sub: `${formatPct(k.ebeMargin[refYear])} du CA`, color: p.ebe[refYear] >= 0 ? MINT : ROSE },
       { label: 'RÉSULTAT NET', value: eurC(p.netResult[refYear]), sub: `${formatPct(k.netMargin[refYear])} du CA`, color: p.netResult[refYear] >= 0 ? MINT : ROSE },
       { label: 'POINT MORT', value: k.breakEven[refYear] ? eurC(k.breakEven[refYear]) : '—', sub: k.breakEven[refYear] && p.revenue[refYear] >= k.breakEven[refYear] ? 'Atteint' : 'Non atteint', color: AMBER },
     ], 1650000),
@@ -382,7 +382,7 @@ export function buildDeck(scenario, result, profile) {
       x: M, y: 1600000, w: CONTENT_W, h: 2900000, categories: YEARS.map((y) => y.replace('Année ', 'A')),
       series: [
         { label: "Chiffre d'affaires", values: p.revenue, color: BRAND },
-        { label: 'EBE', values: p.ebitda, color: MINT },
+        { label: 'EBE', values: p.ebe, color: MINT },
         { label: 'Résultat net', values: p.netResult, color: AMBER },
       ],
     }),
@@ -400,9 +400,10 @@ export function buildDeck(scenario, result, profile) {
       { cells: ['Charges externes', ...p.external.map((v) => eur(-v))] },
       { cells: ['Charges de personnel', ...p.payroll.map((v) => eur(-v))] },
       { cells: ['Impôts et taxes', ...p.duties.map((v) => eur(-v))] },
-      { cells: ['EBE', ...p.ebitda.map(eur)], emphasis: true },
+      { cells: ['EBE', ...p.ebe.map(eur)], emphasis: true },
       { cells: ['Amortissements', ...p.amortisation.map((v) => eur(-v))] },
       { cells: ["Résultat d'exploitation", ...p.ebit.map(eur)] },
+      { cells: ["EBITDA (résultat d'exploitation + amortissements)", ...p.ebitda.map(eur)] },
       ...(p.credits.some((v) => v) ? [{ cells: ["Crédits d'impôt", ...p.credits.map(eur)] }] : []),
       { cells: ['Impôt sur les sociétés', ...p.corporateTax.map((v) => eur(-v))] },
       { cells: ['Résultat net', ...p.netResult.map(eur)], emphasis: true },
@@ -569,7 +570,7 @@ export function buildDeck(scenario, result, profile) {
     const cards = suggestions.best.flatMap((a, i) => {
       const y = 1700000 + i * (cardH + 220000)
       const gains = [
-        a.delta.ebitda ? { label: 'EBE', value: eur(a.delta.ebitda), good: a.delta.ebitda > 0 } : null,
+        a.delta.ebe ? { label: 'EBE', value: eur(a.delta.ebe), good: a.delta.ebe > 0 } : null,
         a.delta.fundingNeed ? { label: 'FINANCEMENT', value: eur(a.delta.fundingNeed), good: a.delta.fundingNeed < 0 } : null,
         a.delta.breakEven ? { label: 'POINT MORT', value: eur(a.delta.breakEven), good: a.delta.breakEven < 0 } : null,
       ].filter(Boolean).slice(0, 3)
@@ -613,7 +614,7 @@ export function buildDeck(scenario, result, profile) {
     // nommé. Trois lignes suffiraient à donner le résultat, mais c'est le
     // chemin qui explique pourquoi l'écart est si grand.
     const steps = [
-      { label: "EBE de l'entreprise", value: p.ebitda[refYear], kind: 'start' },
+      { label: "EBE de l'entreprise", value: p.ebe[refYear], kind: 'start' },
       // Ta rémunération est déjà déduite au-dessus : la rappeler en gris
       // évite de croire, trois lignes plus bas, qu'elle sort du résultat net.
       ...(incomeRow.employerCost > 0 ? [{ label: 'dont ta rémunération chargée', value: -incomeRow.employerCost, kind: 'info',

@@ -104,7 +104,9 @@ export default async function (t, { rapide } = {}) {
   t.verifie(deck.claires === 8 && deck.sombres === 0 && deck.notes === 8, 'diapos : huit diapositives blanches, chacune avec sa note d’orateur', deck)
   t.verifie(deck.inter === 4 && deck.premier, 'diapos : le noir ne sert qu’aux intercalaires, qui ouvrent chaque partie', deck)
   t.verifie(await p.locator('.pitch-offre').count() >= 1 && await p.locator('.pitch-poste').count() >= 1, 'les offres et l’équipe sont listées')
-  t.verifie(await p.locator('.pitch-risques > li').count() >= 2 && await p.locator('.pitch-ratio').count() === 7, 'les risques et les sept ratios qu’on te demandera')
+  const ratios = await p.locator('.pitch-ratio-l').allInnerTexts()
+  t.verifie(await p.locator('.pitch-risques > li').count() >= 2 && ratios.length === 8 && ratios.some((l) => /^EBITDA/.test(l)) && ratios.some((l) => /EBE/.test(l)),
+    'les risques et les huit chiffres qu’on te demandera, l’EBE et l’EBITDA compris', ratios)
   await p.locator('.pitch-fleche[aria-label="Diapositive suivante"]').click()
   await p.waitForFunction(() => (document.querySelector('.pitch-compteur')?.innerText || '').startsWith('2'), null, { timeout: 3000 }).catch(() => {})
   await t.pose(p)

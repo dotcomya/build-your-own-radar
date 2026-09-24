@@ -464,7 +464,7 @@ function boardCharts(r, s, y, level, sector, navigate) {
       categories: YEAR_CATEGORIES,
       series: [
         { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
-        { label: 'EBE', values: p.ebitda, color: PALETTE[2] },
+        { label: 'EBE', values: p.ebe, color: PALETTE[2] },
         { label: 'Résultat net', values: p.netResult, color: PALETTE[5] },
       ],
       line: k.breakEven.some((v) => v)
@@ -586,7 +586,7 @@ function moneyFlow(r, y) {
   if (p.external[y]) items.push({ label: 'Charges externes', value: -p.external[y] })
   if (p.duties[y]) items.push({ label: 'Impôts et taxes', value: -p.duties[y] })
   if (p.payroll[y]) items.push({ label: 'Personnel', value: -p.payroll[y] })
-  items.push({ label: 'EBE', value: p.ebitda[y], total: true })
+  items.push({ label: 'EBE', value: p.ebe[y], total: true })
   if (p.amortisation[y]) items.push({ label: 'Amortis.', value: -p.amortisation[y] })
   if (p.interest[y]) items.push({ label: 'Frais fin.', value: -p.interest[y] })
   if (p.corporateTax[y]) items.push({ label: 'Impôt sociétés', value: -p.corporateTax[y] })
@@ -631,7 +631,7 @@ function actionsPanel(r, s, navigate, refresh) {
           h('p', { class: 'action-why' }, a.rationale),
         ),
         h('div', { class: 'action-gains' },
-          gainRow('EBE', a.delta.ebitda, true),
+          gainRow('EBE', a.delta.ebe, true),
           a.delta.fundingNeed !== 0 && gainRow('Financement', a.delta.fundingNeed, false),
           a.delta.breakEven !== null && a.delta.breakEven !== 0 && gainRow('Point mort', a.delta.breakEven, false),
           a.delta.founderMonthly !== 0 && gainRow('Pour toi', a.delta.founderMonthly, true, '/mois'),

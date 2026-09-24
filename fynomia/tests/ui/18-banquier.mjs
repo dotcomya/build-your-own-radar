@@ -4,7 +4,10 @@
  * Un restaurant emprunte 90 000 €. On vérifie que le dossier dit ce que le
  * banquier recalculera lui-même, avec l'échéancier réel :
  *
- *   1. le mot est « EBE », pas « EBITDA », partout où le fondateur lit ;
+ *   1. le dossier du banquier parle d'EBE ; les états financiers donnent
+ *      l'EBE puis l'EBITDA, chacun par son calcul — l'un par le haut, depuis
+ *      la valeur ajoutée, l'autre par le bas, depuis le résultat
+ *      d'exploitation — et chacun avec sa définition ;
  *   2. « Ce que ton banquier va vérifier » tient en cinq lignes — apport,
  *      couverture des échéances par la CAF, endettement, trésorerie, point
  *      mort —, chacune « Validé », « Juste » ou « À revoir » ;
@@ -14,7 +17,7 @@
  *      restante, année par année ;
  *   5. un prêt d'honneur ajouté améliore l'apport.
  */
-export const nom = 'Banquier — EBE, CAF, échéances réelles, cinq vérifications'
+export const nom = 'Banquier — EBE et EBITDA, CAF, échéances réelles, cinq vérifications'
 
 export default async function (t) {
   const p = await t.page('bureau')
@@ -74,10 +77,33 @@ export default async function (t) {
   const apres = await p.evaluate(async () => (await import('./js/state/store.js')).default.result.bank.apportShare)
   t.verifie(apres > avant, 'un prêt d’honneur améliore l’apport lu par le banquier', `${(avant * 100).toFixed(0)} % → ${(apres * 100).toFixed(0)} %`)
 
-  // Les états financiers parlent aussi d'EBE.
+  // Les états financiers : l'EBE d'abord, l'EBITDA à côté, chacun son calcul.
   await t.aller(p, 'resultats')
-  const res = await p.locator('.content').innerText()
-  t.verifie(!/EBITDA/.test(res), 'les états financiers ne disent plus EBITDA')
+  const comptes = await p.evaluate(async () => {
+    const { euro } = await import('./js/ui/dom.js')
+    const r = (await import('./js/state/store.js')).default.result
+    const table = [...document.querySelectorAll('.content table.data')].find((x) => /EBE/.test(x.innerText))
+    const lignes = table ? [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.children].map((td) => td.innerText.trim())) : []
+    const ebe = lignes.findIndex((l) => /^EBE/.test(l[0]))
+    const ebitda = lignes.findIndex((l) => /^EBITDA/.test(l[0]))
+    const p = r.pnl
+    return {
+      ebe, ebitda,
+      valeursEbe: ebe >= 0 && lignes[ebe].slice(1).join('|') === p.ebe.map((v) => euro(v)).join('|'),
+      valeursEbitda: ebitda >= 0 && lignes[ebitda].slice(1).join('|') === p.ebitda.map((v) => euro(v)).join('|'),
+      parLeHaut: p.ebe.every((v, y) => Math.abs(v - (p.valueAdded[y] + p.grants[y] - p.duties[y] - p.payroll[y])) < 1),
+      parLeBas: p.ebitda.every((v, y) => Math.abs(v - (p.ebit[y] + p.amortisation[y])) < 1),
+    }
+  })
+  t.verifie(comptes.ebe >= 0 && comptes.ebitda > comptes.ebe, 'les états financiers donnent l’EBE, puis l’EBITDA', comptes)
+  t.verifie(comptes.valeursEbe && comptes.valeursEbitda, 'chaque ligne affiche le chiffre du moteur', comptes)
+  t.verifie(comptes.parLeHaut && comptes.parLeBas, 'EBE par le haut (valeur ajoutée), EBITDA par le bas (résultat d’exploitation + amortissements)', comptes)
+  const definitions = await p.evaluate(async () => {
+    const { GLOSSARY } = await import('./js/ui/glossary.js')
+    return { ebe: GLOSSARY.ebe?.formula || '', ebitda: GLOSSARY.ebitda?.formula || '' }
+  })
+  t.verifie(/^EBE = Valeur ajoutée/.test(definitions.ebe) && /^EBITDA = Résultat d'exploitation \+ Dotations/.test(definitions.ebitda),
+    'chacun a sa définition dans le glossaire', definitions)
 
   t.verifie(p.erreurs.length === 0, 'aucune erreur JavaScript', p.erreurs.slice(0, 2))
   await p.fermer()

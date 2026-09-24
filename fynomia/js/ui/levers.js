@@ -53,7 +53,7 @@ function referenceYearOf(r) {
 function noteFor(key, r, y) {
   switch (key) {
     case 'revenue': return `Année ${y + 1}`
-    case 'ebitda': return `${pct(r.kpis.ebitdaMargin[y])} du CA`
+    case 'ebe': return `${pct(r.kpis.ebeMargin[y])} du CA`
     case 'netResult': return `${pct(r.kpis.netMargin[y])} du CA`
     case 'breakEven': {
       const be = r.kpis.breakEven[y]
@@ -77,7 +77,7 @@ function noteFor(key, r, y) {
     case 'jeiSaving': return r.jei[y]?.eligible ? 'Statut acquis' : 'Non éligible'
     case 'credits': return 'CIR et CII'
     case 'corporateTax': return `Année ${y + 1}`
-    case 'ebitdaMargin': return `Année ${y + 1}`
+    case 'ebeMargin': return `Année ${y + 1}`
     default: return ''
   }
 }

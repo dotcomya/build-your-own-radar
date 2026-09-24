@@ -553,6 +553,7 @@ function currentValue(key) {
   const ref = y >= 0 ? y : 2
   const map = {
     pointMort: () => r.kpis.breakEven[ref] ? `${euro(r.kpis.breakEven[ref])} en année ${ref + 1}` : null,
+    ebe: () => `${euro(r.pnl.ebe[ref])} en année ${ref + 1}`,
     ebitda: () => `${euro(r.pnl.ebitda[ref])} en année ${ref + 1}`,
     ebit: () => `${euro(r.pnl.ebit[ref])} en année ${ref + 1}`,
     margeBrute: () => `${euro(r.pnl.grossMargin[ref])} en année ${ref + 1}`,

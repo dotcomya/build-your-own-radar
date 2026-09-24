@@ -182,7 +182,7 @@ function microLadder(income, row, r, y) {
  */
 function waterfall(income, r, y) {
   const row = income.rows[y]
-  const ebitda = r.pnl.ebitda[y]
+  const ebe = r.pnl.ebe[y]
   const steps = []
 
   if (income.micro) {
@@ -196,7 +196,7 @@ function waterfall(income, r, y) {
     return flowPanel(steps, y, null)
   }
 
-  steps.push({ label: "EBE de l'entreprise", value: ebitda, kind: 'start' })
+  steps.push({ label: "EBE de l'entreprise", value: ebe, kind: 'start' })
   if (row.employerCost > 0) steps.push({ label: 'dont ta rémunération chargée', value: -row.employerCost, kind: 'info', note: `${euro(row.gross)} de brut, ${euro(row.employerCost - row.gross)} de cotisations` })
   steps.push({ label: 'Amortissements et frais financiers', value: -(r.pnl.amortisation[y] + r.pnl.interest[y]), kind: 'cost' })
   if (r.pnl.credits[y] > 0) steps.push({ label: "Crédits d'impôt", value: r.pnl.credits[y], kind: 'gain' })

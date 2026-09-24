@@ -208,7 +208,7 @@ function knob(lever, onLive) {
 function liveAnalysis(base, sim) {
   const FIG = [
     { label: "Chiffre d'affaires année 1", read: (r) => r.pnl.revenue[0], good: 1 },
-    { label: 'EBE année 1', read: (r) => r.pnl.ebitda[0], good: 1 },
+    { label: 'EBE année 1', read: (r) => r.pnl.ebe[0], good: 1 },
     { label: 'Trésorerie au plus bas', read: (r) => r.kpis.cashLow.value, good: 1 },
     { label: 'Financement à trouver', read: (r) => r.kpis.fundingNeed, good: -1 },
   ]

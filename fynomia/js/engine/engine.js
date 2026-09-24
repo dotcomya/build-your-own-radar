@@ -108,10 +108,21 @@ export function compute(scenario) {
   })
   const dutiesY = duties.map((d, y) => (jei[y].eligible ? d.total - d.cfe - d.cvae : d.total))
 
-  // EBE / EBITDA
-  const ebitdaY = valueAddedY.map((v, y) => v + grantsY[y] - dutiesY[y] - payrollY[y])
+  // EBE — le solde intermédiaire de gestion du plan comptable français,
+  // calculé par le haut : ce que l'exploitation produit, avant les
+  // amortissements, les frais financiers et l'impôt.
+  const ebeY = valueAddedY.map((v, y) => v + grantsY[y] - dutiesY[y] - payrollY[y])
   const amortisationY = byYear(capex.amortisationMonthly)
-  const ebitY = ebitdaY.map((v, y) => v - amortisationY[y])
+  // Résultat d'exploitation : l'EBE, moins les dotations aux amortissements,
+  // plus les autres produits et moins les autres charges de gestion courante
+  // (redevances, pertes sur créances irrécouvrables…) et les provisions —
+  // que le plan ne modélise pas.
+  const ebitY = ebeY.map((v, y) => v - amortisationY[y])
+  // EBITDA — la mesure anglo-saxonne, calculée par le bas : le résultat
+  // d'exploitation, auquel on rajoute les dotations aux amortissements et
+  // provisions. Il s'écarte de l'EBE de ces autres produits et charges de
+  // gestion : sans eux, dans ce plan, les deux tombent sur le même montant.
+  const ebitdaY = ebitY.map((v, y) => v + amortisationY[y])
 
   const interestY = byYear(financing.interest)
   const preCreditY = ebitY.map((v, y) => v - interestY[y])
@@ -155,7 +166,7 @@ export function compute(scenario) {
   // ─── 14. Indicateurs ───────────────────────────────────────────────────
   const kpis = indicators({
     revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY,
-    ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing,
+    ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing,
   })
 
   // ─── 15. Ce que le banquier va vérifier ───────────────────────────────
@@ -174,7 +185,7 @@ export function compute(scenario) {
     pnl: {
       revenue: revenueY, variableCost: variableCostY, grossMargin: grossMarginY,
       external: externalY, valueAdded: valueAddedY, duties: dutiesY, grants: grantsY,
-      payroll: payrollY, ebitda: ebitdaY, amortisation: amortisationY, ebit: ebitY,
+      payroll: payrollY, ebe: ebeY, amortisation: amortisationY, ebit: ebitY, ebitda: ebitdaY,
       interest: interestY, preTax: preCreditY, corporateTax: tax.map((t) => t.tax),
       credits: credits.map((c) => c.total), jeiSaving: jeiSavingY, netResult: netResultY,
     },
@@ -540,7 +551,7 @@ export function financingPlan({ bfr, capex, financing, netResultY, amortisationY
 
 // ──────────────────────────────── Indicateurs ───────────────────────────────
 
-export function indicators({ revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY }) {
+export function indicators({ revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY, ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY }) {
   const fixedCostsY = externalY.map((v, y) => v + payrollY[y] + dutiesY[y] + amortisationY[y] + interestY[y])
   const marginRateY = revenueY.map((v, y) => (v > 0 ? grossMarginY[y] / v : 0))
 
@@ -567,7 +578,7 @@ export function indicators({ revenueY, grossMarginY, externalY, payrollY, duties
   const cashLow = cash.balance.reduce((acc, v, m) => (v < acc.value ? { value: v, month: m } : acc), { value: Infinity, month: 0 })
   const firstNegative = cash.balance.findIndex((v) => v < 0)
   const firstProfitableYear = netResultY.findIndex((v) => v > 0)
-  const firstEbitdaPositiveYear = ebitdaY.findIndex((v) => v > 0)
+  const firstEbePositiveYear = ebeY.findIndex((v) => v > 0)
 
   // Burn rate et autonomie, calculés sur les 6 derniers mois consommateurs.
   const recentBurn = averageBurn(cash)
@@ -588,11 +599,12 @@ export function indicators({ revenueY, grossMarginY, externalY, payrollY, duties
 
   return {
     fixedCosts: fixedCostsY, marginRate: marginRateY, breakEven, breakEvenWithAid, breakEvenMonth,
+    ebeMargin: revenueY.map((v, y) => (v > 0 ? ebeY[y] / v : 0)),
     ebitdaMargin: revenueY.map((v, y) => (v > 0 ? ebitdaY[y] / v : 0)),
     netMargin: revenueY.map((v, y) => (v > 0 ? netResultY[y] / v : 0)),
     cashLow, firstNegativeMonth: firstNegative === -1 ? null : firstNegative,
     firstProfitableYear: firstProfitableYear === -1 ? null : firstProfitableYear,
-    firstEbitdaPositiveYear: firstEbitdaPositiveYear === -1 ? null : firstEbitdaPositiveYear,
+    firstEbePositiveYear: firstEbePositiveYear === -1 ? null : firstEbePositiveYear,
     burnRate: recentBurn, runwayMonths, fundingNeed,
     cac, ltv, ltvCacRatio: cac && ltv ? ltv / cac : null,
     peakBfr: Math.max(...bfr.total), arpu,

@@ -251,8 +251,8 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
         })),
         grandsChiffres([
           { cle: 'ca', label: 'Chiffre d’affaires', valeurs: p.revenue, mensuel: r.revenue?.monthly, ton: () => 'none', note: () => croissance(p.revenue) },
-          { cle: 'ebitda', label: 'EBE', valeurs: p.ebitda, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
-            note: (y) => (taux(n(p.ebitda[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebitda[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.') },
+          { cle: 'ebe', label: 'EBE', valeurs: p.ebe, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
+            note: (y) => (taux(n(p.ebe[y]) / (n(p.revenue[y]) || 1), p.revenue[y]) !== '—' ? `${pct(n(p.ebe[y]) / n(p.revenue[y]), 0)} du chiffre d’affaires.` : 'Avant amortissements, intérêts et impôts.') },
           { cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton: (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : 'none'),
             note: () => (aPremier ? `Premier bénéfice en année ${premier + 1}.` : 'Pas de bénéfice sur cinq ans.') },
           { cle: 'treso', label: 'Trésorerie à la clôture', valeurs: r.cash.yearEnd, mensuel: r.cash.balance, ton: (v) => (v < 0 ? 'bad' : 'good'), note: () => 'Au 31 décembre.' },
@@ -291,7 +291,7 @@ function partiesDuPitch(s, r, navigate, an, choisir) {
       corps: () => risques(s, r), avis: a.risques, tuile: [6, 1] },
     { cle: 'ratios', nom: 'Les chiffres qu’on te demandera',
       dit: 'Ceux qu’on compare d’un dossier à l’autre.',
-      recit: 'Sept chiffres à savoir par cœur : chiffre d’affaires, croissance, marges, premier bénéfice, besoin et autonomie.',
+      recit: 'Huit chiffres à savoir par cœur : chiffre d’affaires, croissance, marges, EBITDA, premier bénéfice, besoin et autonomie.',
       chiffre: { v: mois >= 0 ? `Année ${mois + 1}` : 'Pas atteint', l: 'le point mort' },
       mini: () => null,
       corps: () => ratios(s, r), avis: a.ratios, tuile: [6, 1] },
@@ -608,9 +608,9 @@ function modele(s, r) {
     ltv > 0 && cac > 0 ? fait('Valeur d’un client / coût pour le trouver', `${num(ltv / cac, 1)} ×`,
       `Un client rapporte ${euro(ltv)} sur toute sa durée de vie et coûte ${euro(cac)} à acquérir. En dessous de 3, la croissance coûte plus qu’elle ne rapporte.`,
       ltv / cac >= 3 ? 'is-good' : 'is-bad') : null,
-    fait('Marge d’EBE, année 3', taux(k.ebitdaMargin?.[y], p.revenue[y]),
-      tauxDit(k.ebitdaMargin?.[y], p.revenue[y], 'La part du chiffre d’affaires que l’activité garde une fois l’équipe et les frais payés. C’est elle qui dit si le modèle devient rentable en grandissant.'),
-      taux(k.ebitdaMargin?.[y], p.revenue[y]) === '—' ? '' : n(k.ebitdaMargin?.[y]) > 0 ? 'is-good' : 'is-bad'),
+    fait('Marge d’EBE, année 3', taux(k.ebeMargin?.[y], p.revenue[y]),
+      tauxDit(k.ebeMargin?.[y], p.revenue[y], 'La part du chiffre d’affaires que l’activité garde une fois l’équipe et les frais payés. C’est elle qui dit si le modèle devient rentable en grandissant.'),
+      taux(k.ebeMargin?.[y], p.revenue[y]) === '—' ? '' : n(k.ebeMargin?.[y]) > 0 ? 'is-good' : 'is-bad'),
   )
 }
 
@@ -683,7 +683,8 @@ function ratios(s, r) {
     ['Chiffre d’affaires en année 3', euro(n(p.revenue[2])), 'La taille de l’affaire à moyen terme.'],
     ['Croissance moyenne par an', (() => { const a = n(p.revenue[0]), b = n(p.revenue[4]); return a > 0 && b > 0 && b / a <= 1000 ? pct(Math.pow(b / a, 1 / 4) - 1, 0) : '—' })(), 'Le rythme auquel l’entreprise grandit, de l’année 1 à l’année 5.'],
     ['Marge brute', taux(k.marginRate?.[2], p.revenue[2]), 'Ce que rapporte chaque vente avant les frais fixes.'],
-    ['Marge d’EBE en année 3', taux(k.ebitdaMargin?.[2], p.revenue[2]), 'Ce que l’activité garde une fois tout le fonctionnement payé.'],
+    ['Marge d’EBE en année 3', taux(k.ebeMargin?.[2], p.revenue[2]), 'Ce que l’activité garde une fois tout le fonctionnement payé.'],
+    ['EBITDA en année 3', euro(n(p.ebitda[2])), 'Résultat d’exploitation plus amortissements : la mesure sur laquelle se calculent les multiples de valorisation.'],
     ['Premier bénéfice', k.firstProfitableYear !== null && k.firstProfitableYear !== undefined ? `Année ${k.firstProfitableYear + 1}` : 'Pas sur cinq ans', 'Quand l’entreprise arrête de consommer l’argent investi.'],
     ['Besoin de financement', n(k.fundingNeed) > 0 ? euro(n(k.fundingNeed)) : 'Aucun', 'Le plus bas que touche le compte : le minimum à lever.'],
     ['Autonomie', k.runwayMonths === null || k.runwayMonths === undefined ? 'Illimitée' : `${num(n(k.runwayMonths), 0)} mois`, 'Combien de temps la trésorerie tient sans nouvelle rentrée.'],
@@ -808,7 +809,7 @@ function avis(s, r) {
         }
 
   // 3. La croissance.
-  const em5 = n(k.ebitdaMargin?.[4])
+  const em5 = n(k.ebeMargin?.[4])
   out.trajectoire = cagr === null
     ? {
         ton: 'watch', titre: 'Aucune vente la première année',

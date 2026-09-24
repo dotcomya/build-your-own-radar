@@ -120,9 +120,9 @@ function quatreChiffres(r, an, choisir) {
         : 'Hors taxes. Aucun point mort calculable sans marge positive.'),
     },
     {
-      cle: 'ebitda', label: 'EBE', valeurs: p.ebitda, ton,
-      pourquoi: 'Ce que ton activité gagne vraiment, avant les choix de financement et la fiscalité. C’est le chiffre qu’un investisseur compare d’une entreprise à l’autre.',
-      note: (y) => `${part(p.ebitda[y], y) ? `${part(p.ebitda[y], y)}, ` : ''}avant amortissements, intérêts et impôts.`,
+      cle: 'ebe', label: 'EBE', valeurs: p.ebe, ton,
+      pourquoi: 'Ce que ton activité gagne vraiment, avant les choix de financement et la fiscalité. C’est le premier chiffre que regarde ton banquier ; un investisseur lit l’EBITDA, juste en dessous.',
+      note: (y) => `${part(p.ebe[y], y) ? `${part(p.ebe[y], y)}, ` : ''}avant amortissements, intérêts et impôts.`,
     },
     {
       cle: 'net', label: 'Résultat net', valeurs: p.netResult, ton,
@@ -207,12 +207,17 @@ function pnlView(r, level) {
     h('td', { class: 'muted small' }, label),
     ...values.map((v) => h('td', { class: 'num pct' }, pct(v))),
   )
+  const noteRow = (texte) => h('tr', { class: 'row-note' },
+    h('td', { class: 'muted small', colspan: String(1 + p.revenue.length) }, texte),
+  )
 
-  // Quatre lignes à l'écran, dix-huit derrière un chevron.
+  // Cinq lignes à l'écran, les vingt autres derrière un chevron.
   //
-  // Le compte de résultat complet est juste, et c'est un mur : dix-huit lignes
-  // sur cinq exercices, quatre-vingt-dix nombres, dont quatre seulement se
-  // retiennent. On montre ces quatre-là, et le reste s'ouvre pour qui vérifie.
+  // Le compte de résultat complet est juste, et c'est un mur : une vingtaine
+  // de lignes sur cinq exercices, une centaine de nombres, dont quelques-uns
+  // seulement se retiennent. On montre ceux-là — l'EBE du banquier et
+  // l'EBITDA de l'investisseur côte à côte —, et le reste s'ouvre pour qui
+  // vérifie.
   const essentiel = h('div', { class: 'card mb' },
     h('div', { class: 'card-head' },
       h('div', {},
@@ -226,7 +231,8 @@ function pnlView(r, level) {
         h('tbody', {},
           line("Chiffre d'affaires", p.revenue, { cls: 'highlight' }),
           line('Marge brute', p.grossMargin, { help: 'margeBrute' }),
-          line("EBE", p.ebitda, { help: 'ebitda' }),
+          line("EBE", p.ebe, { help: 'ebe' }),
+          line('EBITDA', p.ebitda, { help: 'ebitda' }),
           line('Résultat net', p.netResult, { cls: 'total' }),
           rate('marge nette', k.netMargin),
         ),
@@ -237,7 +243,7 @@ function pnlView(r, level) {
   return h('div', {},
     essentiel,
 
-    refine('resultat-sig', 'Voir les dix-huit lignes du compte de résultat',
+    refine('resultat-sig', 'Voir le compte de résultat ligne à ligne',
       h('div', { class: 'table-wrap' },
         h('table', { class: 'data' },
           h('thead', {}, h('tr', {}, h('th', {}, ''), ...YEAR_CATEGORIES.map((c, i) => h('th', {}, yearLabel(i))))),
@@ -251,10 +257,15 @@ function pnlView(r, level) {
             line('Impôts et taxes', p.duties, { negate: true }),
             ...(p.grants.some((v) => v) ? [line("Subventions d'exploitation", p.grants)] : []),
             line('Charges de personnel', p.payroll, { negate: true, help: 'superBrut' }),
-            line("EBE — Excédent brut d'exploitation", p.ebitda, { cls: 'highlight', help: 'ebitda' }),
-            rate('marge d\'EBE', k.ebitdaMargin),
+            line("EBE — Excédent brut d'exploitation", p.ebe, { cls: 'highlight', help: 'ebe' }),
+            rate('marge d\'EBE', k.ebeMargin),
             line('Dotations aux amortissements', p.amortisation, { negate: true }),
             line("Résultat d'exploitation", p.ebit, { help: 'ebit' }),
+            // L'EBITDA se lit par le bas, depuis le résultat d'exploitation :
+            // c'est sa définition, et ce qui le distingue de l'EBE.
+            line("EBITDA — Résultat d'exploitation + amortissements", p.ebitda, { cls: 'highlight', help: 'ebitda' }),
+            rate("marge d'EBITDA", k.ebitdaMargin),
+            ...(p.ebitda.every((v, y) => Math.abs(v - p.ebe[y]) < 1) ? [noteRow("Égal à l'EBE : ton plan ne comporte ni autres produits ou charges de gestion courante, ni provisions, qui seuls les distinguent.")] : []),
             line('Charges financières', p.interest, { negate: true }),
             line('Résultat avant impôt', p.preTax),
             ...(p.credits.some((v) => v) ? [line("Crédits d'impôt recherche et innovation", p.credits, { help: 'cir' })] : []),
@@ -275,7 +286,7 @@ function pnlView(r, level) {
             series: [
               { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
               { label: 'Marge brute', values: p.grossMargin, color: PALETTE[1] },
-              { label: 'EBE', values: p.ebitda, color: PALETTE[3] },
+              { label: 'EBE', values: p.ebe, color: PALETTE[3] },
               { label: 'Résultat net', values: p.netResult, color: PALETTE[2] },
             ],
           }),

@@ -414,7 +414,7 @@ function snapshot(result) {
   return {
     year: y,
     revenue: result.pnl.revenue[y],
-    ebitda: result.pnl.ebitda[y],
+    ebe: result.pnl.ebe[y],
     breakEven: result.kpis.breakEven[y],
     fundingNeed: result.kpis.fundingNeed,
   }

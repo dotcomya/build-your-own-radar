@@ -87,7 +87,7 @@ export function renderBusinessCase(navigate, refresh) {
       h('div', { class: 'card-body' },
         h('div', { class: 'grid grid-4 kpis mb' },
           stat("Chiffre d'affaires", euro(r.pnl.revenue[y], { compact: true }), yearLabel(y)),
-          stat('EBE', euro(r.pnl.ebitda[y], { compact: true }), pct(k.ebitdaMargin[y]) + ' du CA'),
+          stat('EBE', euro(r.pnl.ebe[y], { compact: true }), pct(k.ebeMargin[y]) + ' du CA'),
           stat('Point mort', k.breakEven[y] ? euro(k.breakEven[y], { compact: true }) : '—', 'Seuil de rentabilité'),
           stat('Financement', k.fundingNeed > 0 ? euro(k.fundingNeed, { compact: true }) : 'Couvert', 'Besoin identifié'),
         ),
@@ -103,7 +103,7 @@ export function renderBusinessCase(navigate, refresh) {
             categories: YEAR_CATEGORIES,
             series: [
               { label: "Chiffre d'affaires", values: r.pnl.revenue, color: PALETTE[0] },
-              { label: 'EBE', values: r.pnl.ebitda, color: PALETTE[1] },
+              { label: 'EBE', values: r.pnl.ebe, color: PALETTE[1] },
               { label: 'Résultat net', values: r.pnl.netResult, color: PALETTE[2] },
             ],
           })),
@@ -175,8 +175,8 @@ function narrative(s, r, y) {
   ].flat())
 
   paras.push([
-    k.firstEbitdaPositiveYear !== null
-      ? `L'exploitation dégage un EBE positif dès ${theYear(k.firstEbitdaPositiveYear)} (${euro(p.ebitda[k.firstEbitdaPositiveYear])}). `
+    k.firstEbePositiveYear !== null
+      ? `L'exploitation dégage un EBE positif dès ${theYear(k.firstEbePositiveYear)} (${euro(p.ebe[k.firstEbePositiveYear])}). `
       : `L'EBE reste négatif sur l'ensemble de l'horizon modélisé. `,
     k.firstProfitableYear !== null
       ? `Le résultat net devient positif en ${yearLabel(k.firstProfitableYear).toLowerCase()}, à ${euro(p.netResult[k.firstProfitableYear])}, `
@@ -432,7 +432,7 @@ function buildCsv(r) {
   push('Impôts et taxes', p.duties)
   push('Subventions', p.grants)
   push('Charges de personnel', p.payroll)
-  push('EBE', p.ebitda)
+  push('EBE', p.ebe)
   push('Amortissements', p.amortisation)
   push("Résultat d'exploitation", p.ebit)
   push('Charges financières', p.interest)

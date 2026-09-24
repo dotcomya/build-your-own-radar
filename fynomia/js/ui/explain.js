@@ -33,10 +33,10 @@ export function trajectorySentence(r) {
 export function revenueSentence(r) {
   const p = r.pnl
   const y = 0
-  const marge = p.revenue[y] > 0 ? p.ebitda[y] / p.revenue[y] : 0
+  const marge = p.revenue[y] > 0 ? p.ebe[y] / p.revenue[y] : 0
   const seuil = r.kpis.breakEven[y]
   const dessous = seuil && p.revenue[y] < seuil
-  return `En année 1, ${euro(p.revenue[y], { compact: true })} de chiffre d'affaires laissent ${euro(p.ebitda[y], { compact: true })} d'EBE, soit ${pct(marge, 0)}. `
+  return `En année 1, ${euro(p.revenue[y], { compact: true })} de chiffre d'affaires laissent ${euro(p.ebe[y], { compact: true })} d'EBE, soit ${pct(marge, 0)}. `
     + (seuil
       ? `Le point mort est à ${euro(seuil, { compact: true })} : ${dessous ? 'il n’est pas encore atteint' : 'il est franchi'}.`
       : 'Le point mort n’est pas calculable tant que la marge unitaire est nulle.')

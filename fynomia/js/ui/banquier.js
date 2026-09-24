@@ -140,7 +140,7 @@ export function tableauBanquier(r, yearLabel) {
   return h('table', { class: 'data bk-table' },
     h('thead', {}, h('tr', {}, h('th', {}, ''), ...b.cafY.map((_, i) => h('th', {}, yearLabel ? yearLabel(i) : `Année ${i + 1}`)))),
     h('tbody', {},
-      ligne('EBE — excédent brut d’exploitation', r.pnl.ebitda),
+      ligne('EBE — excédent brut d’exploitation', r.pnl.ebe),
       ligne('CAF — capacité d’autofinancement', b.cafY, (v) => euro(v), 'highlight'),
       emprunte ? ligne('Échéances de prêt (capital + intérêts)', b.annuityY) : null,
       emprunte ? ligne('dont capital remboursé', b.capitalY, (v) => euro(v), 'muted') : null,
