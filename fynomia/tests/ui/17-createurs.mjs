@@ -62,7 +62,12 @@ export default async function (t) {
   // 4. L'ACRE, déclarée.
   await t.aller(p, 'projet', 900)
   const avant = e.cot0
-  await p.locator('[data-gap="regime"] .field-switch', { hasText: 'ACRE' }).locator('.switch').click()
+  const champAcre = p.locator('[data-gap="regime"] .field-switch', { hasText: 'ACRE' })
+  const bulle = await champAcre.locator('.switch-name .info-point').getAttribute('data-tip').catch(() => '')
+  t.verifie(await champAcre.locator('.info-point').count() === 1 && await champAcre.locator('.field-hint').count() === 0
+    && /cotisations/.test(bulle || '') && /URSSAF/.test(bulle || ''),
+  'le droit à l’ACRE s’explique dans une seule bulle, à côté du libellé', bulle)
+  await champAcre.locator('.switch').click()
   await p.waitForTimeout(900)
   e = await etat(p)
   t.verifie(e.acre && e.remise > 0 && e.cot0 < avant, 'l’ACRE allège les cotisations de la première année', `${Math.round(avant)} → ${Math.round(e.cot0)}`)

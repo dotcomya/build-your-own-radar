@@ -12,7 +12,7 @@
  * pour qui le cherche.
  */
 
-import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleShell, confirmDialog } from '../dom.js'
+import { h, euro, num, textField, selectField, switchField, helpButton, refine, moduleShell, confirmDialog, infoPoint } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { stepGuide } from '../tutorial.js'
@@ -471,10 +471,13 @@ function regimeBlock(s, sector, set) {
       }),
     ) : null,
     h('div', { class: `grid ${micro ? 'grid-3' : 'grid-2'} ${micro ? 'mt' : ''}` },
+      // Ce que l'ACRE efface, et à qui elle est ouverte : une seule bulle, à
+      // côté de l'interrupteur, plutôt qu'un paragraphe sous lui.
       switchField({
-        label: 'J’ai droit à l’ACRE',
+        label: h('span', { class: 'switch-name-i' }, 'J’ai droit à l’ACRE', infoPoint(
+          `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
+          { classe: 'is-champ' })),
         checked: !!s.meta.acre,
-        hint: `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
         onInput: (v) => set({ acre: v }, 'ACRE'),
       }),
     ),

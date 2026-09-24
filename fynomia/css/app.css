@@ -8353,3 +8353,14 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .cost-forfait { border: 0; cursor: pointer; padding: 4px 9px; border-radius: 999px; background: var(--warn-wash); color: var(--warn); font: 600 11.5px/1.2 var(--sans); white-space: nowrap; }
 .cost-forfait:hover { background: var(--warn); color: #fff; }
 @media (max-width: 640px) { .cost-seg { width: 100%; } .cost-seg-opt { flex: 1; } }
+
+/* Le « i » d'un champ : à côté du libellé, à sa taille, et sa bulle part vers
+   la droite — centrée, elle sortait de la colonne de gauche. Elle passe
+   devant la barre d'étape comme devant le reste. */
+.switch-name-i { display: inline-flex; align-items: center; gap: 6px; }
+.info-point.is-champ { width: 18px; height: 18px; font-size: 11.5px; z-index: 150; }
+.info-point.is-champ::after { left: -8px; z-index: 150; transform: translate(0, -4px); }
+.info-point.is-champ:hover::after, .info-point.is-champ:focus-visible::after, .info-point.is-champ.is-open::after { transform: translate(0, 0); }
+@media (max-width: 720px) {
+  .info-point.is-champ::after { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-width: none; transform: none !important; }
+}
