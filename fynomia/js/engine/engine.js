@@ -133,7 +133,12 @@ export function compute(scenario) {
   // plus les autres produits et moins les autres charges de gestion courante
   // (redevances, pertes sur créances irrécouvrables…) et les provisions —
   // que le plan ne modélise pas.
-  const ebitY = ebeY.map((v, y) => v - amortisationY[y])
+  // Les pertes sur créances irrécouvrables — les impayés — sont une autre
+  // charge de gestion courante (compte 654) : elles passent sous l'EBE, que
+  // le plan comptable arrête avant elles, et l'EBITDA, calculé par le bas,
+  // les retranche. C'est ce qui sépare les deux soldes dans ce plan.
+  const badDebtsY = byYear(rev.totals.badDebt)
+  const ebitY = ebeY.map((v, y) => v - amortisationY[y] - badDebtsY[y])
   // EBITDA — la mesure anglo-saxonne, calculée par le bas : le résultat
   // d'exploitation, auquel on rajoute les dotations aux amortissements et
   // provisions. Il s'écarte de l'EBE de ces autres produits et charges de
@@ -182,7 +187,7 @@ export function compute(scenario) {
   // ─── 14. Indicateurs ───────────────────────────────────────────────────
   const kpis = indicators({
     revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY,
-    ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing,
+    ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, ctx, financing, badDebtsY,
   })
 
   // ─── 15. Ce que le banquier va vérifier ───────────────────────────────
@@ -201,7 +206,7 @@ export function compute(scenario) {
     pnl: {
       revenue: revenueY, variableCost: variableCostY, grossMargin: grossMarginY,
       external: externalY, valueAdded: valueAddedY, duties: dutiesY, grants: grantsY,
-      payroll: payrollY, ebe: ebeY, amortisation: amortisationY, ebit: ebitY, ebitda: ebitdaY,
+      payroll: payrollY, ebe: ebeY, amortisation: amortisationY, badDebts: badDebtsY, ebit: ebitY, ebitda: ebitdaY,
       interest: interestY, preTax: preCreditY, corporateTax: tax.map((t) => t.tax),
       credits: credits.map((c) => c.total), jeiSaving: jeiSavingY, netResult: netResultY,
     },
@@ -475,7 +480,9 @@ export function workingCapital({ rev, vat, scenario }) {
 
   let cumRevenue = 0, cumCash = 0, cumCost = 0, cumPaid = 0
   for (let m = 0; m < MONTHS; m++) {
-    cumRevenue += rev.totals.total[m]
+    // Une facture impayée sort des créances quand on la passe en perte : elle
+    // n'est plus à encaisser.
+    cumRevenue += rev.totals.total[m] - (rev.totals.badDebt?.[m] || 0)
     cumCash += rev.totals.cash[m]
     cumCost += rev.totals.variableCost[m]
     cumPaid += rev.totals.variableCash[m]
@@ -603,17 +610,21 @@ export function financingPlan({ bfr, capex, financing, netResultY, amortisationY
 
 // ──────────────────────────────── Indicateurs ───────────────────────────────
 
-export function indicators({ revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY, ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY }) {
+export function indicators({ revenueY, grossMarginY, externalY, payrollY, dutiesY, amortisationY, interestY, ebeY, ebitdaY, ebitY, netResultY, cash, bfr, rev, scenario, credits, grantsY, badDebtsY = [0, 0, 0, 0, 0] }) {
   const fixedCostsY = externalY.map((v, y) => v + payrollY[y] + dutiesY[y] + amortisationY[y] + interestY[y])
   const marginRateY = revenueY.map((v, y) => (v > 0 ? grossMarginY[y] / v : 0))
+  // Le point mort se lit sur ce que chaque euro vendu laisse vraiment : la
+  // marge brute, moins la part qui ne sera jamais payée. Sans impayés, c'est
+  // le taux de marge brute.
+  const contributionY = revenueY.map((v, y) => (v > 0 ? (grossMarginY[y] - (badDebtsY[y] || 0)) / v : 0))
 
   const breakEven = revenueY.map((_, y) => {
-    if (marginRateY[y] <= 0) return null
-    return fixedCostsY[y] / marginRateY[y]
+    if (contributionY[y] <= 0) return null
+    return fixedCostsY[y] / contributionY[y]
   })
   const breakEvenWithAid = revenueY.map((_, y) => {
-    if (marginRateY[y] <= 0) return null
-    return Math.max(0, fixedCostsY[y] - grantsY[y] - credits[y].total) / marginRateY[y]
+    if (contributionY[y] <= 0) return null
+    return Math.max(0, fixedCostsY[y] - grantsY[y] - credits[y].total) / contributionY[y]
   })
   // Mois où le chiffre d'affaires cumulé dépasse le point mort de l'année.
   const breakEvenMonth = breakEven.map((target, y) => {

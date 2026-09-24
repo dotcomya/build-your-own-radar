@@ -24,18 +24,21 @@
  */
 
 import { h, euro, num, pct, monthLabel } from '../dom.js'
-import { hot, STATUS } from '../charts.js'
+import { hot, STATUS, barChart } from '../charts.js'
 import { checklist, parAxe, destination } from '../checklist.js'
 import { goToGap } from '../spotlight.js'
 import { lookup } from '../glossary.js'
 import { changed } from '../motion.js'
-import { synthese, RELIRE, lignesRestantes } from '../plain.js'
+import { synthese, RELIRE, lignesRestantes, POURQUOI } from '../plain.js'
 import { gardeBloc } from '../garde.js'
-import { figureSet, PAGE_NAME, avancement } from '../figures.js'
+import { PAGE_NAME, avancement } from '../figures.js'
 import { revenueSentence, costsSentence, mixSentence, cashSentence, bfrSentence, moneyFlowSentence } from '../explain.js'
-import { suggestActions } from '../../engine/simulate.js'
 import { verdict } from '../../engine/verdict.js'
-import { referenceYear } from '../../format.js'
+import { periodeAnnee } from '../../format.js'
+import { coutDUneVente } from '../../engine/engine.js'
+import { bloquantes } from '../../engine/plausible.js'
+import { lignesBanquier } from '../banquier.js'
+import { barres as asBarres, cascade as asCascade, courbeTreso, equation as asEquation, lesOffres, formule, consommation, sensibilites, lignesDeCouts, tableau as asTableau, prixTxt } from './analyse.js'
 import { SECTORS } from '../../state/schema.js'
 import { uniteOffre } from '../../state/sectors.js'
 import { mentionCourte } from '../../state/reperes.js'
@@ -55,7 +58,7 @@ const TON = { good: STATUS.gain, bad: STATUS.loss, watch: STATUS.warn }
  * régulière sur des caractères accentués : le paquet ne les échapperait pas.
  */
 const INSECABLE = '\u00a0'
-const titre = (t) => [' %', ' :', ' ;', ' ?', ' !', ' \u20ac', ' \u00bb', '\u00ab ']
+const titre = (t) => [' %', ' :', ' ;', ' ?', ' !', ' \u20ac', ' \u00bb', '\u00ab ', 'ann\u00e9e ', 'Ann\u00e9e ']
   .reduce((acc, m) => acc.split(m).join(m[0] === ' ' ? INSECABLE + m.slice(1) : m.slice(0, -1) + INSECABLE), String(t))
 
 /* ───────────────────────────── L'état de l'écran ─────────────────────────── */
@@ -147,21 +150,27 @@ export function renderStudio(navigate, refresh, goView) {
   if (entree) vus.clear()
   if (guetteur) guetteur.disconnect()
 
-  const y = etat.annee !== null && etat.annee >= 0 && etat.annee < 5 ? etat.annee : referenceYear(r)
+  // Les six chiffres lisent l'année 1 par défaut : c'est par elle que le
+  // détail s'ouvre ; les pastilles d'exercice en montrent une autre.
+  const y = etat.annee !== null && etat.annee >= 0 && etat.annee < 5 ? etat.annee : 0
   const choisir = (k) => { etat.annee = k; refresh() }
   const pilotage = () => (goView ? goView('pilotage') : navigate('#/tableau-de-bord'))
 
-  const { actes, sansCA } = synthese(s, r)
+  // Un chiffre hors de proportion avec le métier se signale dès l'ouverture,
+  // et rien ne se colore en succès tant qu'il tient.
+  const { garde } = synthese(s, r)
+  const prudence = bloquantes(garde || []).length > 0
 
-  racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
-    // L'avancement du dossier — ce qui est fait, ce qui reste — a rejoint le
-    // Pilotage. Le détail s'ouvre sur son sommaire, puis sur l'analyse.
-    sommaire(actes, sansCA),
-    ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA, navigate)),
-    pied(navigate, pilotage),
+  racine = h('div', { class: `sy is-edito ${entree ? 'is-enter' : ''}` },
+    // L'ordre du récit : le chiffre d'affaires et le résultat, puis ce qu'il
+    // faut financer ; les six chiffres à connaître ; un chapitre pour chacun.
+    introDetail(s, r, garde, prudence, navigate),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
+    sommaireDetail(),
+    ...partiesDetail(s, r, prudence, navigate),
     guet(hypotheses(r, s, navigate), 'hypotheses'),
     analyse(r, s, y, choisir, navigate, refresh),
+    pied(navigate, pilotage),
   )
   return racine
 }
@@ -420,133 +429,6 @@ function verdictLigne(v) {
   return el
 }
 
-/* ─────────────────────────────── 3. Les actes ────────────────────────────── */
-
-/**
- * Un acte : une question, sa réponse en titre, et les lectures qui la fondent.
- *
- * Les trois actes se ressemblaient trop : trois rangées de colonnes de texte,
- * même poids, même forme, et l'œil ne voyait plus où finissait l'un et
- * commençait l'autre. Chacun a désormais sa forme, choisie pour ce qu'il dit :
- *
- *   — le premier pose deux cartes de mesure : un grand chiffre, sa courbe,
- *     puis ce qu'il faut en retenir ;
- *   — le deuxième met une seule image au centre — où part chaque euro — et
- *     range les autres lectures en texte libre à côté ;
- *   — le troisième tend une bande : le seuil à franchir en grand, puis les
- *     leviers chiffrés.
- *
- * Dans les trois, la même hiérarchie : ce que l'on mesure, combien, ce qu'il
- * faut en retenir, puis le détail pour qui le veut. Le texte reste celui de la
- * synthèse d'origine ; c'est l'ordre et la taille qui ont changé.
- */
-// Le nom de chaque partie est la question à laquelle elle répond : on doit
-// savoir de quoi elle parle avant d'en lire le titre.
-const SECTIONS = {
-  plein: ['Gagnes-tu de l’argent, et quand ?', 'Où part chaque euro encaissé', 'Combien vendre pour être rentable'],
-  avant: ['Ce que ton projet coûte chaque mois', 'Ce qui pèse le plus dans tes dépenses', 'Combien il faudra vendre'],
-}
-
-function acte(a, i, total, r, s, sansCA, navigate) {
-  const cartes = a.cartes.filter(Boolean)
-  const nom = (sansCA ? SECTIONS.avant : SECTIONS.plein)[i] || ''
-  const tete = h('header', { class: 'sy-act-head' },
-    h('div', { class: 'sy-act-no' },
-      h('b', {}, String(i + 1).padStart(2, '0')),
-      h('span', {}, nom),
-      // Le titre dit ce que le plan donne tel qu'il est saisi ; un chiffre qui
-      // étonne se signale sur la ligne du numéro, replié, et s'ouvre par-dessus.
-      a.garde ? h('div', { class: 'sx-right-row' }, gardeBloc(a.garde, navigate, { classe: 'sy-garde' })) : null,
-      h('em', {}, `${i + 1} / ${total}`),
-    ),
-    h('h2', { class: 'sy-act-title' }, titre(a.titre)),
-    h('p', { class: 'sy-act-say' }, titre(a.dit)),
-    enClair(i, sansCA, s, r, navigate),
-  )
-
-  const dernier = i === total - 1
-  let corps
-  if (i === 1 && cartes.length > 1) corps = miseEnAvant(cartes, r)
-  else if (i === 2 && cartes.some((c) => c.cle === 'seuil' || c.cle === 'objectif')) corps = bande(cartes, r, dernier ? leviersChiffres(s, r) : null)
-  else corps = [duo(cartes, r), dernier ? leviersChiffres(s, r) : null]
-
-  return guet(h('section', { class: `sy-act sy-chapitre is-${i === 1 ? 'feature' : i === 2 ? 'band' : 'duo'}`, id: `sy-partie-${i + 1}` },
-    tete, corps,
-  ), `acte-${i}`)
-}
-
-/**
- * « En clair » : ce que l'acte veut dire pour toi, sans un mot de compta.
- *
- * Les actes étaient justes et beaux, mais un fondateur les lisait « sans
- * comprendre » : un titre, des cartes, des montants — et la question « donc,
- * je fais quoi ? » restait entière. Sous chaque titre, trois phrases au plus,
- * avec des euros et des mois plutôt que des sigles, puis le geste qui répond.
- */
-function enClair(i, sansCA, s, r, navigate) {
-  const p = r.pnl, k = r.kpis
-  const y = referenceYear(r)
-  const net = (p.netResult || []).map(n)
-  const premier = net.findIndex((v) => v > 0)
-  const manque = n(k.fundingNeed)
-  const bas = k.cashLow || {}
-  const quand = bas.month !== undefined && bas.month !== null ? monthLabel(bas.month, r.startDate) : null
-  const ca = n(p.revenue[y])
-  const lignes = []
-  const gestes = []
-  const va = (label, go) => gestes.push(h('button', { class: 'sy-clair-go', onClick: (e) => goToGap(go, navigate, e.currentTarget) }, `${label} →`))
-
-  if (sansCA) {
-    const mois = (Math.abs(n(p.payroll[0])) + Math.abs(n(p.external[0])) + Math.abs(n(p.duties[0]))) / 12
-    if (i === 0) {
-      lignes.push(`Sans aucune vente, ton projet te coûte environ ${euro(mois)} par mois.`)
-      lignes.push(manque > 0 ? `À ce rythme, ton compte descend jusqu’à ${euro(-manque)}${quand ? ` en ${quand}` : ''}.` : 'Ton compte tient malgré tout : tu as de quoi payer ces frais.')
-      va('Fixer ton prix de vente', { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' })
-    } else if (i === 1) {
-      lignes.push('Le plus gros poste de dépense est celui à regarder en premier : c’est là qu’un euro économisé compte le plus.')
-      va('Voir tes charges', { route: 'achats', view: 'charges', anchor: 'charges' })
-    } else {
-      lignes.push(`Pour couvrir ces frais, il faudra vendre au moins ${euro(mois)} par mois, avant même de te payer davantage.`)
-      va('Estimer tes ventes du premier mois', { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' })
-    }
-  } else if (i === 0) {
-    lignes.push(net[0] < 0
-      ? `La première année, tu perds ${euro(-net[0])} : c’est normal au démarrage, tu dépenses avant de vendre.`
-      : `Dès la première année, tu gagnes ${euro(net[0])} une fois tout payé, impôts compris.`)
-    lignes.push(premier > 0
-      ? `Tu commences à gagner de l’argent en année ${premier + 1} (${euro(net[premier])} de bénéfice).`
-      : premier === 0 ? 'Tu restes bénéficiaire ensuite, année après année.' : 'Sur cinq ans, tu ne gagnes jamais d’argent : il faut revoir tes prix, tes volumes ou tes charges.')
-    lignes.push(manque > 0
-      ? `Mais avant d’y arriver, ton compte descend jusqu’à ${euro(-manque)}${quand ? ` en ${quand}` : ''} : c’est la somme à trouver (apport, prêt ou levée).`
-      : 'Ton compte ne passe jamais sous zéro : tu n’as pas besoin d’argent extérieur pour tenir.')
-    if (manque > 0) va('Ajouter un financement', { route: 'financement', view: 'sources', anchor: 'sources' })
-    else if (premier < 0) va('Revoir ton prix de vente', { route: 'offre', view: 'offres', sec: 'offre', openAll: true, anchor: 'prix' })
-  } else if (i === 1) {
-    if (ca > 0) {
-      const sur = (v) => Math.round((Math.abs(n(v)) / ca) * 100)
-      const achats = sur(p.variableCost[y]), salaires = sur(p.payroll[y]), frais = sur(n(p.external[y]) + n(p.duties[y]))
-      const reste = 100 - achats - salaires - frais
-      lignes.push(`Sur 100 € que tu encaisses en année ${y + 1} : ${achats} € partent dans les achats, ${salaires} € dans les salaires, ${frais} € dans les frais fixes.`)
-      lignes.push(reste >= 0 ? `Il t’en reste ${reste} € avant amortissements, intérêts et impôts.` : `Il en manque ${-reste} € : tu dépenses plus que tu n’encaisses.`)
-    }
-    va('Voir tes charges', { route: 'achats', view: 'charges', anchor: 'charges' })
-  } else {
-    const seuil = n(k.breakEven?.[y])
-    const mois = (k.breakEvenMonth || []).findIndex((m) => m)
-    if (seuil > 0) lignes.push(`Pour couvrir tous tes frais, il faut vendre ${euro(seuil)} dans l’année, soit ${euro(seuil / 12)} par mois.`)
-    lignes.push(mois >= 0
-      ? `Tu y arrives en année ${mois + 1} : à partir de là, chaque vente de plus est du bénéfice.`
-      : 'Sur cinq ans, tu n’y arrives pas : il faut vendre plus, plus cher, ou dépenser moins.')
-    va('Estimer tes volumes de vente', { route: 'offre', view: 'offres', sec: 'volumes', openAll: true, anchor: 'volumes' })
-  }
-  if (!lignes.length) return null
-  return h('div', { class: 'sy-clair' },
-    h('span', { class: 'sy-clair-tag' }, 'En clair'),
-    h('ul', {}, ...lignes.map((l) => h('li', {}, titre(l)))),
-    gestes.length ? h('div', { class: 'sy-clair-gestes' }, ...gestes) : null,
-  )
-}
-
 /**
  * « Pourquoi c'est important », replié.
  *
@@ -559,217 +441,6 @@ function pourquoi(texte) {
   return h('details', { class: 'sy-why' },
     h('summary', {}, 'Pourquoi c’est important'),
     h('p', {}, texte))
-}
-
-/** Un texte long se lit en trois lignes, et se déplie d'un clic. */
-function corpsTexte(texte) {
-  const long = String(texte || '').length > 170
-  const p = h('p', { class: `sy-card-body ${long ? 'is-coupe' : ''}` }, texte)
-  if (!long) return p
-  const bouton = h('button', {
-    class: 'sy-lire', type: 'button',
-    onClick: () => {
-      const ouvert = p.classList.toggle('is-coupe')
-      bouton.textContent = ouvert ? 'Lire la suite' : 'Réduire'
-    },
-  }, 'Lire la suite')
-  return h('div', { class: 'sy-corps' }, p, bouton)
-}
-
-/* ─────────── Forme 1 : deux cartes de mesure ─────────── */
-
-function duo(cartes, r) {
-  return h('div', { class: `sy-cards is-${Math.min(3, cartes.length)}` },
-    ...cartes.map((c, k) => carte(c, k, r)))
-}
-
-/**
- * Une carte de mesure.
- *
- * Ce que l'on mesure, en surtitre ; combien, en très grand ; l'image qui le
- * confirme ; la phrase à retenir, en gras ; le détail, en clair. On lit la
- * carte de haut en bas en s'arrêtant où l'on veut : au chiffre si l'on est
- * pressé, à l'explication si l'on veut comprendre.
- */
-function carte(c, k, r) {
-  return h('article', { class: `sy-card is-${c.tone}`, style: { '--i': String(k) } },
-    h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
-    grandChiffre(c),
-    visuel(c, r),
-    h('h3', { class: 'sy-card-title' }, titre(c.title)),
-    corpsTexte(c.body),
-    pourquoi(c.pourquoi),
-  )
-}
-
-/**
- * Le chiffre de la lecture, en grand, et son libellé exact dessous.
- *
- * Un montant de neuf chiffres ne se lit pas d'un coup d'œil : il s'écrit en
- * millions dans le grand format, et la valeur exacte reste juste dessous, à
- * l'euro près — précis sans être illisible.
- */
-function grandChiffre(c) {
-  if (!c.figure) return null
-  const exact = String(c.figure.value)
-  const court = abrege(exact)
-  const frais = changed(`sy-chiffre-${c.cle || c.kicker}`, exact)
-  return h('div', { class: 'sy-big' },
-    h('span', { class: `sy-big-val ${c.figure.good ? 'is-pos' : 'is-neg'} ${frais ? 'is-fresh' : ''}` }, court),
-    h('span', { class: 'sy-big-cap' }, court !== exact ? `${c.figure.label} · ${exact}` : c.figure.label),
-  )
-}
-
-/** « 280 582 085 € » devient « 280,6 M€ » ; un pourcentage ou un tiret reste tel quel. */
-function abrege(texte) {
-  // Tests par chaînes, pas par expressions régulières : esbuild réécrit en
-  // clair les caractères échappés d'un littéral /…/, et un € ou un signe moins
-  // typographique y casserait le paquet livré en ASCII.
-  if (!texte.trim().endsWith('\u20ac')) return texte
-  const v = Number(texte.split('\u2212').join('-').replace(/[^\d,-]/g, '').replace(',', '.'))
-  if (!Number.isFinite(v) || Math.abs(v) < 100000) return texte
-  return euro(v, { compact: true })
-}
-
-/** L'image d'une lecture, quelle qu'elle soit. */
-function visuel(c, r, { grand = false } = {}) {
-  const cle = `vis-${c.cle || c.kicker}-${grand ? 'g' : 'p'}`
-  if (c.bars) return vis(barres(c.bars, c.kicker, grand), cle)
-  if (c.line) return vis(courbe(c.line, r.startDate, { hauteur: grand ? 120 : 84, legende: 'Ton compte, mois par mois' }), cle)
-  if (c.split) return vis(grand ? grandeBarre(c.split, c.kicker) : repartition(c.split, c.kicker), cle)
-  if (c.meter) return vis(jauge(c.meter, grand), cle)
-  return null
-}
-
-/* ─────────── Forme 2 : une image au centre, le reste en texte libre ─────────── */
-
-/**
- * Où part chaque euro, en grand, et ce qui l'explique à côté.
- *
- * La répartition des cent euros est l'image la plus parlante du dossier :
- * elle prend la largeur et la hauteur. Les autres lectures de l'acte — le
- * poste qui pèse, la rémunération — n'ont pas besoin de carte : ce sont des
- * faits, posés en texte libre dans la colonne d'à côté.
- */
-function miseEnAvant(cartes, r) {
-  const centre = cartes.find((c) => c.cle === 'sur100') || cartes.find((c) => c.split) || cartes[0]
-  const autres = cartes.filter((c) => c !== centre)
-  return h('div', { class: 'sy-feature' },
-    h('article', { class: `sy-feature-main is-${centre.tone}` },
-      h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
-      h('h3', { class: 'sy-feature-title' }, titre(centre.title)),
-      visuel(centre, r, { grand: true }),
-      corpsTexte(centre.body),
-      pourquoi(centre.pourquoi),
-      centre.figure ? h('div', { class: 'sy-feature-fig' },
-        h('span', {}, centre.figure.label),
-        h('b', { class: centre.figure.good ? 'is-pos' : 'is-neg' }, centre.figure.value)) : null,
-    ),
-    h('div', { class: 'sy-facts' }, ...autres.map((c, k) => fait(c, k, r))),
-  )
-}
-
-/** Un fait : pas de carte, un filet, un chiffre, une phrase. */
-function fait(c, k, r) {
-  const exact = c.figure ? String(c.figure.value) : null
-  return h('article', { class: `sy-fact is-${c.tone}`, style: { '--i': String(k) } },
-    h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), c.kicker),
-    exact ? h('div', { class: `sy-fact-val ${c.figure.good ? 'is-pos' : 'is-neg'}` }, abrege(exact)) : null,
-    h('h3', { class: 'sy-fact-title' }, titre(c.title)),
-    c.split ? vis(repartition(c.split, c.kicker), `vis-${c.cle}-fait`) : null,
-    corpsTexte(c.body),
-    pourquoi(c.pourquoi),
-  )
-}
-
-/* ─────────── Forme 3 : une bande, puis les leviers ─────────── */
-
-/**
- * Le seuil, en travers de la page.
- *
- * Le point mort est une distance : ce qu'il faut vendre, ce qu'on prévoit de
- * vendre, et l'écart entre les deux. Il se lit mieux en longueur qu'en
- * pourcentage — d'où une bande pleine largeur, avec les deux repères posés
- * sur la même règle.
- */
-function bande(cartes, r, leviers) {
-  const centre = cartes.find((c) => c.cle === 'seuil') || cartes.find((c) => c.cle === 'objectif')
-  const autres = cartes.filter((c) => c !== centre)
-  // Sous la bande, la trajectoire et les leviers côte à côte : ce qu'on
-  // promet, et ce qui le rendrait plus sûr. Une carte seule en pleine largeur
-  // étirait ses cinq barres jusqu'à ne plus rien dire.
-  const suite = leviers && autres.length
-    ? h('div', { class: 'sy-band-row' }, ...autres.map((c, k) => carte(c, k, r)), leviers)
-    : [autres.length ? duo(autres, r) : null, leviers]
-  return h('div', { class: 'sy-bandwrap' },
-    h('article', { class: `sy-band is-${centre.tone}` },
-      h('div', { class: 'sy-band-say' },
-        h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
-        grandChiffre(centre),
-        h('h3', { class: 'sy-card-title' }, titre(centre.title)),
-        corpsTexte(centre.body),
-        pourquoi(centre.pourquoi),
-      ),
-      h('div', { class: 'sy-band-viz' }, visuel(centre, r, { grand: true })),
-    ),
-    suite,
-  )
-}
-
-/**
- * Les leviers, chiffrés par le moteur.
- *
- * Le troisième acte dit quels leviers existent. Le moteur sait aussi ce que
- * chacun rapporte, en rejouant le modèle entier : les trois meilleurs gestes
- * ferment l'acte, avec leur gain. Le détail et l'essai se font dans Pilotage.
- */
-function leviersChiffres(s, r) {
-  let best = []
-  try { best = suggestActions(s, r, { limit: 3 }).best } catch { best = [] }
-  if (!best.length) return null
-  return h('div', { class: 'sy-levers' },
-    h('div', { class: 'sy-levers-head' },
-      h('div', { class: 'sy-kicker' }, 'Chiffré par le moteur'),
-      h('h3', { class: 'sy-levers-title' }, 'Les trois gestes qui rapportent le plus'),
-    ),
-    h('div', { class: 'sy-levers-rows' },
-      ...best.map((a, i) => {
-        const tresor = -n(a.delta.fundingNeed) > 0
-        const gain = tresor ? -n(a.delta.fundingNeed) : n(a.delta.ebe)
-        return h('div', { class: 'sy-lever', style: { '--i': String(i) } },
-          h('span', { class: 'sy-lever-no' }, String(i + 1)),
-          h('span', { class: 'sy-lever-txt' },
-            h('span', { class: 'sy-lever-label' }, a.label),
-            a.detail ? h('span', { class: 'sy-lever-detail' }, a.detail) : null,
-          ),
-          h('span', { class: 'sy-lever-gain' },
-            h('b', {}, `${gain >= 0 ? '+' : ''}${euro(gain)}`),
-            h('span', {}, tresor ? 'de trésorerie' : 'd’EBE'),
-          ),
-        )
-      }),
-    ),
-  )
-}
-
-/**
- * Le sommaire du détail : cinq parties, chacune avec la question à laquelle
- * elle répond. Un clic y mène. On sait ce qu'on va lire avant de le lire, et
- * on saute à ce qu'on cherche.
- */
-function sommaire(actes, sansCA) {
-  const noms = [...(sansCA ? SECTIONS.avant : SECTIONS.plein), 'Les chiffres clés', 'Les hypothèses', 'Le détail des comptes']
-  const cibles = ['sy-partie-1', 'sy-partie-2', 'sy-partie-3', 'sy-chiffres', 'sy-hypotheses', 'sy-comptes']
-  return h('nav', { class: 'sy-sommaire', 'aria-label': 'Sommaire du détail' },
-    h('span', { class: 'sy-sommaire-t' }, 'Dans ce détail'),
-    h('ol', {},
-      ...noms.slice(0, 6).map((nm, i) => h('li', {},
-        h('button', {
-          type: 'button',
-          onClick: () => document.getElementById(cibles[i])?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        }, h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, nm)),
-      ))),
-  )
 }
 
 /** La phrase qui clôt le récit, et la suite. */
@@ -789,7 +460,403 @@ function pied(navigate, pilotage) {
   )
 }
 
-/* ───────────────────────────── 5. Les hypothèses ───────────────────────────── */
+/* ───────────────────────── Le détail, dans l'ordre du récit ───────────────────────── */
+
+/**
+ * L'ordre du détail : ce que tout le monde veut savoir d'abord, puis pourquoi.
+ *
+ * Le détail s'ouvrait sur la trésorerie — « Rentable tout de suite, mais
+ * 78 981 € à avancer » — avant d'avoir dit ce que l'entreprise vend et gagne.
+ * Il commence désormais par le chiffre d'affaires et le résultat ; le besoin
+ * de trésorerie vient juste après, puis les six chiffres à connaître, puis un
+ * chapitre pour chacun d'eux.
+ *
+ * La mise en page est celle d'un article : un grand titre, trois chiffres, un
+ * dessin, puis un filet. Les panneaux blancs empilés sont partis ; seuls les
+ * objets qui méritent d'être isolés — un tableau, une cascade — ont leur cadre.
+ */
+const PARTIES = [
+  { cle: 'ca', nom: 'Chiffre d’affaires et résultat' },
+  { cle: 'offres', nom: 'D’où vient le chiffre d’affaires' },
+  { cle: 'vente', nom: 'Économie d’une vente' },
+  { cle: 'couts', nom: 'Structure des coûts' },
+  { cle: 'equipe', nom: 'Équipe et masse salariale' },
+  { cle: 'treso', nom: 'Trésorerie' },
+  { cle: 'finance', nom: 'Financement' },
+  { cle: 'hypotheses', nom: 'Hypothèses et risques', id: 'sy-hypotheses' },
+  { cle: 'comptes', nom: 'Analyse détaillée', id: 'sy-comptes' },
+]
+const idPartie = (cle) => PARTIES.find((x) => x.cle === cle)?.id || `sy-ed-${cle}`
+const allerA = (cle) => document.getElementById(idPartie(cle))?.scrollIntoView({ behavior: reduit() ? 'auto' : 'smooth', block: 'start' })
+const eurC = (v) => euro(v, { compact: Math.abs(v) >= 100000 })
+const tauxDe = (a, b) => (n(b) > 0 && Math.abs(n(a) / n(b)) <= 10 ? n(a) / n(b) : null)
+
+/** L'ouverture : le chiffre d'affaires, le résultat, la marge ; puis ce qu'il faut financer. */
+function introDetail(s, r, garde, prudence, navigate) {
+  const p = r.pnl, k = r.kpis
+  const ca = n(p.revenue[0]), net = n(p.netResult[0])
+  const marge = tauxDe(net, ca)
+  const besoin = n(k.fundingNeed)
+  const premier = k.firstProfitableYear
+  const sansCA = !p.revenue.some((v) => n(v) > 0)
+  const ton = (v) => (v < 0 ? 'bad' : prudence ? '' : 'good')
+  return guet(h('section', { class: 'sy-act sy-intro', id: 'sy-intro' },
+    h('div', { class: 'sy-act-no' },
+      h('span', {}, 'Le plan en trois chiffres'),
+      garde?.length ? h('div', { class: 'sx-right-row' }, gardeBloc(garde, navigate, { classe: 'sy-garde' })) : null,
+    ),
+    h('h2', { class: 'sy-act-title' }, titre(sansCA
+      ? 'Le plan ne prévoit pas encore de ventes'
+      : `${eurC(ca)} de chiffre d’affaires en année 1`)),
+    h('div', { class: 'sy-intro-figs' },
+      h('div', { class: 'sy-intro-fig' }, h('b', {}, eurC(ca)), h('span', {}, 'de chiffre d’affaires en année 1')),
+      h('div', { class: `sy-intro-fig is-${ton(net)}` }, h('b', {}, eurC(net)), h('span', {}, 'de résultat net')),
+      h('div', { class: `sy-intro-fig is-${ton(net)}` }, h('b', {}, marge === null ? '—' : pct(marge, 1)), h('span', {}, 'de marge nette')),
+    ),
+    h('p', { class: 'sy-intro-suite' }, titre([
+      premier === null || premier === undefined ? 'Le plan ne dégage pas de bénéfice sur cinq ans.'
+        : premier === 0 ? 'L’entreprise est bénéficiaire dès l’année 1.' : `Le premier bénéfice arrive en année ${premier + 1}.`,
+      besoin > 0
+        ? `Pour y arriver, il faut financer ${euro(besoin)} : c’est le point bas de la trésorerie, en ${monthLabel(k.cashLow.month, r.startDate)}.`
+        : 'La trésorerie reste positive : aucun financement supplémentaire n’est nécessaire dans ce scénario.',
+    ].join(' '))),
+  ), 'intro')
+}
+
+/** Le sommaire : les neuf parties, dans l'ordre où on les lit. */
+function sommaireDetail() {
+  return h('nav', { class: 'sy-sommaire', 'aria-label': 'Sommaire du détail' },
+    h('span', { class: 'sy-sommaire-t' }, 'Dans ce détail'),
+    h('ol', {},
+      ...PARTIES.map((x, i) => h('li', {},
+        h('button', { type: 'button', onClick: () => allerA(x.cle) },
+          h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, x.nom))))),
+  )
+}
+
+/**
+ * Une partie, mise en page comme un article : le numéro et son nom, un grand
+ * titre qui répond, une explication courte, trois chiffres, le dessin, puis ce
+ * qui le détaille. Un filet la sépare de la suivante.
+ */
+function partie({ cle, titre: t, dit, chiffres = [], dessin = null, apres = [], pourquoiTexte = null, lien = null }, navigate) {
+  const i = PARTIES.findIndex((x) => x.cle === cle)
+  return guet(h('section', { class: 'sy-act sy-chapitre sy-ed', id: idPartie(cle), 'data-partie': cle },
+    h('header', { class: 'sy-act-head' },
+      h('div', { class: 'sy-act-no' }, h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, PARTIES[i].nom)),
+      h('h2', { class: 'sy-act-title' }, titre(t)),
+    ),
+    dit ? h('p', { class: 'sy-clair sy-ed-dit' }, titre(dit)) : null,
+    chiffres.filter(Boolean).length ? h('div', { class: 'sy-ed-figs' },
+      ...chiffres.filter(Boolean).map((c) => h('div', { class: `sy-ed-fig ${c.ton ? `is-${c.ton}` : ''}` },
+        h('span', { class: 'sy-ed-fig-l' }, c.l),
+        h('b', { class: 'sy-ed-fig-v' }, c.v),
+        c.note ? h('small', { class: 'sy-ed-fig-n' }, c.note) : null))) : null,
+    dessin ? vis(h('div', { class: 'sy-ed-dessin' }, dessin), `ed-${cle}`) : null,
+    ...apres.filter(Boolean),
+    pourquoi(pourquoiTexte),
+    lien ? h('button', { class: 'sy-link sy-ed-lien', onClick: () => goToGap(lien.go, navigate) }, `${lien.label} →`) : null,
+  ), `ed-${cle}`)
+}
+
+/** Les sept parties chiffrées ; les hypothèses et l'analyse détaillée suivent. */
+function partiesDetail(s, r, prudence, navigate) {
+  const p = r.pnl, k = r.kpis
+  const debut = r.startDate
+  const ANS = [0, 1, 2, 3, 4]
+  const ca = p.revenue.map(n)
+  const aucune = !ca.some((v) => v > 0)
+  const ton = (v) => (v < 0 ? 'bad' : prudence ? '' : 'good')
+  const offresPlan = lesOffres(s, r).sort((a, b) => b.ca[0] - a.ca[0] || b.ca[4] - a.ca[4])
+  const top = offresPlan[0] || null
+  const parts = []
+  const tetes = (premier) => [premier, 'Année 1', 'Année 2', 'Année 3', 'Année 4', 'Année 5']
+
+  /* 1 — Chiffre d'affaires et résultat */
+  {
+    const net = p.netResult.map(n)
+    const cagr = ca[0] > 0 && ca[4] > 0 && ca[4] / ca[0] <= 1000 ? Math.pow(ca[4] / ca[0], 1 / 4) - 1 : null
+    parts.push(partie({
+      cle: 'ca',
+      titre: aucune ? 'Pas encore de chiffre d’affaires' : `${eurC(ca[0])} en année 1, ${eurC(ca[4])} en année 5`,
+      dit: aucune ? 'Fixe un prix et un volume dans Offre et revenus : cette partie se remplira.'
+        : `Le résultat net passe de ${eurC(net[0])} en année 1 à ${eurC(net[4])} en année 5.${cagr !== null ? ` Le chiffre d’affaires progresse de ${pct(cagr, 0)} par an en moyenne.` : ''}`,
+      chiffres: aucune ? [] : [
+        { l: 'Chiffre d’affaires, année 1', v: eurC(ca[0]) },
+        { l: 'Résultat net, année 1', v: eurC(net[0]), ton: ton(net[0]) },
+        { l: 'Marge nette, année 1', v: tauxDe(net[0], ca[0]) === null ? '—' : pct(tauxDe(net[0], ca[0]), 1), note: 'Le résultat net rapporté au chiffre d’affaires.' },
+      ],
+      dessin: aucune ? null : barChart({
+        series: [{ label: 'Chiffre d’affaires', values: ca, color: '#0E0F0C' }],
+        line: { label: 'Résultat net', values: net, color: '#1B7F4B' },
+        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 210, largeur: 640,
+        periodes: ANS.map((i) => periodeAnnee(i, debut)),
+      }),
+      apres: aucune ? [] : [asTableau(tetes(''), [
+        ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
+        ['Variation', '—', ...ANS.slice(1).map((y) => (ca[y - 1] > 0 ? `${ca[y] >= ca[y - 1] ? '+' : '−'}${pct(Math.abs(ca[y] / ca[y - 1] - 1), 0)}` : '—'))],
+        ['Marge brute', ...p.grossMargin.map((v) => euro(v))],
+        ['EBE', ...p.ebe.map((v) => euro(v))],
+        ['Résultat net', ...net.map((v) => euro(v))],
+        ['Marge nette', ...ANS.map((y) => (tauxDe(net[y], ca[y]) === null ? '—' : pct(tauxDe(net[y], ca[y]), 1)))],
+      ])],
+      pourquoiTexte: POURQUOI.profit,
+      lien: { label: 'Les états financiers', go: { route: 'resultats' } },
+    }, navigate))
+  }
+
+  /* 2 — D'où vient le chiffre d'affaires */
+  {
+    const total = (y) => offresPlan.reduce((t, o) => t + o.ca[y], 0)
+    const part = top && total(0) > 0 ? top.ca[0] / total(0) : 0
+    parts.push(partie({
+      cle: 'offres',
+      titre: !top ? 'Aucune offre ne vend encore'
+        : offresPlan.length === 1 ? `Une offre, « ${top.nom} », porte tout le chiffre d’affaires`
+          : `${pct(part, 0)} du chiffre d’affaires vient de « ${top.nom} »`,
+      dit: !top ? null : `${formule(top, 0)} en année 1 : le prix multiplié par le volume donne le revenu. En année 5 : ${formule(top, 4)}.`,
+      chiffres: !top ? [] : [
+        { l: 'Offres qui vendent', v: String(offresPlan.length) },
+        { l: top.modeRec ? 'Abonnés en fin d’année' : 'Volume de l’offre principale', v: top.modeRec ? `${num(top.abonnesFin[0], 0)} → ${num(top.abonnesFin[4], 0)}` : `${num(top.volume[0], 0)} → ${num(top.volume[4], 0)}`, note: 'De l’année 1 à l’année 5.' },
+        { l: 'Prix moyen', v: prixTxt(top.prixMoyen[0]), note: top.modeRec ? 'par abonné et par mois' : `par ${top.u.one}` },
+      ],
+      dessin: top ? asBarres(offresPlan.slice(0, 6).map((o) => ({ nom: o.nom, v: o.ca[0], sous: formule(o, 0) })), {
+        format: (v) => eurC(v), periode: `Chiffre d’affaires · ${periodeAnnee(0, debut)}`,
+      }) : null,
+      apres: !top ? [] : [
+        asTableau(tetes('Chiffre d’affaires'), offresPlan.map((o) => [o.nom, ...o.ca.map((v) => euro(v))])),
+        asTableau(tetes('Volumes'), offresPlan.map((o) => [`${o.nom} (${o.modeRec ? 'mensualités' : o.u.many})`, ...o.volume.map((v) => num(v, 0))])),
+        asTableau(tetes('Contribution'), offresPlan.map((o) => [o.nom, ...ANS.map((y) => (total(y) > 0 ? pct(o.ca[y] / total(y), 0) : '—'))])),
+      ],
+      pourquoiTexte: 'Un chiffre d’affaires se défend offre par offre : un prix qu’on peut justifier, un volume qu’on peut atteindre. C’est ce produit, et lui seul, qui fait le revenu.',
+      lien: { label: 'Les offres', go: { route: 'offre', view: 'offres' } },
+    }, navigate))
+  }
+
+  /* 3 — Économie d'une vente */
+  {
+    const cv = top ? coutDUneVente(s, top.a) : null
+    const prix = cv && cv.prix > 0 ? cv.prix : top ? top.prixMoyen[0] : 0
+    const cout = cv ? cv.total : 0
+    const marge = prix - cout
+    const pm = n(k.breakEven?.[0])
+    const par = top?.modeRec ? 'par mois' : top ? `par ${top.u.one}` : ''
+    const lignes = cv ? [cv.propre > 0 ? { l: 'Coût de revient', v: cv.propre } : null, ...cv.lignes.map((x) => ({ l: x.label, v: x.v }))].filter(Boolean) : []
+    const anPM = (k.breakEvenMonth || []).findIndex((m) => m)
+    parts.push(partie({
+      cle: 'vente',
+      titre: !top ? 'Sans prix, une vente ne se calcule pas encore' : `${prixTxt(prix)} − ${prixTxt(cout)} = ${prixTxt(marge)} de marge par vente`,
+      dit: !top ? null : `Chaque vente de « ${top.nom} » laisse ${prixTxt(marge)} une fois payé ce qu’elle coûte. C’est cette marge qui paie les charges fixes ; le point mort est le chiffre d’affaires où elle les couvre toutes.`,
+      chiffres: !top ? [] : [
+        { l: 'Coût de revient', v: prixTxt(cout), note: 'Coût direct d’une vente, charges par vente comprises.' },
+        { l: 'Marge brute', v: tauxDe(p.grossMargin[0], ca[0]) === null ? '—' : pct(tauxDe(p.grossMargin[0], ca[0]), 1), note: `${eurC(n(p.grossMargin[0]))} en année 1.` },
+        { l: 'Point mort, année 1', v: pm > 0 ? eurC(pm) : 'Non atteint', note: anPM >= 0 ? `Franchi en année ${anPM + 1}.` : 'Pas franchi sur cinq ans.' },
+      ],
+      dessin: top ? asEquation({ prix, cout, marge, par, lignes, periode: `Une vente de « ${top.nom} »` }) : null,
+      apres: !top ? [] : [
+        asTableau(['Offre', 'Prix', 'Coût de revient', 'Charges par vente', 'Contribution par vente', 'Taux'], offresPlan.map((o) => {
+          const c = coutDUneVente(s, o.a)
+          const px = c.prix > 0 ? c.prix : o.prixMoyen[0]
+          return [o.nom, prixTxt(px), prixTxt(c.propre), c.charges > 0 ? prixTxt(c.charges) : '—', prixTxt(px - c.total), px > 0 ? pct((px - c.total) / px, 0) : '—']
+        })),
+        asTableau(tetes(''), [
+          ['Charges fixes', ...ANS.map((y) => euro(n(k.fixedCosts?.[y])))],
+          ['Taux de marge brute', ...ANS.map((y) => (tauxDe(p.grossMargin[y], ca[y]) === null ? '—' : pct(tauxDe(p.grossMargin[y], ca[y]), 1)))],
+          ['Point mort', ...ANS.map((y) => (n(k.breakEven?.[y]) > 0 ? euro(k.breakEven[y]) : '—'))],
+          ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
+        ]),
+      ],
+      pourquoiTexte: POURQUOI.seuil,
+      lien: { label: 'Le coût de revient', go: { route: 'achats', view: 'charges', anchor: 'charges' } },
+    }, navigate))
+  }
+
+  /* 4 — Structure des coûts */
+  {
+    const lignes = lignesDeCouts(s, r, 0)
+    const fixeHors = ANS.map((y) => lignesDeCouts(s, r, y).filter((l) => l.nature === 'fixe').reduce((t, l) => t + l.v, 0))
+    const variable = ANS.map((y) => lignesDeCouts(s, r, y).filter((l) => l.nature === 'variable').reduce((t, l) => t + l.v, 0))
+    const masse = p.payroll.map(n)
+    const fixes0 = fixeHors[0] + masse[0]
+    const postes = Object.values(lignes.reduce((acc, l) => {
+      const c = acc[l.poste.cle] || (acc[l.poste.cle] = { nom: l.poste.nom, v: 0, n: 0 })
+      c.v += l.v; c.n += 1
+      return acc
+    }, {})).sort((a, b) => b.v - a.v)
+    parts.push(partie({
+      cle: 'couts',
+      titre: fixes0 > 0 ? `${eurC(fixes0)} de charges fixes en année 1, dont ${pct(masse[0] / fixes0, 0)} pour l’équipe` : 'Aucune charge saisie',
+      dit: 'Trois natures de coûts, qui ne bougent pas pour les mêmes raisons. Les coûts variables suivent les ventes. La masse salariale suit l’équipe. Les autres charges fixes tombent chaque mois, avec ou sans ventes.',
+      chiffres: [
+        { l: 'Charges fixes hors équipe', v: eurC(fixeHors[0]), note: `${euro(fixeHors[0] / 12)} par mois en année 1.` },
+        { l: 'Masse salariale', v: eurC(masse[0]), note: 'Suit l’équipe : salaires et cotisations.' },
+        { l: 'Coûts variables', v: eurC(variable[0]), note: tauxDe(variable[0], ca[0]) !== null ? `${pct(tauxDe(variable[0], ca[0]), 0)} du chiffre d’affaires : ils suivent les ventes.` : 'Ils suivent les ventes.' },
+      ],
+      dessin: barChart({
+        series: [
+          { label: 'Coûts variables', values: variable, color: '#9BA59A' },
+          { label: 'Charges fixes hors équipe', values: fixeHors, color: '#4B5049' },
+          { label: 'Masse salariale', values: masse, color: '#0E0F0C' },
+        ],
+        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 210, largeur: 640,
+        periodes: ANS.map((i) => periodeAnnee(i, debut)),
+      }),
+      apres: [
+        postes.length ? h('div', { class: 'sy-ed-sous' }, h('h3', {}, 'Les principaux postes hors équipe, année 1'),
+          asBarres(postes.slice(0, 6).map((x) => ({ nom: x.nom, v: x.v, sous: x.n > 1 ? `${x.n} lignes` : null })), { format: (v) => eurC(v), periode: `Coûts hors équipe · ${periodeAnnee(0, debut)}` })) : null,
+        lignes.length ? asTableau(['Ligne', 'Poste', 'Nature', 'Année 1', 'Année 5'], [...lignes].sort((a, b) => b.v - a.v).map((l) => [
+          l.nom, l.poste.nom, l.nature === 'variable' ? 'Suit les ventes' : 'Fixe', euro(l.v), euro(lignesDeCouts(s, r, 4).find((z) => z.nom === l.nom)?.v || 0),
+        ])) : null,
+      ],
+      pourquoiTexte: POURQUOI.poste,
+      lien: { label: 'Les charges', go: { route: 'achats', view: 'charges', anchor: 'charges' } },
+    }, navigate))
+  }
+
+  /* 5 — Équipe et masse salariale */
+  {
+    const team = (s.team || []).filter((m) => m.enabled !== false)
+    const serieDe = (m) => (r.payroll?.byMember || []).find((b) => b.id === m.id)?.series
+    const parAnS = (serie, y) => (serie || []).slice(y * 12, y * 12 + 12).reduce((a, v) => a + n(v), 0)
+    const hc = (m) => n(r.payroll?.headcount?.[m])
+    const masse = p.payroll.map(n)
+    const ratio = ANS.map((y) => tauxDe(masse[y], ca[y]))
+    const bm = SECTORS[s.meta?.sectorKey]?.benchmarks?.payrollRatio
+    const RE_F = new RegExp('fondat|dirigeant|gérant|président|associé', 'i')
+    const fondateurs = team.filter((m) => ['tns', 'dirigeant', 'micro'].includes(m.contractType) || RE_F.test(m.role || ''))
+    const brutF = fondateurs.reduce((t, m) => t + n(m.monthlyGross) * Math.max(1, n(m.count) || 1), 0)
+    parts.push(partie({
+      cle: 'equipe',
+      titre: masse[0] > 0 ? `${num(hc(11), 0)} personne${hc(11) > 1 ? 's' : ''}, ${eurC(masse[0])} de masse salariale en année 1` : 'Aucune rémunération prévue en année 1',
+      dit: [
+        ratio[0] !== null ? `L’équipe pèse ${pct(ratio[0], 0)} du chiffre d’affaires en année 1, ${ratio[4] !== null ? `${pct(ratio[4], 0)} en année 5` : ''}.` : null,
+        bm && ratio[2] !== null ? `Dans ce métier, ce ratio se situe habituellement entre ${pct(bm[0], 0)} et ${pct(bm[1], 0)}.` : null,
+      ].filter(Boolean).join(' ') || null,
+      chiffres: [
+        { l: 'Effectif', v: `${num(hc(11), 0)} → ${num(hc(59), 0)}`, note: 'En fin d’année 1, puis en fin d’année 5.' },
+        { l: 'Masse salariale, année 1', v: eurC(masse[0]), note: 'Coût employeur : salaires bruts et cotisations patronales.' },
+        { l: 'Rémunération des fondateurs', v: brutF > 0 ? `${euro(brutF)} brut/mois` : 'Aucune', ton: brutF > 0 ? '' : 'bad' },
+      ],
+      dessin: team.length ? asBarres(team.map((m) => ({ nom: `${m.role || 'Poste'}${n(m.count) > 1 ? ` ×${m.count}` : ''}`, v: parAnS(serieDe(m), 1) })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v).slice(0, 6), {
+        format: (v) => `${eurC(v)}/an`, periode: `Coût employeur · ${periodeAnnee(1, debut)}`,
+      }) : null,
+      apres: [
+        team.length ? asTableau(['Poste', 'Contrat', 'Brut mensuel', 'Arrivée', 'Coût employeur A1', 'Coût employeur A5'], team.map((m) => [
+          `${m.role || 'Poste'}${fondateurs.includes(m) ? ' — fondateur' : ''}`, m.contractType || '—', euro(n(m.monthlyGross)), monthLabel(n(m.startMonth), debut),
+          euro(parAnS(serieDe(m), 0)), euro(parAnS(serieDe(m), 4)),
+        ])) : null,
+        asTableau(tetes(''), [
+          ['Masse salariale', ...masse.map((v) => euro(v))],
+          ['Part du chiffre d’affaires', ...ratio.map((v) => (v === null ? '—' : pct(v, 0)))],
+          ['Effectif en fin d’année', ...ANS.map((y) => num(hc(y * 12 + 11), 0))],
+        ]),
+      ],
+      pourquoiTexte: POURQUOI.remuneration,
+      lien: { label: 'L’équipe', go: { route: 'equipe', view: 'postes', anchor: 'equipe' } },
+    }, navigate))
+  }
+
+  /* 6 — Trésorerie */
+  const conso = consommation(s, r)
+  {
+    const bal = r.cash.balance.map(n)
+    const bas = k.cashLow?.month ?? 0
+    const vBas = bal[bas]
+    const sousZero = k.firstNegativeMonth ?? null
+    const remonte = vBas < 0 ? bal.findIndex((v, m) => m > bas && v >= 0) : -1
+    const negatifs = bal.filter((v) => v < 0).length
+    parts.push(partie({
+      cle: 'treso',
+      titre: vBas >= 0 ? `La trésorerie ne passe jamais sous zéro ; point bas à ${eurC(vBas)}` : `Point bas en ${monthLabel(bas, debut)}, à ${eurC(vBas)}`,
+      dit: 'Être rentable et avoir de la trésorerie sont deux choses différentes. Le résultat compte ce qui est vendu et dépensé ; la trésorerie, ce qui est encaissé et payé, et quand.',
+      chiffres: [
+        { l: 'Cash minimum', v: eurC(vBas), ton: vBas < 0 ? 'bad' : prudence ? '' : 'good', note: monthLabel(bas, debut) },
+        { l: 'Mois sous zéro', v: String(negatifs), ton: negatifs ? 'bad' : '', note: sousZero !== null ? `Dès ${monthLabel(sousZero, debut)}${remonte >= 0 ? `, jusqu’à ${monthLabel(remonte - 1, debut)}` : ''}.` : 'Aucun.' },
+        { l: 'Fin d’année 5', v: eurC(n(r.cash.yearEnd[4])) },
+      ],
+      dessin: courbeTreso(bal, debut, { bas, sousZero, remonte: remonte >= 0 ? remonte : null }),
+      apres: [asTableau(tetes(''), [
+        ['Trésorerie en début d’année', ...ANS.map((y) => euro(y === 0 ? n(conso.parts.depart) : n(r.cash.yearEnd[y - 1])))],
+        ['Activité et investissements', ...conso.activiteAn.map((v) => euro(v, { sign: true }))],
+        ['Financement', ...ANS.map((y) => euro(n(r.cash.yearEnd[y]) - (y === 0 ? n(conso.parts.depart) : n(r.cash.yearEnd[y - 1])) - conso.activiteAn[y], { sign: true }))],
+        ['Trésorerie en fin d’année', ...ANS.map((y) => euro(n(r.cash.yearEnd[y])))],
+        ['BFR en fin d’année', ...ANS.map((y) => euro(n(r.bfr?.total?.[y * 12 + 11])))],
+      ])],
+      pourquoiTexte: POURQUOI.cash,
+      lien: { label: 'Le tableau de trésorerie', go: { route: 'resultats' } },
+    }, navigate))
+  }
+
+  /* 7 — Financement */
+  {
+    const f = s.financing || {}
+    const x = conso.parts
+    const besoin = n(k.fundingNeed)
+    const quand = monthLabel(conso.mois, debut)
+    const bank = lignesBanquier(r)
+    const somme2 = (xs) => (xs || []).reduce((a, e) => a + n(e?.amount), 0)
+    parts.push(partie({
+      cle: 'finance',
+      titre: besoin > 0 ? `Il manque ${euro(besoin)} au point bas, en ${quand}` : 'Le plan est financé jusqu’au bout',
+      dit: conso.besoin > 0
+        ? `Le business consomme ${eurC(conso.besoin)} jusqu’à son point bas. Les ressources prévues en couvrent ${eurC(Math.min(conso.besoin, conso.ressources))}.${besoin > 0 ? ` Il faut donc financer ${euro(besoin)}.` : ''}`
+        : 'Les ventes financent l’activité dès le départ.',
+      chiffres: [
+        { l: 'Besoin total', v: eurC(Math.max(0, conso.besoin)), note: 'Ce que l’activité consomme avant de se financer elle-même.' },
+        { l: 'Ressources prévues', v: eurC(conso.ressources), note: `Versées avant ${quand}.` },
+        { l: 'Manque', v: euro(besoin), ton: besoin > 0 ? 'bad' : prudence ? '' : 'good', note: besoin > 0 ? `${eurC(Math.ceil((besoin * 1.2) / 1000) * 1000)} avec 20 % de marge de sécurité.` : 'Rien à trouver.' },
+      ],
+      dessin: conso.besoin > 0 ? asCascade([
+        { type: 'depart', l: 'Besoin total', v: conso.besoin },
+        x.depart ? { l: 'Trésorerie déjà disponible', v: -x.depart, ton: 'couvre' } : null,
+        x.fondateurs ? { l: 'Apport des fondateurs', v: -x.fondateurs, ton: 'couvre' } : null,
+        x.dette ? { l: 'Dette', v: -x.dette, ton: x.dette > 0 ? 'couvre' : null } : null,
+        x.subventions ? { l: 'Subventions et avances', v: -x.subventions, ton: 'couvre' } : null,
+        x.levee ? { l: 'Levée de fonds', v: -x.levee, ton: 'couvre' } : null,
+        { type: 'total', l: besoin > 0 ? 'Manque' : 'Marge au point bas', ton: besoin > 0 ? 'manque' : 'total' },
+      ], `Au point bas · ${quand}`) : null,
+      apres: [
+        asTableau(['Ressource', 'Montant', 'Versée'], [
+          n(f.openingCash) > 0 ? ['Trésorerie de départ', euro(n(f.openingCash)), monthLabel(0, debut)] : null,
+          ...(f.equityFounders || []).map((e) => ['Apport des fondateurs', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.honourLoans || []).map((e) => ['Prêt d’honneur', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.loans || []).map((e) => ['Prêt bancaire', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.equityInvestors || []).map((e) => ['Levée de fonds', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.grants || []).map((e) => ['Subvention', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.advances || []).map((e) => ['Avance remboursable', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+          ...(f.shareholderLoans || []).map((e) => ['Compte courant d’associé', euro(n(e.amount)), monthLabel(n(e.month), debut)]),
+        ]),
+        somme2(f.loans) > 0 ? h('ul', { class: 'as-bk' }, ...bank.map((l) => h('li', { class: `as-bk-ligne is-${l.etat}` },
+          h('span', { class: 'as-bk-etat' }, l.etat === 'ok' ? 'Validé' : l.etat === 'juste' ? 'Juste' : l.etat === 'revoir' ? 'À revoir' : '—'),
+          h('span', { class: 'as-bk-titre' }, l.titre), h('b', { class: 'as-bk-val' }, l.valeur)))) : null,
+      ],
+      pourquoiTexte: POURQUOI.manque,
+      lien: { label: 'Le financement', go: { route: 'financement', view: 'sources', anchor: 'sources' } },
+    }, navigate))
+  }
+  return parts
+}
+
+/** Ce qui ferait bouger le plan : chaque hypothèse rejouée seule, par le moteur. */
+function risquesDetail(s, r) {
+  const offresPlan = lesOffres(s, r).sort((a, b) => b.ca[0] - a.ca[0])
+  const sens = sensibilites(s, r, offresPlan[0] || null).sort((a, b) => b.dBesoin - a.dBesoin || a.dNet - b.dNet)
+  const pieges = (SECTORS[s.meta?.sectorKey]?.traps || []).slice(0, 3)
+  if (!sens.length && !pieges.length) return null
+  return h('div', { class: 'sy-ed-risques' },
+    sens.length ? h('div', { class: 'sy-ed-sous' },
+      h('h3', {}, 'Ce qui ferait bouger le plan'),
+      h('p', { class: 'sy-ed-note' }, 'Chaque hypothèse est modifiée seule, tout le reste égal ; le moteur recalcule la paie, la TVA, l’impôt et la trésorerie.'),
+      asTableau(['Hypothèse', 'Dans le plan', 'Test', 'Besoin de financement', 'Écart', 'Résultat net A3', 'Écart'], sens.map((x) => [
+        x.nom, x.plan, x.test, euro(x.besoin), euro(x.dBesoin, { sign: true }), euro(x.net), euro(x.dNet, { sign: true }),
+      ]))) : null,
+    pieges.length ? h('div', { class: 'sy-ed-sous' },
+      h('h3', {}, 'Les pièges propres au métier'),
+      h('ul', { class: 'sy-ed-pieges' }, ...pieges.map((t) => h('li', {}, h('b', {}, t.title), ' — ', t.body)))) : null,
+  )
+}
+
+/* ───────────────────────────── 8. Les hypothèses ───────────────────────────── */
 
 /**
  * Les hypothèses du plan, et ce qui les justifie.
@@ -889,8 +956,8 @@ function hypotheses(r, s, navigate) {
   })
 
   const ETAT = { ok: 'Étayée', watch: 'À justifier', none: 'À documenter' }
-  return h('section', { class: 'sy-hyp sy-act sy-chapitre', id: 'sy-hypotheses' },
-    numero(5, 'Les hypothèses'),
+  return h('section', { class: 'sy-hyp sy-act sy-chapitre sy-ed', id: 'sy-hypotheses' },
+    numero(8, 'Hypothèses et risques'),
     h('div', { class: 'sy-sec-head' },
       h('div', {},
         h('h2', { class: 'sy-act-title' }, 'Les hypothèses du plan, et ce qui les justifie'),
@@ -907,6 +974,7 @@ function hypotheses(r, s, navigate) {
         ))),
       ),
     ),
+    risquesDetail(s, r),
     h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'methode' }, navigate) }, 'Voir la méthode et les sources →'),
   )
 }
@@ -928,24 +996,41 @@ function numero(no, nom) {
   )
 }
 
+/**
+ * Les six chiffres qu'on doit connaître : le chiffre d'affaires, le résultat
+ * net, la marge brute, le point mort, le cash minimum et le besoin de
+ * financement. Posés juste après l'ouverture, en une rangée ; chaque partie
+ * qui suit en explique un.
+ */
+function sixDuDetail(r, y) {
+  const p = r.pnl, k = r.kpis
+  const ca = n(p.revenue[y]), net = n(p.netResult[y])
+  const mr = ca > 0 ? n(k.marginRate?.[y]) : null
+  const pm = n(k.breakEven?.[y])
+  const franchi = pm > 0 && ca >= pm
+  const besoin = n(k.fundingNeed)
+  const C = (v) => euro(v, { compact: true })
+  return [
+    { label: 'Chiffre d’affaires', value: C(ca), note: `année ${y + 1}`, tone: 'pos', go: 'offre', help: 'chiffreAffaires', cible: 'ca' },
+    { label: 'Résultat net', value: C(net), note: ca > 0 ? `${pct(net / ca, 1)} du chiffre d’affaires` : `année ${y + 1}`, tone: net >= 0 ? 'pos' : 'neg', go: 'resultats', help: 'resultatNet', cible: 'ca' },
+    { label: 'Marge brute', value: mr === null ? '—' : pct(mr, 0), note: `${C(n(p.grossMargin[y]))} après les coûts directs`, tone: mr === null ? '' : mr >= 0.4 ? 'pos' : mr >= 0.15 ? 'warn' : 'neg', go: 'offre', help: 'margeBrute', cible: 'vente' },
+    { label: 'Point mort', value: pm > 0 ? C(pm) : '—', note: franchi ? 'franchi cette année' : 'pas encore franchi', tone: franchi ? 'pos' : 'warn', go: 'resultats', help: 'pointMort', cible: 'vente' },
+    { label: 'Cash minimum', value: C(k.cashLow.value), note: `au plus bas en ${monthLabel(k.cashLow.month, r.startDate)}`, tone: k.cashLow.value < 0 ? 'neg' : 'pos', go: 'financement', help: 'tresorerie', cible: 'treso' },
+    { label: 'Besoin de financement', value: besoin > 0 ? C(besoin) : 'Aucun', note: besoin > 0 ? `à réunir avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la trésorerie se suffit', tone: besoin > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement', cible: 'finance' },
+  ]
+}
+
 function sixChiffres(r, s, y, choisir, navigate) {
-  const figures = figureSet(r, s, y)
-  return h('section', { class: 'sy-figs sy-act sy-chapitre', id: 'sy-chiffres' },
-    numero(4, 'Les chiffres clés'),
+  const figures = sixDuDetail(r, y)
+  return h('section', { class: 'sy-figs sy-act is-compact', id: 'sy-chiffres' },
     h('div', { class: 'sy-sec-head' },
       h('div', {},
         h('h2', { class: 'sy-act-title' }, 'Les six chiffres à connaître par cœur'),
-        h('p', { class: 'sy-act-say' }, 'EBE, point mort, trésorerie au plus bas, montant à financer, marge brute, autonomie : clique sur chacun pour savoir ce qu’il veut dire, pourquoi on te le demande, et où le corriger.'),
+        h('p', { class: 'sy-act-say' }, 'Chacun est expliqué dans une partie ci-dessous. Clique sur un chiffre pour sa définition et pour aller à sa partie.'),
       ),
       anneeChips(y, choisir),
     ),
-    // Trois piles plutôt qu'une grille : une définition dépliée n'allonge que
-    // sa colonne. Dans une grille, elle étirait toute la rangée et laissait
-    // deux grands vides à côté d'elle.
-    h('div', { class: 'sy-figs-grid' },
-      ...[0, 1, 2].map((col) => h('div', { class: 'sy-figs-col' },
-        ...figures.map((f, i) => (i % 3 === col ? chiffre(f, i, navigate) : null)))),
-    ),
+    h('div', { class: 'sy-figs-grid is-six' }, ...figures.map((f, i) => chiffre(f, i, navigate))),
   )
 }
 
@@ -993,6 +1078,7 @@ function chiffre(f, i, navigate) {
           g ? h('p', { class: 'sy-fig-what' }, g.what) : null,
           g && g.use ? h('p', { class: 'sy-fig-use' }, g.use) : null,
           g && g.watch ? h('p', { class: 'sy-fig-watch' }, h('b', {}, 'À surveiller — '), g.watch) : null,
+          f.cible ? h('button', { class: 'sy-link', onClick: () => allerA(f.cible) }, `Lire la partie « ${PARTIES.find((x) => x.cle === f.cible)?.nom} » ↓`) : null,
           h('button', {
             class: 'sy-link',
             onClick: () => goToGap({ route: f.go }, navigate),
@@ -1019,7 +1105,7 @@ function analyse(r, s, y, choisir, navigate, refresh) {
   const neuve = etat.analyseNeuve
   etat.analyseNeuve = false
   return h('section', { class: `sy-deep sy-act sy-chapitre ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}`, id: 'sy-comptes' },
-    numero(6, 'Le détail des comptes'),
+    numero(9, 'Analyse détaillée'),
     h('h2', { class: 'sy-act-title' }, 'D’où viennent tous ces chiffres'),
     h('p', { class: 'sy-act-say' }, 'Pour vérifier un chiffre ou répondre à une question précise : le compte de résultat de chaque année, ce qui fait passer du chiffre d’affaires au bénéfice, et le compte en banque mois par mois.'),
     h('button', {
@@ -1179,6 +1265,7 @@ function compteAnnee(r, y) {
     l('− Salaires et cotisations', p.payroll[y]),
     l('= EBE', p.ebe[y], true),
     n(p.amortisation[y]) ? l('− Amortissements', p.amortisation[y]) : null,
+    n(p.badDebts?.[y]) ? l('− Pertes sur créances', p.badDebts[y]) : null,
     l('= Résultat d’exploitation', p.ebit[y], true),
     n(p.interest[y]) ? l('− Intérêts', p.interest[y]) : null,
     n(p.corporateTax[y]) ? l('− Impôt sur les sociétés', p.corporateTax[y]) : null,
@@ -1212,6 +1299,7 @@ function cascade(r, y) {
     { nom: 'Personnel', v: -Math.abs(n(p.payroll[y])) },
     { nom: 'EBE', v: n(p.ebe[y]), solde: true },
     { nom: 'Amortissements', v: -Math.abs(n(p.amortisation[y])) },
+    { nom: 'Impayés', v: -Math.abs(n(p.badDebts?.[y])) },
     { nom: 'Frais financiers', v: -Math.abs(n(p.interest[y])) },
     { nom: 'Impôt sur les sociétés', v: -Math.abs(n(p.corporateTax[y])) },
     { nom: 'Crédits d’impôt', v: n(p.credits[y]) },
@@ -1368,119 +1456,6 @@ function ratios(r, y) {
 }
 
 /* ───────────────────────────── Les petites images ────────────────────────── */
-
-/**
- * Cinq barres de part et d'autre d'un zéro.
- *
- * La barre dit le sens — ça monte, ça part du rouge, ça passe au positif
- * telle année ; le survol donne le montant exact.
- */
-function barres(items, nom, grand = false) {
-  const haut = Math.max(0, ...items.map((i) => n(i.value)))
-  const bas = Math.min(0, ...items.map((i) => n(i.value)))
-  const span = haut - bas || 1
-  // La ligne de zéro tombe là où le zéro se trouve vraiment : une perte de
-  // 12 000 € face à un bénéfice de 800 000 € ne mérite pas la moitié du dessin.
-  // Une échelle, une seule, pour les deux sens.
-  const zero = haut / span
-  return h('div', { class: `sy-mini ${grand ? 'is-grand' : ''}`, style: { '--zero': String(zero) } },
-    h('i', { class: 'sy-mini-zero', 'aria-hidden': 'true' }),
-    ...items.map((it, k) => {
-      const v = n(it.value)
-      const part = (Math.abs(v) / span) * 100
-      const pose = v >= 0
-        ? { bottom: `${(1 - zero) * 100}%`, height: `${part}%` }
-        : { top: `${zero * 100}%`, height: `${part}%` }
-      return hot(h('div', { class: 'sy-mini-col' },
-        h('div', { class: 'sy-mini-track' },
-          h('i', { class: v < 0 ? 'is-neg' : 'is-pos', style: { ...pose, '--i': String(k) } },
-            // En grand, chaque barre porte son montant : l'image se lit sans
-            // survol, et le survol garde l'euro près.
-            grand ? h('span', { class: 'sy-mini-val' }, euro(v, { compact: true })) : null)),
-        h('span', { class: 'sy-mini-label' }, it.label),
-      ), nom, () => [{ label: it.label, value: euro(v), strong: true }])
-    }),
-  )
-}
-
-/** Où part chaque euro : une barre, des parts, une légende en chasse fixe. */
-function repartition(parts, nom) {
-  const garde = parts.filter((p) => n(p.value) > 0)
-  const total = garde.reduce((a, p) => a + n(p.value), 0) || 100
-  return h('div', { class: 'sy-split' },
-    hot(h('div', { class: 'sy-split-bar' },
-      ...garde.map((p) => h('i', { class: `is-${p.tone}`, style: { flexGrow: String(n(p.value) / total) } }))),
-      nom, () => garde.map((p) => ({ label: p.label, value: String(p.value), strong: p.tone === 'left' }))),
-    h('div', { class: 'sy-split-keys' },
-      ...garde.map((p) => h('span', { class: `sy-split-key is-${p.tone}` },
-        h('i', { 'aria-hidden': 'true' }), p.label, h('b', {}, String(p.value))))),
-  )
-}
-
-/**
- * Une jauge : la part d'un seuil atteinte, et le repère du seuil.
- *
- * En grand, elle devient une règle : le seuil et le prévu y sont posés avec
- * leurs montants, et l'écart se lit comme une distance.
- */
-function jauge(meter, grand = false) {
-  const { part, label, seuil, prevu } = meter
-  if (grand && n(seuil) > 0) {
-    const max = Math.max(n(seuil), n(prevu)) * 1.08 || 1
-    const franchi = n(prevu) >= n(seuil)
-    const xs = (n(seuil) / max) * 100
-    const xp = Math.max(1.5, (n(prevu) / max) * 100)
-    return h('div', { class: `sy-rule ${franchi ? 'is-ok' : ''}` },
-      h('div', { class: 'sy-rule-track' },
-        h('i', { class: 'sy-rule-fill', style: { width: `${xp}%` } }),
-        h('span', { class: 'sy-rule-mark', style: { left: `${xs}%` }, 'aria-hidden': 'true' }),
-      ),
-      h('div', { class: 'sy-rule-labels' },
-        h('span', { class: 'sy-rule-seuil', style: { left: `${xs}%` } },
-          h('b', {}, 'Point mort'), euro(n(seuil), { compact: true })),
-        h('span', { class: 'sy-rule-prevu', style: { left: `${xp}%` } },
-          h('b', {}, 'Prévu'), euro(n(prevu), { compact: true })),
-      ),
-      h('span', { class: 'sy-gauge-label' }, label),
-    )
-  }
-  const echelle = Math.max(1, n(part))
-  return h('div', { class: 'sy-gauge' },
-    h('div', { class: 'sy-gauge-track' },
-      h('i', {
-        class: n(part) >= 1 ? 'is-ok' : '',
-        style: { width: `${Math.min(100, Math.max(2, (n(part) / echelle) * 100))}%` },
-      }),
-      h('span', { class: 'sy-gauge-mark', style: { left: `${(1 / echelle) * 100}%` }, 'aria-hidden': 'true' }),
-    ),
-    h('span', { class: 'sy-gauge-label' }, label),
-  )
-}
-
-/**
- * Cent euros, en une barre large.
- *
- * Chaque part porte son montant dans la barre quand elle est assez large pour
- * le contenir, et toutes se retrouvent dans la liste dessous, alignée sur la
- * droite : on lit l'image, puis on vérifie les nombres.
- */
-function grandeBarre(parts, nom) {
-  const garde = parts.filter((p) => n(p.value) > 0)
-  const total = garde.reduce((a, p) => a + n(p.value), 0) || 100
-  return h('div', { class: 'sy-hundred' },
-    hot(h('div', { class: 'sy-hundred-bar' },
-      ...garde.map((p, k) => h('i', {
-        class: `is-${p.tone}`,
-        style: { flexGrow: String(n(p.value) / total), '--i': String(k) },
-      }, n(p.value) / total >= 0.09 ? h('span', {}, `${p.value} €`) : null))),
-      nom, () => garde.map((p) => ({ label: p.label, value: `${p.value} € sur 100`, strong: p.tone === 'left' }))),
-    h('div', { class: 'sy-hundred-keys' },
-      ...garde.map((p) => h('div', { class: `sy-hundred-key is-${p.tone}` },
-        h('i', { 'aria-hidden': 'true' }),
-        h('span', {}, p.label),
-        h('b', {}, `${p.value} €`)))),
-  )
-}
 
 /** Une étincelle : la forme d'une série, sans axe, dans la couleur du verdict. */
 function etincelle(values, couleur) {

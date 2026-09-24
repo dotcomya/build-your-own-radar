@@ -583,19 +583,20 @@ function costBlocks(s, r, level, refresh, navigate) {
   const fixed = s.opex.filter((o) => !o.mode || o.mode === 'fixed' || o.mode === 'perEmployee')
   const variable = s.opex.filter((o) => ['perUnit', 'pctRevenue'].includes(o.mode))
   const vendues = (s.activities || []).filter((a) => (Number(a.unitPrice) > 0 || Number(a.recurringPrice) > 0) && !(Number(a.commissionRate) > 0 && Number(a.dealValue) > 0))
-  const block = (title, note, rows, tone = '', tete = []) => rows.length || tete.length
+  const block = (title, note, rows, tone = '', tete = [], queue = []) => rows.length || tete.length || queue.length
     ? h('section', { class: `costblock ${tone}` },
         h('header', { class: 'costblock-head' },
           h('div', { class: 'costblock-title' }, title),
           h('div', { class: 'costblock-note' }, note),
-          h('span', { class: 'costblock-count num' }, `${rows.length + tete.length}`),
+          h('span', { class: 'costblock-count num' }, `${rows.length + tete.length + queue.length}`),
         ),
         ...tete,
         ...rows.map((o) => opexRow(o, r, level, refresh)),
+        ...queue,
       )
     : null
   return [
-    block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed, '',
+    block('Charges générales', 'Elles tombent chaque mois, que tu vendes ou non. Ce sont elles qui fixent le nombre de clients qu’il te faut.', fixed, '', [],
       (s.marketing || []).filter((c) => c.enabled !== false && Number(c.monthlyBudget) > 0).map((c) => campagneRow(c, navigate))),
     block('Charges par vente', 'Elles n’existent que s’il y a une vente. En tête, le coût de revient de chaque offre — ce que tu achètes ou produis pour la livrer ; dessous, ce qui s’y ajoute : commissions, emballages. Ne mets pas deux fois le même coût.', variable, 'is-variable', vendues.map((a) => coutRevientRow(s, a))),
   ].filter(Boolean)

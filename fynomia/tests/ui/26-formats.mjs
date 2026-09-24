@@ -100,7 +100,7 @@ export default async function (t) {
   t.verifie(notes.every((x) => !/[«»]/.test(x.replace(/« [^»]+ »/g, (m) => (m.length < 40 ? '' : m)))), 'diapos : la note d’orateur ne cite personne entre guillemets')
 
   await choisir('En détail')
-  const hyp = await p.$$eval('#sy-hypotheses tbody tr', (e) => e.map((x) => ({
+  const hyp = await p.$$eval('#sy-hypotheses .sy-hyp-table tbody tr', (e) => e.map((x) => ({
     h: x.children[0]?.textContent.trim(), v: x.children[1]?.textContent.trim(), j: x.children[2]?.textContent.trim(),
   })))
   t.verifie(hyp.length >= 6 && hyp.every((x) => x.h && x.v && x.j && x.j.length > 30), 'en détail : les hypothèses du plan, chacune avec sa valeur et sa justification', hyp.map((x) => x.h))

@@ -45,6 +45,10 @@ const SOURCES = [
       { k: 'amount', label: 'Montant', suffix: '\u20ac', type: 'number' },
       { k: 'rate', label: 'Taux annuel', type: 'percent', step: 0.1 },
       { k: 'months', label: 'Dur\u00e9e', suffix: 'mois', type: 'number' },
+      // Un diff\u00e9r\u00e9 d'amortissement : six \u00e0 douze mois sans rembourser le
+      // capital, le temps que l'activit\u00e9 d\u00e9marre. Le moteur le calculait ; il
+      // ne se saisissait nulle part.
+      { k: 'graceMonths', label: 'Diff\u00e9r\u00e9', suffix: 'mois', type: 'number' },
       { k: 'month', label: 'D\u00e9blocage', type: 'month' },
     ],
     note: (l) => loanSummary(l),

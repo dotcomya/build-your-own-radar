@@ -641,7 +641,7 @@ function keepCard(r) {
   const per100 = (v) => Math.round((n(v) / rev) * 100)
   const buys = Math.max(0, per100(p.variableCost[i]))
   const team = Math.max(0, per100(p.payroll[i]))
-  const other = Math.max(0, per100(n(p.external[i]) + n(p.duties[i]) + n(p.amortisation[i]) + n(p.interest[i]) + n(p.corporateTax[i])))
+  const other = Math.max(0, per100(n(p.external[i]) + n(p.duties[i]) + n(p.amortisation[i]) + n(p.badDebts?.[i]) + n(p.interest[i]) + n(p.corporateTax[i])))
   const net = per100(p.netResult[i])
   const spend = buys + team + other
 

@@ -198,7 +198,7 @@ function waterfall(income, r, y) {
 
   steps.push({ label: "EBE de l'entreprise", value: ebe, kind: 'start' })
   if (row.employerCost > 0) steps.push({ label: 'dont ta rémunération chargée', value: -row.employerCost, kind: 'info', note: `${euro(row.gross)} de brut, ${euro(row.employerCost - row.gross)} de cotisations` })
-  steps.push({ label: 'Amortissements et frais financiers', value: -(r.pnl.amortisation[y] + r.pnl.interest[y]), kind: 'cost' })
+  steps.push({ label: (r.pnl.badDebts?.[y] || 0) > 0 ? 'Amortissements, impayés et frais financiers' : 'Amortissements et frais financiers', value: -(r.pnl.amortisation[y] + (r.pnl.badDebts?.[y] || 0) + r.pnl.interest[y]), kind: 'cost' })
   if (r.pnl.credits[y] > 0) steps.push({ label: "Crédits d'impôt", value: r.pnl.credits[y], kind: 'gain' })
   steps.push({ label: 'Impôt sur les sociétés', value: -r.pnl.corporateTax[y], kind: 'cost' })
   steps.push({ label: "Résultat net de l'entreprise", value: r.pnl.netResult[y], kind: 'subtotal' })

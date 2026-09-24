@@ -136,7 +136,7 @@ export default async function (t, { rapide } = {}) {
   await t.pose(p)
   t.verifie((await p.locator('.pitch-compteur').innerText()).startsWith('2'), 'diapos : la flèche passe à la suivante')
 
-  // En détail : un sommaire, des chapitres détachés, le texte replié.
+  // En détail : un sommaire, neuf parties, le texte replié.
   await p.locator('.pitch-mise', { hasText: 'En détail' }).click()
   await p.locator('.pitch-mise.is-on', { hasText: 'En détail' }).waitFor({ timeout: 3000 }).catch(() => {})
   await t.pose(p)
@@ -147,8 +147,8 @@ export default async function (t, { rapide } = {}) {
     pourquoi: document.querySelectorAll('.pitch.is-detail details.sy-why').length,
     ouverts: document.querySelectorAll('.pitch.is-detail details.sy-why[open]').length,
   }))
-  t.verifie(detail.sommaire === 6 && detail.chapitres >= 6, '« En détail » : un sommaire de six parties — hypothèses comprises —, chacune dans son panneau', detail)
-  t.verifie(detail.clairs >= 3 && detail.pourquoi >= 3 && detail.ouverts === 0, '« en clair » sous chaque acte, « pourquoi c’est important » replié', detail)
+  t.verifie(detail.sommaire === 9 && detail.chapitres === 9, '« En détail » : un sommaire de neuf parties, de l’ouverture à l’analyse détaillée', detail)
+  t.verifie(detail.clairs >= 7 && detail.pourquoi >= 7 && detail.ouverts === 0, 'une explication courte avant les chiffres, « pourquoi c’est important » replié', detail)
   await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
   await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).waitFor({ timeout: 3000 }).catch(() => {})
   await t.pose(p)

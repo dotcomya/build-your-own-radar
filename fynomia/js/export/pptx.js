@@ -619,7 +619,7 @@ export function buildDeck(scenario, result, profile) {
       // évite de croire, trois lignes plus bas, qu'elle sort du résultat net.
       ...(incomeRow.employerCost > 0 ? [{ label: 'dont ta rémunération chargée', value: -incomeRow.employerCost, kind: 'info',
         note: `${eur(incomeRow.gross)} de brut et ${eur(incomeRow.employerCost - incomeRow.gross)} de cotisations patronales` }] : []),
-      { label: 'Amortissements et frais financiers', value: -(p.amortisation[refYear] + p.interest[refYear]), kind: 'cost' },
+      { label: (p.badDebts?.[refYear] || 0) > 0 ? 'Amortissements, impayés et frais financiers' : 'Amortissements et frais financiers', value: -(p.amortisation[refYear] + (p.badDebts?.[refYear] || 0) + p.interest[refYear]), kind: 'cost' },
       ...(p.credits[refYear] > 0 ? [{ label: "Crédits d'impôt", value: p.credits[refYear], kind: 'gain' }] : []),
       { label: 'Impôt sur les sociétés', value: -p.corporateTax[refYear], kind: 'cost' },
       { label: "Résultat net de l'entreprise", value: p.netResult[refYear], kind: 'sub' },

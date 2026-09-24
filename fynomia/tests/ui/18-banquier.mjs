@@ -15,7 +15,9 @@
  *      divisée par sept ;
  *   4. le tableau du banquier donne EBE, capacité d'autofinancement, échéances, couverture et dette
  *      restante, année par année ;
- *   5. un prêt d'honneur ajouté améliore l'apport.
+ *   5. un prêt d'honneur ajouté améliore l'apport ;
+ *   6. le prêt bancaire se saisit avec son différé : le capital attend, les
+ *      intérêts courent.
  */
 export const nom = 'Banquier — EBE et EBITDA, capacité d’autofinancement, échéances réelles, cinq vérifications'
 
@@ -37,6 +39,21 @@ export default async function (t) {
   await champ(/^Durée/).fill('84')
   await champ(/^Durée/).blur()
   await t.pose(p)
+  // Un différé de six mois : le capital attend, les intérêts courent.
+  t.verifie(await champ(/^Différé/).count() === 1, 'le prêt bancaire a son champ « Différé »')
+  await champ(/^Différé/).fill('6')
+  await champ(/^Différé/).blur()
+  await t.pose(p)
+  const differe = await p.evaluate(async () => {
+    const st = (await import('./js/state/store.js')).default
+    const l = st.scenario.financing.loans[0]
+    const f = st.result.financing
+    const m0 = Number(l.month) || 0
+    return { grace: l.graceMonths, capital: f.repayment.slice(m0, m0 + 6).reduce((a, v) => a + v, 0), interets: f.interest.slice(m0, m0 + 6).every((v) => v > 0), apres: f.repayment[m0 + 6] > 0 }
+  })
+  const resume = await p.locator('.source-line').first().innerText().catch(() => '')
+  t.verifie(differe.grace === 6 && differe.capital === 0 && differe.interets && differe.apres && /Différé de 6 mois/.test(resume),
+    'six mois sans capital, les intérêts payés, puis l’échéancier démarre — et la note le dit', { differe, resume: resume.slice(0, 120) })
 
   await t.aller(p, 'business-case')
   const texte = await p.locator('.content').innerText()

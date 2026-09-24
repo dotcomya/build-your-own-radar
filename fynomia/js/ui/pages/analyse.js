@@ -527,6 +527,7 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
         n(p.grants[y]) ? { l: 'Subventions d’exploitation', v: n(p.grants[y]) } : null,
         { type: 'sous', l: 'EBE', def: 'Avant amortissements, intérêts et impôts' },
         n(p.amortisation[y]) ? { l: 'Amortissements', v: -n(p.amortisation[y]), def: 'L’usure du matériel, étalée sur sa durée' } : null,
+        n(p.badDebts?.[y]) ? { l: 'Impayés', v: -n(p.badDebts[y]), def: 'Pertes sur créances : des factures qui ne seront jamais réglées' } : null,
         n(p.interest[y]) ? { l: 'Intérêts d’emprunt', v: -n(p.interest[y]) } : null,
         n(p.corporateTax[y]) ? { l: 'Impôt sur les sociétés', v: -n(p.corporateTax[y]) } : null,
         n(p.credits[y]) ? { l: 'Crédits d’impôt', v: n(p.credits[y]), def: 'Crédit d’impôt recherche ou innovation' } : null,
@@ -548,7 +549,9 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
           ['Résultat net', ...p.netResult.map((v) => euro(v))],
           ['Rentabilité nette', ...ANS.map((i) => (taux(p.netResult[i], ca[i]) !== null ? pct(taux(p.netResult[i], ca[i]), 1) : '—'))],
         ]),
-        h('p', { class: 'as-note' }, 'L’EBE se calcule depuis la valeur ajoutée ; l’EBITDA, depuis le résultat d’exploitation. Ils ne diffèrent que par les provisions et les pertes sur créances.'),
+        h('p', { class: 'as-note' }, (p.badDebts || []).some((v) => v)
+          ? 'L’EBE se calcule depuis la valeur ajoutée ; l’EBITDA, depuis le résultat d’exploitation. L’écart entre les deux, ce sont les impayés prévus : l’EBITDA les retranche, l’EBE non.'
+          : 'L’EBE se calcule depuis la valeur ajoutée ; l’EBITDA, depuis le résultat d’exploitation. Ils ne diffèrent que par les provisions et les pertes sur créances, absentes de ce plan.'),
       ], va('Voir les états financiers', { route: 'resultats' }), navigate),
     }))
   }

@@ -481,13 +481,16 @@ function activityCard(a, index, r, level, open, refresh, duplicate, navigate) {
           titre: 'Délais de paiement et acomptes',
           sous: 'Combien de temps tes clients mettent à te payer, et toi à payer tes fournisseurs.',
           eteint: 'Désactivé : tout le monde paie comptant, le jour de la vente.',
-          neutre: { deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, costPaymentLag: 0, costDeposit: 0 },
+          neutre: { deliveryLag: 0, paymentLag: 0, deposit: 0, milestone: 0, costPaymentLag: 0, costDeposit: 0, badDebtRate: 0 },
           corps: () => h('div', {},
             h('div', { class: 'grid grid-2' },
               numberField({ label: 'Délai de livraison', field: 'deliveryLag', value: a.deliveryLag, suffix: 'mois', onInput: (v) => set({ deliveryLag: v }) }),
               numberField({ label: 'Délai de paiement client', field: 'paymentLag', value: a.paymentLag, suffix: 'mois', hint: '0 = comptant.', onInput: (v) => set({ paymentLag: v }) }),
               numberField({ label: 'Acompte à la commande', field: 'deposit', value: a.deposit, percent: true, hint: 'Réduit directement ton besoin de trésorerie.', onInput: (v) => set({ deposit: v }) }),
               numberField({ label: 'Solde intermédiaire', field: 'milestone', value: a.milestone, percent: true, onInput: (v) => set({ milestone: v }) }),
+              // Une part des factures ne sera jamais payée : elle compte dans le
+              // chiffre d'affaires, jamais dans la trésorerie, et passe en perte.
+              numberField({ label: 'Impayés', field: 'badDebtRate', value: a.badDebtRate, percent: true, hint: 'Part des factures jamais réglée. 1 à 3 % entre entreprises est courant.', onInput: (v) => set({ badDebtRate: v }) }),
             ),
             paymentTimeline(a),
             h('div', { class: 'grid grid-2 mt' },

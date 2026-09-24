@@ -260,12 +260,15 @@ function pnlView(r, level) {
             line("EBE — Excédent brut d'exploitation", p.ebe, { cls: 'highlight', help: 'ebe' }),
             rate('marge d\'EBE', k.ebeMargin),
             line('Dotations aux amortissements', p.amortisation, { negate: true }),
+            ...((p.badDebts || []).some((v) => v) ? [line('Pertes sur créances irrécouvrables', p.badDebts, { negate: true })] : []),
             line("Résultat d'exploitation", p.ebit, { help: 'ebit' }),
             // L'EBITDA se lit par le bas, depuis le résultat d'exploitation :
             // c'est sa définition, et ce qui le distingue de l'EBE.
             line("EBITDA — Résultat d'exploitation + amortissements", p.ebitda, { cls: 'highlight', help: 'ebitda' }),
             rate("marge d'EBITDA", k.ebitdaMargin),
-            ...(p.ebitda.every((v, y) => Math.abs(v - p.ebe[y]) < 1) ? [noteRow("Égal à l'EBE : ton plan ne comporte ni autres produits ou charges de gestion courante, ni provisions, qui seuls les distinguent.")] : []),
+            ...(p.ebitda.every((v, y) => Math.abs(v - p.ebe[y]) < 1)
+              ? [noteRow("Égal à l'EBE : ton plan ne comporte ni impayés, ni provisions, qui seuls les distinguent.")]
+              : [noteRow("Sous l'EBE : l'EBITDA retranche les pertes sur créances — tes impayés —, que l'EBE laisse de côté.")]),
             line('Charges financières', p.interest, { negate: true }),
             line('Résultat avant impôt', p.preTax),
             ...(p.credits.some((v) => v) ? [line("Crédits d'impôt recherche et innovation", p.credits, { help: 'cir' })] : []),

@@ -171,6 +171,12 @@ export function activityRevenue(activity, volumes) {
   const milestone = clamp01(Number(activity.milestone) || 0)
   const balance = Math.max(0, 1 - deposit - milestone)
   const contracts = activeContracts(volumes, activity)
+  // Les impayés : une part des factures n'est jamais réglée. Elle ne porte
+  // que sur ce qui se paie après coup — le solde d'une vente, la mensualité
+  // d'un abonnement ; l'acompte, versé à la commande, est acquis. La perte
+  // est constatée à l'échéance de la facture, et rien n'entre en caisse.
+  const impaye = Math.min(0.5, clamp01(Number(activity.badDebtRate) || 0))
+  const badDebt = zeros()
 
   for (let m = 0; m < MONTHS; m++) {
     const y = yearOf(m)
@@ -191,15 +197,19 @@ export function activityRevenue(activity, volumes) {
     if (amount) {
       push(cashOneOff, m, amount * deposit)
       push(cashOneOff, m + Math.round(delivery / 2), amount * milestone)
-      push(cashOneOff, m + delivery + payLag, amount * balance)
+      push(cashOneOff, m + delivery + payLag, amount * balance * (1 - impaye))
+      if (impaye) push(badDebt, m + delivery + payLag, amount * balance * impaye)
     }
     // Encaissement du récurrent : facturé au mois, encaissé au délai de paiement.
-    if (recurring[m]) push(cashRecurring, m + payLag, recurring[m])
+    if (recurring[m]) {
+      push(cashRecurring, m + payLag, recurring[m] * (1 - impaye))
+      if (impaye) push(badDebt, m + payLag, recurring[m] * impaye)
+    }
   }
 
   const total = oneOff.map((v, i) => v + recurring[i])
   const cash = cashOneOff.map((v, i) => v + cashRecurring[i])
-  return { oneOff, recurring, total, cash, cashOneOff, cashRecurring, contracts }
+  return { oneOff, recurring, total, cash, cashOneOff, cashRecurring, contracts, badDebt }
 }
 
 /** Charges variables d'une activité : achats et sous-traitance directement liés aux ventes. */
@@ -232,7 +242,7 @@ export function activityVariableCosts(activity, volumes) {
 export function revenueModel(activities, campaigns) {
   const mk = marketingVolumes(campaigns, activities)
   const perActivity = []
-  const totals = { oneOff: zeros(), recurring: zeros(), total: zeros(), cash: zeros(), variableCost: zeros(), variableCash: zeros(), units: zeros() }
+  const totals = { oneOff: zeros(), recurring: zeros(), total: zeros(), cash: zeros(), variableCost: zeros(), variableCash: zeros(), units: zeros(), badDebt: zeros() }
 
   for (const a of activities) {
     const base = baseVolumes(a)
@@ -246,6 +256,7 @@ export function revenueModel(activities, campaigns) {
       totals.recurring[m] += rev.recurring[m]
       totals.total[m] += rev.total[m]
       totals.cash[m] += rev.cash[m]
+      totals.badDebt[m] += rev.badDebt[m]
       totals.variableCost[m] += cost.charge[m]
       totals.variableCash[m] += cost.cash[m]
       totals.units[m] += volumes[m]

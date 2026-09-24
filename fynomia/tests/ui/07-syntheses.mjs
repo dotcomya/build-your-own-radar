@@ -2,8 +2,10 @@
  * Les deux synthèses : elles bougent avec le plan, et disent la même chose.
  *
  * — la synthèse d'origine change quand on change une charge ou un salaire ;
- * — l'essai porte exactement les mêmes lectures, mot pour mot ;
- * — chaque bloc de l'essai se trace en défilant, et rien ne déborde.
+ * — le détail du pitch suit l'ordre du récit : le chiffre d'affaires et le
+ *   résultat d'abord, les six chiffres à connaître, puis une partie pour
+ *   chacun ; ses chiffres sont ceux du moteur et du récit ;
+ * — chaque bloc du détail se trace en défilant, et rien ne déborde.
  */
 export const nom = 'Synthèses — recalcul, texte partagé, défilement'
 
@@ -32,28 +34,40 @@ export default async function (t) {
     await p.fermer()
   }
 
-  // 2 et 3. L'essai dit la même chose que l'original, et se trace au défilement.
+  // 2 et 3. Le détail suit l'ordre du récit, dit les chiffres du moteur, et se trace au défilement.
+  const PARTIES = ['Chiffre d’affaires et résultat', 'D’où vient le chiffre d’affaires', 'Économie d’une vente', 'Structure des coûts',
+    'Équipe et masse salariale', 'Trésorerie', 'Financement', 'Hypothèses et risques', 'Analyse détaillée']
+  const SIX = ['Chiffre d’affaires', 'Résultat net', 'Marge brute', 'Point mort', 'Cash minimum', 'Besoin de financement']
   for (const format of ['bureau', 'telephone']) {
     const p = await t.page(format)
     await t.exemple(p)
     await t.aller(p, 'tableau-de-bord')
-    const orig = await p.evaluate(() => [...document.querySelectorAll('.plaincard')].map((c) => [
-      c.querySelector('.plaincard-kicker').textContent, c.querySelector('.plaincard-title').textContent, c.querySelector('.plaincard-body').textContent]))
-    const actesO = await p.evaluate(() => [...document.querySelectorAll('.plain-act-title')].map((x) => x.textContent))
     await t.onglet(p, 'essai')
-    const essai = await p.evaluate(() => [...document.querySelectorAll('.sy-card, .sy-feature-main, .sy-fact, .sy-band-say')].map((c) => [
-      c.querySelector('.sy-card-kicker').textContent,
-      (c.querySelector('.sy-card-title, .sy-feature-title, .sy-fact-title') || {}).textContent,
-      (c.querySelector('.sy-card-body') || {}).textContent]))
-    // Les trois actes du récit ; les parties 04 et 05 (chiffres clés, détail
-    // des comptes) reprennent leur style mais ne sont pas partagées.
-    const actesE = await p.evaluate(() => [...document.querySelectorAll('.sy-act:not(.sy-figs):not(.sy-deep) > .sy-act-head .sy-act-title')].map((x) => x.textContent))
-    const cle = (l) => l.map((x) => x.map(norm).join(' | ')).sort()
-    const o = cle(orig), e = cle(essai)
-    t.verifie(o.length >= 5 && o.length === e.length, `${format} : l’essai porte autant de lectures que l’original`, `${o.length} / ${e.length}`)
-    const manquent = o.filter((x) => !e.includes(x))
-    t.verifie(!manquent.length, `${format} : texte des lectures identique`, manquent[0]?.slice(0, 120))
-    t.verifie(JSON.stringify(actesO.map(norm)) === JSON.stringify(actesE.map(norm)), `${format} : titres d’actes identiques`, { actesO, actesE })
+    const moteur = await p.evaluate(async () => {
+      const { euro } = await import('./js/ui/dom.js')
+      const r = (await import('./js/state/store.js')).default.result
+      const c = (v) => euro(v, { compact: Math.abs(v) >= 100000 })
+      return { ca: c(r.pnl.revenue[0]), net: c(r.pnl.netResult[0]), besoin: euro(r.kpis.fundingNeed), caC: euro(r.pnl.revenue[0], { compact: true }) }
+    })
+    const lu = await p.evaluate(() => {
+      const sy = document.querySelector('.pitch.is-detail .sy')
+      const blocs = [...sy.children].map((x) => x.id || x.className.split(' ')[0])
+      return {
+        blocs,
+        intro: (sy.querySelector('#sy-intro')?.textContent || '').replace(/\s+/g, ' '),
+        six: [...sy.querySelectorAll('#sy-chiffres .sy-fig-label')].map((x) => x.textContent.trim()),
+        sixVal: [...sy.querySelectorAll('#sy-chiffres .sy-fig-val')].map((x) => x.textContent.trim()),
+        parties: [...sy.querySelectorAll('.sy-chapitre > .sy-act-head .sy-act-no > span, .sy-chapitre > .sy-act-no > span')].map((x) => x.textContent.trim()),
+        fonds: [...sy.querySelectorAll('.sy-ed')].map((x) => getComputedStyle(x).backgroundColor),
+      }
+    })
+    t.verifie(lu.blocs[0] === 'sy-intro' && lu.blocs[1] === 'sy-chiffres', `${format} : le détail s’ouvre sur le chiffre d’affaires et le résultat, puis les six chiffres`, lu.blocs.slice(0, 3))
+    const intro = norm(lu.intro)
+    t.verifie(intro.includes(norm(moteur.ca)) && intro.includes(norm(moteur.net)) && /marge nette/.test(intro) && intro.indexOf(norm(moteur.besoin)) > intro.indexOf(norm(moteur.net)),
+      `${format} : l’ouverture dit le chiffre d’affaires, le résultat et la marge, puis le besoin de financement`, lu.intro.slice(0, 160))
+    t.verifie(JSON.stringify(lu.six) === JSON.stringify(SIX) && lu.sixVal[0] === moteur.caC, `${format} : les six chiffres à connaître, dans l’ordre`, lu.six)
+    t.verifie(JSON.stringify(lu.parties) === JSON.stringify(PARTIES), `${format} : les neuf parties, dans l’ordre du récit`, lu.parties)
+    t.verifie(lu.fonds.length >= 7 && lu.fonds.every((f) => f === 'rgba(0, 0, 0, 0)'), `${format} : des parties en article, sans panneau blanc`, lu.fonds.slice(0, 2))
 
     const attendent = await p.evaluate(() => [...document.querySelectorAll('.sy-watch')].filter((x) => !x.classList.contains('is-seen')).length)
     t.verifie(attendent > 0, `${format} : des blocs attendent d’être vus avant le défilement`, `${attendent}`)
@@ -64,8 +78,8 @@ export default async function (t) {
     const restent = await p.evaluate(() => [...document.querySelectorAll('.sy-watch')].filter((x) => !x.classList.contains('is-seen')).map((x) => x.dataset.guet))
     t.verifie(!restent.length, `${format} : tous les blocs se sont tracés au défilement`, restent)
     const hors = await p.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1,
-      blocs: [...document.querySelectorAll('.sy *')].filter((x) => x.getBoundingClientRect().right > innerWidth + 1 && !x.closest('.sy-ex')).map((x) => x.className).slice(0, 3) }))
-    t.verifie(!hors.page && !hors.blocs.length, `${format} : rien ne déborde dans l’essai`, hors)
+      blocs: [...document.querySelectorAll('.sy *')].filter((x) => x.getBoundingClientRect().right > innerWidth + 1 && !x.closest('.sy-ex, .as-table-wrap, .table-wrap')).map((x) => x.className).slice(0, 3) }))
+    t.verifie(!hors.page && !hors.blocs.length, `${format} : rien ne déborde dans le détail`, hors)
     t.verifie(p.erreurs.length === 0, `${format} : aucune erreur JavaScript`, p.erreurs.slice(0, 2))
     await p.fermer()
   }

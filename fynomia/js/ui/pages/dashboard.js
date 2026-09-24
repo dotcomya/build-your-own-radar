@@ -588,6 +588,7 @@ function moneyFlow(r, y) {
   if (p.payroll[y]) items.push({ label: 'Personnel', value: -p.payroll[y] })
   items.push({ label: 'EBE', value: p.ebe[y], total: true })
   if (p.amortisation[y]) items.push({ label: 'Amortis.', value: -p.amortisation[y] })
+  if (p.badDebts?.[y]) items.push({ label: 'Impayés', value: -p.badDebts[y] })
   if (p.interest[y]) items.push({ label: 'Frais fin.', value: -p.interest[y] })
   if (p.corporateTax[y]) items.push({ label: 'Impôt sociétés', value: -p.corporateTax[y] })
   if (p.credits[y]) items.push({ label: "Crédits impôt", value: p.credits[y] })
