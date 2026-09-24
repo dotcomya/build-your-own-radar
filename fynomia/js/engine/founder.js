@@ -22,7 +22,7 @@ import { isMicro } from './micro.js'
  * Impôt sur le revenu par application du barème à une part de quotient.
  * @returns {number} impôt dû pour une part
  */
-function taxOnOnePart(taxableIncome, brackets) {
+export function taxOnOnePart(taxableIncome, brackets) {
   let tax = 0
   let floor = 0
   for (const b of brackets) {
@@ -33,6 +33,12 @@ function taxOnOnePart(taxableIncome, brackets) {
   }
   return tax
 }
+
+/**
+ * L'abattement forfaitaire de 10 % sur un salaire net, borné par son plancher
+ * et son plafond.
+ */
+export const salaryDeduction = (net, allowance) => Math.min(allowance.max, Math.max(Math.min(net, allowance.min), net * allowance.rate))
 
 /**
  * Impôt sur le revenu du foyer, quotient familial et plafonnement compris.
@@ -152,7 +158,7 @@ export function founderIncome(scenario, result) {
 
     // ─── 4. Impôt sur le revenu du foyer ───────────────────────────────
     const deduction = allowanceApplies
-      ? Math.min(allowance.max, Math.max(Math.min(netBeforeTax, allowance.min), netBeforeTax * allowance.rate))
+      ? salaryDeduction(netBeforeTax, allowance)
       : 0
     const salaryTaxable = Math.max(0, netBeforeTax - deduction)
 

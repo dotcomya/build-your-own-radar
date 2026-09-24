@@ -69,7 +69,7 @@ export const REPERES = {
 export const SEUILS = { attention: 3, alerte: 10 }
 
 /** Le SMIC annuel brut à temps plein (35 h), à la valeur en vigueur. */
-export const SMIC_ANNUEL = Math.round(PARAMS.smicHourly.value * 151.67 * 12)
+export const SMIC_ANNUEL = Math.round(PARAMS.smicHourly.value * PARAMS.monthlyHours.value * 12)
 
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 

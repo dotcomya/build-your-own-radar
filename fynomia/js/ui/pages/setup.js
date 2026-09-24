@@ -24,6 +24,7 @@ import { h, euro, num, pct, keystone } from '../dom.js'
 import { getSector, vocabulary } from '../../state/sectors.js'
 import { newTeamMember, newOpex } from '../../state/schema.js'
 import { monthlyCost } from '../../engine/payroll.js'
+import { salaryDeduction, taxOnOnePart } from '../../engine/founder.js'
 import { compute } from '../../engine/engine.js'
 import store from '../../state/store.js'
 import { pfuTotal, PARAMS } from '../../engine/fiscal-fr-2026.js'
@@ -1317,19 +1318,10 @@ function salaryScreen(ctx) {
  * change la décision. On le dit, et on dit sous quelle hypothèse.
  */
 function incomeTaxOn(net) {
-  const brackets = PARAMS.incomeTaxBrackets.value
-  const ab = PARAMS.salaryAllowance.value
-  const base = Math.max(0, net - Math.min(ab.max, Math.max(Math.min(net, ab.min), net * ab.rate)))
-  let tax = 0, floor = 0
-  for (const b of brackets) {
-    if (base <= floor) break
-    tax += (Math.min(base, b.upTo) - floor) * b.rate
-    floor = b.upTo
-  }
-  return Math.round(tax)
+  const base = Math.max(0, net - salaryDeduction(net, PARAMS.salaryAllowance.value))
+  return Math.round(taxOnOnePart(base, PARAMS.incomeTaxBrackets.value))
 }
 
-/** Ce que l'impôt prendra, et sous quelle hypothèse. */
 /**
  * Ce qu'il reste après impôt, sur une ligne.
  *
