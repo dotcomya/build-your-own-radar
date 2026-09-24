@@ -14,9 +14,9 @@ export default async function (t) {
   await t.exemple(p)
 
   // 1. Une charge par vente.
-  await t.aller(p, 'achats', 900)
+  await t.aller(p, 'achats')
   const sugg = p.locator('button', { hasText: 'Commission de paiement' }).first()
-  if (await sugg.count()) { await sugg.click(); await p.waitForTimeout(900) }
+  if (await sugg.count()) { await sugg.click(); await p.locator('.costblock.is-variable .cost-row').first().waitFor({ timeout: 3000 }).catch(() => {}); await t.pose(p) }
   const ligne = p.locator('.costblock.is-variable .cost-row').first()
   t.verifie(await ligne.count() === 1, 'la commission arrive dans les charges par vente')
   const choix = await ligne.locator('.cost-seg-opt').allInnerTexts()
@@ -29,7 +29,7 @@ export default async function (t) {
   })
   t.verifie(forfait && forfait.mode === 'pctRevenue' && Number(forfait.mensuel) === 0, 'aucun forfait mensuel caché derrière le pourcentage', forfait)
   await ligne.locator('.cost-seg-opt', { hasText: 'par produit vendu' }).click()
-  await p.waitForTimeout(700)
+  await t.pose(p)
   const apres = await p.evaluate(async () => {
     const st = (await import('./js/state/store.js')).default
     return st.scenario.opex.find((x) => x.label === 'Commission de paiement')?.mode
@@ -37,12 +37,14 @@ export default async function (t) {
   t.verifie(apres === 'perUnit' && await p.locator('.costblock.is-variable .cost-row').first().locator('.cost-extra span', { hasText: 'produit' }).count() === 1, 'l’autre choix se prend d’un clic, en € par produit', apres)
 
   // 2. L'avertissement devant le guide flottant.
-  await t.aller(p, 'offre', 900)
-  if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.waitForTimeout(700) }
+  await t.aller(p, 'offre')
+  if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.locator('.item.open').first().waitFor(); await t.pose(p) }
   const abo = p.locator('.item.open .field', { has: p.locator('label', { hasText: /^Abonnement/ }) }).locator('input').first()
-  await abo.fill('12000'); await abo.blur(); await p.waitForTimeout(1000)
-  await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300)
-  await p.locator('.sx-ribbon-ctrl .garde summary').first().click(); await p.waitForTimeout(500)
+  await abo.fill('12000'); await abo.blur(); await t.pose(p)
+  await p.evaluate(() => window.scrollTo(0, 0)); await t.pose(p)
+  await p.locator('.sx-ribbon-ctrl .garde summary').first().click()
+  await p.locator('.garde[open] .garde-body').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const masques = await p.evaluate(() => {
     const b = document.querySelector('.garde[open] .garde-body')
     if (!b) return ['pas de bulle']

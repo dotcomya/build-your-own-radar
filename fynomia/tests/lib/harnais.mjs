@@ -94,56 +94,77 @@ export function outils(browser, base, journal) {
     return p
   }
 
-  /** Aller à une route de l'application et laisser le rendu se poser. */
-  async function aller(p, route, attente = 700) {
-    await p.goto(`${url}#/${route}`, { waitUntil: 'domcontentloaded' })
-    await p.waitForTimeout(attente)
+  /**
+   * Aller à une route de l'application et attendre que la page soit rendue.
+   *
+   * Rendue : la racine de l'application a été remplacée — une nouvelle page,
+   * pas l'ancienne encore affichée — puis le DOM s'est tu. Le fondu de la
+   * transition de vue peut encore jouer, et les courbes se tracer : l'un
+   * n'anime que des images de l'écran, l'autre l'intérieur des SVG ; aucun
+   * des deux ne déplace un élément de la page. Un test qui les regarde
+   * appelle `pose`.
+   */
+  async function aller(p, route) { await ouvrir(p, `${url}#/${route}`) }
+
+  /** La même chose pour une adresse complète (le fichier livré, par exemple). */
+  async function ouvrir(p, adresse) {
+    const meme = await p.evaluate((a) => {
+      window.__racine = document.querySelector('#app > *')
+      return location.href === a
+    }, adresse).catch(() => false)
+    await p.goto(adresse, { waitUntil: 'domcontentloaded' })
+    if (!meme) await p.waitForFunction(() => { const x = document.querySelector('#app > *'); return !!x && x !== window.__racine })
+    await pose(p, { voyage: false, svg: false })
   }
 
   /** Choisir un métier dans le parcours de création. */
   async function metier(p, nom) {
     await p.goto(`${url}#/creer`, { waitUntil: 'load' })
-    await p.waitForTimeout(500)
-    await p.locator('.welcome-go').click({ timeout: 1500 }).catch(() => {})
-    await p.waitForTimeout(300)
+    // Premier écran du parcours : l'accueil (« Commencer ») ou déjà les étapes.
+    await p.locator('.welcome-go, .setup-search-input, .setup-step').first().waitFor()
+    if (await p.locator('.welcome-go').count()) await p.locator('.welcome-go').click()
+    await p.locator('.setup-search-input, .setup-step').first().waitFor()
     if (!(await p.locator('.setup-search-input').count())) {
-      await p.locator('.setup-step', { hasText: 'Ton métier' }).first().click({ timeout: 2000 }).catch(() => {})
-      await p.waitForTimeout(400)
+      await p.locator('.setup-step', { hasText: 'Ton métier' }).first().click()
     }
     await p.locator('.setup-search-input').fill(nom)
-    await p.waitForTimeout(320)
+    const avant = await p.evaluate(() => localStorage.getItem('fynomia.current'))
     await p.locator(`.setup-sector:has-text("${nom}")`).first().click()
-    await p.waitForTimeout(600)
+    // Le plan est né : un nouveau plan courant, enregistré.
+    await p.waitForFunction((a) => { const c = localStorage.getItem('fynomia.current'); return !!c && c !== a }, avant)
+    await pose(p)
   }
 
   /** Charger le plan d'exemple (Nova Analytics, logiciel en abonnement). */
   async function exemple(p, nom = 'Logiciel en abonnement') {
     await metier(p, nom)
-    await aller(p, 'demarrer', 500)
+    await aller(p, 'demarrer')
     await p.locator('.landing-example').first().click()
-    await p.waitForTimeout(1100)
+    await p.waitForFunction(() => location.hash === '#/tableau-de-bord')
+    await pose(p)
   }
 
   /** Cliquer un onglet de module par son libellé. */
-  async function onglet(p, texte, attente = 900) {
+  async function onglet(p, texte) {
     // La synthèse essai vit désormais dans le pitch, sous « En détail ».
     if (/essai/i.test(texte)) {
       await p.locator('.module-nav .hnav-tab', { hasText: 'Pitch' }).first().click()
-      await p.waitForTimeout(400)
       await p.locator('.pitch-mise', { hasText: 'En détail' }).first().click()
-      await p.waitForTimeout(attente)
+      await p.locator('.pitch-mise.is-on', { hasText: 'En détail' }).first().waitFor()
+      await pose(p)
       return
     }
     await p.locator('.module-nav .hnav-tab', { hasText: texte }).first().click()
-    await p.waitForTimeout(attente)
+    await p.locator('.module-nav .hnav-tab.active', { hasText: texte }).first().waitFor()
+    await pose(p)
   }
 
-  /** Descendre jusqu'en bas, lentement, pour que tout ce qui se guette se déclenche. */
-  async function defiler(p, pas = 600, attente = 140) {
+  /** Descendre jusqu'en bas, par pas, pour que tout ce qui se guette se déclenche. */
+  async function defiler(p, pas = 600) {
     const H = await p.evaluate(() => document.documentElement.scrollHeight)
     for (let y = 0; y < H; y += pas) {
       await p.evaluate((yy) => window.scrollTo(0, yy), y)
-      await p.waitForTimeout(attente)
+      await pose(p, { calme: 60 })
     }
   }
 
@@ -156,7 +177,47 @@ export function outils(browser, base, journal) {
   }
   const bilan = () => ({ ok, ko })
 
-  return { url, page, aller, metier, exemple, onglet, defiler, verifie, bilan }
+  return { url, page, aller, ouvrir, metier, exemple, onglet, defiler, pose, verifie, bilan }
+}
+
+/**
+ * Attendre que l'écran soit posé — une condition, pas une durée.
+ *
+ * Posé veut dire : aucune transition de page en cours (la classe
+ * `is-travelling` est tombée), aucune animation d'état encore en train de
+ * jouer, et ni le DOM ni le défilement n'ont bougé depuis `calme`
+ * millisecondes. `max`
+ * borne l'attente : un écran qui ne se pose jamais laisse le test constater
+ * ce qu'il voit.
+ *
+ * Une animation d'état — une entrée, un volet qui s'ouvre, une transition —
+ * dure au plus une seconde et demie. Au-delà, ce sont des effets d'attention
+ * (l'appel du « i », l'éclat d'un ajout, l'anneau posé sur un champ, la
+ * révélation) ou des boucles : l'écran est lisible pendant qu'ils jouent, et
+ * les tests qui les concernent les guettent eux-mêmes.
+ */
+export async function pose(p, { calme = 120, max = 5000, voyage = true, svg = true } = {}) {
+  await p.evaluate(({ calme, max, voyage, svg }) => new Promise((ok) => {
+    const t0 = performance.now()
+    let dernier = t0
+    const obs = new MutationObserver(() => { dernier = performance.now() })
+    obs.observe(document, { subtree: true, childList: true, attributes: true, characterData: true })
+    // Un défilement en cours (molette, défilement doux) compte comme un mouvement.
+    const bouge = () => { dernier = performance.now() }
+    addEventListener('scroll', bouge, { capture: true, passive: true })
+    const ETAT = 1500
+    const fondu = (a) => String(a.effect && a.effect.pseudoElement || '').startsWith('::view-transition')
+    const dessin = (a) => typeof SVGElement === 'function' && a.effect && a.effect.target instanceof SVGElement
+    const anime = () => document.getAnimations().some((a) => a.playState === 'running' && (voyage || !fondu(a)) && (svg || !dessin(a))
+      && (a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity) <= ETAT)
+    const voit = () => {
+      const t = performance.now()
+      const fini = t - dernier >= calme && !anime() && (!voyage || !document.documentElement.classList.contains('is-travelling'))
+      if (fini || t - t0 > max) { obs.disconnect(); removeEventListener('scroll', bouge, { capture: true }); ok(); return }
+      setTimeout(voit, 20)
+    }
+    voit()
+  }), { calme, max, voyage, svg })
 }
 
 /** Le débordement horizontal d'une page, et les valeurs coupées. */

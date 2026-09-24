@@ -18,12 +18,12 @@ const lignes = (p) => p.evaluate(async () => {
 })
 
 async function ouvrirDossier(t, p) {
-  await t.aller(p, 'tableau-de-bord', 700)
-  await t.onglet(p, 'Pilotage', 700)
+  await t.aller(p, 'tableau-de-bord')
+  await t.onglet(p, 'Pilotage')
   const d = p.locator('.sy-dossier')
   if (!(await d.count())) return false
   await d.scrollIntoViewIfNeeded()
-  await p.waitForTimeout(250)
+  await t.pose(p)
   // Tout déplier : les colonnes longues cachent leurs dernières lignes.
   for (let k = 0; k < 12; k++) {
     const plus = p.locator('.sy-dossier-more').first()
@@ -49,15 +49,18 @@ async function jouer(t, p, plan) {
       .filter({ has: p.locator(`text="${it.label}"`) }).first()
     if (!(await bouton.count())) { t.verifie(false, `${plan} : « ${it.label} » est cliquable`); continue }
     await bouton.click()
-    // Le voyage, le rendu, puis l'anneau (posé à l'image suivante).
-    let arrive = null
-    for (let k = 0; k < 26 && !arrive?.spot; k++) {
-      await p.waitForTimeout(150)
-      arrive = await p.evaluate((a) => {
-        const el = a ? document.querySelector(`[data-gap="${a}"]`) : null
-        return { hash: location.hash, existe: !!el, spot: !!el && el.classList.contains('spotlit') }
-      }, it.go.anchor || null)
-    }
+    // Le voyage, le rendu, puis l'anneau (posé à l'image suivante) — ou, sans
+    // champ visé, la page d'arrivée.
+    await p.waitForFunction(({ a, route }) => {
+      if (location.hash !== `#/${route}`) return false
+      if (!a) return true
+      const el = document.querySelector(`[data-gap="${a}"]`)
+      return !!el && el.classList.contains('spotlit')
+    }, { a: (!it.na && it.go.anchor) || null, route: it.go.route }, { timeout: 4000 }).catch(() => {})
+    const arrive = await p.evaluate((a) => {
+      const el = a ? document.querySelector(`[data-gap="${a}"]`) : null
+      return { hash: location.hash, existe: !!el, spot: !!el && el.classList.contains('spotlit') }
+    }, it.go.anchor || null)
     t.verifie(arrive.hash === `#/${it.go.route}`, `${plan} : « ${it.label} » mène à ${it.go.route}`, arrive.hash)
     if (it.go.anchor && !it.na) {
       t.verifie(arrive.existe, `${plan} : « ${it.label} » trouve son champ (${it.go.anchor})`)

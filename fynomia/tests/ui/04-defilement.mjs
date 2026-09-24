@@ -8,18 +8,26 @@ import { PAGES } from '../lib/harnais.mjs'
 
 export const nom = 'Défilement et débordements'
 
+/**
+ * Attendre que la molette ait fait son effet : la page a défilé, ou elle est
+ * déjà en bas. Sous charge, le défilement peut commencer bien après le geste ;
+ * un écran immobile ne prouve donc pas qu'il a eu lieu.
+ */
+const avance = (p, depuis = 0) => p.waitForFunction((y0) => window.scrollY > y0 + 4
+  || window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 4, depuis, { timeout: 3000 }).catch(() => {})
+
 export default async function (t) {
   for (const format of ['large', 'telephone']) {
     const p = await t.page(format)
     await t.exemple(p)
     const hFenetre = format === 'large' ? 1000 : 844
     for (const k of PAGES) {
-      await t.aller(p, k, 900)
+      await t.aller(p, k)
       const h0 = await p.evaluate(() => document.documentElement.scrollHeight)
-      await p.mouse.wheel(0, 700); await p.waitForTimeout(500)
+      await p.mouse.wheel(0, 700); await avance(p); await t.pose(p)
       const h1 = await p.evaluate(() => document.documentElement.scrollHeight)
       const y1 = await p.evaluate(() => Math.round(window.scrollY))
-      await p.mouse.wheel(0, 900); await p.waitForTimeout(500)
+      await p.mouse.wheel(0, 900); await avance(p, y1); await t.pose(p)
       const y2 = await p.evaluate(() => Math.round(window.scrollY))
       const h2 = await p.evaluate(() => document.documentElement.scrollHeight)
       t.verifie(Math.abs(h0 - h1) <= 2 && Math.abs(h1 - h2) <= 2, `${format} / ${k} : hauteur stable`, `${h0}/${h1}/${h2}`)

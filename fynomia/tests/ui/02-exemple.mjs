@@ -14,7 +14,7 @@ export default async function (t) {
     const p = await t.page(format)
     await t.exemple(p, 'Restaurant')
     for (const r of PAGES) {
-      await t.aller(p, r, 260)
+      await t.aller(p, r)
       const titre = await p.evaluate(() => (document.querySelector('h1') || {}).textContent || '')
       const d = await debordements(p)
       t.verifie(titre && !d.page && !d.coupes.length, `${format} / exemple / ${r}`, { titre: titre.slice(0, 30), ...d })

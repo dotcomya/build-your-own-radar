@@ -25,21 +25,21 @@ export default async function (t, { rapide } = {}) {
   await t.exemple(p)
 
   for (const route of PAGES) {
-    await t.aller(p, route, 900)
-    await t.defiler(p, 420, 180)
-    await p.waitForTimeout(500)
+    await t.aller(p, route)
+    await t.defiler(p, 420)
+    await t.pose(p)
     const reste = await caches(p)
     t.verifie(reste.length === 0, `${route} : tout ce qui se révèle au défilement s'est révélé`, reste)
   }
 
   // Un volet replié garde ses graphiques pour l'ouverture : ils s'y tracent.
-  await t.aller(p, 'tableau-de-bord', 900)
+  await t.aller(p, 'tableau-de-bord')
   const volet = p.locator('details:not([open])', { has: p.locator('.ch-watch') }).first()
   if (await volet.count()) {
     await volet.locator('summary').first().click()
-    await p.waitForTimeout(300)
+    await t.pose(p)
     await volet.locator('.ch-watch').first().scrollIntoViewIfNeeded()
-    await p.waitForTimeout(900)
+    await t.pose(p)
     const ouverts = await volet.evaluate((d) => [...d.querySelectorAll('.ch-watch')].filter((x) => {
       const r = x.getBoundingClientRect()
       return r.top < innerHeight && r.bottom > 0
@@ -51,10 +51,10 @@ export default async function (t, { rapide } = {}) {
   // bord supérieur dépasse du bas de l'écran — c'est ce que le fondateur
   // voyait : des graphiques déjà figés quand il arrivait dessus.
   async function arrivee(route, onglet, selecteur, libelle) {
-    await t.aller(p, route, 900)
-    if (onglet) await t.onglet(p, onglet, 900)
+    await t.aller(p, route)
+    if (onglet) await t.onglet(p, onglet)
     await p.evaluate(() => window.scrollTo(0, 0))
-    await p.waitForTimeout(400)
+    await t.pose(p)
     const cible = p.locator(selecteur).first()
     if (!(await cible.count())) { t.verifie(false, `${libelle} : l’image existe`); return }
     const etat = () => cible.evaluate((x) => ({ vu: x.classList.contains('is-seen'), haut: x.getBoundingClientRect().top }))
@@ -64,10 +64,11 @@ export default async function (t, { rapide } = {}) {
     t.verifie(!e0.vu, `${libelle} : pas jouée au chargement, hors de l’écran`)
     // Seul le bord supérieur dépasse.
     await cible.evaluate((x) => window.scrollBy(0, x.getBoundingClientRect().top - window.innerHeight + 30))
-    await p.waitForTimeout(500)
+    // Le défilement posé, l'observateur a eu le temps de répondre s'il devait le faire.
+    await t.pose(p)
     t.verifie(!(await etat()).vu, `${libelle} : pas jouée quand seul son bord dépasse`)
     await cible.evaluate((x) => x.scrollIntoView({ block: 'center' }))
-    await p.waitForTimeout(600)
+    await cible.evaluate((x) => new Promise((ok) => { const t0 = performance.now(); const v = () => (x.classList.contains('is-seen') || performance.now() - t0 > 3000 ? ok() : setTimeout(v, 20)); v() }))
     t.verifie((await etat()).vu, `${libelle} : jouée une fois à l’écran`)
   }
   await arrivee('resultats', 'Compte de résultat', '.fin .ch.ch-watch', 'États financiers › graphique')
@@ -76,30 +77,30 @@ export default async function (t, { rapide } = {}) {
 
   // Les onglets des états financiers ont chacun leurs graphiques.
   for (const tab of ['Trésorerie', 'Bilan', 'BFR', 'Fiscalité']) {
-    await t.aller(p, 'resultats', 700)
-    await t.onglet(p, tab, 800)
-    await t.defiler(p, 420, 180)
-    await p.waitForTimeout(500)
+    await t.aller(p, 'resultats')
+    await t.onglet(p, tab)
+    await t.defiler(p, 420)
+    await t.pose(p)
     const reste = await caches(p)
     t.verifie(reste.length === 0, `États financiers › ${tab} : rien ne reste caché`, reste)
   }
 
   // Les états financiers : trois parties numérotées, quatre chiffres.
-  await t.aller(p, 'resultats', 900)
-  await t.onglet(p, 'Compte de résultat', 900)
+  await t.aller(p, 'resultats')
+  await t.onglet(p, 'Compte de résultat')
   const parties = await p.$$eval('.sx > .sx-head .sx-no > b', (e) => e.map((x) => x.textContent))
   t.verifie(parties.join(',') === '01,02', 'le compte de résultat a deux parties numérotées', parties)
   t.verifie(await p.locator('.sx-card').count() === 4, 'l’exercice se lit en quatre chiffres')
   t.verifie(!(await p.locator('.netsum').count()), 'ce qui arrive sur ton compte perso n’est pas sur cet onglet')
   // Chaque onglet n'a que ses propres parties.
   for (const tab of ['Bilan', 'BFR', 'Trésorerie']) {
-    await t.onglet(p, tab, 800)
+    await t.onglet(p, tab)
     t.verifie(!(await p.locator('.sx-card').count()) && !(await p.locator('.netsum').count()), `${tab} : ni les quatre chiffres, ni le compte perso`)
   }
-  await t.onglet(p, 'Ce que tu touches', 900)
+  await t.onglet(p, 'Ce que tu touches')
   const net = await p.locator('.netsum').innerText().catch(() => '')
   t.verifie(/compte perso/i.test(net) && /ni l’argent sur le compte de ta société/i.test(net), '« Ce que tu touches » dit de quel argent il s’agit', net.slice(0, 80))
-  await t.onglet(p, 'Compte de résultat', 900)
+  await t.onglet(p, 'Compte de résultat')
   const exacts = await p.$$eval('.sx-card .sx-big-cap', (e) => e.map((x) => x.textContent))
   t.verifie(exacts.every((x) => /année \d/i.test(x)), 'chaque chiffre porte sa valeur exacte et son année', exacts)
 
@@ -111,7 +112,8 @@ export default async function (t, { rapide } = {}) {
   }))
   const avant = await lire()
   await p.locator('.sx-year', { hasText: 'A4' }).first().click()
-  await p.waitForTimeout(700)
+  await p.locator('.sx-year.is-on', { hasText: 'A4' }).first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const apres = await lire()
   t.verifie(apres.grand !== avant.grand, 'choisir A4 change les quatre chiffres', `${avant.grand} → ${apres.grand}`)
   t.verifie(apres.an === 'fin-an-3', 'la colonne de l’année 4 est surlignée dans les tableaux', apres.an)
@@ -119,14 +121,15 @@ export default async function (t, { rapide } = {}) {
 
   // Cliquer une barre d'une carte choisit aussi l'exercice.
   await p.locator('.sx-card').first().locator('.sx-bar').nth(1).click()
-  await p.waitForTimeout(600)
+  await p.locator('.sx-year.is-on', { hasText: 'A2' }).first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, 'cliquer une barre choisit son exercice')
 
   // L'exercice choisi suit sur les pages de saisie, qui ont leurs chiffres —
   // en bandeau d'une ligne partout : le titre à gauche, les chiffres, puis
   // l'exercice et « Détail », qui déplie les cartes.
   for (const route of ['offre', 'achats', 'equipe', 'financement']) {
-    await t.aller(p, route, 900)
+    await t.aller(p, route)
     const n = await p.locator('.sx-ribbon-item').count()
     t.verifie(n >= 3, `${route} : la page montre ses chiffres en bandeau`, String(n))
     t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, `${route} : l’exercice choisi a suivi`)
@@ -147,25 +150,29 @@ export default async function (t, { rapide } = {}) {
     t.verifie(!forme.pastille && !forme.cote, `${route} : ni pastille de total répétée, ni colonne à droite`)
     t.verifie(forme.info && !forme.texteInfo, `${route} : l’explication du module est un « i », sans texte à côté du titre`)
   }
-  await t.aller(p, 'achats', 900)
+  await t.aller(p, 'achats')
   await p.locator('.sx-ribbon-more').click()
-  await p.waitForTimeout(600)
+  await p.waitForFunction(() => document.querySelectorAll('.sx.is-bandeau .sx-card').length >= 3, null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   t.verifie(await p.locator('.sx.is-bandeau .sx-card').count() >= 3, 'achats : « Détail » déplie les cartes')
 
   // Cliquer une année d'une carte descend dans ses douze mois ; « ← 5 ans »
   // remonte. Les mois additionnés redonnent l'année.
-  await t.aller(p, 'offre', 900)
+  await t.aller(p, 'offre')
   await p.locator('.sx-ribbon-more').click()
-  await p.waitForTimeout(700)
+  await p.locator('.sx-card').first().waitFor({ timeout: 3000 })
+  await t.pose(p)
   const carte = p.locator('.sx-card').first()
   await carte.scrollIntoViewIfNeeded()
-  await p.waitForTimeout(800)
+  await t.pose(p)
   await carte.locator('.sx-bar').nth(1).click()
-  await p.waitForTimeout(700)
+  await p.waitForFunction(() => !!document.querySelector('.sx-card .sx-bars.is-zoom'), null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const mois = await p.locator('.sx-card').first().locator('.sx-bars.is-zoom .sx-bar').count()
   t.verifie(mois === 12, 'un clic sur une année montre ses douze mois', String(mois))
   await p.locator('.sx-card').first().locator('.sx-unzoom').click()
-  await p.waitForTimeout(600)
+  await p.waitForFunction(() => !document.querySelector('.sx-card .sx-bars.is-zoom'), null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   t.verifie(await p.locator('.sx-card').first().locator('.sx-bars:not(.is-zoom) .sx-bar').count() === 5, '« ← 5 ans » ramène aux cinq exercices')
   const juste = await p.evaluate(async () => {
     const st = (await import('./js/state/store.js')).default
@@ -175,13 +182,13 @@ export default async function (t, { rapide } = {}) {
   t.verifie(juste, 'les douze mois additionnés redonnent le chiffre d’affaires de l’année')
 
   // Les graphiques gardent leur survol : une année s'allume, les autres s'éteignent.
-  await t.aller(p, 'resultats', 900)
+  await t.aller(p, 'resultats')
   const svg = p.locator('.ch svg.chart').first()
   await svg.scrollIntoViewIfNeeded()
-  await p.waitForTimeout(1300)
+  await t.pose(p)
   const box = await svg.boundingBox()
   await p.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.5)
-  await p.waitForTimeout(250)
+  await p.waitForFunction(() => !!document.querySelector('.ch .is-dim') && !!document.querySelector('.ctip.is-on'), null, { timeout: 3000 }).catch(() => {})
   const dims = await p.locator('.ch .is-dim').count()
   t.verifie(dims > 0, 'survoler une année éteint les autres')
   t.verifie(await p.locator('.ctip.is-on').count() === 1, 'l’infobulle donne les montants exacts')
@@ -193,19 +200,19 @@ export default async function (t, { rapide } = {}) {
     await t.exemple(q)
     // Les pages de saisie replient leurs cartes dans le bandeau : les états
     // financiers, eux, les empilent.
-    await t.aller(q, 'resultats', 900)
+    await t.aller(q, 'resultats')
     const barres = q.locator('.sx-bars.ch').nth(2)
     const avant = await barres.evaluate((x) => ({ vu: x.classList.contains('is-seen'), haut: x.getBoundingClientRect().top, vh: window.innerHeight }))
     t.verifie(avant.haut > avant.vh && !avant.vu, 'téléphone : les barres de la troisième carte attendent sous l’écran', avant)
     await barres.evaluate((x) => window.scrollBy(0, x.getBoundingClientRect().top - window.innerHeight + 20))
-    await q.waitForTimeout(500)
+    await t.pose(q)
     t.verifie(!(await barres.evaluate((x) => x.classList.contains('is-seen'))), 'téléphone : pas jouées quand seul leur bord dépasse')
     await barres.evaluate((x) => x.scrollIntoView({ block: 'center' }))
-    await q.waitForTimeout(600)
+    await barres.evaluate((x) => new Promise((ok) => { const t0 = performance.now(); const v = () => (x.classList.contains('is-seen') || performance.now() - t0 > 3000 ? ok() : setTimeout(v, 20)); v() }))
     t.verifie(await barres.evaluate((x) => x.classList.contains('is-seen')), 'téléphone : jouées une fois à l’écran')
     for (const route of ['resultats', 'offre', 'equipe', 'financement', 'achats']) {
-      await t.aller(q, route, 900)
-      await t.defiler(q, 500, 120)
+      await t.aller(q, route)
+      await t.defiler(q, 500)
       const d = await debordements(q)
       t.verifie(!d.page && d.coupes.length === 0, `téléphone › ${route} : ni débordement ni chiffre coupé`, d)
     }

@@ -11,24 +11,21 @@
 export const nom = 'Ajouts — chaque ajout jaillit et arrive éclairé'
 
 async function essai(t, p, libelle, route, bouton, lignes, onglet = null) {
-  await t.aller(p, route, 900)
-  if (onglet) await t.onglet(p, onglet, 800)
+  await t.aller(p, route)
+  if (onglet) await t.onglet(p, onglet)
   const avant = await p.locator(lignes).count()
   const b = typeof bouton === 'string' ? p.locator(bouton).first() : bouton(p)
   if (!(await b.count())) { t.verifie(false, `${libelle} : le bouton existe`); return }
   await b.click()
-  await p.waitForTimeout(90)
+  await p.waitForFunction(() => document.querySelectorAll('.burst-bit').length >= 8, null, { timeout: 2000 }).catch(() => {})
   const eclats = await p.locator('.burst-bit').count()
   t.verifie(eclats >= 8, `${libelle} : des icônes jaillissent du bouton`, String(eclats))
-  let eclairee = 0
-  for (let k = 0; k < 12 && !eclairee; k++) {
-    await p.waitForTimeout(120)
-    eclairee = await p.locator(`${lignes}.is-just-added`).count()
-  }
+  await p.locator(`${lignes}.is-just-added`).first().waitFor({ timeout: 2000 }).catch(() => {})
+  const eclairee = await p.locator(`${lignes}.is-just-added`).count()
   const apres = await p.locator(lignes).count()
   t.verifie(apres === avant + 1, `${libelle} : une ligne de plus`, `${avant} → ${apres}`)
   t.verifie(eclairee === 1, `${libelle} : la ligne créée arrive éclairée`)
-  await p.waitForTimeout(1200)
+  await p.waitForFunction(() => !document.querySelector('.burst-bit, .burst-ghost'), null, { timeout: 2000 }).catch(() => {})
   t.verifie(!(await p.locator('.burst-bit, .burst-ghost').count()), `${libelle} : tout s'efface de lui-même`)
 }
 
@@ -43,7 +40,9 @@ export default async function (t) {
 
   // La carte ouverte se soulève : un trait d'encre et une ombre portée, rien
   // qui tourne ni ne teinte le fond.
-  await p.waitForTimeout(2400)
+  // L'éclat de la dernière ligne ajoutée terminé, la carte est au repos.
+  await p.waitForFunction(() => !document.querySelector('.is-just-added'), null, { timeout: 4000 }).catch(() => {})
+  await t.pose(p)
   const carte = await p.evaluate(() => {
     const c = document.querySelector('.item.open')
     if (!c) return null

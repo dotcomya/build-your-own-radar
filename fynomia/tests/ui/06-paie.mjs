@@ -6,8 +6,8 @@ export const nom = 'Paie en direct'
 export default async function (t) {
   const p = await t.page('large')
   await t.exemple(p)
-  await t.aller(p, 'equipe', 1100)
-  if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.waitForTimeout(700) }
+  await t.aller(p, 'equipe')
+  if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.locator('.item.open').first().waitFor(); await t.pose(p) }
   const lire = () => p.evaluate(() => ({
     cout: document.querySelector('.postresult > .num')?.textContent.trim(),
     net: document.querySelector('.postresult-net .num')?.textContent.trim(),
@@ -16,7 +16,10 @@ export default async function (t) {
   t.verifie(await f.count() === 1, 'le champ du salaire existe')
   const vus = []
   for (const v of ['20000', '50000', '90000']) {
-    await f.fill(v); await p.waitForTimeout(240)
+    const avant = (await lire()).cout
+    await f.fill(v)
+    // Le coût affiché change pendant la frappe ; s'il ne change pas, le constat le dira.
+    await p.waitForFunction((a) => document.querySelector('.postresult > .num')?.textContent.trim() !== a, avant, { timeout: 3000 }).catch(() => {})
     vus.push(await lire())
   }
   const couts = vus.map((x) => Number(String(x.cout || '').replace(/[^\d]/g, '')))

@@ -18,12 +18,20 @@
  *   --rapide        trois métiers au lieu de quatorze dans la matrice de rendus
  *   --seul=nom      ne jouer que les suites dont le nom contient « nom »
  *   --sans-paquet   ne pas reconstruire (utile pendant qu'on écrit un test)
+ *   --parallele=N   suites d'interface jouées N à la fois (3 par défaut ; 1 pour
+ *                   les jouer l'une après l'autre)
+ *
+ * Les suites d'interface sont indépendantes : chacune ouvre ses propres
+ * contextes de navigateur — stockage vide, aucun plan — et n'écrit rien sur
+ * le disque. Elles peuvent donc se jouer en même temps ; leurs résultats
+ * s'affichent quand même dans l'ordre des fichiers.
  *
  * Le code de sortie vaut 1 à la première croix : une seule doit suffire à
  * arrêter une mise en ligne.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process'
+import { cpus } from 'node:os'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -35,6 +43,8 @@ const args = process.argv.slice(2)
 const rapide = args.includes('--rapide')
 const seul = (args.find((a) => a.startsWith('--seul=')) || '').slice(7)
 const sansPaquet = args.includes('--sans-paquet')
+const parallele = Math.max(1, Number((args.find((a) => a.startsWith('--parallele=')) || '').slice(12))
+  || Math.min(3, Math.max(1, cpus().length - 1)))
 
 const lignes = []
 let echecs = 0
@@ -80,12 +90,14 @@ if (!seul) {
 
 /* ───────────────────────────── 3. L'interface ─────────────────────────── */
 
-dire('\n━━ 3. L\'interface')
+dire(`\n━━ 3. L'interface${parallele > 1 ? ` — ${parallele} suites à la fois` : ''}`)
 const srv = await serveur(app)
 const browser = await navigateur()
 const suites = readdirSync(join(ici, 'ui')).filter((f) => f.endsWith('.mjs')).sort()
   .filter((f) => !seul || f.includes(seul))
-for (const f of suites) {
+
+/** Une suite, de bout en bout ; son bilan, sans rien afficher. */
+async function jouer(f) {
   const journal = []
   const t = outils(browser, srv.base, journal)
   const debut = Date.now()
@@ -97,13 +109,23 @@ for (const f of suites) {
     journal.push(`✗ la suite s'est interrompue : ${String(e && e.message || e).split('\n')[0].slice(0, 240)}`)
     t.verifie(false, 'suite complète')
   }
-  const { ok, ko } = t.bilan()
-  const duree = Math.round((Date.now() - debut) / 1000)
-  dire(`   ${ko ? '✗' : '✓'} ${(mod && mod.nom) || f} — ${ok} contrôles${ko ? `, ${ko} en échec` : ''} (${duree} s)`)
+  return { f, nom: (mod && mod.nom) || f, ...t.bilan(), duree: Math.round((Date.now() - debut) / 1000), journal }
+}
+
+// N ouvriers se partagent les suites ; l'affichage suit l'ordre des fichiers.
+const fins = suites.map(() => { let tenir; const promesse = new Promise((r) => { tenir = r }); return { promesse, tenir } })
+let prochaine = 0
+const ouvriers = Array.from({ length: Math.min(parallele, suites.length) }, async () => {
+  while (prochaine < suites.length) { const i = prochaine++; fins[i].tenir(await jouer(suites[i])) }
+})
+for (const fin of fins) {
+  const { f, nom, ok, ko, duree, journal } = await fin.promesse
+  dire(`   ${ko ? '✗' : '✓'} ${nom} — ${ok} contrôles${ko ? `, ${ko} en échec` : ''} (${duree} s)`)
   for (const l of journal.slice(0, 12)) dire(`       ${l}`)
   if (journal.length > 12) dire(`       … et ${journal.length - 12} autres`)
   if (ko) { echecs += ko; lignes.push(...journal.map((l) => `${f} : ${l}`)) }
 }
+await Promise.all(ouvriers)
 await browser.close()
 await srv.fermer()
 

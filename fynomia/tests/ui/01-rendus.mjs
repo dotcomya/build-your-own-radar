@@ -16,7 +16,7 @@ export default async function (t, { rapide }) {
     for (const m of metiers) {
       await t.metier(p, m)
       for (const r of PAGES) {
-        await t.aller(p, r, 220)
+        await t.aller(p, r)
         const titre = await p.evaluate(() => (document.querySelector('h1') || {}).textContent || '')
         const d = await debordements(p)
         t.verifie(titre && !d.page && !d.coupes.length, `${format} / ${m} / ${r}`, { titre: titre.slice(0, 30), ...d })

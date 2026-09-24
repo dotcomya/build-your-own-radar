@@ -18,7 +18,7 @@ const compteur = (p) => p.evaluate(() => {
 export default async function (t) {
   const p = await t.page('bureau')
   await t.exemple(p)
-  await t.aller(p, 'projet', 900)
+  await t.aller(p, 'projet')
   const avant = await compteur(p)
   t.verifie(avant !== null, 'le compteur d’avancement est lisible')
 
@@ -26,12 +26,13 @@ export default async function (t) {
   await ta.click()
   await ta.fill('Une plateforme d’analyse pour les commerces indépendants.')
   await p.locator('h1').click()
-  await p.waitForTimeout(500)
+  // La sortie du champ annonce la saisie : le compteur bouge, ou le constat dira qu'il ne bouge pas.
+  await p.waitForFunction((a) => { const m = (document.querySelector('.topbar')?.innerText || '').match(/(\d+)\s*\/\s*(\d+)/); return m && Number(m[1]) !== a }, avant, { timeout: 3000 }).catch(() => {})
   const apres = await compteur(p)
   t.verifie(apres === avant + 1, 'quitter la description fait avancer le compteur, sans changer de page', `${avant} → ${apres}`)
 
-  await t.aller(p, 'tableau-de-bord', 800)
-  await t.onglet(p, 'Pilotage', 900)
+  await t.aller(p, 'tableau-de-bord')
+  await t.onglet(p, 'Pilotage')
   // Les paliers s'ouvrent et se ferment en entier : fermé, aucune ligne ;
   // ouvert, toutes. Le titre est un titre, plus une étiquette.
   const paliers = await p.$$eval('.refinery-group', (e) => e.map((g) => ({
@@ -44,23 +45,27 @@ export default async function (t) {
   const ferme = p.locator('.refinery-group.is-closed .refinery-group-head').first()
   if (await ferme.count()) {
     await ferme.click()
-    await p.waitForTimeout(500)
+    await p.waitForFunction(() => document.querySelectorAll('.refinery-group.is-open').length >= 2, null, { timeout: 3000 }).catch(() => {})
+    await t.pose(p)
     const rouvert = await p.$$eval('.refinery-group', (e) => e.filter((g) => g.classList.contains('is-open')).length)
     t.verifie(rouvert >= 2, 'un clic sur le titre ouvre le palier entier', String(rouvert))
   }
   await p.locator('.refinery-more').click()
-  await p.waitForTimeout(500)
+  await p.waitForFunction(() => [...document.querySelectorAll('.refinery-item')].some((x) => /description/i.test(x.textContent)), null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const coche = await p.evaluate(() => [...document.querySelectorAll('.refinery-item')].some((x) => /description/i.test(x.textContent) && x.classList.contains('is-done')))
   t.verifie(coche, 'le pilotage coche la description')
   t.verifie(await p.locator('.pilote-dossier .sy-hero').count() === 1 && await p.locator('.pilote-dossier .sy-dossier').count() === 1, 'l’avancement du dossier est dans le pilotage : où tu en es, ce qui reste, page par page')
 
   // Au clavier : du nom du projet, Tab mène au champ suivant, et y reste.
-  await t.aller(p, 'projet', 900)
+  await t.aller(p, 'projet')
   const nomProjet = p.locator('.slab .grid input').first()
   await nomProjet.click()
   await nomProjet.fill('Nova Analytics Pro')
   await p.keyboard.press('Tab')
-  await p.waitForTimeout(500)
+  // Le redessin tenu pendant la touche se joue au relâchement, puis le focus est rendu.
+  await p.waitForFunction(() => /NOVA ANALYTICS PRO/i.test(document.querySelector('.topbar')?.innerText || ''), null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const focus = await p.evaluate(() => { const a = document.activeElement; return a ? `${a.tagName}.${a.className}` : '' })
   t.verifie(!/^BODY/.test(focus), 'Tab après une saisie garde le curseur dans la page', focus)
   const titre = await p.evaluate(() => document.querySelector('.topbar')?.innerText || '')

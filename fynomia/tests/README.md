@@ -3,8 +3,8 @@
 ```bash
 cd fynomia/tests
 npm install        # une fois : installe playwright-core
-npm test           # tout : paquet, comptes, interface (≈ 12 min)
-npm run test:rapide  # la matrice de rendus sur 3 métiers au lieu de 14 (≈ 5 min)
+npm test           # tout : paquet, comptes, interface (≈ 5 min sur 4 cœurs)
+npm run test:rapide  # la matrice de rendus sur 3 métiers au lieu de 14 (≈ 3 min 30)
 ```
 
 Le code de sortie vaut 1 à la première croix. Une seule suffit à arrêter une
@@ -49,6 +49,32 @@ mise en ligne.
 - `--seul=nom` : ne jouer que les suites dont le fichier contient `nom`
   (`--seul=08`, `--seul=synth`). Saute le paquet et les comptes.
 - `--sans-paquet` : ne pas reconstruire.
+- `--parallele=N` : suites d'interface jouées N à la fois (3 par défaut,
+  `--parallele=1` pour les jouer l'une après l'autre). Chaque suite ouvre ses
+  propres contextes de navigateur — stockage vide, aucun plan — et n'écrit
+  rien sur le disque : elles ne peuvent pas se gêner. Les résultats
+  s'affichent dans l'ordre des fichiers.
+
+## Attendre une condition, jamais une durée
+
+Aucune suite n'attend un nombre de millisecondes : une pause fixe est trop
+courte sur une machine chargée et trop longue partout ailleurs. On attend ce
+qu'on veut constater.
+
+- `t.aller(p, route)` rend la main quand la racine de l'application a été
+  remplacée par la page demandée et que le DOM s'est tu. Le fondu de la
+  transition de vue et le tracé des courbes SVG peuvent encore jouer.
+- `t.pose(p)` attend que l'écran soit posé : plus de transition de page,
+  plus d'animation d'état en cours (une seconde et demie au plus — les effets
+  d'attention plus longs et les boucles ne comptent pas), ni DOM ni
+  défilement qui bougent depuis 120 ms.
+- Pour le reste, on attend l'état lui-même : un élément qui apparaît
+  (`locator.waitFor()`), qui disparaît (`{ state: 'detached' }`), une
+  classe, un compteur, une adresse (`p.waitForFunction(…)`). Borner ces
+  attentes (`{ timeout }`) et laisser l'assertion qui suit dire ce qui manque.
+- Pour constater qu'une chose ne s'est **pas** produite — une image qui ne se
+  joue pas quand seul son bord dépasse —, `t.pose(p)` d'abord : l'écran
+  immobile, l'observateur a eu le temps de répondre s'il devait le faire.
 
 ## Le navigateur
 
@@ -69,6 +95,8 @@ export default async function (t, { rapide }) {
   const p = await t.page('bureau')      // contexte neuf, stockage vide
   await t.exemple(p)                    // ou t.metier(p, 'Restaurant')
   await t.aller(p, 'offre')
+  await p.locator('.item-head').first().click()
+  await p.locator('.item.open').first().waitFor()   // l'état attendu, pas une durée
   t.verifie(condition, 'libellé du contrôle', détail)
   await p.fermer()
 }

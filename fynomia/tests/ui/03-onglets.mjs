@@ -10,14 +10,15 @@ export default async function (t) {
   await t.exemple(p)
   let clics = 0
   for (const r of PAGES) {
-    await t.aller(p, r, 450)
+    await t.aller(p, r)
     const n = await p.locator('.module-nav .hnav-tab').count()
     for (let i = 0; i < n; i++) {
       const avant = p.erreurs.length
       const tab = p.locator('.module-nav .hnav-tab').nth(i)
       const libelle = ((await tab.textContent()) || '').trim()
       await tab.click()
-      await p.waitForTimeout(420)
+      await p.locator('.module-nav .hnav-tab.active', { hasText: libelle }).first().waitFor({ timeout: 3000 }).catch(() => {})
+      await t.pose(p, { voyage: false })
       clics++
       const actif = ((await p.locator('.module-nav .hnav-tab.active').first().textContent()) || '').trim()
       t.verifie(actif === libelle && p.erreurs.length === avant, `${r} / ${libelle}`, { actif, erreurs: p.erreurs.slice(avant) })

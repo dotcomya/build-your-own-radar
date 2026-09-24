@@ -21,20 +21,21 @@ export default async function (t) {
   await t.exemple(p, 'Restaurant')
 
   // Un prêt bancaire de 90 000 € sur sept ans, saisi comme un fondateur.
-  await t.aller(p, 'financement', 1000)
+  await t.aller(p, 'financement')
   const pret = p.locator('.source', { hasText: 'Emprunt bancaire' }).first()
   if (!(await pret.evaluate((e) => e.classList.contains('is-on')))) await pret.locator('.source-act').click()
   else await pret.click()
-  await p.waitForTimeout(700)
+  await p.locator('.source-line .field').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const champ = (nomChamp) => p.locator('.source-line .field', { has: p.locator('label', { hasText: nomChamp }) }).locator('input').first()
   await champ(/^Montant/).fill('90000')
   await champ(/^Montant/).blur()
-  await p.waitForTimeout(500)
+  await t.pose(p)
   await champ(/^Durée/).fill('84')
   await champ(/^Durée/).blur()
-  await p.waitForTimeout(800)
+  await t.pose(p)
 
-  await t.aller(p, 'business-case', 1100)
+  await t.aller(p, 'business-case')
   const texte = await p.locator('.content').innerText()
   t.verifie(!/EBITDA/.test(texte) && /EBE/.test(texte), 'le business case parle d’EBE, pas d’EBITDA')
   const bk = p.locator('[data-banquier]').first()
@@ -60,20 +61,21 @@ export default async function (t) {
   t.verifie(/CAF/.test(tableau) && /Échéances de prêt/.test(tableau) && /Couverture/.test(tableau) && /Dette bancaire restante/.test(tableau), 'le tableau du banquier donne EBE, CAF, échéances, couverture, dette', tableau.slice(0, 160))
 
   // Le financement : le même bloc, là où l'on règle l'apport et le prêt.
-  await t.aller(p, 'financement', 1000)
+  await t.aller(p, 'financement')
   t.verifie(await p.locator('[data-banquier]').count() === 1, 'le bloc se lit aussi dans Financement')
   const avant = await p.evaluate(async () => (await import('./js/state/store.js')).default.result.bank.apportShare)
   await p.locator('.source', { hasText: 'Prêt d’honneur' }).or(p.locator('.source', { hasText: "Prêt d'honneur" })).first().locator('.source-act').click()
-  await p.waitForTimeout(700)
+  await p.locator('.card', { hasText: 'Réseau' }).first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const montant = p.locator('.card', { hasText: 'Réseau' }).locator('.source-line .field', { has: p.locator('label', { hasText: /^Montant/ }) }).locator('input').first()
   await montant.fill('20000')
   await montant.blur()
-  await p.waitForTimeout(900)
+  await t.pose(p)
   const apres = await p.evaluate(async () => (await import('./js/state/store.js')).default.result.bank.apportShare)
   t.verifie(apres > avant, 'un prêt d’honneur améliore l’apport lu par le banquier', `${(avant * 100).toFixed(0)} % → ${(apres * 100).toFixed(0)} %`)
 
   // Les états financiers parlent aussi d'EBE.
-  await t.aller(p, 'resultats', 1000)
+  await t.aller(p, 'resultats')
   const res = await p.locator('.content').innerText()
   t.verifie(!/EBITDA/.test(res), 'les états financiers ne disent plus EBITDA')
 

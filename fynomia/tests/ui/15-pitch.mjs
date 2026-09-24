@@ -14,8 +14,8 @@ export const nom = 'Pitch investisseur — l’essentiel du plan'
 export default async function (t, { rapide } = {}) {
   const p = await t.page('bureau')
   await t.exemple(p)
-  await t.aller(p, 'tableau-de-bord', 800)
-  await t.onglet(p, 'Pitch investisseur', 1200)
+  await t.aller(p, 'tableau-de-bord')
+  await t.onglet(p, 'Pitch investisseur')
 
   // « Récit » (par défaut) : l'analyse stratégique, en cinq chapitres qui
   // ont chacun un objectif, deux cartes — le diagnostic et la courbe — et la
@@ -69,7 +69,8 @@ export default async function (t, { rapide } = {}) {
 
   // Tableau : en clair, huit tuiles.
   await p.locator('.pitch-mise', { hasText: 'Tableau' }).click()
-  await p.waitForTimeout(900)
+  await p.locator('.pitch-mise.is-on', { hasText: 'Tableau' }).waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const tuiles = await p.$$eval('.pz-cockpit .pitch-tuile', (e) => e.map((x) => ({
     chiffre: (x.querySelector('.pz-chiffre b')?.textContent || '').trim(),
     verdict: (x.querySelector('.pz-verdict')?.textContent || '').trim(),
@@ -79,17 +80,20 @@ export default async function (t, { rapide } = {}) {
   t.verifie(tuiles.length === 8 && tuiles.every((x) => x.chiffre && x.verdict && x.ton), 'tableau : huit tuiles, chacune avec son chiffre, son verdict et son ton', tuiles.length)
   t.verifie(tuiles.every((x) => x.fond === 'rgb(255, 255, 255)'), 'tableau : des tuiles claires, plus de noir partout', tuiles.map((x) => x.fond))
   await p.locator('.pz-cockpit .pz-ouvrir').nth(2).click()
-  await p.waitForTimeout(600)
+  await p.locator('.pz-cockpit .pitch-tuile.is-open').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   t.verifie(await p.locator('.pz-cockpit .pitch-tuile.is-open .pitch-avis').count() === 1 && await p.locator('.pz-cockpit .pitch-tuile.is-open .sx-card').count() >= 1, 'tableau : une tuile s’ouvre sur tout son contenu, avis compris')
   const avant = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText()
   await p.locator('.pitch-tuile.is-open .sx-year', { hasText: 'A4' }).first().click()
-  await p.waitForTimeout(700)
+  await p.locator('.pitch-tuile.is-open .sx-year.is-on', { hasText: 'A4' }).first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const apres = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText().catch(() => avant)
   t.verifie(avant !== apres, 'choisir A4 change les chiffres affichés', `${avant} → ${apres}`)
 
   // Diapos : blanches, et quatre intercalaires sombres entre les parties.
   await p.locator('.pitch-mise', { hasText: 'Diapos' }).click()
-  await p.waitForTimeout(900)
+  await p.locator('.pitch-mise.is-on', { hasText: 'Diapos' }).waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const deck = await p.evaluate(() => ({
     claires: document.querySelectorAll('.pitch-deck .pitch-diapo.is-clair').length,
     sombres: document.querySelectorAll('.pitch-deck .pitch-diapo.is-sombre').length,
@@ -102,12 +106,14 @@ export default async function (t, { rapide } = {}) {
   t.verifie(await p.locator('.pitch-offre').count() >= 1 && await p.locator('.pitch-poste').count() >= 1, 'les offres et l’équipe sont listées')
   t.verifie(await p.locator('.pitch-risques > li').count() >= 2 && await p.locator('.pitch-ratio').count() === 7, 'les risques et les sept ratios qu’on te demandera')
   await p.locator('.pitch-fleche[aria-label="Diapositive suivante"]').click()
-  await p.waitForTimeout(900)
+  await p.waitForFunction(() => (document.querySelector('.pitch-compteur')?.innerText || '').startsWith('2'), null, { timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   t.verifie((await p.locator('.pitch-compteur').innerText()).startsWith('2'), 'diapos : la flèche passe à la suivante')
 
   // En détail : un sommaire, des chapitres détachés, le texte replié.
   await p.locator('.pitch-mise', { hasText: 'En détail' }).click()
-  await p.waitForTimeout(1200)
+  await p.locator('.pitch-mise.is-on', { hasText: 'En détail' }).waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const detail = await p.evaluate(() => ({
     sommaire: document.querySelectorAll('.pitch.is-detail .sy-sommaire button').length,
     chapitres: document.querySelectorAll('.pitch.is-detail .sy-chapitre').length,
@@ -118,21 +124,26 @@ export default async function (t, { rapide } = {}) {
   t.verifie(detail.sommaire === 5 && detail.chapitres >= 5, '« En détail » : un sommaire de cinq parties, chacune dans son panneau', detail)
   t.verifie(detail.clairs >= 3 && detail.pourquoi >= 3 && detail.ouverts === 0, '« en clair » sous chaque acte, « pourquoi c’est important » replié', detail)
   await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
-  await p.waitForTimeout(700)
+  await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   // Le voyage : la page s'ouvre en haut (on lit son titre), puis la zone
   // s'éclaire d'un reflet qui la traverse.
   await p.locator('.pitch-cover .pitch-manque').click()
-  let vu = { haut: false, reflet: false, anneau: false }
-  for (let k = 0; k < 30 && !(vu.reflet && vu.anneau); k++) {
-    await p.waitForTimeout(100)
-    const e = await p.evaluate(() => {
+  // On regarde image par image, jusqu'à avoir vu le reflet et l'anneau (trois secondes au plus).
+  const vu = await p.evaluate(() => new Promise((ok) => {
+    const vu = { haut: false, reflet: false, anneau: false }
+    const t0 = performance.now()
+    const regarder = () => {
       const z = document.querySelector('[data-gap="pitch"]')
-      return { hash: location.hash, y: window.scrollY, reflet: !!z && z.classList.contains('is-shine'), anneau: !!z && z.classList.contains('spotlit') }
-    })
-    if (e.hash === '#/projet' && e.y === 0 && !e.reflet) vu.haut = true
-    if (e.reflet) vu.reflet = true
-    if (e.anneau) vu.anneau = true
-  }
+      const e = { hash: location.hash, y: window.scrollY, reflet: !!z && z.classList.contains('is-shine'), anneau: !!z && z.classList.contains('spotlit') }
+      if (e.hash === '#/projet' && e.y === 0 && !e.reflet) vu.haut = true
+      if (e.reflet) vu.reflet = true
+      if (e.anneau) vu.anneau = true
+      if ((vu.reflet && vu.anneau) || performance.now() - t0 > 3000) ok(vu)
+      else requestAnimationFrame(regarder)
+    }
+    regarder()
+  }))
   t.verifie(await p.evaluate(() => location.hash) === '#/projet', 'et emmène à Mon projet')
   t.verifie(vu.haut, 'la page s’ouvre d’abord en haut, sur son titre')
   t.verifie(vu.reflet && vu.anneau, 'puis la zone s’éclaire d’un reflet et de l’anneau')
@@ -142,10 +153,11 @@ export default async function (t, { rapide } = {}) {
   if (!rapide) {
     const q = await t.page('telephone')
     await t.exemple(q)
-    await t.aller(q, 'tableau-de-bord', 800)
+    await t.aller(q, 'tableau-de-bord')
     await q.locator('.module-nav .hnav-tab', { hasText: 'Pitch' }).first().click().catch(() => {})
-    await q.waitForTimeout(1000)
-    await t.defiler(q, 500, 120)
+    await q.locator('.pitch').first().waitFor({ timeout: 3000 }).catch(() => {})
+    await t.pose(q)
+    await t.defiler(q, 500)
     const d = await debordements(q)
     t.verifie(!d.page && d.coupes.length === 0, 'téléphone : ni débordement ni chiffre coupé', d)
     t.verifie(q.erreurs.length === 0, 'téléphone : aucune erreur JavaScript', q.erreurs.slice(0, 2))

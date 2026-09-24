@@ -35,13 +35,15 @@ export default async function (t) {
   await t.exemple(p, 'Salon de coiffure')
 
   // 1. La micro-entreprise, sous le statut.
-  await t.aller(p, 'projet', 900)
+  await t.aller(p, 'projet')
   await p.locator('[data-gap="juridique"] .legalline').click()
-  await p.waitForTimeout(400)
+  await p.locator('.legalopen .pick').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const carte = p.locator('.legalopen .pick', { hasText: 'Micro-entreprise' })
   t.verifie(await carte.count() === 1, 'la micro-entreprise est proposée parmi les formes')
   await carte.click()
-  await p.waitForTimeout(900)
+  await p.locator('[data-gap="regime"]').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const libelles = await p.locator('[data-gap="regime"] label').allInnerTexts()
   const lu = libelles.join(' | ')
   t.verifie(/Nature de ton activit/.test(lu) && /Versement lib/.test(lu) && /Franchise de TVA/.test(lu) && /ACRE/.test(lu),
@@ -55,12 +57,12 @@ export default async function (t) {
   t.verifie(e.cot0 > 0, 'des cotisations sur le chiffre d’affaires encaissé', String(e.cot0))
 
   // 3. Dans Équipe, un prélèvement.
-  await t.aller(p, 'equipe', 900)
+  await t.aller(p, 'equipe')
   const meta = await p.locator('.item .item-meta').allInnerTexts()
   t.verifie(meta.some((m) => /Micro-entrepreneur/.test(m) && /prélevés/.test(m)), 'la ligne du fondateur devient un prélèvement', meta.slice(0, 3))
 
   // 4. L'ACRE, déclarée.
-  await t.aller(p, 'projet', 900)
+  await t.aller(p, 'projet')
   const avant = e.cot0
   const champAcre = p.locator('[data-gap="regime"] .field-switch', { hasText: 'ACRE' })
   const bulle = await champAcre.locator('.switch-name .info-point').getAttribute('data-tip').catch(() => '')
@@ -68,23 +70,24 @@ export default async function (t) {
     && /cotisations/.test(bulle || '') && /URSSAF/.test(bulle || ''),
   'le droit à l’ACRE s’explique dans une seule bulle, à côté du libellé', bulle)
   await champAcre.locator('.switch').click()
-  await p.waitForTimeout(900)
+  await t.pose(p)
   e = await etat(p)
   t.verifie(e.acre && e.remise > 0 && e.cot0 < avant, 'l’ACRE allège les cotisations de la première année', `${Math.round(avant)} → ${Math.round(e.cot0)}`)
 
   // 5. Le prêt d'honneur, une source de financement.
-  await t.aller(p, 'financement', 900)
+  await t.aller(p, 'financement')
   const tuile = p.locator('.source', { hasText: 'Prêt d’honneur' }).or(p.locator('.source', { hasText: "Prêt d'honneur" }))
   t.verifie(await tuile.count() >= 1, 'le prêt d’honneur figure parmi les sources')
   const treso = e.tresoM0
   await tuile.first().locator('.source-act').click()
-  await p.waitForTimeout(800)
+  await p.locator('.source-line select').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const reseaux = await p.locator('.source-line select').first().locator('option').allInnerTexts()
   t.verifie(reseaux.includes('Initiative France') && reseaux.includes('Réseau Entreprendre'), 'on choisit le réseau : Initiative France, Réseau Entreprendre…', reseaux)
   const montant = p.locator('.source-line .field', { has: p.locator('label', { hasText: /^Montant/ }) }).locator('input').first()
   await montant.fill('12000')
   await montant.blur()
-  await p.waitForTimeout(900)
+  await t.pose(p)
   e = await etat(p)
   t.verifie(e.honneur[0]?.montant === 12000 && e.apport === 12000, 'le montant entre dans la trésorerie comme un apport', e.honneur)
   t.verifie(Math.round(e.tresoM0 - treso) === 12000, 'la trésorerie du premier mois gagne 12 000 €', `${Math.round(treso)} → ${Math.round(e.tresoM0)}`)
@@ -92,9 +95,10 @@ export default async function (t) {
   t.verifie(/sans intérêts/.test(note) && /Initiative France/.test(note), 'la ligne dit la mensualité et le repère du réseau', note)
 
   // 6. Ce que je touche.
-  await t.aller(p, 'resultats', 900)
+  await t.aller(p, 'resultats')
   await p.locator('.module-nav .hnav-tab', { hasText: /touche|Revenu/ }).first().click().catch(() => {})
-  await p.waitForTimeout(900)
+  await p.locator('.pay-step-k').first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const echelle = await p.locator('.pay-step-k').allInnerTexts()
   t.verifie(echelle.includes('Ce que tu encaisses') && echelle.includes('Tes cotisations') && echelle.includes('Ce qui te reste, net de tout'),
     'l’échelle part de ce qu’il encaisse, passe par les cotisations, finit sur ce qui reste', echelle)

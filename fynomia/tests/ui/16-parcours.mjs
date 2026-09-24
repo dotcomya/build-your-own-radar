@@ -34,15 +34,16 @@ export default async function (t) {
     else if (/Sous quelle forme/.test(q)) await p.locator('.setup-choice').first().click()
     else if (/démarres avec combien/.test(q)) await p.locator('.setup-input').fill('15000')
     else if (/produit phare/.test(q)) await p.locator('.setup-input').fill('Pizza napolitaine')
-    else if (/client paie/.test(q)) { await p.locator('.setup-choice').first().click(); await p.waitForTimeout(200); await p.locator('.setup-input').fill('14') }
+    else if (/client paie/.test(q)) { await p.locator('.setup-choice').first().click(); await p.locator('.setup-input').fill('14') }
     else if (/te paies combien/.test(q)) await p.locator('.setup-input').fill('24000')
     else if (/frais tous les mois/.test(q)) { await p.locator('.setup-cost-toggle').nth(0).click(); await p.locator('.setup-cost-toggle').nth(3).click() }
     else if (/vends-tu le premier mois/.test(q)) await p.locator('.setup-input').fill('900')
     else if (/elle te coûte combien/.test(q)) await p.locator('.setup-cost-toggle').first().click()
     else if (/quelle vitesse/.test(q)) await p.locator('.setup-choice').nth(1).click()
-    await p.waitForTimeout(200)
     await p.locator('.setup-actions .btn-primary').click()
-    await p.waitForTimeout(450)
+    // La question suivante — ou la page du business qui prend forme.
+    await p.waitForFunction((avant) => location.hash.includes('ton-business') || (document.querySelector('.setup-q')?.textContent || '') !== avant, q, { timeout: 4000 }).catch(() => {})
+    await t.pose(p)
   }
   t.verifie(vus.some((e) => /produit phare/.test(e.q)) && vus.some((e) => /Comment ton client paie « Pizza napolitaine »/.test(e.q)), 'on demande le produit phare, puis comment le client le paie', vus.map((e) => e.q))
   const pleins = vus.filter((e) => e.remplis || e.coches)
@@ -51,7 +52,7 @@ export default async function (t) {
 
   // 2. Le business qui prend forme, une seule fois.
   t.verifie(p.url().includes('#/ton-business'), 'la dernière réponse mène à « ton business prend forme »', p.url())
-  await p.waitForTimeout(1500)
+  await t.pose(p)
   const rv = await p.evaluate(() => ({
     nom: document.querySelector('.rvl-name')?.textContent || '',
     barres: document.querySelectorAll('.rvl-bar').length,
@@ -60,9 +61,10 @@ export default async function (t) {
   }))
   t.verifie(/Pizza/.test(rv.nom) && rv.barres === 5 && rv.courbe && rv.pieces === 5, 'la page montre le nom, cinq ans de chiffre d’affaires, la trésorerie et les pièces du dossier', rv)
   await p.locator('.rvl-cta').click()
-  await p.waitForTimeout(1300)
+  await p.waitForFunction(() => location.hash === '#/tableau-de-bord', null, { timeout: 4000 }).catch(() => {})
+  await t.pose(p)
   t.verifie(p.url().endsWith('#/tableau-de-bord') && await p.locator('.pitch').count() === 1, 'puis elle emmène au pitch investisseur')
-  await t.aller(p, 'ton-business', 900)
+  await t.aller(p, 'ton-business')
   t.verifie(!p.url().includes('ton-business') && !(await p.locator('.rvl').count()), 'elle ne se revoit pas')
 
   // 3. Un seul ordre, le même partout.
@@ -78,21 +80,25 @@ export default async function (t) {
   const guide = (await p.locator('.nextstep-do').innerText().catch(() => '')).trim()
   const tag = (await p.locator('.nextstep-tag').innerText().catch(() => '')).trim()
   t.verifie(/prix/i.test(guide) && /relire/i.test(tag), 'le guide propose la même chose : relire le prix', `${tag} · ${guide}`)
-  await t.onglet(p, 'Pilotage', 900)
+  await t.onglet(p, 'Pilotage')
   const pilote = (await p.locator('.refinery-item.is-next .refinery-label').first().innerText().catch(() => '')).trim()
   t.verifie(pilote === guide, 'le pilotage met en avant la même ligne que le guide', `${pilote} / ${guide}`)
   // Relire, c'est valider : y aller la retire de la tête de file.
+  await p.evaluate(async () => { window.__dossier = await import('./js/ui/checklist.js') })
   await p.locator('.nextstep-go').click()
-  await p.waitForTimeout(1500)
+  // Relire le prix le retire de la tête de file : on attend que la file ait bougé.
+  await p.waitForFunction(() => window.__dossier.checklist().next?.key !== 'prix', null, { timeout: 4000 }).catch(() => {})
+  await t.pose(p)
   const apres = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().next?.key)
   t.verifie(apres && apres !== 'prix', 'une fois relu, le prix laisse la place à la suite', apres)
 
   // Une date de début déjà remplie se valide d'un clic, et compte.
-  await t.aller(p, 'projet', 900)
+  await t.aller(p, 'projet')
   const valider = p.locator('[data-gap="demarrage"] .valider-chip')
   t.verifie(await valider.count() === 1, 'la date de début propose « Valider cette date »')
   await valider.click()
-  await p.waitForTimeout(700)
+  await valider.waitFor({ state: 'detached', timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   const date = await p.evaluate(async () => (await import('./js/ui/checklist.js')).checklist().items.find((i) => i.key === 'demarrage'))
   t.verifie(date?.done && !(await p.locator('[data-gap="demarrage"] .valider-chip').count()), 'une fois validée, la date de début compte comme faite', date?.label)
   // Plus de question de régime de TVA : elle doublonnait le statut et la

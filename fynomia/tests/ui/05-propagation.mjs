@@ -12,8 +12,8 @@ const ONGLETS = ['Compte de résultat', 'Trésorerie', 'Bilan', 'BFR']
 async function lire(t, p) {
   const out = {}
   for (const tab of ONGLETS) {
-    await t.aller(p, 'resultats', 650)
-    await t.onglet(p, tab, 750).catch(() => {})
+    await t.aller(p, 'resultats')
+    await t.onglet(p, tab).catch(() => {})
     out[tab] = await p.evaluate(() => {
       const g = {}
       for (const tr of document.querySelectorAll('table.data tr')) {
@@ -53,24 +53,24 @@ async function cas(t, libelle, action, attendues) {
 
 export default async function (t) {
   await cas(t, 'Prix de l’abonnement 49 → 99', async (p) => {
-    await t.aller(p, 'offre', 1000)
+    await t.aller(p, 'offre')
     const f = p.locator('.item-body input[inputmode=decimal], .item-body input[inputmode=numeric]').first()
-    await f.fill('99'); await f.blur(); await p.waitForTimeout(900)
+    await f.fill('99'); await f.blur(); await t.pose(p)
   }, ['Compte de résultat/Chiffre d', 'Compte de résultat/EBE', 'Compte de résultat/Résultat net', 'Trésorerie/'])
 
   await cas(t, 'Salaire du fondateur → 90 000', async (p) => {
-    await t.aller(p, 'equipe', 1000)
-    if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.waitForTimeout(700) }
+    await t.aller(p, 'equipe')
+    if (!(await p.locator('.item.open').count())) { await p.locator('.item-head').first().click(); await p.locator('.item.open').first().waitFor(); await t.pose(p) }
     const libelles = await p.$$eval('.item.open .item-body input', (e) => e.map((x) => (x.closest('.field')?.querySelector('label')?.textContent || '').trim()))
     const i = libelles.findIndex((l) => /brut/i.test(l))
     const f = p.locator('.item.open .item-body input').nth(Math.max(0, i))
-    await f.fill('90000'); await f.blur(); await p.waitForTimeout(900)
+    await f.fill('90000'); await f.blur(); await t.pose(p)
   }, ['Compte de résultat/Charges de personnel', 'Compte de résultat/EBE', 'Trésorerie/'])
 
   await cas(t, 'Première charge × 10', async (p) => {
-    await t.aller(p, 'achats', 1000)
+    await t.aller(p, 'achats')
     const f = p.locator('.cost-row input[inputmode=decimal], .cost-row input[inputmode=numeric]').first()
     const v = Number((await f.inputValue()).replace(',', '.')) || 300
-    await f.fill(String(v * 10)); await f.blur(); await p.waitForTimeout(900)
+    await f.fill(String(v * 10)); await f.blur(); await t.pose(p)
   }, ['Compte de résultat/Charges externes', 'Compte de résultat/EBE', 'Trésorerie/'])
 }

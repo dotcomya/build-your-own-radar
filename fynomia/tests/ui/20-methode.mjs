@@ -15,17 +15,18 @@ export default async function (t) {
   await t.exemple(p)
 
   // 1. Dans l'avis du pitch.
-  await t.aller(p, 'tableau-de-bord', 900)
-  await t.onglet(p, 'Pitch', 900)
+  await t.aller(p, 'tableau-de-bord')
+  await t.onglet(p, 'Pitch')
   await p.locator('.pitch-mise', { hasText: /R[ée]cit/ }).first().click({ timeout: 3000 }).catch(() => {})
-  await p.waitForTimeout(900)
+  await p.locator('.pitch-mise.is-on', { hasText: /R[ée]cit/ }).first().waitFor({ timeout: 3000 }).catch(() => {})
+  await t.pose(p)
   await t.defiler(p)
   const mention = p.locator('.repere-src').first()
   const texte = (await mention.count()) ? await mention.innerText() : ''
   t.verifie(/KeyBanc 2024/.test(texte) && /méthode/.test(texte), 'la fourchette du métier cite sa source et son année', texte)
 
   // 2. La page Méthode.
-  await t.aller(p, 'methode', 900)
+  await t.aller(p, 'methode')
   const titre = await p.locator('.module-title').first().innerText().catch(() => '')
   t.verifie(/D’où viennent les repères/.test(titre), 'la page Méthode s’ouvre', titre)
   const ratios = await p.locator('.mt-table tr[data-ratio]').evaluateAll((els) => els.map((e) => e.dataset.ratio))
@@ -38,7 +39,7 @@ export default async function (t) {
   t.verifie(blocs.some((b) => /construite/.test(b)) && blocs.some((b) => /ne disent pas/.test(b)), 'elle dit comment une fourchette est construite, et ce qu’elle ne dit pas', blocs)
 
   // 3. Depuis Réglages.
-  await t.aller(p, 'reglages', 900)
+  await t.aller(p, 'reglages')
   t.verifie(await p.locator('a[href="#/methode"]').count() >= 1, 'Réglages mène à la méthode')
 
   t.verifie(p.erreurs.length === 0, 'aucune erreur JavaScript', p.erreurs.slice(0, 2))
