@@ -8111,3 +8111,227 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 /* La source d'un repère, à côté du repère. */
 .repere-src { font-size: 11.5px; color: var(--ink-4); text-decoration: none; border-bottom: 1px dotted var(--ink-5); white-space: nowrap; }
 .repere-src:hover { color: var(--signal-ink); border-bottom-color: currentColor; }
+
+/* ═══════════ Pilotage : trois paliers, titres en grand, ouverts en entier ═══════════
+   Le titre du palier n'est plus une étiquette en capitales de neuf pixels :
+   c'est un titre, dans la police des titres, précédé de sa couleur. Fermé,
+   le palier ne montre que ce titre, sa phrase et son compte ; ouvert, toutes
+   ses lignes. */
+.refinery-groups { gap: 8px; }
+.refinery-group-head { align-items: center; gap: 14px; padding: 12px 12px; margin-bottom: 0; border-bottom: 1px solid var(--rule); }
+button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-radius: 10px; }
+.refinery-chip {
+  display: inline-flex; align-items: center; gap: 10px; padding: 0; border-radius: 0;
+  font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -.015em; text-transform: none; line-height: 1.1;
+  background: none !important; border: 0 !important; color: var(--ink) !important;
+}
+.refinery-chip::before { content: ''; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.refinery-chip.is-fondation::before { background: var(--ink); }
+.refinery-chip.is-credibilite::before { background: var(--accent-dim); }
+.refinery-chip.is-finition::before { background: var(--ink-5); }
+.refinery-group-note { font-size: 13px; color: var(--ink-3); }
+.refinery-group-count { font-family: var(--mono); font-size: 14px; font-weight: 650; color: var(--ink); }
+.refinery-group.is-full .refinery-group-count { color: var(--gain); }
+.refinery-group.is-open .refinery-group-head { border-bottom-color: transparent; background: var(--surface-2); }
+.refinery-group.is-open .refinery-items { padding: 4px 0 10px; border-bottom: 1px solid var(--rule); animation: palier-in .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes palier-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .refinery-group.is-open .refinery-items { animation: none; } }
+@media (max-width: 640px) { .refinery-chip { font-size: 19px; } }
+.pilote-dossier { margin-bottom: 6px; }
+
+/* ═══════════════════ Pitch · Récit : l'analyse stratégique ═══════════════════
+   Cinq chapitres numérotés. Chacun : un titre en capitales, son objectif, le
+   nombre de facteurs bloquants que le moteur y trouve ; puis deux cartes
+   blanches côte à côte — le diagnostic et la courbe — et la phrase à dire à
+   chacun. Fond clair, cartes blanches, un seul accent : le vert acide de la
+   maison pour l'aire de la courbe en J. */
+.as { display: grid; gap: 64px; margin-top: 36px; }
+.as-chap-tete {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 16px; row-gap: 6px; align-items: center;
+  padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1.5px solid var(--ink);
+}
+.as-no { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent-ink); background: var(--accent); padding: 5px 9px; border-radius: 7px; }
+.as-titre { margin: 0; font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: .01em; text-transform: uppercase; line-height: 1.1; color: var(--ink); }
+.as-meta { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.as-meta i { width: 8px; height: 8px; border-radius: 50%; background: var(--gain); }
+.as-meta.is-bad i { background: var(--loss); box-shadow: 0 0 0 4px var(--loss-wash); }
+.as-objectif { grid-column: 2 / -1; margin: 0; font-size: 14px; color: var(--ink-3); }
+.as-objectif b { color: var(--ink); font-weight: 650; }
+
+.as-cartes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.as-carte {
+  display: flex; flex-direction: column; gap: 13px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; padding: 22px 24px 18px;
+  box-shadow: 0 1px 0 rgba(14, 15, 12, .03), 0 18px 36px -30px rgba(14, 15, 12, .35);
+}
+.as-diag.is-bad { box-shadow: inset 0 3px 0 var(--loss), 0 18px 36px -30px rgba(14, 15, 12, .35); }
+.as-diag.is-watch { box-shadow: inset 0 3px 0 var(--warn), 0 18px 36px -30px rgba(14, 15, 12, .35); }
+.as-diag.is-good { box-shadow: inset 0 3px 0 var(--gain), 0 18px 36px -30px rgba(14, 15, 12, .35); }
+.as-tag-ligne { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-family: var(--mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; }
+.as-tag { font-weight: 700; color: var(--ink-3); }
+.as-tag.is-bad { color: var(--loss); }
+.as-tag.is-watch { color: var(--warn); }
+.as-tag.is-good { color: var(--gain); }
+.as-ratio { color: var(--ink-4); text-transform: none; letter-spacing: .01em; font-size: 12px; }
+.as-carte-titre { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.22; letter-spacing: -.01em; color: var(--ink); }
+.as-texte { margin: 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+.as-texte b { color: var(--ink); font-weight: 700; background: linear-gradient(transparent 62%, var(--accent-wash) 62%); }
+.as-texte .repere-src { margin-left: 2px; }
+
+.as-barres { display: grid; gap: 11px; }
+.as-barre-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }
+.as-barre-nom { color: var(--ink-2); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.as-barre-val { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.as-barre-piste { height: 8px; margin-top: 5px; border-radius: 999px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); overflow: hidden; }
+.as-barre-piste i { display: block; height: 100%; border-radius: 999px; background: var(--ink); transform-origin: left; animation: as-pousse .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+.as-barre.is-neg .as-barre-piste i { background: var(--ink-3); }
+.as-barre.is-alerte .as-barre-piste i { background: var(--loss); }
+.as-barre.is-alerte .as-barre-val, .as-barre.is-alerte .as-barre-nom { color: var(--loss); }
+@keyframes as-pousse { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.as-pied { margin-top: auto; padding-top: 13px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-3); }
+.as-conseil { flex: 1 1 260px; line-height: 1.5; }
+.as-conseil b { color: var(--ink); }
+.as-lien { flex: none; border: 0; background: none; padding: 0; cursor: pointer; font: 650 13px/1.3 var(--sans); color: var(--signal-ink); }
+.as-lien:hover { text-decoration: underline; }
+.as-pied.is-chiffres { justify-content: space-between; }
+.as-kpi { font-size: 13px; color: var(--ink-3); }
+.as-kpi b { font-family: var(--mono); font-size: 13.5px; color: var(--ink); }
+.as-kpi b.is-good { color: var(--gain); }
+.as-kpi b.is-watch { color: var(--warn); }
+.as-kpi b.is-bad { color: var(--loss); }
+
+.as-dessin { min-width: 0; }
+.as-dessin svg { width: 100%; height: auto; display: block; }
+.as-j-zero { stroke: var(--ink-5); stroke-width: 1; stroke-dasharray: 3 4; }
+.as-j-aire { fill: var(--accent); opacity: .55; }
+.as-j-trait { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; }
+.as-j-y, .as-j-x { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-4); }
+.as-j-bas circle { fill: var(--loss); stroke: #fff; stroke-width: 2; }
+.as-j-haut circle { fill: var(--gain); stroke: #fff; stroke-width: 2; }
+.as-j-bas text, .as-j-haut text { font-family: var(--mono); font-size: 10.5px; font-weight: 700; fill: var(--ink-2); }
+
+.as-bk { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.as-bk-ligne { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13.5px; }
+.as-bk-ligne:last-child { border-bottom: 0; }
+.as-bk-etat { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 4px 6px; border-radius: 6px; text-align: center; background: var(--surface-2); color: var(--ink-4); }
+.as-bk-ligne.is-ok .as-bk-etat { background: var(--gain-wash); color: var(--gain); }
+.as-bk-ligne.is-juste .as-bk-etat { background: var(--warn-wash); color: var(--warn); }
+.as-bk-ligne.is-revoir .as-bk-etat { background: var(--loss-wash); color: var(--loss); }
+.as-bk-titre { color: var(--ink-2); font-weight: 600; }
+.as-bk-val { font-family: var(--mono); font-size: 12.5px; color: var(--ink); white-space: nowrap; }
+
+.as-pieges { margin: 0; padding: 0 0 0 16px; display: grid; gap: 6px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.as-pieges b { color: var(--ink-2); }
+
+.as-dire { margin-top: 16px; padding: 16px 18px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--rule); }
+.as-dire-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.as-dire-titre { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.as-question { font-size: 13px; color: var(--ink-3); }
+.as-question em { font-style: normal; color: var(--ink); font-weight: 600; }
+.as-dire-cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.as-dire-case { padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--rule); }
+.as-dire-case p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.as-dire-qui { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
+
+@media (max-width: 980px) {
+  .as-cartes, .as-dire-cases { grid-template-columns: minmax(0, 1fr); }
+  .as-chap-tete { grid-template-columns: auto minmax(0, 1fr); }
+  .as-meta { grid-column: 1 / -1; }
+  .as-objectif { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .as-titre { font-size: 20px; }
+  .as-carte { padding: 18px 16px 14px; }
+  .as-carte-titre { font-size: 18px; }
+  .as-bk-ligne { grid-template-columns: 70px minmax(0, 1fr); }
+  .as-bk-val { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .as-barre-piste i { animation: none; } }
+
+/* ═══════════ Pitch · Tableau, en clair ═══════════
+   Le cockpit noir faisait de l'onglet un bloc sombre d'un bout à l'autre.
+   Les tuiles sont désormais des cartes blanches sur le papier de la page :
+   le chiffre en encre, le dessin en encre et en vert, le verdict dans sa
+   couleur. Seule la couverture, au-dessus, garde le noir. */
+.pz-cockpit { background: transparent; padding: 0; border-radius: 0; gap: 14px; }
+.pz-cockpit .pitch-tuile {
+  background: var(--surface); color: var(--ink); padding: 16px 18px 14px; border-radius: 18px;
+  box-shadow: inset 0 0 0 1px var(--rule), 0 18px 36px -32px rgba(14, 15, 12, .4);
+}
+.pz-cockpit .pitch-tuile:hover { box-shadow: inset 0 0 0 1px var(--ink-5), 0 18px 36px -28px rgba(14, 15, 12, .45); }
+.pz-cockpit .pitch-tuile.is-open { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink), 0 18px 36px -28px rgba(14, 15, 12, .45); }
+.pz-cockpit .pitch-tuile-head > b { background: var(--ink); color: var(--accent); }
+.pz-cockpit .pitch-tuile-head > h3 { color: var(--ink); font-size: 17px; }
+.pz-cockpit .pz-ton.is-good { background: var(--gain-wash); color: var(--gain); }
+.pz-cockpit .pz-ton.is-watch { background: var(--warn-wash); color: var(--warn); }
+.pz-cockpit .pz-ton.is-bad { background: var(--loss-wash); color: var(--loss); }
+.pz-cockpit .pz-chiffre > b { color: var(--ink); font-size: 20px; }
+.pz-cockpit .pz-chiffre > b.is-bad { color: var(--loss); }
+.pz-cockpit .pz-chiffre > b.is-good { color: var(--gain); }
+.pz-cockpit .pz-chiffre > span { color: var(--ink-4); }
+.pz-cockpit .pz-mini rect, .pz-cockpit .pz-barres > i { fill: var(--ink); background: var(--ink); opacity: 1; }
+.pz-cockpit .pz-barres > i.is-neg { background: var(--loss); }
+.pz-cockpit .pz-mini .pz-zero { stroke: var(--rule); }
+.pz-cockpit .pz-mini .pz-trait { stroke: var(--ink); }
+.pz-cockpit .pz-jauge { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); }
+.pz-cockpit .pz-jauge > i { background: var(--ink); }
+.pz-cockpit .pz-jauge-rep { background: var(--accent); opacity: .7; }
+.pz-cockpit .pz-parts > i { background: var(--ink); }
+.pz-cockpit .pz-parts > i.is-1 { background: var(--ink-3); } .pz-cockpit .pz-parts > i.is-2 { background: var(--ink-5); } .pz-cockpit .pz-parts > i.is-3 { background: var(--accent-dim); }
+.pz-cockpit .pz-points > i { background: var(--warn); }
+.pz-cockpit .pz-verdict { color: var(--ink-2); }
+.pz-cockpit .pz-ouvrir { background: var(--surface-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule); }
+.pz-cockpit .pz-ouvrir:hover, .pz-cockpit .pitch-tuile.is-open .pz-ouvrir { background: var(--ink); color: var(--accent); box-shadow: none; }
+
+/* ═══════════ Pitch · Diapos : des diapositives blanches ═══════════
+   Passer du noir au blanc à chaque diapositive fatiguait l'œil. Toutes les
+   diapositives de contenu sont blanches ; le noir ne sert plus qu'aux
+   intercalaires, qui annoncent qu'on change de partie. */
+.pitch-diapo.is-intercalaire { background: var(--ink); color: #F2F0E8; box-shadow: none; justify-content: center; }
+.pz-inter { display: grid; gap: 14px; max-width: 760px; }
+.pz-inter-no { font: 700 clamp(56px, 8vw, 110px)/.9 var(--mono); letter-spacing: -.05em; color: var(--accent); }
+.pz-inter-titre { margin: 0; font: 800 clamp(30px, 4vw, 56px)/1.02 var(--display); letter-spacing: -.035em; text-wrap: balance; color: #fff !important; }
+.pz-inter-dit { margin: 0; font: 500 clamp(15px, 1.4vw, 19px)/1.5 var(--display); opacity: .75; }
+.pz-inter-liste { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pz-inter-liste span { padding: 5px 11px; border-radius: 999px; background: rgba(255, 255, 255, .08); font: 600 12.5px/1.2 var(--sans); color: #E9EBE3; }
+.pitch-point.is-inter { width: 14px; border-radius: 3px; background: var(--ink-5); }
+.pitch-point.is-inter.is-on { background: var(--ink); }
+
+/* ═══════════ Pitch · En détail : des chapitres, pas un wiki ═══════════
+   Chaque partie devient un panneau blanc détaché du papier, avec son numéro
+   en pastille, sa question, sa réponse en grand. Un sommaire ouvre la page.
+   Le texte long se coupe à trois lignes, « pourquoi c'est important » se
+   replie : on lit les chiffres d'abord, l'explication si on la veut. */
+.pitch.is-detail .sy { display: grid; gap: 26px; }
+.sy-sommaire {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rule), 0 10px 30px -24px rgba(14, 15, 12, .5); backdrop-filter: blur(8px);
+}
+.sy-sommaire-t { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
+.sy-sommaire ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.sy-sommaire button { display: inline-flex; align-items: center; gap: 7px; border: 0; cursor: pointer; padding: 6px 11px 6px 6px; border-radius: 999px; background: var(--surface-2); font: 600 12.5px/1.2 var(--sans); color: var(--ink-2); }
+.sy-sommaire button b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--accent); font: 700 10px/1 var(--mono); }
+.sy-sommaire button:hover { background: var(--ink); color: #fff; }
+.pitch.is-detail .sy-chapitre {
+  padding: 30px 32px 30px; border-top: 0; border-radius: 24px; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--rule), 0 24px 48px -40px rgba(14, 15, 12, .45); scroll-margin-top: 130px;
+}
+.pitch.is-detail .sy-chapitre .sy-act-no { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.pitch.is-detail .sy-chapitre .sy-act-no > b { width: 34px; height: 34px; font-size: 13px; background: var(--accent); color: var(--accent-ink); }
+.pitch.is-detail .sy-chapitre .sy-act-title { margin-top: 6px; }
+.pitch.is-detail .sy-card, .pitch.is-detail .sy-fact, .pitch.is-detail .sy-feature-main, .pitch.is-detail .sy-band { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule); }
+.sy-card-body.is-coupe { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.sy-lire { margin-top: 4px; padding: 0; border: 0; background: none; cursor: pointer; font: 600 12px/1.3 var(--sans); color: var(--signal-ink); }
+.sy-lire:hover { text-decoration: underline; }
+.sy-why { margin-top: 10px; border-top: 1px dashed var(--rule); padding-top: 8px; }
+.sy-why > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1.3 var(--sans); color: var(--ink-3); }
+.sy-why > summary::-webkit-details-marker { display: none; }
+.sy-why > summary::before { content: '+'; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); font: 700 11px/1 var(--mono); color: var(--ink-3); }
+.sy-why[open] > summary::before { content: '−'; }
+.sy-why > p { margin: 6px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .pitch.is-detail .sy-chapitre { padding: 20px 16px; border-radius: 18px; }
+  .sy-sommaire { position: static; }
+}

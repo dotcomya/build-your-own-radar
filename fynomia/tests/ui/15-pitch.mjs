@@ -17,31 +17,40 @@ export default async function (t, { rapide } = {}) {
   await t.aller(p, 'tableau-de-bord', 800)
   await t.onglet(p, 'Pitch investisseur', 1200)
 
-  // Mise en page « Récit » (celle par défaut) : huit parties, le titre et
-  // sa phrase sur une même ligne, l'avis de Fynomia à droite de chacune.
+  // « Récit » (par défaut) : l'analyse stratégique, en cinq chapitres qui
+  // ont chacun un objectif, deux cartes — le diagnostic et la courbe — et la
+  // phrase à dire au banquier, à l'investisseur, à l'équipe.
   t.verifie(await p.locator('.pitch-mise.is-on', { hasText: 'Récit' }).count() === 1, 'le récit est la mise en page par défaut')
-  const parties = await p.$$eval('.pitch .sx > .sx-head .sx-no > .sx-name', (e) => e.map((x) => x.textContent))
-  t.verifie(parties.length === 8, 'huit parties, dans l’ordre où un investisseur les lit', parties)
-  t.verifie(/trajectoire/i.test(parties[0] || '') && /vends/.test(parties[1] || '') && /demandera/.test(parties[7] || ''), 'la trajectoire d’abord, l’offre ensuite, les ratios à la fin', parties)
-  const lignes = await p.$$eval('.pitch .sx > .sx-head .sx-no', (e) => e.map((x) => {
-    const n = x.querySelector('.sx-name'), d = x.querySelector('.sx-say')
-    return { dit: d ? d.textContent.trim().length : 0, meme: !!n && !!d && d.getBoundingClientRect().top < n.getBoundingClientRect().bottom }
-  }))
-  t.verifie(lignes.every((l) => l.dit > 30), 'chaque partie dit pourquoi elle compte', lignes.map((l) => l.dit))
-  t.verifie(lignes.every((l) => l.meme), 'le titre et sa phrase sont sur la même ligne')
-  const cote = await p.$$eval('.pitch-ligne-corps', (e) => e.map((x) => {
-    const m = x.querySelector('.pitch-ligne-main'), a = x.querySelector('.pitch-avis')
-    return !!m && !!a && a.getBoundingClientRect().left >= m.getBoundingClientRect().right - 1
-  }))
-  t.verifie(cote.length === 8 && cote.every(Boolean), 'l’avis de Fynomia est un bloc à droite de chaque partie', cote)
-  // Des courbes : la trésorerie et ses jalons, le chiffre d'affaires et le
-  // résultat ; et le récit de la trajectoire, en toutes lettres.
-  t.verifie(await p.locator('.pitch .pitch-traj svg').count() >= 1, 'la trajectoire de trésorerie est tracée, avec ses jalons')
-  t.verifie(await p.locator('.pitch .pitch-croiss .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
-  const recitTraj = await p.locator('.pitch-recit .pitch-chapeau').first().innerText().catch(() => '')
-  t.verifie(/année 5/i.test(recitTraj) && /exercice bénéficiaire|trésorerie/i.test(recitTraj), 'la trajectoire se raconte en toutes lettres, en tête de partie', recitTraj.slice(0, 90))
-  t.verifie(await p.locator('.pitch-recit .pitch-chapeau').count() === 8, 'chaque partie du récit s’ouvre sur la phrase qui la raconte')
+  const chapitres = await p.$$eval('.as-chap', (e) => e.map((x) => ({
+    titre: (x.querySelector('.as-titre')?.textContent || '').trim(),
+    objectif: (x.querySelector('.as-objectif')?.textContent || '').trim().length,
+    meta: (x.querySelector('.as-meta')?.textContent || '').trim(),
+    diag: !!x.querySelector('.as-diag'), courbe: !!x.querySelector('.as-courbe'),
+    cote: (() => { const d = x.querySelector('.as-diag'), c = x.querySelector('.as-courbe'); return !!d && !!c && c.getBoundingClientRect().left >= d.getBoundingClientRect().right - 1 })(),
+    dire: x.querySelectorAll('.as-dire-case').length,
+  })))
+  t.verifie(chapitres.length === 5, 'cinq chapitres d’analyse stratégique', chapitres.map((c) => c.titre))
+  t.verifie(/modèle/i.test(chapitres[0]?.titre) && /coûts/i.test(chapitres[1]?.titre) && /financement/i.test(chapitres[2]?.titre) && /équipe/i.test(chapitres[3]?.titre) && /risques/i.test(chapitres[4]?.titre),
+    'le modèle, les coûts, le financement, l’équipe, les risques', chapitres.map((c) => c.titre))
+  t.verifie(chapitres.every((c) => c.objectif > 30 && /facteur/.test(c.meta)), 'chaque chapitre a un objectif et compte ses facteurs bloquants', chapitres.map((c) => c.meta))
+  t.verifie(chapitres.every((c) => c.diag && c.courbe && c.cote), 'deux cartes par chapitre : le diagnostic à gauche, la courbe à droite')
+  t.verifie(chapitres.every((c) => c.dire >= 2), 'chaque chapitre dit quoi dire au banquier, à l’investisseur, à l’équipe', chapitres.map((c) => c.dire))
+  const diags = await p.$$eval('.as-diag', (e) => e.map((x) => ({
+    tag: (x.querySelector('.as-tag')?.textContent || '').trim(),
+    titre: (x.querySelector('.as-carte-titre')?.textContent || '').trim(),
+    lien: !!x.querySelector('.as-lien'),
+  })))
+  t.verifie(diags.every((d) => /\/\//.test(d.tag) && d.titre.length > 10 && d.lien), 'chaque diagnostic : sa gravité, son titre, le module où agir', diags.map((d) => d.tag))
+  const couts = await p.locator('.as-chap[data-chapitre="2"] .as-ratio').first().innerText().catch(() => '')
+  t.verifie(/charges fixes \/ CA/i.test(couts), 'les coûts se lisent en ratio charges fixes / chiffre d’affaires', couts)
+  t.verifie(await p.locator('.as-chap[data-chapitre="2"] svg.as-j .as-j-aire').count() === 1, 'la trésorerie se dessine en courbe en J, avec son aire')
+  t.verifie(await p.locator('.as-chap[data-chapitre="1"] .chart polyline.ch-line').count() >= 1, 'le résultat net est une courbe sur les barres du chiffre d’affaires')
+  t.verifie(await p.locator('.as-chap[data-chapitre="3"] .as-bk-ligne').count() === 5, 'le financement donne les cinq vérifications du banquier')
+  t.verifie(await p.locator('.as-chap[data-chapitre="5"] .as-courbe .as-barre').count() === 4, 'les risques sont rejoués en stress test : quatre imprévus')
+  const questions = await p.$$eval('.as-question em', (e) => e.map((x) => x.textContent.trim().length))
+  t.verifie(questions.length >= 4 && questions.every((l) => l > 25), 'la question qu’on te posera, chapitre par chapitre', questions)
   t.verifie(!(await p.locator('.module-nav .hnav-tab', { hasText: 'essai' }).count()), 'la synthèse essai n’est plus un onglet à part')
+  t.verifie(!(await p.locator('.pitch .sy-hero, .pitch .pitch-dossier').count()), 'l’avancement du dossier a quitté le pitch pour le Pilotage')
 
   // Le besoin de la couverture est celui du moteur.
   const besoin = await p.evaluate(async () => {
@@ -50,69 +59,64 @@ export default async function (t, { rapide } = {}) {
   })
   const ask = (await p.locator('.pitch-ask b').innerText()).replace(/\D/g, '')
   t.verifie(besoin > 0 && Number(ask) === besoin, 'le montant de la couverture est le besoin calculé', `${ask} / ${besoin}`)
-
-  // Les quatre chiffres suivent l'exercice.
-  const avant = await p.locator('.pitch .sx-card .sx-big-val').first().innerText()
-  await p.locator('.pitch .sx-year', { hasText: 'A4' }).first().click()
-  await p.waitForTimeout(700)
-  const apres = await p.locator('.pitch .sx-card .sx-big-val').first().innerText()
-  t.verifie(avant !== apres, 'choisir A4 change la trajectoire affichée', `${avant} → ${apres}`)
-
-  // La même tête que la synthèse essai, pour comparer les deux onglets.
-  t.verifie(await p.locator('.pitch-dossier .sy-hero').count() === 1, 'l’avancement du dossier est en tête, comme dans l’essai')
-  t.verifie(await p.locator('.pitch-dossier .sy-dossier').count() === 1, 'ce qui est fait et ce qui reste, page par page')
-  // L'avis d'un associé pour chaque partie : un verdict, des chiffres, la
-  // question qu'on te posera — et, s'il y a lieu, le geste suivant.
-  const avis = await p.$$eval('.pitch-avis', (e) => e.map((x) => ({
-    ton: ['is-good', 'is-watch', 'is-bad'].some((c) => x.classList.contains(c)),
-    titre: (x.querySelector('.avis-titre')?.textContent || '').trim(),
-    points: x.querySelectorAll('.avis-points li').length,
-    question: (x.querySelector('.avis-question p')?.textContent || '').trim(),
-  })))
-  t.verifie(avis.length === 8, 'l’avis de Fynomia pour chacune des huit parties', avis.length)
-  t.verifie(avis.every((a) => a.ton && a.titre.length > 10 && a.points >= 1 && a.question.length > 30), 'chaque avis : un ton, un verdict, des chiffres, la question qu’on te posera', avis.map((a) => `${a.titre.slice(0, 30)} · ${a.points}`))
   t.verifie(/investisseur/i.test(await p.locator('.pitch-hero .rvl-kicker').innerText()), 'un logiciel parle à un investisseur')
   t.verifie(await p.locator('.pitch-hero .rvl-bar').count() === 5 && await p.locator('.pitch-hero .rvl-line').count() === 1, 'la couverture trace cinq ans de chiffre d’affaires et la trésorerie')
-  // Ce qui reste à faire : les colonnes alignées, et un bouton pour voir le reste.
-  const dossier = await p.evaluate(() => {
-    const cols = [...document.querySelectorAll('.pitch-dossier .sy-dossier-col')]
-    const hauts = cols.map((c) => c.querySelector('.sy-dossier-bloc, .sy-dossier-ok')?.getBoundingClientRect().top).filter((x) => x !== undefined)
-    return { ecart: hauts.length ? Math.max(...hauts) - Math.min(...hauts) : 0, plus: document.querySelectorAll('.pitch-dossier .sy-dossier-more').length }
-  })
-  t.verifie(dossier.ecart < 2, 'ce qui reste commence à la même hauteur dans chaque colonne', `${Math.round(dossier.ecart)} px`)
-  t.verifie(dossier.plus >= 1, 'un bouton « Voir les autres » ouvre ce qui n’est pas affiché', String(dossier.plus))
   // Aucun pourcentage absurde.
   const absurdes = await p.evaluate(() => (document.querySelector('.pitch').innerText.match(/-?\d[\d \u00a0\u202f]{3,}[ \u00a0]?%/g) || []).filter((x) => Math.abs(Number(x.replace(/[^\d-]/g, ''))) > 1000))
   t.verifie(absurdes.length === 0, 'aucun pourcentage au-delà de 1 000 %', absurdes)
-  t.verifie(await p.locator('.pitch-offre').count() >= 1, 'les offres sont listées avec leur prix')
-  t.verifie(await p.locator('.pitch-poste').count() >= 1, 'l’équipe est listée')
-  t.verifie(await p.locator('.pitch-risques > li').count() >= 2, 'les risques sont nommés')
-  t.verifie(await p.locator('.pitch-ratio').count() === 7, 'les sept ratios qu’on te demandera')
   // Sans phrase d'accroche, la couverture le dit et y emmène.
   t.verifie(await p.locator('.pitch-cover .pitch-manque').count() === 1, 'sans description, la couverture propose de l’écrire')
 
-  // Les autres formes portent le même contenu.
+  // Tableau : en clair, huit tuiles.
   await p.locator('.pitch-mise', { hasText: 'Tableau' }).click()
   await p.waitForTimeout(900)
   const tuiles = await p.$$eval('.pz-cockpit .pitch-tuile', (e) => e.map((x) => ({
     chiffre: (x.querySelector('.pz-chiffre b')?.textContent || '').trim(),
     verdict: (x.querySelector('.pz-verdict')?.textContent || '').trim(),
     ton: !!x.querySelector('.pz-ton'),
+    fond: getComputedStyle(x).backgroundColor,
   })))
   t.verifie(tuiles.length === 8 && tuiles.every((x) => x.chiffre && x.verdict && x.ton), 'tableau : huit tuiles, chacune avec son chiffre, son verdict et son ton', tuiles.length)
+  t.verifie(tuiles.every((x) => x.fond === 'rgb(255, 255, 255)'), 'tableau : des tuiles claires, plus de noir partout', tuiles.map((x) => x.fond))
   await p.locator('.pz-cockpit .pz-ouvrir').nth(2).click()
   await p.waitForTimeout(600)
   t.verifie(await p.locator('.pz-cockpit .pitch-tuile.is-open .pitch-avis').count() === 1 && await p.locator('.pz-cockpit .pitch-tuile.is-open .sx-card').count() >= 1, 'tableau : une tuile s’ouvre sur tout son contenu, avis compris')
+  const avant = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText()
+  await p.locator('.pitch-tuile.is-open .sx-year', { hasText: 'A4' }).first().click()
+  await p.waitForTimeout(700)
+  const apres = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText().catch(() => avant)
+  t.verifie(avant !== apres, 'choisir A4 change les chiffres affichés', `${avant} → ${apres}`)
+
+  // Diapos : blanches, et quatre intercalaires sombres entre les parties.
   await p.locator('.pitch-mise', { hasText: 'Diapos' }).click()
   await p.waitForTimeout(900)
-  t.verifie(await p.locator('.pitch-deck .pitch-diapo').count() === 8 && await p.locator('.pitch-deck .pz-note').count() === 8, 'diapos : huit diapositives, chacune avec sa note d’orateur')
+  const deck = await p.evaluate(() => ({
+    claires: document.querySelectorAll('.pitch-deck .pitch-diapo.is-clair').length,
+    sombres: document.querySelectorAll('.pitch-deck .pitch-diapo.is-sombre').length,
+    inter: document.querySelectorAll('.pitch-deck .pitch-diapo.is-intercalaire').length,
+    notes: document.querySelectorAll('.pitch-deck .pz-note').length,
+    premier: document.querySelector('.pitch-deck .pitch-diapo')?.classList.contains('is-intercalaire'),
+  }))
+  t.verifie(deck.claires === 8 && deck.sombres === 0 && deck.notes === 8, 'diapos : huit diapositives blanches, chacune avec sa note d’orateur', deck)
+  t.verifie(deck.inter === 4 && deck.premier, 'diapos : le noir ne sert qu’aux intercalaires, qui ouvrent chaque partie', deck)
+  t.verifie(await p.locator('.pitch-offre').count() >= 1 && await p.locator('.pitch-poste').count() >= 1, 'les offres et l’équipe sont listées')
+  t.verifie(await p.locator('.pitch-risques > li').count() >= 2 && await p.locator('.pitch-ratio').count() === 7, 'les risques et les sept ratios qu’on te demandera')
   await p.locator('.pitch-fleche[aria-label="Diapositive suivante"]').click()
   await p.waitForTimeout(900)
   t.verifie((await p.locator('.pitch-compteur').innerText()).startsWith('2'), 'diapos : la flèche passe à la suivante')
+
+  // En détail : un sommaire, des chapitres détachés, le texte replié.
   await p.locator('.pitch-mise', { hasText: 'En détail' }).click()
   await p.waitForTimeout(1200)
-  const detail = await p.evaluate(() => ({ actes: document.querySelectorAll('.pitch.is-detail .sy-act').length, clairs: document.querySelectorAll('.pitch.is-detail .sy-clair').length }))
-  t.verifie(detail.actes >= 3 && detail.clairs >= 3, '« En détail » : tout le raisonnement, et « en clair » sous chaque acte', detail)
+  const detail = await p.evaluate(() => ({
+    sommaire: document.querySelectorAll('.pitch.is-detail .sy-sommaire button').length,
+    chapitres: document.querySelectorAll('.pitch.is-detail .sy-chapitre').length,
+    clairs: document.querySelectorAll('.pitch.is-detail .sy-clair').length,
+    pourquoi: document.querySelectorAll('.pitch.is-detail details.sy-why').length,
+    ouverts: document.querySelectorAll('.pitch.is-detail details.sy-why[open]').length,
+  }))
+  t.verifie(detail.sommaire === 5 && detail.chapitres >= 5, '« En détail » : un sommaire de cinq parties, chacune dans son panneau', detail)
+  t.verifie(detail.clairs >= 3 && detail.pourquoi >= 3 && detail.ouverts === 0, '« en clair » sous chaque acte, « pourquoi c’est important » replié', detail)
   await p.locator('.pitch-mise', { hasText: 'Récit' }).click()
   await p.waitForTimeout(700)
   // Le voyage : la page s'ouvre en haut (on lit son titre), puis la zone

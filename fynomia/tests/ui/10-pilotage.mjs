@@ -32,8 +32,27 @@ export default async function (t) {
 
   await t.aller(p, 'tableau-de-bord', 800)
   await t.onglet(p, 'Pilotage', 900)
+  // Les paliers s'ouvrent et se ferment en entier : fermé, aucune ligne ;
+  // ouvert, toutes. Le titre est un titre, plus une étiquette.
+  const paliers = await p.$$eval('.refinery-group', (e) => e.map((g) => ({
+    ouvert: g.classList.contains('is-open'), lignes: g.querySelectorAll('.refinery-item').length,
+    total: Number((g.querySelector('.refinery-group-count')?.textContent || '0/0').split('/')[1]),
+    titre: parseFloat(getComputedStyle(g.querySelector('.refinery-chip')).fontSize),
+  })))
+  t.verifie(paliers.length === 3 && paliers.every((x) => (x.ouvert ? x.lignes === x.total : x.lignes === 0)), 'un palier fermé ne montre aucune ligne, un palier ouvert les montre toutes', paliers)
+  t.verifie(paliers.every((x) => x.titre >= 20), 'les titres des paliers sont en grand', paliers.map((x) => x.titre))
+  const ferme = p.locator('.refinery-group.is-closed .refinery-group-head').first()
+  if (await ferme.count()) {
+    await ferme.click()
+    await p.waitForTimeout(500)
+    const rouvert = await p.$$eval('.refinery-group', (e) => e.filter((g) => g.classList.contains('is-open')).length)
+    t.verifie(rouvert >= 2, 'un clic sur le titre ouvre le palier entier', String(rouvert))
+  }
+  await p.locator('.refinery-more').click()
+  await p.waitForTimeout(500)
   const coche = await p.evaluate(() => [...document.querySelectorAll('.refinery-item')].some((x) => /description/i.test(x.textContent) && x.classList.contains('is-done')))
   t.verifie(coche, 'le pilotage coche la description')
+  t.verifie(await p.locator('.pilote-dossier .sy-hero').count() === 1 && await p.locator('.pilote-dossier .sy-dossier').count() === 1, 'l’avancement du dossier est dans le pilotage : où tu en es, ce qui reste, page par page')
 
   // Au clavier : du nom du projet, Tab mène au champ suivant, et y reste.
   await t.aller(p, 'projet', 900)

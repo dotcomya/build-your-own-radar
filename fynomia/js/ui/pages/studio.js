@@ -151,9 +151,9 @@ export function renderStudio(navigate, refresh, goView) {
   const { actes, sansCA } = synthese(s, r)
 
   racine = h('div', { class: `sy ${entree ? 'is-enter' : ''}` },
-    // Ce qui manque se dit avant ce qu'on a trouvé — tant qu'il manque
-    // quelque chose. Un dossier complet ouvre directement sur son verdict.
-    ...teteDossier(navigate, pilotage),
+    // L'avancement du dossier — ce qui est fait, ce qui reste — a rejoint le
+    // Pilotage. Le détail s'ouvre sur son sommaire, puis sur l'analyse.
+    sommaire(actes, sansCA),
     ...actes.map((a, i) => acte(a, i, actes.length, r, s, sansCA, navigate)),
     pied(navigate, pilotage),
     guet(sixChiffres(r, s, y, choisir, navigate), 'chiffres'),
@@ -466,7 +466,7 @@ function acte(a, i, total, r, s, sansCA, navigate) {
   else if (i === 2 && cartes.some((c) => c.cle === 'seuil' || c.cle === 'objectif')) corps = bande(cartes, r, dernier ? leviersChiffres(s, r) : null)
   else corps = [duo(cartes, r), dernier ? leviersChiffres(s, r) : null]
 
-  return guet(h('section', { class: `sy-act is-${i === 1 ? 'feature' : i === 2 ? 'band' : 'duo'}` },
+  return guet(h('section', { class: `sy-act sy-chapitre is-${i === 1 ? 'feature' : i === 2 ? 'band' : 'duo'}`, id: `sy-partie-${i + 1}` },
     tete, corps,
   ), `acte-${i}`)
 }
@@ -543,6 +543,35 @@ function enClair(i, sansCA, s, r, navigate) {
   )
 }
 
+/**
+ * « Pourquoi c'est important », replié.
+ *
+ * Ouvert partout, il doublait la longueur de chaque carte : on lisait un
+ * mur de texte là où l'on cherchait un chiffre. Il reste à un clic, sous la
+ * carte, pour qui veut comprendre.
+ */
+function pourquoi(texte) {
+  if (!texte) return null
+  return h('details', { class: 'sy-why' },
+    h('summary', {}, 'Pourquoi c’est important'),
+    h('p', {}, texte))
+}
+
+/** Un texte long se lit en trois lignes, et se déplie d'un clic. */
+function corpsTexte(texte) {
+  const long = String(texte || '').length > 170
+  const p = h('p', { class: `sy-card-body ${long ? 'is-coupe' : ''}` }, texte)
+  if (!long) return p
+  const bouton = h('button', {
+    class: 'sy-lire', type: 'button',
+    onClick: () => {
+      const ouvert = p.classList.toggle('is-coupe')
+      bouton.textContent = ouvert ? 'Lire la suite' : 'Réduire'
+    },
+  }, 'Lire la suite')
+  return h('div', { class: 'sy-corps' }, p, bouton)
+}
+
 /* ─────────── Forme 1 : deux cartes de mesure ─────────── */
 
 function duo(cartes, r) {
@@ -564,8 +593,8 @@ function carte(c, k, r) {
     grandChiffre(c),
     visuel(c, r),
     h('h3', { class: 'sy-card-title' }, titre(c.title)),
-    h('p', { class: 'sy-card-body' }, c.body),
-    c.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), c.pourquoi) : null,
+    corpsTexte(c.body),
+    pourquoi(c.pourquoi),
   )
 }
 
@@ -626,8 +655,8 @@ function miseEnAvant(cartes, r) {
       h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
       h('h3', { class: 'sy-feature-title' }, titre(centre.title)),
       visuel(centre, r, { grand: true }),
-      h('p', { class: 'sy-card-body' }, centre.body),
-      centre.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), centre.pourquoi) : null,
+      corpsTexte(centre.body),
+      pourquoi(centre.pourquoi),
       centre.figure ? h('div', { class: 'sy-feature-fig' },
         h('span', {}, centre.figure.label),
         h('b', { class: centre.figure.good ? 'is-pos' : 'is-neg' }, centre.figure.value)) : null,
@@ -644,8 +673,8 @@ function fait(c, k, r) {
     exact ? h('div', { class: `sy-fact-val ${c.figure.good ? 'is-pos' : 'is-neg'}` }, abrege(exact)) : null,
     h('h3', { class: 'sy-fact-title' }, titre(c.title)),
     c.split ? vis(repartition(c.split, c.kicker), `vis-${c.cle}-fait`) : null,
-    h('p', { class: 'sy-card-body' }, c.body),
-    c.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), c.pourquoi) : null,
+    corpsTexte(c.body),
+    pourquoi(c.pourquoi),
   )
 }
 
@@ -674,8 +703,8 @@ function bande(cartes, r, leviers) {
         h('div', { class: 'sy-card-kicker' }, h('i', { 'aria-hidden': 'true' }), centre.kicker),
         grandChiffre(centre),
         h('h3', { class: 'sy-card-title' }, titre(centre.title)),
-        h('p', { class: 'sy-card-body' }, centre.body),
-        centre.pourquoi ? h('p', { class: 'sy-card-why' }, h('b', {}, 'Pourquoi c’est important · '), centre.pourquoi) : null,
+        corpsTexte(centre.body),
+        pourquoi(centre.pourquoi),
       ),
       h('div', { class: 'sy-band-viz' }, visuel(centre, r, { grand: true })),
     ),
@@ -719,6 +748,26 @@ function leviersChiffres(s, r) {
   )
 }
 
+/**
+ * Le sommaire du détail : cinq parties, chacune avec la question à laquelle
+ * elle répond. Un clic y mène. On sait ce qu'on va lire avant de le lire, et
+ * on saute à ce qu'on cherche.
+ */
+function sommaire(actes, sansCA) {
+  const noms = [...(sansCA ? SECTIONS.avant : SECTIONS.plein), 'Les chiffres clés', 'Le détail des comptes']
+  const cibles = ['sy-partie-1', 'sy-partie-2', 'sy-partie-3', 'sy-chiffres', 'sy-comptes']
+  return h('nav', { class: 'sy-sommaire', 'aria-label': 'Sommaire du détail' },
+    h('span', { class: 'sy-sommaire-t' }, 'Dans ce détail'),
+    h('ol', {},
+      ...noms.slice(0, 5).map((nm, i) => h('li', {},
+        h('button', {
+          type: 'button',
+          onClick: () => document.getElementById(cibles[i])?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        }, h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, nm)),
+      ))),
+  )
+}
+
 /** La phrase qui clôt le récit, et la suite. */
 function pied(navigate, pilotage) {
   const reste = lignesRestantes()
@@ -755,7 +804,7 @@ function numero(no, nom) {
 
 function sixChiffres(r, s, y, choisir, navigate) {
   const figures = figureSet(r, s, y)
-  return h('section', { class: 'sy-figs sy-act' },
+  return h('section', { class: 'sy-figs sy-act sy-chapitre', id: 'sy-chiffres' },
     numero(4, 'Les chiffres clés'),
     h('div', { class: 'sy-sec-head' },
       h('div', {},
@@ -843,7 +892,7 @@ function chiffre(f, i, navigate) {
 function analyse(r, s, y, choisir, navigate, refresh) {
   const neuve = etat.analyseNeuve
   etat.analyseNeuve = false
-  return h('section', { class: `sy-deep sy-act ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}` },
+  return h('section', { class: `sy-deep sy-act sy-chapitre ${etat.analyse ? 'is-open' : ''} ${neuve ? 'is-opening' : ''}`, id: 'sy-comptes' },
     numero(5, 'Le détail des comptes'),
     h('h2', { class: 'sy-act-title' }, 'D’où viennent tous ces chiffres'),
     h('p', { class: 'sy-act-say' }, 'Pour vérifier un chiffre ou répondre à une question précise : le compte de résultat de chaque année, ce qui fait passer du chiffre d’affaires au bénéfice, et le compte en banque mois par mois.'),

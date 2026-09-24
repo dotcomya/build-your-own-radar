@@ -102,9 +102,12 @@ export default async function (t) {
   t.verifie(await q.locator('.sy-act').first().locator('.sy-garde').count() === 1, 'le premier acte porte l’avertissement')
   const titre1 = (await q.locator('.sy-act-title').first().innerText().catch(() => '')).trim()
   t.verifie(titre1 && !/^À vérifier/.test(titre1), 'le titre du premier acte reste factuel', titre1)
+  t.verifie(!(await q.locator('.sy-card.is-good, .sy-feature-main.is-good, .sy-fact.is-good').count()), 'aucune carte ne se colore en succès')
+  // Le verdict du dossier se lit dans le pilotage, avec l'avancement.
+  await t.onglet(q, 'Pilotage', 1000)
+  await t.defiler(q)
   const mot = await q.evaluate(() => [...document.querySelectorAll('.sy-verdict-word, .sy-ink-word, .sy-ink .sy-kicker')].map((x) => x.textContent).join(' | '))
   t.verifie(/vérifier/i.test(mot), 'le verdict dit « À vérifier »', mot.slice(0, 120))
-  t.verifie(!(await q.locator('.sy-card.is-good, .sy-feature-main.is-good, .sy-fact.is-good').count()), 'aucune carte ne se colore en succès')
 
   await t.onglet(q, 'Synthèse', 1000)
   t.verifie(await q.locator('.plain .garde').count() === 1, 'la synthèse d’origine dit la même chose')

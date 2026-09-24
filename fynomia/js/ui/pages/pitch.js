@@ -24,7 +24,8 @@ import { goToGap } from '../spotlight.js'
 import { section, exercices, grandsChiffres, anneeLue, lireAnnee } from '../sections.js'
 import { barres, courbe, compter } from '../vitrine.js'
 import { gardesDuPlan, gardeBloc } from '../garde.js'
-import { teteDossier, renderStudio } from './studio.js'
+import { renderStudio } from './studio.js'
+import { analyseStrategique } from './analyse.js'
 
 const n = (v) => Number(v) || 0
 const somme = (xs) => (xs || []).reduce((a, x) => a + n(x?.amount ?? x), 0)
@@ -65,7 +66,7 @@ const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des e
  * clic, sans rien perdre. Le choix est retenu sur cet appareil.
  */
 const MISES = [
-  { key: 'recit', label: 'Récit', dit: 'à lire, partie par partie' },
+  { key: 'recit', label: 'Récit', dit: 'l’analyse stratégique' },
   { key: 'tableau', label: 'Tableau', dit: 'tout sur un écran' },
   { key: 'diapos', label: 'Diapos', dit: 'à présenter' },
   { key: 'detail', label: 'En détail', dit: 'tout le raisonnement' },
@@ -114,12 +115,13 @@ export function renderPitch(navigate, refresh, goView) {
   const parties = partiesDuPitch(s, r, navigate, an, choisir)
   return h('div', { class: `pitch is-${mise}` },
     selecteur,
-    // La même tête que la vue « En détail » : où en est le dossier, ce qui
-    // est fait, ce qui reste.
-    h('div', { class: 'sy pitch-dossier' }, ...teteDossier(navigate, pilotage, 'pitch-')),
+    // L'avancement du dossier vit dans le Pilotage : le pitch montre
+    // l'entreprise, pas la liste de ce qu'il reste à saisir.
     couverture(s, r, navigate),
     garde.length ? gardeBloc(garde, navigate, { classe: 'is-page' }) : null,
-    mise === 'tableau' ? tableau(parties) : mise === 'diapos' ? diapos(parties) : recit(parties),
+    mise === 'tableau' ? tableau(parties)
+      : mise === 'diapos' ? diapos(parties)
+        : analyseStrategique(s, r, navigate, { avis: avis(s, r), source: () => sourceRepere() }),
     h('div', { class: 'pitch-foot' },
       h('p', {}, 'Tous ces chiffres viennent du même calcul que les états financiers : un chiffre qui te surprend se corrige dans la page où il se saisit, et tout le pitch suit.'),
       h('div', { class: 'pitch-foot-go' },
@@ -369,36 +371,76 @@ function tableau(parties) {
  * une note d'orateur. Les flèches du clavier font défiler.
  */
 const diapo = { i: 0 }
+
+/**
+ * Les chapitres du deck : quatre intercalaires, sombres, qui annoncent qu'on
+ * change de partie. Tout le reste est blanc.
+ */
+const CHAPITRES_DECK = [
+  { titre: 'Le projet', dit: 'Ce que tu vends, à qui, et l’histoire des cinq prochaines années.', parties: ['trajectoire', 'offre'] },
+  { titre: 'L’économie', dit: 'Jusqu’où ça peut aller, et ce que chaque vente rapporte.', parties: ['croissance', 'modele'] },
+  { titre: 'Le financement', dit: 'Ce qu’il faut réunir, et qui fait le travail.', parties: ['besoin', 'equipe'] },
+  { titre: 'Les risques et les chiffres', dit: 'Ce qui peut mal tourner, et ce qu’on te demandera.', parties: ['risques', 'ratios'] },
+]
+
 function diapos(parties) {
-  const total = parties.length
+  const deja = new Set()
+  const suite = []
+  CHAPITRES_DECK.forEach((c, k) => {
+    const dedans = c.parties.map((cle) => parties.find((x) => x.cle === cle)).filter(Boolean)
+    if (!dedans.length) return
+    suite.push({ inter: true, no: k + 1, ...c, noms: dedans.map((x) => x.nom) })
+    dedans.forEach((x) => { deja.add(x.cle); suite.push({ x }) })
+  })
+  parties.filter((x) => !deja.has(x.cle)).forEach((x) => suite.push({ x }))
+  const total = suite.length
+  if (diapo.i >= total) diapo.i = 0
+  let rang = 0
   const piste = h('div', { class: 'pitch-piste', tabindex: '0', 'aria-label': 'Diapositives du pitch' },
-    ...parties.map((x, i) => h('section', { class: `pitch-diapo ${i % 2 ? 'is-clair' : 'is-sombre'}`, 'data-partie': x.cle, 'aria-label': `${i + 1} sur ${total} : ${x.nom}` },
-      h('div', { class: 'pz-diapo-haut' },
-        h('span', { class: 'pitch-diapo-no' }, `${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`),
-        x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
-      ),
-      h('div', { class: 'pz-diapo-grille' },
-        h('div', { class: 'pz-diapo-texte' },
-          h('h3', {}, x.nom),
-          h('p', { class: 'pz-diapo-recit' }, insecable(x.recit)),
-          h('div', { class: 'pz-diapo-chiffre' },
-            h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
-            h('span', {}, x.chiffre?.l || ''),
+    ...suite.map((d, i) => {
+      if (d.inter) {
+        return h('section', { class: 'pitch-diapo is-intercalaire', 'data-chapitre': String(d.no), 'aria-label': `${i + 1} sur ${total} : ${d.titre}` },
+          h('div', { class: 'pz-inter' },
+            h('span', { class: 'pz-inter-no' }, String(d.no).padStart(2, '0')),
+            h('h3', { class: 'pz-inter-titre' }, d.titre),
+            h('p', { class: 'pz-inter-dit' }, d.dit),
+            h('div', { class: 'pz-inter-liste' }, ...d.noms.map((nm) => h('span', {}, nm))),
+          ),
+        )
+      }
+      const x = d.x
+      rang += 1
+      return h('section', { class: 'pitch-diapo is-clair', 'data-partie': x.cle, 'aria-label': `${i + 1} sur ${total} : ${x.nom}` },
+        h('div', { class: 'pz-diapo-haut' },
+          h('span', { class: 'pitch-diapo-no' }, `${String(rang).padStart(2, '0')} / ${String(parties.length).padStart(2, '0')}`),
+          x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null,
+        ),
+        h('div', { class: 'pz-diapo-grille' },
+          h('div', { class: 'pz-diapo-texte' },
+            h('h3', {}, x.nom),
+            h('p', { class: 'pz-diapo-recit' }, insecable(x.recit)),
+            h('div', { class: 'pz-diapo-chiffre' },
+              h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
+              h('span', {}, x.chiffre?.l || ''),
+            ),
+          ),
+          h('div', { class: 'pz-diapo-visuel' }, x.corps()),
+        ),
+        h('footer', { class: 'pz-note' },
+          h('span', { class: 'avis-mono', 'aria-hidden': 'true' }, 'F'),
+          h('div', {},
+            h('b', {}, 'Note d’orateur · ', TONS[x.avis?.ton || 'good']),
+            h('p', {}, insecable(x.avis?.titre || ''), x.avis?.question ? ` — on te demandera : « ${x.avis.question} »` : ''),
           ),
         ),
-        h('div', { class: 'pz-diapo-visuel' }, x.corps()),
-      ),
-      h('footer', { class: 'pz-note' },
-        h('span', { class: 'avis-mono', 'aria-hidden': 'true' }, 'F'),
-        h('div', {},
-          h('b', {}, 'Note d’orateur · ', TONS[x.avis?.ton || 'good']),
-          h('p', {}, insecable(x.avis?.titre || ''), x.avis?.question ? ` — on te demandera : « ${x.avis.question} »` : ''),
-        ),
-      ),
-    )))
+      )
+    }))
   const barre = h('div', { class: 'pz-progres', 'aria-hidden': 'true' }, h('i', { style: { width: `${((diapo.i + 1) / total) * 100}%` } }))
   const points = h('div', { class: 'pitch-points' },
-    ...parties.map((x, i) => h('button', { class: `pitch-point ${i === diapo.i ? 'is-on' : ''}`, 'aria-label': x.nom, title: x.nom, onClick: () => aller(i) })))
+    ...suite.map((d, i) => {
+      const nm = d.inter ? d.titre : d.x.nom
+      return h('button', { class: `pitch-point ${d.inter ? 'is-inter' : ''} ${i === diapo.i ? 'is-on' : ''}`, 'aria-label': nm, title: nm, onClick: () => aller(i) })
+    }))
   const compteur = h('span', { class: 'pitch-compteur' }, `${diapo.i + 1} / ${total}`)
   const aller = (i) => {
     diapo.i = Math.max(0, Math.min(total - 1, i))

@@ -14,6 +14,7 @@ import { metricBoard } from '../levers.js'
 import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
 import { referenceYear } from '../impact.js'
 import { renderPitch } from './pitch.js'
+import { teteDossier } from './studio.js'
 import { storyline, gauge } from '../story.js'
 import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
@@ -155,6 +156,11 @@ export function renderDashboard(navigate, refresh) {
     // franchir, les leviers classés par ce qu'ils rapportent, la position dans
     // le métier, et les points qui clochent.
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
+      // Où en est le dossier : l'avancement en grand, la prochaine étape, le
+      // verdict du moment, puis ce qui est fait et ce qui reste, page par page.
+      h('div', { class: 'sy pilote-dossier' }, ...teteDossier(navigate, () => {
+        document.querySelector('.refinery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 'pilote-')),
       refinePanel(navigate, { refresh }),
       breakEvenBoard(r, s, vocabulary(s)),
       actionsPanel(r, s, navigate, refresh),

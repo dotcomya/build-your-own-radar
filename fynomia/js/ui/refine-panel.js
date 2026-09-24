@@ -18,8 +18,15 @@ import { stageOf } from './stages.js'
 export function refinePanel(navigate, { compact = false, refresh = () => {} } = {}) {
   const c = checklist(store.scenario)
   const pct = Math.round(c.ratio * 100)
-  const open = memory.open
-  const hidden = c.groups.reduce((a, g) => a + (g.items.length - visible(g, false).length), 0)
+  // Un palier est ouvert en entier ou fermé en entier. Au premier affichage,
+  // celui qui porte la prochaine étape est ouvert : on voit tout de suite
+  // quoi faire, sans dérouler les deux autres.
+  if (!memory.init) {
+    memory.init = true
+    const ici = c.groups.find((g) => g.items.includes(c.next))
+    if (ici) memory.paliers.add(ici.key)
+  }
+  const tousOuverts = c.groups.every((g) => memory.paliers.has(g.key))
 
   return h('section', { class: `refinery ${compact ? 'is-compact' : ''} ${memory.shut ? 'is-shut' : ''}` },
     h('header', { class: 'refinery-head' },
@@ -71,21 +78,20 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
 
     h('div', { class: 'refinery-groups' },
       ...c.groups.map((g) => {
-        // Chaque palier s'ouvre seul : on veut voir toute la finition sans
-        // dérouler aussi les fondations.
-        const deplie = open || memory.paliers.has(g.key)
-        const caches = g.items.length - visible(g, false).length
+        // Chaque palier s'ouvre et se ferme en entier : fermé, il ne montre
+        // que son titre et son compte ; ouvert, toutes ses lignes.
+        const deplie = memory.paliers.has(g.key)
         const basculer = () => { memory.paliers.has(g.key) ? memory.paliers.delete(g.key) : memory.paliers.add(g.key); refresh() }
-        return h('div', { class: `refinery-group ${g.done === g.total ? 'is-full' : ''} ${deplie ? 'is-open' : ''}` },
+        return h('div', { class: `refinery-group ${g.done === g.total ? 'is-full' : ''} ${deplie ? 'is-open' : 'is-closed'}`, 'data-palier': g.key },
         h('button', { class: 'refinery-group-head', type: 'button', 'aria-expanded': String(deplie), onClick: basculer,
-          title: deplie ? 'Replier ce palier' : 'Voir toutes les lignes de ce palier' },
+          title: deplie ? 'Fermer ce palier' : 'Ouvrir ce palier' },
           h('span', { class: `refinery-chip is-${g.key}` }, g.label),
           h('span', { class: 'refinery-group-note' }, g.note),
           h('span', { class: 'refinery-group-count num' }, `${g.done}/${g.total}`),
           h('span', { class: 'refinery-group-chev', 'aria-hidden': 'true' }),
         ),
-        h('div', { class: 'refinery-items' },
-          ...visible(g, deplie).map((it) => {
+        deplie ? h('div', { class: 'refinery-items' },
+          ...ordre(g).map((it) => {
             const aFaire = !it.done || it.relire
             return h('button', {
               class: `refinery-item ${aFaire ? '' : 'is-done'} ${it.relire ? 'is-relire' : ''} ${it.later ? 'is-later' : ''} ${it === c.next ? 'is-next' : ''}`,
@@ -106,37 +112,41 @@ export function refinePanel(navigate, { compact = false, refresh = () => {} } = 
               aFaire ? h('span', { class: 'refinery-go' }, '→') : null,
             )
           }),
-          !deplie && caches > 0 ? h('button', { class: 'refinery-group-more', type: 'button', onClick: basculer },
-            `Voir ${caches > 1 ? `les ${caches} autres` : 'l’autre'}`) : null,
-        ),
+        ) : null,
       )
       }),
     ),
 
-    // Trente lignes d'un coup, c'est un mur. On montre ce qui compte
-    // maintenant — les premières de chaque palier — et le reste attend d'être
-    // demandé. Le compte dit exactement ce qu'on cache.
-    hidden > 0 ? h('button', {
+    // Les trois paliers d'un geste, dans un sens ou dans l'autre.
+    h('button', {
       class: 'refinery-more',
-      onClick: () => { memory.open = !memory.open; refresh() },
-    }, open ? 'Tout replier' : `Voir les ${hidden} autres lignes`) : null,
+      onClick: () => {
+        if (tousOuverts) memory.paliers.clear()
+        else c.groups.forEach((g) => memory.paliers.add(g.key))
+        refresh()
+      },
+    }, tousOuverts ? 'Tout fermer' : 'Tout ouvrir'),
     ),
   )
 }
 
-/** Ce qu'on montre d'un palier : tout s'il est déplié, l'essentiel sinon. */
-const SHOWN = 3
-function visible(group, open) {
-  if (open) return group.items
-  // Le même ordre que le guide : les réponses à relire d'abord, puis ce qui
-  // manque ; le facultatif ne se montre que déplié.
-  const todo = [...group.items.filter((i) => i.relire), ...group.items.filter((i) => !i.done && !i.optionnel)]
-  const done = group.items.filter((i) => i.done && !i.relire)
-  return [...done, ...todo.slice(0, SHOWN)]
+/**
+ * L'ordre d'un palier ouvert : les réponses à relire d'abord, puis ce qui
+ * manque, puis le facultatif, et ce qui est fait en dernier — le même ordre
+ * que le guide.
+ */
+function ordre(group) {
+  const it = group.items
+  return [
+    ...it.filter((i) => i.relire),
+    ...it.filter((i) => !i.done && !i.relire && !i.optionnel),
+    ...it.filter((i) => !i.done && !i.relire && i.optionnel),
+    ...it.filter((i) => i.done && !i.relire),
+  ]
 }
 
-/** Replié ou déplié — le choix survit aux redessins de la page. */
-const memory = { open: false, shut: false, paliers: new Set() }
+/** Ouvert ou fermé — le choix survit aux redessins de la page. */
+const memory = { init: false, shut: false, paliers: new Set() }
 
 /**
  * Pourquoi cet ordre-là.

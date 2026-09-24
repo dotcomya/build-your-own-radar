@@ -1,7 +1,7 @@
 /**
  * Chaque étape du dossier mène quelque part — au bon endroit.
  *
- * La synthèse essai range les trente lignes du dossier page par page : ce qui
+ * Le pilotage range les trente lignes du dossier page par page : ce qui
  * est fait, ce qui reste. Une ligne qui emmène sur une page où son champ
  * n'existe pas laisse le fondateur chercher. On les clique donc toutes, une à
  * une, sur deux plans (un métier neuf et l'exemple complet), et on vérifie
@@ -19,7 +19,7 @@ const lignes = (p) => p.evaluate(async () => {
 
 async function ouvrirDossier(t, p) {
   await t.aller(p, 'tableau-de-bord', 700)
-  await t.onglet(p, 'Synthèse — essai', 700)
+  await t.onglet(p, 'Pilotage', 700)
   const d = p.locator('.sy-dossier')
   if (!(await d.count())) return false
   await d.scrollIntoViewIfNeeded()
