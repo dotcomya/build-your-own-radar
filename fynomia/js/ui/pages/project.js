@@ -7,12 +7,11 @@
  * rémunération ; le type de client commande les cycles de vente et les délais
  * de paiement.
  *
- * Ce qui relève du réglage fin — régime d'imposition, statut JEI, date de
- * clôture — n'a pas disparu : il est derrière « affiner », et n'apparaît que
- * pour qui le cherche.
+ * Ce qui relève du réglage fin — régime d'imposition, statut JEI, mois de
+ * clôture, droit à l'ACRE — vit dans les Réglages, section « Ce projet ».
  */
 
-import { h, euro, textField, selectField, switchField, refine, moduleShell, confirmDialog, infoPoint } from '../dom.js'
+import { h, euro, textField, selectField, switchField, refine, moduleShell, confirmDialog } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { todoPanel } from '../todo.js'
@@ -20,7 +19,7 @@ import store from '../../state/store.js'
 import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
 import { resetSetup } from './setup.js'
 import { familyIcon } from '../icons.js'
-import { MICRO_CATEGORIES, microCategory, acreMicroMonths, acreMicroReduction } from '../../engine/micro.js'
+import { MICRO_CATEGORIES, microCategory } from '../../engine/micro.js'
 import { fiscalContext } from '../../engine/fiscal-fr-2026.js'
 
 /** Les clients type : ils ne payent pas au même rythme. */
@@ -113,24 +112,8 @@ export function renderProject(navigate, refresh) {
         })(),
       ),
       activityOpen(s) ? h('div', { class: 'legalopen' }, sectorGrid(s, set, refresh)) : null,
-
-      // La clôture de l'exercice et le droit à l'ACRE, sur une ligne : deux
-      // réglages du premier exercice. La question du régime de TVA est partie ;
-      // elle doublonnait le statut juridique et le taux de TVA de chaque offre,
-      // et la franchise, qui ne concerne que les petites affaires, reste dans
-      // le régime fiscal du statut.
-      h('div', { class: 'grid grid-2 mt' },
-        h('div', { 'data-gap': 'calendrier' },
-          selectField({
-            label: 'Mois de clôture', value: String(s.meta.fiscalYearEnd ?? 12),
-            options: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
-              .map((m, i) => ({ value: String(i + 1), label: m })),
-            hint: "Décembre dans la plupart des cas. Un exercice décalé change la date des impôts, pas les montants.",
-            onInput: (v) => set({ fiscalYearEnd: Number(v) }, 'Clôture'),
-          }),
-        ),
-        h('div', { 'data-gap': 'acre' }, acreSwitch(s, set)),
-      ),
+      // Le mois de clôture et le droit à l'ACRE sont partis dans les Réglages,
+      // avec les autres réglages du premier exercice.
     ),
 
     h('div', { class: 'slab-pair' },
@@ -433,8 +416,8 @@ function applyLegal(key) {
  * La micro-entreprise fait cotiser sur le chiffre d'affaires au lieu d'une
  * paie : sa nature d'activité, son versement libératoire et sa franchise de
  * TVA se règlent à côté de la forme juridique, parce que c'est là qu'on la
- * choisit. L'ACRE, qui vaut pour toutes les formes, est à côté du mois de
- * clôture.
+ * choisit. L'ACRE, qui vaut pour toutes les formes, se déclare dans les
+ * Réglages.
  */
 function regimeBlock(s, sector, set) {
   const micro = s.meta.legalForm === 'MICRO'
@@ -467,26 +450,6 @@ function regimeBlock(s, sector, set) {
       }),
     ),
   )
-}
-
-/**
- * Le droit à l'ACRE : ce qu'elle efface et à qui elle est ouverte, dans une
- * seule bulle à côté de l'interrupteur, plutôt qu'un paragraphe sous lui.
- */
-function acreSwitch(s, set) {
-  const micro = s.meta.legalForm === 'MICRO'
-  const ctx = fiscalContext(s.fiscal || {})
-  const pctFr = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
-  const acreNote = micro
-    ? `Tes cotisations baissent de ${pctFr(acreMicroReduction(s, ctx))} pendant ${acreMicroMonths(s)} mois — jusqu’à la fin du troisième trimestre civil après ton début d’activité.`
-    : 'Pendant douze mois, 25 % de tes cotisations de base effacées, en entier sous 36 045 € de revenu annuel, puis de moins en moins jusqu’à 48 060 €.'
-  return switchField({
-    label: h('span', { class: 'switch-name-i' }, 'J’ai droit à l’ACRE', infoPoint(
-      `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
-      { classe: 'is-champ' })),
-    checked: !!s.meta.acre,
-    onInput: (v) => set({ acre: v }, 'ACRE'),
-  })
 }
 
 /**

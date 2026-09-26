@@ -515,15 +515,15 @@ function pied(navigate, pilotage) {
  * objets qui méritent d'être isolés — un tableau, une cascade — ont leur cadre.
  */
 const PARTIES = [
-  { cle: 'ca', nom: 'Chiffre d’affaires et résultat' },
-  { cle: 'offres', nom: 'D’où vient le chiffre d’affaires' },
-  { cle: 'vente', nom: 'Économie d’une vente' },
-  { cle: 'couts', nom: 'Structure des coûts' },
-  { cle: 'equipe', nom: 'Équipe et masse salariale' },
-  { cle: 'treso', nom: 'Trésorerie' },
-  { cle: 'finance', nom: 'Financement' },
-  { cle: 'hypotheses', nom: 'Hypothèses et risques', id: 'sy-hypotheses' },
-  { cle: 'comptes', nom: 'Analyse détaillée', id: 'sy-comptes' },
+  { cle: 'ca', nom: 'Chiffre d’affaires et résultat', court: 'CA et résultat' },
+  { cle: 'offres', nom: 'D’où vient le chiffre d’affaires', court: 'Ventes' },
+  { cle: 'vente', nom: 'Économie d’une vente', court: 'Une vente' },
+  { cle: 'couts', nom: 'Structure des coûts', court: 'Coûts' },
+  { cle: 'equipe', nom: 'Équipe et masse salariale', court: 'Équipe' },
+  { cle: 'treso', nom: 'Trésorerie', court: 'Trésorerie' },
+  { cle: 'finance', nom: 'Financement', court: 'Financement' },
+  { cle: 'hypotheses', nom: 'Hypothèses et risques', court: 'Hypothèses', id: 'sy-hypotheses' },
+  { cle: 'comptes', nom: 'Analyse détaillée', court: 'Analyse', id: 'sy-comptes' },
 ]
 const idPartie = (cle) => PARTIES.find((x) => x.cle === cle)?.id || `sy-ed-${cle}`
 const allerA = (cle) => document.getElementById(idPartie(cle))?.scrollIntoView({ behavior: reduit() ? 'auto' : 'smooth', block: 'start' })
@@ -563,13 +563,50 @@ function introDetail(s, r, garde, prudence, navigate) {
 
 /** Le sommaire : les neuf parties, dans l'ordre où on les lit. */
 function sommaireDetail() {
-  return h('nav', { class: 'sy-sommaire', 'aria-label': 'Sommaire du détail' },
-    h('span', { class: 'sy-sommaire-t' }, 'Dans ce détail'),
+  suivreLaPartie()
+  return h('nav', { class: 'sy-sommaire', 'aria-label': 'Dans ce détail' },
     h('ol', {},
       ...PARTIES.map((x, i) => h('li', {},
-        h('button', { type: 'button', onClick: () => allerA(x.cle) },
-          h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, x.nom))))),
+        h('button', { type: 'button', title: x.nom, 'data-cle': x.cle, onClick: () => allerA(x.cle) },
+          h('b', {}, String(i + 1).padStart(2, '0')), h('span', {}, x.court))))),
   )
+}
+
+/**
+ * Le sommaire reste à l'écran et dit où l'on est.
+ *
+ * Il ouvrait la page puis disparaissait au premier défilement : pour passer
+ * de la trésorerie aux hypothèses, il fallait remonter tout le détail. Il se
+ * colle désormais sous la barre « Lire le pitch », sur une ligne, et la
+ * partie qu'on lit s'y allume — la dernière dont le haut a passé le sommaire.
+ */
+let suiviPose = false
+function suivreLaPartie() {
+  if (suiviPose) return
+  suiviPose = true
+  let attente = 0
+  const marquer = () => {
+    attente = 0
+    const nav = document.querySelector('.pitch.is-detail .sy-sommaire')
+    if (!nav) return
+    const seuil = nav.getBoundingClientRect().bottom + 24
+    let courante = null
+    for (const x of PARTIES) {
+      const el = document.getElementById(idPartie(x.cle))
+      if (el && el.getBoundingClientRect().top <= seuil) courante = x.cle
+    }
+    for (const b of nav.querySelectorAll('button[data-cle]')) {
+      const on = b.dataset.cle === courante
+      b.classList.toggle('is-on', on)
+      if (on && b.getAttribute('aria-current') !== 'true') {
+        b.setAttribute('aria-current', 'true')
+        // La pastille allumée reste visible dans la rangée qui défile.
+        const ol = b.closest('ol')
+        if (ol && ol.scrollWidth > ol.clientWidth) ol.scrollTo({ left: b.offsetLeft - ol.clientWidth / 2 + b.offsetWidth / 2, behavior: 'auto' })
+      } else if (!on) b.removeAttribute('aria-current')
+    }
+  }
+  document.addEventListener('scroll', () => { if (!attente) attente = requestAnimationFrame(marquer) }, { passive: true, capture: true })
 }
 
 /**

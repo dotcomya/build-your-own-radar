@@ -207,7 +207,7 @@ export function emptyScenario(name = 'Mon business plan') {
       // fondateur ne la déclare pas. La nature d'activité du micro-entrepreneur
       // se déduit du métier tant qu'elle n'est pas choisie.
       acre: false, microActivity: '', microVL: false,
-      sectorKey: null, vatExempt: false, nonProfit: false, persona: 'founder',
+      sectorKey: null, vatExempt: false, nonProfit: false,
       // Ce que le fondateur a répondu — « pizzeria » — et le mot de son métier.
       // `sectorKey` reste le modèle économique qui tourne derrière.
       activityKey: '', activityLabel: '', unit: null,

@@ -54,59 +54,14 @@ export const METRICS = {
 const sumYear = (arr, y) => arr.slice(y * 12, y * 12 + 12).reduce((a, b) => a + b, 0)
 
 /**
- * Les personas. `depth` module la quantité de détail pour le fondateur, qui
- * regarde tout ; les autres ont un périmètre par nature.
+ * La vue du fondateur, la seule. Les vues direction financière, marketing,
+ * RH, produit et conseil ont été retirées : Fynomia se lit en fondateur.
  */
 export const PERSONAS = {
   founder: {
-    label: 'Fondateur', short: 'Fondateur', code: 'FDR',
-    tagline: "Tu décides de tout, donc tu réponds de tout.",
-    brief: "La vue d'ensemble : ce que tu vends, ce que ça coûte, ce qu'il reste, et combien de temps tu tiens.",
-    hasDepth: true,
+    label: 'Fondateur',
     metrics: ['revenue', 'ebe', 'breakEven', 'netResult', 'fundingNeed', 'runway'],
     pages: ['tableau-de-bord', 'modele', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    question: "Ce modèle tient-il debout ?",
-  },
-  cfo: {
-    label: 'Direction financière', short: 'DAF', code: 'CFO',
-    tagline: "Le résultat est une opinion, la trésorerie est un fait.",
-    brief: "Trésorerie, besoin en fonds de roulement, point mort et fiscalité. Ce qui décide si l'entreprise passe l'année.",
-    metrics: ['fundingNeed', 'cashLow', 'peakBfr', 'breakEven', 'runway', 'corporateTax'],
-    pages: ['tableau-de-bord', 'modele', 'financement', 'resultats', 'charges', 'offre', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    question: "À quel moment manque-t-il de l'argent, et combien ?",
-  },
-  cmo: {
-    label: 'Direction marketing', short: 'CMO', code: 'CMO',
-    tagline: "Un client qui coûte plus qu'il ne rapporte n'est pas une croissance.",
-    brief: "Budgets, canaux, coût d'acquisition et valeur client. Combien coûte un euro de chiffre d'affaires.",
-    metrics: ['cac', 'ltv', 'ltvCac', 'revenue', 'ebe', 'arpu'],
-    pages: ['tableau-de-bord', 'modele', 'marketing', 'offre', 'resultats', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    question: "Chaque euro investi en acquisition en rapporte-t-il plus d'un ?",
-  },
-  chro: {
-    label: 'Ressources humaines', short: 'RH', code: 'CHRO',
-    tagline: "Un salaire brut n'est jamais le coût d'un salarié.",
-    brief: "Masse salariale chargée, calendrier des recrutements, seuils d'effectif et dispositifs d'exonération.",
-    metrics: ['payrollCost', 'payrollRatio', 'headcount', 'breakEven', 'jeiSaving', 'runway'],
-    pages: ['tableau-de-bord', 'modele', 'equipe', 'charges', 'resultats', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    question: "Cette équipe est-elle finançable au rythme prévu ?",
-  },
-  cpo: {
-    label: 'Produit', short: 'Produit', code: 'CPO',
-    tagline: "Le prix est une décision produit, pas une décision commerciale.",
-    brief: "Prix, coût de revient, récurrence et rétention. Ce que chaque unité vendue laisse dans la caisse.",
-    metrics: ['grossMargin', 'marginRate', 'arpu', 'recurringShare', 'revenue', 'ebe'],
-    pages: ['tableau-de-bord', 'modele', 'offre', 'marketing', 'resultats', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    question: "Chaque vente laisse-t-elle assez pour payer la structure ?",
-  },
-  consultant: {
-    label: 'Conseil', short: 'Conseil', code: 'CNS',
-    tagline: "Un chiffre sans hypothèse derrière ne vaut rien.",
-    brief: "Le modèle complet, sans filtre : bilan, BFR, crédits d'impôt, sensibilité et exports.",
-    metrics: ['revenue', 'ebe', 'breakEven', 'peakBfr', 'fundingNeed', 'netResult'],
-    pages: ['tableau-de-bord', 'modele', 'offre', 'marketing', 'equipe', 'charges', 'financement', 'resultats', 'mon-revenu', 'business-case', 'compte', 'reglages'],
-    forceLevel: 'advanced',
-    question: "Où se cassent les hypothèses ?",
   },
 }
 

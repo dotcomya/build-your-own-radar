@@ -1,12 +1,11 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
-import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, moduleShell } from '../dom.js'
-import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
+import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, moduleShell, infoPoint } from '../dom.js'
+import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR, fiscalContext } from '../../engine/fiscal-fr-2026.js'
+import { acreMicroMonths, acreMicroReduction } from '../../engine/micro.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
 import { renderAccount } from './account.js'
-import { personaPicker } from '../persona-switch.js'
-import { getPersona } from '../personas.js'
 import store from '../../state/store.js'
 
 export function renderSettings(navigate, refresh) {
@@ -17,8 +16,6 @@ export function renderSettings(navigate, refresh) {
     moduleShell({
       no: '09', title: 'Réglages',
     }),
-
-    teamViews(navigate, refresh),
 
     h('div', { class: 'card mb' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Ce projet')),
@@ -49,8 +46,19 @@ export function renderSettings(navigate, refresh) {
             })(),
             h('div', { class: 'field-hint' }, "Premier mois du prévisionnel."),
           ),
+          // Le calendrier et le droit à l'ACRE vivent ici, avec les autres
+          // réglages du premier exercice, plus dans la page Projet.
+          h('div', { 'data-gap': 'calendrier' },
+            selectField({
+              label: 'Mois de clôture', value: String(s.meta.fiscalYearEnd ?? 12),
+              options: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                .map((m, i) => ({ value: String(i + 1), label: m })),
+              hint: "Décembre dans la plupart des cas. Un exercice décalé change la date des impôts, pas les montants.",
+              onInput: (v) => store.update((sc) => { sc.meta.fiscalYearEnd = Number(v) }, { label: 'Clôture' }),
+            }),
+          ),
         ),
-        h('div', { class: 'grid grid-2 mt' },
+        h('div', { class: 'grid grid-3 mt' },
           switchField({
             label: "Éligible au taux réduit d'impôt sur les sociétés",
             checked: s.meta.reducedCorporateTax !== false,
@@ -63,11 +71,12 @@ export function renderSettings(navigate, refresh) {
             hint: "Fynomia vérifiera chaque année si le seuil de dépenses de recherche est atteint.",
             onInput: (v) => store.update((sc) => { sc.meta.jeiClaimed = v }, { label: 'Statut JEI' }),
           }),
+          h('div', { 'data-gap': 'acre' }, acreSwitch(s)),
         ),
         h('div', { class: 'grid grid-2 mt', 'data-gap': 'stock' },
           numberField({
-            label: 'Stock moyen', field: 'stockDays', value: s.assumptions?.stockDays, suffix: 'jours',
-            hint: "Nombre de jours d'achats immobilisés en stock. Augmente le besoin en fonds de roulement.",
+            label: 'Marchandises en réserve', field: 'stockDays', value: s.assumptions?.stockDays, suffix: 'jours d’achats',
+            hint: stockHint(s),
             onInput: (v) => store.update((sc) => { sc.assumptions.stockDays = v }, { label: 'Stock' }),
           }),
         ),
@@ -246,29 +255,38 @@ function dataPanel(navigate, refresh, usage) {
 }
 
 /**
- * Les vues par métier, au second plan.
- *
- * Utile quand le modèle est relu à plusieurs — un associé financier, un
- * associé financier — mais ce n'est pas la question d'un fondateur qui ouvre
- * l'outil pour la première fois. D'où sa place ici, repliée.
+ * Le droit à l'ACRE : ce qu'elle efface et à qui elle est ouverte, dans une
+ * seule bulle à côté de l'interrupteur, plutôt qu'un paragraphe sous lui.
  */
-function teamViews(navigate, refresh) {
-  const current = getPersona(store.persona)
-  return h('details', { class: 'detail-block mb' },
-    h('summary', {},
-      h('span', { class: 'detail-summary-title' }, 'Relire à plusieurs'),
-      h('span', { class: 'detail-summary-note' },
-        `Vue active : ${current.label}. Chaque métier voit ses indicateurs et ses leviers.`),
-    ),
-    h('div', { class: 'detail-inner' },
-      h('p', { class: 'small muted', style: { margin: '0 0 12px' } },
-        "Fynomia est construit pour un fondateur qui bâtit son dossier seul. Si tu partages le modèle avec un associé ou un directeur financier, chacun peut l'ouvrir avec ses propres indicateurs et ses propres leviers."),
-      personaPicker((p) => {
-        if (!p.pages.includes('reglages')) navigate('#/parcours')
-        else refresh()
-      }),
-    ),
-  )
+function acreSwitch(s) {
+  const micro = s.meta.legalForm === 'MICRO'
+  const ctx = fiscalContext(s.fiscal || {})
+  const pctFr = (v) => `${String(Math.round(v * 1000) / 10).replace('.', ',')} %`
+  const acreNote = micro
+    ? `Tes cotisations baissent de ${pctFr(acreMicroReduction(s, ctx))} pendant ${acreMicroMonths(s)} mois — jusqu’à la fin du troisième trimestre civil après ton début d’activité.`
+    : 'Pendant douze mois, 25 % de tes cotisations de base effacées, en entier sous 36 045 € de revenu annuel, puis de moins en moins jusqu’à 48 060 €.'
+  return switchField({
+    label: h('span', { class: 'switch-name-i' }, 'J’ai droit à l’ACRE', infoPoint(
+      `${acreNote} Depuis 2026, elle se demande à l’URSSAF dans les 60 jours et reste réservée à certains créateurs : demandeurs d’emploi, bénéficiaires du RSA ou de l’ASS, moins de 26 ans, entre autres.`,
+      { classe: 'is-champ' })),
+    checked: !!s.meta.acre,
+    onInput: (v) => store.update((sc) => { sc.meta.acre = v }, { label: 'ACRE' }),
+  })
+}
+
+/**
+ * Le stock, dit en clair.
+ *
+ * « Stock moyen, jours » ne parlait à personne. C'est ce qu'on a acheté et
+ * pas encore vendu, compté en jours d'achats : de l'argent sorti de la
+ * caisse qui dort sur une étagère. Il pèse sur la trésorerie, jamais sur le
+ * résultat — et le montant que cela représente dans le plan le montre.
+ */
+function stockHint(s) {
+  const jours = Number(s.assumptions?.stockDays) || 0
+  const base = 'Ce que tu as acheté et pas encore vendu, compté en jours d’achats : 30, c’est un mois d’achats payé qui attend sur l’étagère. Cet argent manque à la trésorerie, pas au résultat. Laisse 0 si tu ne stockes rien.'
+  const immobilise = jours > 0 ? Number(store.result?.bfr?.stock?.[11]) || 0 : 0
+  return immobilise > 0 ? `${base} Dans ton plan : ${euro(immobilise)} immobilisés en fin d’année 1.` : base
 }
 
 /**

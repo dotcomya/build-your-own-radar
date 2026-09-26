@@ -480,24 +480,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .meter { height: 4px; background: var(--rule); overflow: hidden; }
 .meter > i { display: block; height: 100%; background: var(--signal); transition: width .3s var(--ease); }
 
-/* ───────────────────────── Sélecteur de persona ──────────────────────── */
-.persona-switch { display: flex; align-items: center; gap: 8px; }
-.persona-code {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
-  background: var(--ink); color: #fff; padding: 3px 5px; flex: none;
-}
-
-.persona-option {
-  display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--rule);
-  background: none; padding: 13px 15px; cursor: pointer;
-}
-.persona-option:last-child { border-bottom: 0; }
-.persona-option:hover { background: var(--signal-wash); }
-.persona-option.active { background: var(--ink); color: #fff; }
-.persona-option.active .persona-option-tag, .persona-option.active .persona-option-brief { color: #A8B1B8; }
-.persona-option-name { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 15px; }
-.persona-option-tag { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; font-style: italic; }
-.persona-option-brief { font-size: 12px; color: var(--ink-4); margin-top: 5px; line-height: 1.45; }
 
 /* Barre d'onglets mobile */
 .tabbar { display: none; }
@@ -886,10 +868,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 .verdict-panel { border-top-color: var(--gain); }
 .verdict-panel.is-bad { border-top-color: var(--loss); }
-
-/* La liste des vues métier, dans les réglages. */
-.persona-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0; }
-.persona-list .persona-option { border: 1px solid var(--rule); }
 
 /* ─────────────────────────────── Adaptatif ───────────────────────────────── */
 
@@ -7248,14 +7226,13 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
   padding: 10px 14px; border-radius: 14px; background: color-mix(in srgb, var(--surface) 92%, transparent);
   box-shadow: inset 0 0 0 1px var(--rule), 0 10px 30px -24px rgba(14, 15, 12, .5); backdrop-filter: blur(8px);
 }
-.sy-sommaire-t { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
 .sy-sommaire ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
 .sy-sommaire button { display: inline-flex; align-items: center; gap: 7px; border: 0; cursor: pointer; padding: 6px 11px 6px 6px; border-radius: 999px; background: var(--surface-2); font: 600 12.5px/1.2 var(--sans); color: var(--ink-2); }
 .sy-sommaire button b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--accent); font: 700 10px/1 var(--mono); }
 .sy-sommaire button:hover { background: var(--ink); color: #fff; }
 .pitch.is-detail .sy-chapitre {
   padding: 30px 32px 30px; border-top: 0; border-radius: 24px; background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--rule), 0 24px 48px -40px rgba(14, 15, 12, .45); scroll-margin-top: 130px;
+  box-shadow: inset 0 0 0 1px var(--rule), 0 24px 48px -40px rgba(14, 15, 12, .45); scroll-margin-top: calc(var(--header-h) + 200px);
 }
 .pitch.is-detail .sy-chapitre .sy-act-no { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--rule); }
 .pitch.is-detail .sy-chapitre .sy-act-no > b { width: 34px; height: 34px; font-size: 13px; background: var(--accent); color: var(--accent-ink); }
@@ -7270,9 +7247,24 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .sy-why > summary::before { content: '+'; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); font: 700 11px/1 var(--mono); color: var(--ink-3); }
 .sy-why[open] > summary::before { content: '−'; }
 .sy-why > p { margin: 6px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-3); }
+/* Le sommaire se colle sous « Lire le pitch », sur une ligne qui défile de
+   côté si elle déborde ; la partie lue s'y allume. Les parties s'arrêtent
+   sous la pile des barres collées quand on y saute. */
+.pitch.is-detail .sy-sommaire {
+  position: sticky; top: calc(var(--header-h) + 126px); z-index: 14;
+  flex-wrap: nowrap; padding: 7px 8px; gap: 12px; background: var(--paper);
+}
+.pitch.is-detail .sy-sommaire ol { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.pitch.is-detail .sy-sommaire ol::-webkit-scrollbar { display: none; }
+.pitch.is-detail .sy-sommaire li { flex: none; }
+.pitch.is-detail .sy-sommaire button { white-space: nowrap; }
+.pitch.is-detail .sy-sommaire button.is-on { background: var(--ink); color: #fff; }
+.pitch.is-detail [id^="sy-ed-"], .pitch.is-detail #sy-hypotheses, .pitch.is-detail #sy-comptes { scroll-margin-top: calc(var(--header-h) + 200px); }
 @media (max-width: 640px) {
   .pitch.is-detail .sy-chapitre { padding: 20px 16px; border-radius: 18px; }
-  .sy-sommaire { position: static; }
+  .pitch.is-detail .sy-sommaire { position: static; flex-wrap: wrap; }
+  .pitch.is-detail .sy-sommaire ol { flex-wrap: wrap; overflow: visible; }
+  .pitch.is-detail [id^="sy-ed-"], .pitch.is-detail #sy-hypotheses, .pitch.is-detail #sy-comptes, .pitch.is-detail .sy.is-edito .sy-chapitre { scroll-margin-top: 110px; }
 }
 
 /* ═══════════ Pitch · En détail, en article ═══════════
@@ -7306,7 +7298,7 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
 .sy-figs-grid.is-six .sy-fig-head > .sy-vis, .sy-figs-grid.is-six .sy-fig-head > svg { display: none; }
 .sy-figs-grid.is-six .sy-fig-more { grid-area: more; justify-self: start; margin-top: 4px; }
 
-.pitch.is-detail .sy.is-edito .sy-chapitre { padding: 42px 0 38px; border-radius: 0; background: transparent; box-shadow: none; border-top: 1px solid var(--rule); scroll-margin-top: 130px; }
+.pitch.is-detail .sy.is-edito .sy-chapitre { padding: 42px 0 38px; border-radius: 0; background: transparent; box-shadow: none; border-top: 1px solid var(--rule); scroll-margin-top: calc(var(--header-h) + 200px); }
 .pitch.is-detail .sy.is-edito .sy-chapitre .sy-act-no { padding-bottom: 0; margin-bottom: 0; border-bottom: 0; }
 .sy-ed .sy-act-title { max-width: 26ch; font-size: clamp(26px, 3vw, 40px); line-height: 1.1; letter-spacing: -.025em; }
 .sy-clair.sy-ed-dit { margin: 14px 0 0; padding: 0; background: none; box-shadow: none; max-width: 72ch; font-size: 16px; line-height: 1.6; color: var(--ink-2); }

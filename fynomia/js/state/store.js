@@ -95,10 +95,9 @@ class Store {
     this.baselineLabel = label
   }
 
-  get persona() { return this.scenario?.meta?.persona || 'founder' }
-  setPersona(key) {
-    this.update((s) => { s.meta.persona = key }, { label: 'Changement de vue' })
-  }
+  // Une seule vue : celle du fondateur. Un plan enregistré avec une autre vue
+  // (direction financière, marketing…) s'ouvre désormais dans celle-ci.
+  get persona() { return 'founder' }
   emit(reason = 'change') { for (const fn of this.listeners) fn(this, reason) }
 
   // ───────────────────────────── Profil ────────────────────────────────
@@ -432,7 +431,6 @@ function migrate(scenario) {
   s.opex = s.opex || []
   s.capex = s.capex || []
   s.assumptions = s.assumptions || { stockDays: 0 }
-  if (!s.meta.persona) s.meta.persona = 'founder'
   s.financing = { openingCash: 0, equityFounders: [], equityInvestors: [], loans: [], grants: [], advances: [], shareholderLoans: [], ...(s.financing || {}) }
   for (const a of s.activities) {
     a.volumes = a.volumes || { mode: 'growth', launchMonth: 0, startUnits: 0, monthlyGrowth: 0, manual: [] }

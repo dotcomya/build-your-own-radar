@@ -48,13 +48,13 @@ export default async function (t) {
   const lu = libelles.join(' | ')
   t.verifie(/Nature de ton activit/.test(lu) && /Versement lib/.test(lu) && /Franchise de TVA/.test(lu),
     'le régime se règle sous le statut : nature, versement libératoire, franchise', lu)
-  const ligne = await p.evaluate(() => {
-    const cloture = [...document.querySelectorAll('.field')].find((f) => /Mois de clôture/.test(f.querySelector('label')?.textContent || ''))
-    const acre = document.querySelector('[data-gap="acre"] .field-switch')
-    const a = cloture?.getBoundingClientRect(), b = acre?.getBoundingClientRect()
-    return a && b ? { memeLigne: Math.abs(a.top - b.top) < 30 && b.left > a.left } : null
-  })
-  t.verifie(ligne?.memeLigne, 'le droit à l’ACRE est sur la ligne du mois de clôture', ligne)
+  // Le mois de clôture et l'ACRE ne sont plus dans Projet : ils se règlent
+  // dans Réglages › Ce projet, avec les autres réglages du premier exercice.
+  const dansProjet = await p.evaluate(() => ({
+    cloture: [...document.querySelectorAll('.field label')].some((l) => /Mois de clôture/.test(l.textContent)),
+    acre: !!document.querySelector('[data-gap="acre"]'),
+  }))
+  t.verifie(!dansProjet.cloture && !dansProjet.acre, 'Projet ne porte plus ni le mois de clôture ni l’ACRE', dansProjet)
 
   // 2. Le moteur suit.
   let e = await etat(p)
@@ -68,8 +68,15 @@ export default async function (t) {
   const meta = await p.locator('.item .item-meta').allInnerTexts()
   t.verifie(meta.some((m) => /Micro-entrepreneur/.test(m) && /prélevés/.test(m)), 'la ligne du fondateur devient un prélèvement', meta.slice(0, 3))
 
-  // 4. L'ACRE, déclarée.
-  await t.aller(p, 'projet')
+  // 4. L'ACRE, déclarée dans Réglages › Ce projet, avec le mois de clôture.
+  await t.aller(p, 'reglages')
+  const reglages = await p.evaluate(() => ({
+    cloture: [...document.querySelectorAll('.field label')].some((l) => /Mois de clôture/.test(l.textContent)),
+    acre: !!document.querySelector('[data-gap="acre"] .field-switch'),
+    vues: /Relire à plusieurs/.test(document.body.textContent),
+  }))
+  t.verifie(reglages.cloture && reglages.acre, 'Réglages porte le mois de clôture et le droit à l’ACRE', reglages)
+  t.verifie(!reglages.vues, 'plus de vues par métier : la vue est celle du fondateur')
   const avant = e.cot0
   const champAcre = p.locator('[data-gap="acre"] .field-switch', { hasText: 'ACRE' })
   const bulle = await champAcre.locator('.switch-name .info-point').getAttribute('data-tip').catch(() => '')

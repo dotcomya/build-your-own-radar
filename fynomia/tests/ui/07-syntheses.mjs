@@ -77,6 +77,11 @@ export default async function (t) {
     await t.pose(p)
     const restent = await p.evaluate(() => [...document.querySelectorAll('.sy-watch')].filter((x) => !x.classList.contains('is-seen')).map((x) => x.dataset.guet))
     t.verifie(!restent.length, `${format} : tous les blocs se sont tracés au défilement`, restent)
+    // « Doit rester fixé pour naviguer entre chaque partie » : en bas du
+    // détail, le sommaire est toujours à l'écran (sauf sur téléphone, où il
+    // ouvre la page).
+    const sommaire = await p.evaluate(() => { const b = document.querySelector('.sy-sommaire').getBoundingClientRect(); return { haut: Math.round(b.top), bas: Math.round(b.bottom), allume: document.querySelector('.sy-sommaire button.is-on')?.dataset.cle || null } })
+    if (format !== 'telephone') t.verifie(sommaire.haut > 0 && sommaire.bas < 400 && !!sommaire.allume, `${format} : le sommaire reste fixé en haut et allume la partie lue`, sommaire)
     const hors = await p.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1,
       blocs: [...document.querySelectorAll('.sy *')].filter((x) => x.getBoundingClientRect().right > innerWidth + 1 && !x.closest('.sy-ex, .as-table-wrap, .table-wrap')).map((x) => x.className).slice(0, 3) }))
     t.verifie(!hors.page && !hors.blocs.length, `${format} : rien ne déborde dans le détail`, hors)
