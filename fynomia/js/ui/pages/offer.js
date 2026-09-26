@@ -26,7 +26,6 @@ import { h, euro, euro as euroEntier, pct, num, numberField, textField, selectFi
 import { newActivity } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE } from '../charts.js'
 import { vocabulary, uniteOffre, UNITES } from '../../state/sectors.js'
-import { tutorial } from '../tutorial.js'
 import { valueForYear, baseVolumes, moisDebut } from '../../engine/revenue.js'
 import { SAISONS, SAISON_METIER, MOIS, profilDe } from '../../state/saisons.js'
 import { coutDUneVente } from '../../engine/engine.js'
@@ -132,7 +131,6 @@ export function renderOffer(navigate, refresh) {
 
     todoPanel('offre', store.scenario, navigate),
 
-    tutorial('clients', navigate),
   )
 }
 

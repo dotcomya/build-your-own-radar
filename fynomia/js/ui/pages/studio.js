@@ -104,6 +104,36 @@ const vus = new Set()
 let guetteur = null
 const reduit = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
 
+/**
+ * Un bloc dépassé est un bloc vu.
+ *
+ * L'observateur ne parle que lorsqu'un seuil est franchi. Un défilement
+ * rapide — ou une machine chargée qui saute des images — peut faire passer un
+ * bloc du dessous au-dessus de la fenêtre sans qu'il ait jamais été compté
+ * visible : il restait alors effacé, et remontait vide. Tout bloc guetté dont
+ * le bas est passé au-dessus de la fenêtre s'affiche donc, sans rejouer son
+ * tracé.
+ */
+const guettes = new Set()
+let depasseEnAttente = 0
+function marquerVu(t, jouer) {
+  vus.add(t.dataset.guet)
+  t.classList.add('is-seen')
+  if (jouer) t.classList.add('is-play')
+  guetteur?.unobserve(t)
+  guettes.delete(t)
+}
+function verifierDepasses() {
+  depasseEnAttente = 0
+  for (const t of guettes) {
+    if (!t.isConnected) { guettes.delete(t); continue }
+    const b = t.getBoundingClientRect()
+    // Une boîte nulle n'est pas dépassée : le bloc n'est pas encore posé, ou
+    // il dort dans un volet fermé.
+    if (b.height > 0 && b.bottom <= 0) marquerVu(t, false)
+  }
+}
+
 function guet(el, cle, { visuel = false, min = 0.14 } = {}) {
   if (!el) return el
   el.classList.add(visuel ? 'sy-vis' : 'sy-watch')
@@ -114,23 +144,32 @@ function guet(el, cle, { visuel = false, min = 0.14 } = {}) {
   if (!guetteur) {
     guetteur = new IntersectionObserver((entrees) => {
       for (const e of entrees) {
-        if (!e.isIntersecting) continue
+        const t = e.target
+        if (!e.isIntersecting) {
+          // Sorti par le haut sans avoir été compté : on l'affiche.
+          const b = e.boundingClientRect
+          if (t.isConnected && b.height > 0 && b.bottom <= (e.rootBounds?.top ?? 0)) marquerVu(t, false)
+          continue
+        }
         // Une image ne se joue que lorsqu'on la voit presque entière : c'est
         // elle qu'on regarde pousser, pas le haut de la partie qui la porte.
         // Un bloc plus haut que la fenêtre n'atteint jamais une grande
         // proportion visible : on le déclenche aussi sur une hauteur absolue.
-        const t = e.target
         const m = Number(t.dataset.min) || 0.14
         const assez = Math.max(220, window.innerHeight * 0.45)
         if (e.intersectionRatio < m && e.intersectionRect.height < assez) continue
-        vus.add(t.dataset.guet)
-        t.classList.add('is-seen', 'is-play')
-        guetteur.unobserve(t)
+        marquerVu(t, true)
       }
     }, { threshold: [0, 0.14, 0.3, 0.5, 0.65, 0.8, 1], rootMargin: '0px 0px -6% 0px' })
+    // Un saut par-dessus un bloc ne franchit aucun seuil : le défilement le
+    // rattrape, une fois par image au plus.
+    document.addEventListener('scroll', () => {
+      if (!depasseEnAttente && guettes.size) depasseEnAttente = requestAnimationFrame(verifierDepasses)
+    }, { passive: true, capture: true })
   }
   el.dataset.guet = cle
   el.dataset.min = String(min)
+  guettes.add(el)
   guetteur.observe(el)
   return el
 }

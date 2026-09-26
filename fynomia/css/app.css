@@ -871,46 +871,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   margin-left: auto;
 }
 
-/* Le coach : replié par défaut une fois lu, mais toujours à portée. */
-.coach {
-  background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--ink);
-  margin-top: 22px;
-}
-.coach-head {
-  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px;
-  border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
-}
-.coach-head:hover { background: var(--surface-2); }
-.coach-badge {
-  width: 20px; height: 20px; flex: none; display: grid; place-items: center;
-  background: var(--ink); color: #fff; font-family: var(--mono); font-size: 11px; font-weight: 600;
-}
-.coach-title { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
-.coach-count {
-  margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.coach-chevron { color: var(--ink-4); transform: rotate(90deg); transition: transform .18s var(--ease); }
-.coach.is-closed .coach-chevron { transform: rotate(0deg); }
-.coach.is-closed .coach-body { display: none; }
-.coach-body { border-top: 1px solid var(--rule); }
-.coach-invest { padding: 14px 16px; background: var(--ink); color: #C6CDD2; }
-.coach-invest-tag {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #6E7A85;
-}
-.coach-invest p { margin: 5px 0 0; font-size: 13.5px; color: #fff; line-height: 1.5; max-width: 76ch; }
-.coach-tips { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.coach-tip {
-  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 15px 16px;
-  border-right: 1px solid var(--rule); border-top: 1px solid var(--rule);
-}
-.coach-tip:last-child { border-right: 0; }
-.coach-tip-no {
-  width: 19px; height: 19px; display: grid; place-items: center; flex: none;
-  border: 1px solid var(--ink-5); color: var(--ink-4); font-size: 10.5px;
-}
-.coach-tip-title { font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 4px; }
-.coach-tip-body { margin: 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.52; }
 
 /* ══════════════════════ La page « Mon modèle » ════════════════════════════ */
 
@@ -934,7 +894,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 /* ─────────────────────────────── Adaptatif ───────────────────────────────── */
 
 @media (max-width: 860px) {
-            .coach-tip { border-right: 0; }
   .engine { border-right: 0; border-bottom: 1px solid var(--rule); }
   .engine:last-child { border-bottom: 0; }
   .win { grid-template-columns: 1fr; gap: 8px; }

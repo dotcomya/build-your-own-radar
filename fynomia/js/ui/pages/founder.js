@@ -10,7 +10,7 @@
 import { h, euro, pct, num, numberField, selectField, switchField, yearLabel } from '../dom.js'
 import { founderIncome } from '../../engine/founder.js'
 import { barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { stepBanner } from '../tutorial.js'
 import { journey } from '../../engine/journey.js'
 import store from '../../state/store.js'
 import { pfuSocial, pfuDetail } from '../../engine/fiscal-fr-2026.js'
@@ -68,7 +68,6 @@ export function renderFounder(navigate, refresh) {
       "Le prélèvement à la source lisse l'impôt sur l'année mais ne le change pas. Ne sont pas modélisés ici : la CSG déductible en cas d'option pour le barème, les réductions et crédits d'impôt personnels, ni l'éventuelle contribution exceptionnelle sur les hauts revenus. Un expert-comptable affinera ton arbitrage entre rémunération et dividendes, qui dépend aussi de tes droits à retraite et à prévoyance.",
     ),
 
-    tutorial('remuneration', navigate),
   )
 }
 

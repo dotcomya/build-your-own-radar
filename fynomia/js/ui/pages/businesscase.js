@@ -8,7 +8,6 @@ import { resetDeck } from './deck.js'
 import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'
 import { download } from '../../export/zip.js'
-import { tutorial } from '../tutorial.js'
 import store from '../../state/store.js'
 import { pickYear } from './dashboard.js'
 import { lignesBanquier, banquierVerifie, tableauBanquier } from '../banquier.js'
@@ -141,7 +140,6 @@ export function renderBusinessCase(navigate, refresh) {
           "Ce prévisionnel est un outil d'aide à la décision. Les paramètres fiscaux et sociaux sont des valeurs de référence : faites-les valider par un expert-comptable avant tout dépôt de dossier bancaire ou toute levée de fonds.")),
     ),
 
-    tutorial('dossier', navigate),
   )
 }
 

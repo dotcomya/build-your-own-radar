@@ -51,23 +51,8 @@ export const STEPS = [
     label: 'Mon projet',
     question: 'Quel est ton projet ?',
     promise: "Le métier choisi commande tout le reste : la TVA, ton statut social, les repères auxquels on te comparera.",
-    investor: "La première chose qu'on regarde : sais-tu dire en une phrase ce que tu vends et à qui.",
     minutes: 2,
     unlocks: "Repères du métier et régime de TVA applicable",
-    tips: [
-      {
-        title: 'Le métier décide de la TVA',
-        body: "Un cabinet médical ou paramédical est exonéré : tu ne la factures pas, mais tu ne la récupères pas non plus sur tes achats. Saisis alors tout en TTC — sinon tu sous-estimes tes charges de 20 %.",
-      },
-      {
-        title: 'SAS ou SARL : ce n’est pas un détail',
-        body: "En SAS, le président est assimilé salarié : meilleure couverture, environ 80 % de charges sur le net. En SARL, le gérant majoritaire est TNS : environ 45 % de cotisations, mais des dividendes soumis à cotisations au-delà de 10 % du capital.",
-      },
-      {
-        title: 'La date de départ n’est pas aujourd’hui',
-        body: "Indique la date du premier euro encaissé, pas celle de l'immatriculation. Un décalage de trois mois déplace tout le besoin de trésorerie.",
-      },
-    ],
     check(s) {
       let score = 0
       if (s.meta?.sectorKey) score += 0.5
@@ -86,23 +71,8 @@ export const STEPS = [
     label: 'Mon modèle',
     question: 'Comment gagnes-tu de l’argent ?',
     promise: "Un prix, un coût de revient, et la façon dont l'argent revient — une fois ou tous les mois. C'est la brique dont tout le reste est fait.",
-    investor: "On vérifiera que ta marge unitaire est positive avant même de regarder ton chiffre d'affaires. Vendre à perte ne se rattrape pas au volume.",
     minutes: 5,
     unlocks: 'Marge unitaire et point mort',
-    tips: [
-      {
-        title: 'La marge brute, pas le prix',
-        body: "Ce qui paie les charges fixes, ce n'est pas le prix : c'est le prix moins ce que coûte chaque vente. À 100 € vendus et 70 € de coût, il faut dix fois plus de clients qu'à 30 € de coût pour le même résultat.",
-      },
-      {
-        title: "Le récurrent vaut plusieurs fois l'unitaire",
-        body: "Un abonnement de 50 €/mois sur un contrat de 24 mois, c'est 1 200 € de revenu pour une seule vente. C'est pour ça qu'un investisseur paie plus cher un euro d'abonnement qu'un euro de prestation.",
-      },
-      {
-        title: "L'erreur classique : oublier le coût de revient",
-        body: "Hébergement, commission de paiement, matières, sous-traitance, livraison. Tout ce qui augmente quand tu vends une unité de plus est un coût variable — pas une charge fixe.",
-      },
-    ],
     check(s) {
       const list = activities(s)
       if (!list.length) return state(0, 'Aucune offre définie')
@@ -134,23 +104,8 @@ export const STEPS = [
     label: 'Mon équipe',
     question: 'Qui travaille avec toi ?',
     promise: "Tu donnes un brut annuel, Fynomia calcule le coût réel pour l'entreprise — cotisations patronales, réduction générale, allègements applicables.",
-    investor: "Les salaires sont le premier poste de dépense et le plus difficile à réduire. Le mois d'arrivée compte autant que le montant.",
     minutes: 6,
     unlocks: 'Masse salariale chargée et point mort',
-    tips: [
-      {
-        title: 'Un salaire brut coûte 1,25 à 1,45 fois plus',
-        body: "Les cotisations patronales s'ajoutent au brut. Au niveau du SMIC, la réduction générale les ramène presque à zéro ; elle s'annule à 3 SMIC. Fynomia applique la dégressivité réelle : inutile d'en faire la moyenne.",
-      },
-      {
-        title: 'Décaler une embauche de trois mois',
-        body: "C'est souvent le levier le plus rapide pour réduire le besoin de financement, sans rien changer au modèle. Mesure l'effet avant d'aller chercher de l'argent.",
-      },
-      {
-        title: 'Compte-toi dedans',
-        body: "Un business plan où le fondateur ne se paie pas n'est pas prudent : il est faux. Inscris ta rémunération, même modeste, sinon le point mort est sous-estimé et la première année surprend.",
-      },
-    ],
     check(s, r) {
       const team = liveTeam(s)
       if (!team.length) return state(0, "Personne dans l'équipe, pas même toi")
@@ -167,23 +122,8 @@ export const STEPS = [
     label: 'Mes charges',
     question: 'Que coûte le fonctionnement ?',
     promise: "Loyer, comptable, logiciels, assurances, matériel. Les dépenses qui tombent que tu vendes ou non — celles qui fixent ton point mort.",
-    investor: "Un prévisionnel sans comptable, sans assurance et sans banque n'a pas été relu. C'est le premier signe qu'on cherche.",
     minutes: 4,
     unlocks: 'Point mort et besoin en fonds de roulement',
-    tips: [
-      {
-        title: 'Les quatre oubliés',
-        body: "Expert-comptable (150 à 400 €/mois), assurance responsabilité civile professionnelle, frais bancaires et de paiement, mutuelle obligatoire dès le premier salarié. Aucun business plan crédible ne les omet.",
-      },
-      {
-        title: 'Investissement ou charge ?',
-        body: "Ce qui sert plus d'un an et dépasse 500 € est un investissement : il sort de la trésorerie d'un coup, mais s'étale dans le résultat sur sa durée d'amortissement. Le résultat change sans que la caisse bouge.",
-      },
-      {
-        title: 'Les charges qui suivent le chiffre d’affaires',
-        body: "Certaines charges ne sont pas fixes : commission de plateforme, frais de livraison, part variable d'un loyer. Rattache-les au chiffre d'affaires plutôt que de les figer — le point mort en dépend.",
-      },
-    ],
     check(s) {
       const opex = liveOpex(s)
       if (!opex.length) return state(0, 'Aucune charge de fonctionnement')
@@ -202,23 +142,8 @@ export const STEPS = [
     label: 'Mes clients',
     question: 'Combien de clients, et à quel rythme ?',
     promise: "Le nombre de clients du premier mois et la vitesse à laquelle il grossit. C'est l'hypothèse la plus contestée d'un business plan : autant l'assumer.",
-    investor: "Un investisseur ne discute presque jamais tes charges. Il discute tes volumes. Prépare-toi à dire d'où vient ce premier chiffre.",
     minutes: 6,
     unlocks: "Chiffre d'affaires et trajectoire sur cinq ans",
-    tips: [
-      {
-        title: 'Pars de ce que tu sais livrer, pas du marché',
-        body: "« 1 % d'un marché de 400 millions » ne convainc personne. « Trois clients le premier mois, parce que deux attendent déjà » se vérifie. Dimensionne à partir de ta capacité réelle à livrer.",
-      },
-      {
-        title: '10 % par mois, c’est déjà énorme',
-        body: "10 % de croissance mensuelle triplent les volumes en un an. 30 % les multiplient par 23. Au-delà de 15 %, il faut dire par quel canal — Fynomia freine automatiquement la croissance dans la durée, parce qu'aucune courbe ne monte indéfiniment.",
-      },
-      {
-        title: 'Le délai de paiement tue plus que le prix',
-        body: "Vendre à 60 jours quand les salaires partent à 30 crée un trou permanent. Demande un acompte : c'est la façon la plus simple de financer sa croissance sans lever un euro.",
-      },
-    ],
     check(s, r) {
       const list = activities(s)
       const withVolume = list.filter((a) => {
@@ -238,24 +163,8 @@ export const STEPS = [
     label: 'Mon financement',
     question: 'Comment tenir jusqu’à la rentabilité ?',
     promise: "Apport, prêt, subvention, levée. Fynomia calcule le trou à combler et la date avant laquelle il doit l'être.",
-    investor: "Le chiffre qu'on retient d'un dossier : combien tu demandes, et pour combien de mois d'autonomie.",
     minutes: 5,
     unlocks: 'Plan de financement et date limite',
-    tips: [
-      {
-        title: 'Demande le point bas, pas la perte',
-        button: 'Voir mon point bas',
-        body: "Ce qu'il faut réunir, ce n'est pas la somme des pertes : c'est le point le plus bas de la trésorerie, plus une marge. Fynomia donne le montant exact et le mois où il tombe.",
-      },
-      {
-        title: 'La règle du 1 pour 1',
-        body: "Une banque prête rarement plus que les fonds propres. 20 000 € d'apport ouvrent la porte à 20 000 € de prêt — rarement à 60 000. Prévois l'apport avant de compter sur l'emprunt.",
-      },
-      {
-        title: 'Lève pour 18 mois, pas pour 6',
-        body: "Une levée prend quatre à six mois. En ne finançant que six mois d'autonomie, on repart en levée le jour où l'on a fini. Vise 18 à 24 mois entre deux tours.",
-      },
-    ],
     check(s, r) {
       const f = s.financing || {}
       const sources = [
@@ -278,23 +187,8 @@ export const STEPS = [
     label: 'Ma rémunération',
     question: 'Combien t’en reste-t-il ?',
     promise: "Une fois l'URSSAF, l'impôt sur les sociétés, la flat tax et l'impôt sur le revenu passés : ce qui arrive vraiment sur ton compte.",
-    investor: "Un fondateur qui sait ce qu'il touche net a compris son propre modèle. C'est plus rare qu'on ne croit.",
     minutes: 3,
     unlocks: 'Revenu disponible, mois par mois',
-    tips: [
-      {
-        title: "L'arbitrage salaire / dividendes",
-        body: "Le salaire coûte plus cher à l'entreprise mais ouvre des droits — retraite, prévoyance, parfois chômage. Les dividendes coûtent moins mais n'ouvrent rien, et supposent un bénéfice. Fynomia chiffre les deux.",
-      },
-      {
-        title: 'Le « coût d’un euro net »',
-        body: "L'entreprise doit souvent produire 1,70 à 2,20 € de valeur pour en laisser un dans ton poche. Le savoir change la façon de fixer ses prix.",
-      },
-      {
-        title: "Le gérant majoritaire de SARL n'échappe pas aux cotisations",
-        body: "Ses dividendes au-delà de 10 % du capital social supportent les cotisations TNS, pas seulement les prélèvements sociaux. C'est l'erreur la plus fréquente des simulateurs gratuits.",
-      },
-    ],
     check(s, r) {
       const f = s.founder || {}
       const team = liveTeam(s)
@@ -313,24 +207,9 @@ export const STEPS = [
     label: 'Mon acquisition',
     question: 'Comment les trouves-tu ?',
     promise: "Combien te coûte un client, et combien il te rapporte. Le rapport entre les deux décide si dépenser plus accélère ou creuse.",
-    investor: "La question qui suit toujours : combien coûte l'acquisition d'un client, et en combien de temps il est remboursé.",
     minutes: 5,
     optional: true,
     unlocks: "Coût d'acquisition et rapport valeur client / coût",
-    tips: [
-      {
-        title: 'La règle des 3',
-        body: "Un client doit rapporter au moins trois fois ce qu'il a coûté à acquérir. En dessous, chaque euro de publicité supplémentaire accélère les pertes au lieu de les combler.",
-      },
-      {
-        title: 'Le bouche-à-oreille n’est pas un canal',
-        body: "Si les premiers clients viennent du réseau, laisse cette page vide et dis-le : c'est plus honnête qu'un budget publicitaire inventé. Elle se remplira au moment de passer à l'échelle.",
-      },
-      {
-        title: 'Le taux de conversion est plus bas qu’on ne croit',
-        body: "2 à 5 % d'un visiteur à un contact, 10 à 20 % d'un contact à un client : voilà les ordres de grandeur. Au-delà de 20 %, il faut des données réelles pour l'étayer.",
-      },
-    ],
     check(s, r) {
       const live = liveCampaigns(s)
       if (!live.length) return state(0, 'Pas de budget — bouche-à-oreille')
@@ -348,23 +227,8 @@ export const STEPS = [
     label: 'Mon dossier',
     question: 'Prêt à le présenter ?',
     promise: "La synthèse rédigée à partir de tes chiffres, et le PowerPoint qui dit exactement la même chose que ton écran.",
-    investor: "Le dossier ne remplace pas la conversation : il prouve que le travail est fait avant d'entrer dans la pièce.",
     minutes: 2,
     unlocks: 'Business plan exportable',
-    tips: [
-      {
-        title: 'Douze diapositives, pas quarante',
-        body: "Le dossier exporté s'ouvre sur le verdict, pose la courbe de trésorerie annotée, chiffre ce qui changerait le plus et finit sur ce que tu touches. C'est l'ordre dans lequel on te lira.",
-      },
-      {
-        title: 'Emporte le CSV',
-        body: "Une banque ou un fonds demande presque toujours le détail mois par mois. Le CSV contient les soixante mois : tu réponds en trente secondes au lieu de trois jours.",
-      },
-      {
-        title: 'Relis tes hypothèses avant d’envoyer',
-        body: "La dernière diapositive liste les paramètres sur lesquels tout repose. Une ligne que tu ne saurais pas défendre se corrige maintenant, pas en réunion.",
-      },
-    ],
     check(s, r) {
       if (!r) return state(0, 'Rien à exporter pour le moment')
       const hasRevenue = (r.pnl.revenue || []).some((v) => v > 0)

@@ -17,7 +17,7 @@ import { vocabulaireDuPlan, getSector } from '../../state/sectors.js'
 import { referenceYear } from '../../format.js'
 import { journey } from '../../engine/journey.js'
 import { compute } from '../../engine/engine.js'
-import { tutorial, stepBanner } from '../tutorial.js'
+import { stepBanner } from '../tutorial.js'
 import { areaChart, PALETTE } from '../charts.js'
 import store from '../../state/store.js'
 import { memoire } from '../memoire.js'
@@ -80,7 +80,6 @@ export function renderModel(navigate, refresh) {
     sector ? h('p', { class: 'model-sector' },
       `Repère du métier — ${sector.label.toLowerCase()} : ${sector.tagline}`) : null,
 
-    tutorial('modele', navigate),
   )
 }
 

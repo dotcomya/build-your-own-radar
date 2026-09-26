@@ -3,7 +3,6 @@
 import { h, euro, num, numberField, textField, selectField, monthField, helpButton, monthLabel, moduleShell, PLUS, MINUS, saisieDifferee, lireNombre } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
-import { tutorial } from '../tutorial.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
@@ -326,7 +325,6 @@ export function renderFinancing(navigate, refresh) {
 
     todoPanel('financement', store.scenario, navigate),
 
-    tutorial('financement', navigate),
   )
 }
 

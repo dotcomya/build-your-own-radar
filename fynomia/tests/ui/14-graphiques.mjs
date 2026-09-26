@@ -144,6 +144,7 @@ export default async function (t, { rapide } = {}) {
         texteInfo: !!document.querySelector('.module-why-text'),
         cote: !!document.querySelector('.saisie-aside'),
         bulle: !!r?.querySelector('.sx-ribbon-head .info-point'),
+        reperes: !!document.querySelector('.coach') || /Ce qu.il faut savoir ici/.test(document.body.textContent),
       }
     })
     t.verifie(forme.haut < 120, `${route} : les chiffres tiennent sur une ligne`, `${Math.round(forme.haut)} px`)
@@ -153,12 +154,15 @@ export default async function (t, { rapide } = {}) {
     // ni celui du bandeau ne portent de « i ».
     t.verifie(!forme.info && !forme.texteInfo, `${route} : le titre de la page se suffit, sans « i » ni texte à côté`)
     t.verifie(!forme.bulle, `${route} : le titre du bandeau non plus`)
+    // « Delete cette section partout » : plus de « Ce qu'il faut savoir ici ».
+    t.verifie(!forme.reperes, `${route} : plus de section « Ce qu’il faut savoir ici »`)
   }
   // Les autres pages non plus : aucun titre de module ne porte de « i ».
   for (const route of ['projet', 'tableau-de-bord', 'resultats', 'business-case', 'reglages']) {
     await t.aller(p, route)
     const titre = await p.locator('.module-title').count()
     t.verifie(titre === 1 && await p.locator('.module-top .info-point').count() === 0, `${route} : le titre de la page se suffit, sans « i »`)
+    t.verifie(!(await p.evaluate(() => !!document.querySelector('.coach') || /Ce qu.il faut savoir ici/.test(document.body.textContent))), `${route} : plus de section « Ce qu’il faut savoir ici »`)
   }
   await t.aller(p, 'achats')
   await p.locator('.sx-ribbon-more').click()

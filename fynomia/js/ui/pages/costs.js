@@ -4,7 +4,6 @@ import { h, euro, pct, num, numberField, textField, switchField, monthField, hel
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
 import { todoPanel } from '../todo.js'
 import { claim, goToGap } from '../spotlight.js'
@@ -155,7 +154,6 @@ export function renderCosts(navigate, refresh) {
 
     todoPanel('achats', store.scenario, navigate),
 
-    tutorial('charges', navigate),
   )
 }
 

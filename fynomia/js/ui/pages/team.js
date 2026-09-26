@@ -12,7 +12,6 @@ import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS, MANDATAIRES } from '../../engine/payroll.js'
 import { isMicro } from '../../engine/micro.js'
 import { barChart, PALETTE, YEAR_CATEGORIES, A_PLAT } from '../charts.js'
-import { tutorial } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, unitAmount } from '../dom.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
@@ -121,7 +120,6 @@ export function renderTeam(navigate, refresh) {
 
     todoPanel('equipe', store.scenario, navigate),
 
-    tutorial('equipe', navigate),
   )
 }
 
