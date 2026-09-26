@@ -170,6 +170,9 @@ export default async function (t, { rapide } = {}) {
   await p.locator('.as-couche.is-tiroir .as-couche-btn.is-accent').click()
   await p.waitForFunction(() => location.hash === '#/equipe', null, { timeout: 3000 }).catch(() => {})
   t.verifie(await p.evaluate(() => location.hash) === '#/equipe' && !(await p.locator('.as-couche').count()), '« Ouvrir le module source » mène à l’équipe, tiroir refermé')
+  // La page de l'équipe affichée, on revient.
+  await p.locator('.module-title', { hasText: 'Équipe' }).first().waitFor({ timeout: 5000 }).catch(() => {})
+  await t.pose(p)
   await t.aller(p, 'tableau-de-bord')
   t.verifie(await p.evaluate(() => document.querySelector('.as-scene.is-on')?.dataset.chapitre) === '1', 'revenu au tableau de bord, le récit repart de la première scène')
 

@@ -1,8 +1,8 @@
 /**
  * Un repère cite sa source, et une page dit comment il est construit.
  *
- *   1. « 75 % à 90 % dans ton métier » porte, à côté, l'éditeur et l'année
- *      des données, et mène à la page Méthode ;
+ *   1. « 75 % à 90 % dans ton métier », dans la lecture du récit, porte à
+ *      côté l'éditeur et l'année des données, et mène à la page Méthode ;
  *   2. la page Méthode donne les repères du métier ouvert — fourchette et
  *      calcul —, la façon dont une fourchette est construite, ce que Fynomia
  *      en fait, et toutes les sources avec leur année et leur lien ;
@@ -14,14 +14,16 @@ export default async function (t) {
   const p = await t.page('bureau')
   await t.exemple(p)
 
-  // 1. Dans l'avis du pitch.
+  // 1. Dans le récit : la lecture de la marge brute, au tiroir « Comprendre ce chiffre ».
   await t.aller(p, 'tableau-de-bord')
   await t.onglet(p, 'Synthèse')
   await p.locator('.pitch-mise', { hasText: /R[ée]cit/ }).first().click({ timeout: 3000 }).catch(() => {})
   await p.locator('.pitch-mise.is-on', { hasText: /R[ée]cit/ }).first().waitFor({ timeout: 3000 }).catch(() => {})
   await t.pose(p)
-  await t.defiler(p)
-  const mention = p.locator('.repere-src').first()
+  await p.locator('.as-etape').nth(1).click()
+  await p.locator('.as-scene.is-on .as-geste.is-comprendre').click()
+  await p.locator('.as-couche.is-tiroir.is-on').waitFor({ timeout: 3000 }).catch(() => {})
+  const mention = p.locator('.as-couche .repere-src').first()
   const texte = (await mention.count()) ? await mention.innerText() : ''
   t.verifie(/KeyBanc 2024/.test(texte) && /méthode/.test(texte), 'la fourchette du métier cite sa source et son année', texte)
 
