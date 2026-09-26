@@ -124,7 +124,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* Étiquette d'instrument : petite, capitale, espacée */
-.eyebrow, .metric-label, .rail-section, table.data thead th {
+.eyebrow, .rail-section, table.data thead th {
   font-family: var(--mono);
   font-size: 10px;
   text-transform: uppercase;
@@ -340,18 +340,18 @@ table.data td.pct { color: var(--ink-5); font-size: 11.5px; }
 table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ──────────────────────── Indicateurs et mesures ─────────────────────── */
-.kpi, .metric {
+.kpi {
   background: var(--surface); border: 1px solid var(--rule);
   border-top: 2px solid var(--rule-strong); padding: 13px 15px; min-width: 0;
 }
-.kpi-label, .metric-label { color: var(--ink-4); display: flex; align-items: center; gap: 5px; }
-.kpi-value, .metric-value {
+.kpi-label { color: var(--ink-4); display: flex; align-items: center; gap: 5px; }
+.kpi-value {
   font-family: var(--mono); font-weight: 600;
   letter-spacing: -.04em; margin-top: 7px; color: var(--ink);
   font-variant-numeric: tabular-nums; line-height: 1.1;
   white-space: nowrap; overflow: hidden; text-overflow: clip;
 }
-.kpi-sub, .metric-note { margin-top: 4px; }
+.kpi-sub { margin-top: 4px; }
 .kpi.pos { border-top-color: var(--gain); }
 .kpi.neg { border-top-color: var(--loss); }
 .kpi.warn { border-top-color: var(--warn); }
@@ -393,11 +393,7 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   border-left: 3px solid var(--ink);
   padding: 14px 16px;
 }
-.verdict-line {
-  font-family: var(--display); font-weight: 700;
-  letter-spacing: -.022em; margin-bottom: 5px;
-}
-.verdict-body { max-width: 72ch; }
+
 .verdict.good { border-left-color: var(--gain); }
 .verdict.bad { border-left-color: var(--loss); }
 .verdict.watch { border-left-color: var(--warn); }
@@ -480,9 +476,8 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .meter { height: 4px; background: var(--rule); overflow: hidden; }
 .meter > i { display: block; height: 100%; background: var(--signal); transition: width .3s var(--ease); }
 
-
 /* Barre d'onglets mobile */
-.tabbar { display: none; }
+
 .mobile-only { display: none; }
 
 /* ────────────────────────────── Adaptatif ────────────────────────────── */
@@ -512,20 +507,11 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   .topbar .levels { flex: none; }
   .topbar .level-btn { padding: 6px 9px; font-size: 10px; }
 
-  .tabbar {
-    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 45;
-    background: var(--surface); border-top: 1px solid var(--rule);
-    padding: 5px 3px calc(5px + env(safe-area-inset-bottom));
-  }
-  .tab {
-    border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 4px 2px; color: var(--ink-4); font-family: var(--mono); font-size: 8.5px;
-    text-transform: uppercase; letter-spacing: .04em; cursor: pointer; min-width: 0;
-  }
-  .tab .ico { font-size: 15px; line-height: 1; }
-  .tab.active { color: var(--signal-ink); }
-  .tab > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  
+  
+  
+  
 
   .drawer { width: 100vw; top: 8vh; border-left: 0; border-top: 2px solid var(--ink); animation: slide-up .24s var(--ease) forwards; transform: translateY(100%); }
   @keyframes slide-up { to { transform: translateY(0) } }
@@ -541,7 +527,7 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 }
 
 @media print {
-  .rail, .topbar, .tabbar, .btn, .help { display: none !important; }
+  .rail, .topbar, .btn, .help { display: none !important; }
     .card, .panel { break-inside: avoid; }
   }
 
@@ -602,12 +588,8 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ─── Pièges du métier ─── */
 .traps { display: flex; flex-direction: column; }
-.trap { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
-.trap:last-child { border-bottom: 0; }
+
 /* Numérotation : il y a bien une séquence, du plus fréquent au plus subtil. */
-.trap-index { font-family: var(--mono); font-size: 11px; color: var(--surface); background: var(--ink); padding: 2px 5px; height: fit-content; letter-spacing: .02em; }
-.trap-title { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 3px; letter-spacing: -.014em; }
-.trap-body { margin: 0; font-size: 12.8px; color: var(--ink-3); line-height: 1.55; }
 
 /* ─── Cadre réglementaire ─── */
 .regime { display: flex; flex-direction: column; }
@@ -636,7 +618,7 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 }
 
 /* ─── Le film ─── */
-.story-panel { border-top-color: var(--signal); }
+
 .story { padding: 4px 6px 0; }
 
 /* ─── Actions chiffrées ─── */
@@ -693,7 +675,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .gauge-high .gauge-verdict { color: var(--loss); }
 
 /* ─── Le détail, replié ─── */
-.detail-block { background: var(--surface); border: 1px solid var(--rule); border-top: 2px solid var(--rule-strong); }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; }
@@ -853,7 +834,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   margin-left: auto;
 }
 
-
 /* ══════════════════════ La page « Mon modèle » ════════════════════════════ */
 
 .engine {
@@ -865,9 +845,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .engine:last-child { border-right: 0; }
 .engine:hover { background: var(--surface-2); }
 .engine.active { background: var(--ink); box-shadow: inset 0 3px 0 var(--signal); }
-
-.verdict-panel { border-top-color: var(--gain); }
-.verdict-panel.is-bad { border-top-color: var(--loss); }
 
 /* ─────────────────────────────── Adaptatif ───────────────────────────────── */
 
@@ -990,36 +967,8 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 
 /* ─── Trois lecteurs, trois grilles ─── */
 /* Le même prévisionnel n'est pas jugé de la même façon selon qui l'ouvre. */
-.audiences { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
-.audience {
-  padding: 16px 18px 18px; border-right: 1px solid var(--rule); border-top: 1px solid var(--rule);
-}
-.audience:last-child { border-right: 0; }
-.audience-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
-.audience-glyph { font-size: 16px; color: var(--ink-5); line-height: 1; }
-.audience-label { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); letter-spacing: -.016em; }
-.audience-score {
-  margin-left: auto; font-size: 11px; color: var(--ink-4);
-  padding: 2px 7px; border: 1px solid var(--rule);
-}
-.audience.ready .audience-glyph { color: var(--gain); }
-.audience.ready .audience-score { border-color: var(--gain); color: var(--gain); }
-.audience-brief { margin: 0 0 12px; font-size: 12px; color: var(--ink-4); line-height: 1.5; }
-.audience-checks { display: flex; flex-direction: column; gap: 11px; }
-.check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; }
-.check-mark {
-  width: 16px; height: 16px; flex: none; display: grid; place-items: center; margin-top: 1px;
-  border: 1px solid var(--rule); color: var(--ink-5); font-size: 10px;
-}
-.check.ok .check-mark { border-color: var(--gain); background: var(--gain); color: #fff; }
-.check-label { font-size: 12.8px; font-weight: 500; color: var(--ink-2); }
-.check-value { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; }
-.check.ok .check-value { color: var(--gain); }
-.check-need { margin: 5px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
 
-@media (max-width: 860px) {
-  .audience { border-right: 0; }
-}
+.check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px; align-items: start; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    L'ACCUEIL ET LE PARCOURS GUIDÉ
@@ -1765,37 +1714,8 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   flex: 0 1 340px; min-width: 250px; align-self: flex-end;
   border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); overflow: hidden;
 }
-.verdict-head {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 10px 12px; background: none; border: 0; cursor: pointer; font: inherit; text-align: left;
-}
-.verdict-head:hover { background: var(--surface-2); }
-.verdict-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ink-4); }
-.verdict-bad .verdict-dot { background: var(--loss); box-shadow: 0 0 0 4px var(--loss-wash); }
-.verdict-watch .verdict-dot { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-wash); }
-.verdict-good .verdict-dot { background: var(--gain); box-shadow: 0 0 0 4px var(--gain-wash); }
-.verdict-neutral .verdict-dot { background: var(--ink-5); }
+
 .verdict .spacer { min-width: 0; }
-.verdict-word {
-  display: block; font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; color: var(--ink);
-}
-.verdict-bad .verdict-word { color: var(--loss); }
-.verdict-watch .verdict-word { color: var(--warn); }
-.verdict-good .verdict-word { color: var(--gain); }
-.verdict-line {
-  display: block; font-size: 11.5px; color: var(--ink-4); line-height: 1.4; margin-top: 1px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.verdict.open .verdict-line { white-space: normal; }
-.verdict-more { flex: none; color: var(--ink-5); font-size: 18px; transition: transform .15s; }
-.verdict.open .verdict-more { transform: rotate(90deg); }
-.verdict-body { display: none; padding: 0 12px 12px 31px; font-size: 12px; line-height: 1.6; color: var(--ink-3); }
-.verdict.open .verdict-body { display: block; }
-.verdict-figure {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 11.5px; color: var(--ink-4);
-}
-.verdict-figure strong { font-size: 15px; color: var(--ink); letter-spacing: -.02em; }
 
 /* Deux graphiques côte à côte. */
 .board-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
@@ -2085,7 +2005,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .card,
 .panel,
 .item,
-.detail-block,
 .advice,
 .deck,
 .cockpit,
@@ -2099,7 +2018,7 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
   overflow: hidden;
   box-shadow: var(--lift);
 }
-.kpi, .metric, .part, .source-line, .note, .gauge { border-radius: var(--r-md); }
+.kpi, .part, .source-line, .note, .gauge { border-radius: var(--r-md); }
 .gauge { box-shadow: none; }
 .btn { border-radius: var(--r-sm); }
 .btn-lg { border-radius: var(--r-md); }
@@ -2116,11 +2035,11 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 /* Les filets internes s'allègent : la séparation suffit, l'insistance non. */
 .card-head, .panel-head, .item-body, .cost-row, .lever, .gauge,
 table.data th, table.data td { border-color: var(--rule); }
-.card, .panel, .item, .detail-block, .advice, .deck, .figures, .nudges {
+.card, .panel, .item, .advice, .deck, .figures, .nudges {
   border-top-width: 1px;
 }
 /* Sauf l'accent de tête, qui devient un liseré de couleur au lieu d'un trait noir. */
-.card, .panel, .item, .detail-block, .advice, .deck, .figures, .nudges {
+.card, .panel, .item, .advice, .deck, .figures, .nudges {
   border-top-color: var(--rule);
 }
 .figures { box-shadow: var(--lift), inset 0 2px 0 var(--level, var(--ink)); }
@@ -2136,7 +2055,6 @@ table.data th, table.data td { padding: 9px 12px; }
   .card,
 .panel,
 .item,
-.detail-block,
 .advice,
 .deck,
 .cockpit,
@@ -2670,63 +2588,6 @@ details[open] > .refine-head .foldsign {
    métier. Ce bandeau le dit avant tout le reste. Il emprunte au bloc noir sa
    force : c'est la seule chose de la page qui parle plus fort que le verdict,
    et c'est voulu tant que le dossier n'est pas fini. */
-.finish {
-  position: relative; overflow: hidden;
-  background: var(--ink); color: #fff; border: 0; border-radius: var(--r-lg, 16px);
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 26px;
-  align-items: center; padding: 26px 28px 22px;
-}
-.finish::after {
-  content: ''; position: absolute; right: -60px; top: -80px; width: 260px; aspect-ratio: 1;
-  background: radial-gradient(circle at 50% 50%, var(--accent) 0%, transparent 62%);
-  opacity: .16; pointer-events: none;
-}
-.finish-say { min-width: 0; position: relative; z-index: 1; }
-.finish-kicker {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
-}
-.finish-big {
-  font-family: var(--display); font-weight: 800; font-size: clamp(22px, 2.6vw, 32px);
-  line-height: 1.08; letter-spacing: -.032em; color: #fff; margin: 0 0 9px;
-}
-.finish-body { margin: 0 0 14px; font-size: 13.5px; line-height: 1.6; color: #B9C1C7; max-width: 62ch; }
-.finish-next {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.06);
-}
-.finish-next-tag {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .13em;
-  text-transform: uppercase; color: #8E99A2; flex: none;
-}
-.finish-next-label { font-size: 14.5px; font-weight: 650; color: #fff; letter-spacing: -.01em; }
-.finish-next-why { font-size: 12.5px; color: #A8B1B8; line-height: 1.45; }
-.finish-acts { display: flex; flex-direction: column; gap: 9px; flex: none; position: relative; z-index: 1; }
-.finish-go { border-radius: 999px; white-space: nowrap; }
-.finish-list { background: transparent; border-color: #3A434B; color: #C6CDD2; border-radius: 999px; white-space: nowrap; }
-.finish-list:hover { background: #fff; color: var(--ink); border-color: #fff; }
-.finish-meter {
-  grid-column: 1 / -1; display: flex; align-items: center; gap: 11px;
-  margin-top: 4px; position: relative; z-index: 1;
-}
-.finish-meter > i {
-  height: 4px; border-radius: 999px; background: var(--accent); flex: none;
-  min-width: 4px; max-width: 320px; transition: width .4s var(--ease-soft);
-}
-.finish-meter > i + span {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
-  text-transform: uppercase; color: #8E99A2;
-}
-.finish-meter::before {
-  content: ''; position: absolute; left: 0; top: 50%; width: 320px; height: 4px;
-  border-radius: 999px; background: rgba(255,255,255,.12); transform: translateY(-50%); z-index: -1;
-}
-@media (max-width: 860px) {
-  .finish { grid-template-columns: 1fr; gap: 16px; padding: 20px 18px 18px; }
-  .finish-acts { flex-direction: column; }
-  .finish-acts .btn { width: 100%; justify-content: center; }
-  .finish-meter::before, .finish-meter > i { max-width: none; }
-}
 
 /* ─── Le chiffre à retenir ─── */
 .keystone {
@@ -2922,10 +2783,10 @@ details[open] > .refine-head .foldsign {
 /* L'échelle des nombres : trois marches, pas sept.
    22 px pour une cellule, 28 px pour un terme d'opération, 38 px et plus pour
    le seul chiffre que la page veut faire retenir. */
-.kpi-value, .metric-value { font-size: 22px; }
+.kpi-value { font-size: 22px; }
 
 /* La note sous un nombre se lit comme une phrase. */
-.kpi-sub, .metric-note, .sim-fig-gap, .eq-note, .seuil-term-note, .netsum-cell-note {
+.kpi-sub, .sim-fig-gap, .seuil-term-note, .netsum-cell-note {
   font-size: 11.5px; line-height: 1.5; color: var(--ink-4);
 }
 
@@ -3376,41 +3237,16 @@ details[open] > .refine-head .foldsign {
   padding: 12px 14px; border: 1px solid var(--rule); border-radius: 12px;
   background: var(--surface); font: inherit; text-align: left;
 }
-.year-no {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.year-ca { font-size: 22px; font-weight: 650; letter-spacing: -.04em; color: var(--ink); }
-.year-net { font-size: 11.5px; }
-.year-net.pos { color: var(--gain); }
-.year-net.neg { color: var(--loss); }
+
 .year.active { background: var(--ink); border-color: var(--ink); }
-.year.active .year-no { color: var(--accent); }
-.year.active .year-ca { color: #fff; }
-.year.active .year-net.pos { color: #8FE3B8; }
-.year.active .year-net.neg { color: #FF9AA8; }
 
 /* ─── L'opération : ce qui entre, ce qui sort, ce qui reste ─── */
 .eq { border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); overflow: hidden; }
-.eq-terms { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; }
-.eq-term { padding: 18px 20px; min-width: 0; }
-.eq-tag {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.eq-value { font-size: 28px; font-weight: 650; letter-spacing: -.045em; color: var(--ink); margin-top: 7px; line-height: 1; }
-.eq-note { margin-top: 8px; font-size: 11.5px; line-height: 1.5; color: var(--ink-4); max-width: 32ch; }
-.eq-op { font-family: var(--mono); font-size: 20px; color: var(--ink-5); align-self: center; padding: 0 4px; }
-.eq-term.is-result { background: var(--ink); display: flex; flex-direction: column; justify-content: center; }
-.eq-term.is-result .eq-tag { color: var(--accent); }
-.eq-term.is-result .eq-value { color: #fff; font-family: var(--display); font-weight: 800; font-size: 38px; }
-.eq-term.is-result .eq-note { color: #8A8D82; }
-.eq-term.is-result.is-loss .eq-value { color: #FF9AA8; }
 
 @media (max-width: 980px) {
   .years { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .eq-terms { grid-template-columns: 1fr; }
-  .eq-op { padding: 0 20px 6px; }
+  
+  
 }
 
 /* ─── Le bac à sable ─── */
@@ -3633,7 +3469,6 @@ details[open] > .refine-head .foldsign {
 }
 .module-figure-note { font-size: 11px; color: #A9ACA0; line-height: 1.35; }
 
-
 /* La barre de navigation porte aussi l'action : elle appartient à l'onglet
    ouvert, pas à un bandeau séparé au-dessus. */
 .module-nav {
@@ -3699,7 +3534,7 @@ details[open] > .refine-head .foldsign {
    ═══════════════════════════════════════════════════════════════════════════ */
 .rail { view-transition-name: rail; }
 .topbar { view-transition-name: topbar; }
-.tabbar { view-transition-name: tabbar; }
+
 .nextstep, .nextstep-tab { view-transition-name: guide; }
 /* La charpente ne voyage pas : elle bascule.
    « animation: none » sur les deux images ne suffisait pas. L'ancienne reste
@@ -3784,46 +3619,6 @@ details[open] > .refine-head .foldsign {
   flex: none; align-self: stretch; min-width: 0; height: auto;
   width: 100%; border: 1px solid var(--rule); border-left: 4px solid var(--ink);
   border-radius: 16px; background: var(--surface); padding: 0; overflow: hidden;
-}
-.board-stack > .verdict .verdict-head {
-  width: 100%; display: flex; align-items: center; gap: 14px;
-  padding: 20px 24px; border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
-}
-.board-stack > .verdict .verdict-word {
-  display: block; font-family: var(--display); font-weight: 800; font-size: 13px;
-  letter-spacing: .1em; text-transform: uppercase;
-}
-.board-stack > .verdict .verdict-line {
-  display: block; font-family: var(--display); font-weight: 700; font-size: 21px;
-  letter-spacing: -.026em; color: var(--ink); line-height: 1.25; margin-top: 4px; max-width: 62ch;
-}
-.board-stack > .verdict .verdict-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: currentColor; }
-.board-stack > .verdict .verdict-more {
-  margin-left: auto; flex: none; font-size: 20px; color: var(--ink-5);
-  transition: transform .34s var(--ease-soft);
-}
-.board-stack > .verdict.open .verdict-more { transform: rotate(90deg); }
-.board-stack > .verdict .verdict-body {
-  /* Sans `overflow: hidden`, la hauteur nulle ne retient rien et le texte
-     replié laissait une bande vide de trois cents pixels sous le verdict. */
-  max-height: 0; opacity: 0; padding: 0 24px; overflow: hidden;
-  transition: max-height .42s var(--ease-soft), opacity .3s var(--ease-soft), padding .42s var(--ease-soft);
-  font-size: 13.5px; color: var(--ink-3); line-height: 1.6; max-width: 84ch;
-}
-.board-stack > .verdict.open .verdict-body { max-height: 420px; opacity: 1; padding: 0 24px 22px; }
-.board-stack > .verdict .verdict-figure {
-  display: flex; align-items: baseline; gap: 12px; margin-top: 14px;
-  padding-top: 14px; border-top: 1px solid var(--rule);
-}
-.board-stack > .verdict .verdict-figure strong { font-size: 22px; letter-spacing: -.04em; color: var(--ink); }
-.board-stack > .verdict.verdict-bad { border-left-color: var(--loss); color: var(--loss); }
-.board-stack > .verdict.verdict-watch { border-left-color: var(--warn); color: var(--warn); }
-.board-stack > .verdict.verdict-good { border-left-color: var(--gain); color: var(--gain); }
-
-@media (max-width: 760px) {
-  .board-stack > .verdict .verdict-head { padding: 16px 15px; gap: 10px; }
-  .board-stack > .verdict .verdict-line { font-size: 17px; }
-  .board-stack > .verdict.open .verdict-body { padding: 0 15px 18px; }
 }
 
 /* ─── Le reste de la liste, à la demande ─── */
@@ -4088,11 +3883,6 @@ details[open] > .refine-head .foldsign {
    la phrase vient de dire. Le ton — vert, ambre, rouge — est porté par un
    filet haut, jamais par un fond : un fond coloré crie, un filet informe. */
 .plain { display: flex; flex-direction: column; gap: 18px; }
-.plain-cards {
-  display: grid; gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  align-items: stretch;
-}
 
 .plaincard {
   background: var(--surface); border: 1px solid var(--rule);
@@ -4155,13 +3945,6 @@ details[open] > .refine-head .foldsign {
   stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke;
 }
 .plainline-note { font-size: 11px; color: var(--ink-5); }
-
-.plain-foot {
-  border-top: 1px solid var(--rule); padding-top: 14px;
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-}
-.plain-foot p { margin: 0; flex: 1 1 320px; font-size: 12.5px; color: var(--ink-4); max-width: 70ch; }
-.plain-foot-go { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ─── Acquisition : une campagne naît à zéro, les repères se demandent ─── */
 .seed-row {
@@ -4340,117 +4123,32 @@ details[open] > .refine-head .foldsign {
    Elle vivait derrière un bouton, en plein écran, dans un autre module :
    la plupart ne savaient pas qu'elle existait. C'est pourtant la même
    lecture que l'analyse, faite pour être montrée à quelqu'un d'autre. */
-.deckin {
-  background: var(--surface); border: 1px solid var(--rule);
-  border-top: 2px solid var(--rule-strong); min-width: 0;
-}
-.deckin-head {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 13px 16px; border-bottom: 1px solid var(--rule);
-}
-.deckin-head h2 { margin: 0; }
-.deckin-count { font-family: var(--mono); font-size: 12px; color: var(--ink-4); }
+
 /* Les flèches ne bougent pas d'un écran à l'autre.
    Centrées sur la diapositive, elles montaient et descendaient à chaque
    changement puisque les quinze écrans n'ont pas la même hauteur : on visait
    « suivant » et le bouton s'était déplacé. Elles se posent donc en haut, à
    distance fixe du cadre, et la scène garde une hauteur minimale pour que le
    cadre lui-même cesse de respirer. */
-.deckin-stage {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start; gap: 10px; padding: 18px 14px;
-}
-.deckin-arrow { margin-top: 26px; }
-.deckin-slide { min-width: 0; min-height: 560px; }
-@media (max-width: 760px) { .deckin-slide { min-height: 0; } }
+
 /* Le même écran que le plein écran, en plus sobre : pas de rebond à l'entrée
    ni de marge de scène, il est déjà dans un cadre. */
-.deckin-slide .slide { max-width: none; animation: none; }
-.deckin-slide.is-fresh .slide { animation: deckin-slide .34s var(--ease-soft) both; }
-.deckin-slide .slide-inner { border-radius: 16px; padding: clamp(20px, 3vw, 34px); }
+
 @keyframes deckin-slide {
   from { opacity: 0; transform: translateX(14px); }
   to   { opacity: 1; transform: none; }
 }
-.deckin-arrow {
-  width: 38px; height: 38px; border-radius: 50%; flex: none; cursor: pointer;
-  display: inline-grid; place-items: center; padding: 0; line-height: 0;
-  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
-  transition: border-color .18s, color .18s, background .18s, opacity .18s;
-}
-.deckin-arrow svg { width: 17px; height: 17px; display: block; }
-.deckin-arrow.is-prev { transform: rotate(90deg); }
-.deckin-arrow.is-next { transform: rotate(-90deg); }
-.deckin-arrow:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); background: var(--accent); }
-.deckin-arrow:disabled { opacity: .3; cursor: default; }
-.deckin-dots {
-  display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;
-  padding: 0 16px 16px;
-}
-@media (max-width: 760px) {
-  .deckin-stage { grid-template-columns: 1fr; gap: 14px; }
-  .deckin-arrow { justify-self: center; }
-  .deckin-arrow.is-prev { order: 2; }
-  .deckin-slide { order: 1; }
-  .deckin-arrow.is-next { order: 3; }
-}
-@media (prefers-reduced-motion: reduce) { .deckin-slide .slide { animation: none; } }
 
 /* ═══════════ Les six chiffres, chacun repliable sur ce qu'il veut dire ════
    C'étaient des tuiles qui emmenaient ailleurs d'un clic : on quittait la
    page sans savoir ce qu'on allait y faire, et qui ne connaît pas le mot
    « EBITDA » n'avait qu'un « ? » à survoler. Un clic déplie la définition ;
    le déplacement vient après, par un bouton qui dit où il mène. */
-.kpis6 {
-  background: var(--surface); border: 1px solid var(--rule);
-  border-top: 2px solid var(--rule-strong); min-width: 0;
-}
-.kpis6-head { padding: 15px 18px 12px; border-bottom: 1px solid var(--rule); }
-.kpis6-head h2 { margin: 0; }
-.kpis6-head p { margin: 4px 0 0; font-size: var(--t-block-sub); color: var(--ink-4); }
+
 /* Les cases ne s'étirent pas sur la hauteur de la plus haute : un chiffre
    déplié fait quatre cents pixels, et ses deux voisines devenaient deux
    grandes cartes blanches vides. Chacune prend sa taille ; le vide qui reste
    est du fond, pas une carte. */
-.kpis6-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  align-items: start;
-}
-.kpi6 {
-  background: var(--surface); min-width: 0;
-  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-}
-.kpi6-head {
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-  cursor: pointer; list-style: none; user-select: none;
-  transition: background .16s var(--ease);
-}
-.kpi6-head::-webkit-details-marker { display: none; }
-.kpi6-head:hover { background: var(--surface-2); }
-.kpi6-ico { width: 30px; height: 30px; flex: none; line-height: 0; }
-.kpi6-id { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
-.kpi6-label {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--ink-4);
-}
-.kpi6-value { font-size: 21px; font-weight: 650; letter-spacing: -.035em; color: var(--ink); line-height: 1.1; }
-.kpi6.pos .kpi6-value { color: var(--gain); }
-.kpi6.neg .kpi6-value { color: var(--loss); }
-.kpi6.warn .kpi6-value { color: var(--warn); }
-.kpi6-note { font-size: 11.5px; color: var(--ink-4); line-height: 1.35; }
-.kpi6-spark { flex: none; line-height: 0; opacity: .8; }
-.kpi6[open] .kpi6-head { background: var(--surface-2); }
-.kpi6[open] .kpi6-head .foldsign { transform: rotate(180deg); border-color: var(--ink); color: var(--ink); }
-.kpi6-body {
-  padding: 0 16px 16px; display: flex; flex-direction: column; gap: 9px;
-  background: var(--surface-2); border-top: 1px dashed var(--rule);
-  padding-top: 14px;
-}
-.kpi6-body p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); }
-.kpi6-what { color: var(--ink-2) !important; }
-.kpi6-watch { color: var(--ink-4) !important; }
-.kpi6-watch b { color: var(--warn); font-weight: 600; }
-.kpi6-body .btn { align-self: flex-start; margin-top: 3px; }
 
 /* ═══════════ Ce qui se clique, et ce qui se lit ═══════════════════════════
    Les cinq exercices sont des boutons ; l'opération juste dessous ne l'est
@@ -4464,7 +4162,6 @@ details[open] > .refine-head .foldsign {
   letter-spacing: .14em; text-transform: uppercase; color: var(--ink-5); margin-bottom: 2px;
 }
 .eq { box-shadow: none; }
-.eq-term { cursor: default; }
 
 /* ─── Sur 100 € facturés : une barre en parts, pas un camembert ─── */
 .plainsplit { display: flex; flex-direction: column; gap: 8px; }
@@ -4516,35 +4213,10 @@ details[open] > .refine-head .foldsign {
    Un volet ordinaire — un chevron et six mots en gris — se lisait comme une
    note de bas de page. Ce qu'il ouvre est la moitié du tableau de bord : il
    lui faut la taille de ce qu'il contient. */
-.deepfold {
-  background: var(--surface); border: 1px solid var(--rule);
-  border-top: 2px solid var(--rule-strong); min-width: 0;
-}
-.deepfold-head {
-  display: flex; align-items: center; gap: 16px; padding: 20px 22px;
-  cursor: pointer; list-style: none; user-select: none; width: 100%;
-  font-size: inherit; color: inherit;
-  transition: background .16s var(--ease);
-}
-.deepfold-head::-webkit-details-marker { display: none; }
-.deepfold-head:hover { background: var(--surface-2); }
-.deepfold-id { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
-.deepfold-title {
-  font-family: var(--display); font-size: var(--t-block); font-weight: 700;
-  letter-spacing: -.024em; line-height: 1.2; color: var(--ink);
-}
-.deepfold-sub { font-size: var(--t-block-sub); color: var(--ink-4); line-height: 1.5; }
+
 /* Le signe d'un volet a deux tailles, et deux seulement : vingt-deux quand il
    plie quelque chose à l'intérieur d'un bloc, vingt-huit quand il plie le bloc
    entier. Au-delà, on lisait des signes différents pour un geste identique. */
-.deepfold .foldsign { width: 28px; height: 28px; }
-.deepfold .foldsign svg { width: 17px; height: 17px; }
-.deepfold[open] .deepfold-head { border-bottom: 1px solid var(--rule); }
-.deepfold-body { padding: 20px 22px 22px; }
-@media (max-width: 760px) {
-  .deepfold-head { padding: 16px 16px; }
-  .deepfold-body { padding: 16px 14px 18px; }
-}
 
 /* ═══════════ Ce qui reste à l'écran : la barre d'onglets ════════════════
    L'en-tête entier se collait sous la barre du haut et se resserrait en
@@ -4591,8 +4263,8 @@ details[open] > .refine-head .foldsign {
    visible dans l'analyse, et le défaut s'est vu. Le chiffre se réduit
    plutôt que de perdre son dernier caractère. */
 @media (max-width: 760px) {
-  .kpi-value, .metric-value { font-size: clamp(15px, 5.2vw, 20px); letter-spacing: -.045em; }
-  .metrics .metric { padding: 12px 11px; }
+  .kpi-value { font-size: clamp(15px, 5.2vw, 20px); letter-spacing: -.045em; }
+  
 }
 
 /* ═══════════ La page d'accueil du site ═══════════════════════════════════
@@ -4701,24 +4373,6 @@ details[open] > .refine-head .foldsign {
    bord doit répondre à « qu'est-ce que je dois traiter ». L'ordre porte donc
    la question de chaque groupe — est-ce que ça tient, d'où ça vient, où agir
    — et le titre d'acte est la seule chose à lire pour s'orienter. */
-.plain-act + .plain-act { margin-top: 30px; }
-.plain-act-head {
-  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
-  margin: 0 0 14px; padding-bottom: 9px; border-bottom: 2px solid var(--rule-strong);
-}
-.plain-act-title {
-  font-family: var(--display); font-weight: 800; font-size: 20px;
-  letter-spacing: -.028em; color: var(--ink); margin: 0; flex: none;
-}
-.plain-act-say {
-  margin: 0; font-size: 12.8px; line-height: 1.5; color: var(--ink-4);
-  flex: 1 1 320px; min-width: 0;
-}
-@media (max-width: 760px) {
-  .plain-act-head { gap: 5px; }
-  .plain-act-title { font-size: 18px; flex: 1 1 100%; }
-  .plain-act-say { flex: 1 1 100%; }
-}
 
 /* ═══════════ La fiche d'un poste : une ligne, puis ce qu'il coûte ════════
    L'intitulé, le contrat, le statut et le salaire décrivent le poste : ils
@@ -6320,7 +5974,7 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
 
 /* Les phrases d'une partie courent sur toute la largeur : une phrase coupée
    en trois lignes étroites faisait défiler pour rien. */
-.sx-say, .sy-act-say, .sy-sec-say, .sy-note, .garde-say, .plain-act-say, .view-intro, .pitch-foot p, .sy-verdict-body p, .pitch-phrase { max-width: none; }
+.sx-say, .sy-act-say, .sy-sec-say, .sy-note, .garde-say, .view-intro, .pitch-foot p, .sy-verdict-body p, .pitch-phrase { max-width: none; }
 .sx-say { font-size: 14.5px; }
 .sy-act-say { font-size: 15.5px; }
 
@@ -6569,8 +6223,6 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
 }
 .rvl-cta:hover { transform: translateY(-2px); }
 @keyframes rvl-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(214, 240, 52, .45); } 60% { box-shadow: 0 0 0 14px rgba(214, 240, 52, 0); } }
-.rvl-ghost { border: 0; background: none; cursor: pointer; font: 600 14px/1 var(--sans); color: #D9DBD2; text-decoration: underline; text-underline-offset: 4px; }
-.rvl-ghost:hover { color: #fff; }
 @media (max-width: 900px) {
   .rvl-charts { grid-template-columns: minmax(0, 1fr); }
   .rvl-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -6593,6 +6245,18 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
 .pitch-mise:hover { background: var(--surface-2); color: var(--ink); }
 .pitch-mise.is-on { background: var(--ink); color: #fff; }
 .pitch-mise.is-on > span { color: #B9BCB1; }
+/* Le PowerPoint, juste après les diapos qu'il emporte. */
+.pitch-pptx {
+  display: inline-flex; align-items: center; gap: 10px; border: 0; cursor: pointer; text-align: left; font: inherit;
+  padding: 8px 16px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--ink); transition: box-shadow .16s, transform .16s var(--ease-soft);
+}
+.pitch-pptx:hover { box-shadow: inset 0 0 0 1px var(--ink); transform: translateY(-1px); }
+.pitch-pptx-ico { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font: 700 16px/1 var(--sans); }
+.pitch-pptx > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.pitch-pptx > span:last-child > b { font: 700 14px/1.2 var(--display); }
+.pitch-pptx > span:last-child > span { font-size: 11.5px; color: var(--ink-4); }
+.pitch-pptx.is-busy { opacity: .6; cursor: progress; }
 
 /* Les faits et les ratios : le libellé au moins aussi grand que le chiffre. */
 .pitch-fait-label { font: 700 15px/1.25 var(--display); letter-spacing: -.02em; text-transform: none; color: var(--ink); }
@@ -6623,26 +6287,8 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
 @media (max-width: 1100px) { .pitch-ligne-corps { grid-template-columns: minmax(0, 1fr); } .pitch-ligne-corps > .pitch-avis { position: static; } }
 
 /* B · Tableau — douze colonnes, chaque tuile choisit sa place. */
-.pitch-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px; margin-top: 22px; }
-.pitch-tuile {
-  grid-column: span var(--cols, 6); grid-row: span var(--rows, 1); display: flex; flex-direction: column; min-width: 0;
-  padding: 16px 16px 14px; border-radius: 18px; background: var(--surface-2, #F7F6F1); box-shadow: inset 0 0 0 1px var(--rule);
-  animation: sy-rise .5s var(--ease-soft) both; animation-delay: calc(var(--i) * .05s);
-}
-.pitch-tuile-head { display: flex; align-items: center; gap: 10px; }
-.pitch-tuile-head > b { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--accent); font: 600 10.5px/1 var(--mono); }
-.pitch-tuile-head > h3 { margin: 0; font: 700 var(--t-block)/1.2 var(--display); letter-spacing: -.024em; color: var(--ink); }
+
 .pitch-tuile-droite { margin-left: auto; }
-.pitch-tuile-dit { margin: 6px 0 12px; font-size: 13px; line-height: 1.45; color: var(--ink-4); }
-.pitch-tuile-corps { flex: 1; min-width: 0; }
-.pitch-tuile .pitch-offres, .pitch-tuile .pitch-faits { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.pitch-tuile .pitch-fait, .pitch-tuile .pitch-offre, .pitch-tuile .pitch-client { padding: 12px 14px; border-radius: 14px; }
-.pitch-tuile .pitch-fait-dit { font-size: 12px; }
-.pitch-tuile .pitch-ratio { grid-template-columns: minmax(0, 1fr) auto; }
-.pitch-tuile .pitch-ratio-d { display: none; }
-.pitch-tuile .pitch-risques > li { padding: 10px 12px; }
-.pitch-tuile .pitch-risques span { font-size: 12.5px; }
-@media (max-width: 1100px) { .pitch-tuile { grid-column: span 12; grid-row: auto; } }
 
 /* C · Diapos — une idée par diapositive, qu'on fait défiler de côté. */
 .pitch-deck { margin-top: 22px; }
@@ -6802,29 +6448,17 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pitch.is-recit .sx.pitch-ligne .sx-no > b { width: 36px; height: 36px; font-size: 13px; }
 
 /* ═══════════ B · Tableau — un cockpit, tout sur un écran ═══════════ */
-.pz-cockpit .pitch-tuile {
-  transition: box-shadow .2s var(--ease-soft), transform .2s var(--ease-soft);
-}
-.pz-cockpit .pitch-tuile.is-open { color: var(--ink); }
-.pz-cockpit .pitch-tuile.is-open .pitch-tuile-head > h3 { color: var(--ink); }
-.pz-cockpit .pitch-tuile.is-open .pitch-tuile-head > b { background: var(--ink); }
-.pz-ton { margin-left: auto; padding: 3px 8px; border-radius: 999px; font: 600 10.5px/1.3 var(--sans); white-space: nowrap; }
-.pz-ton.is-good { background: rgba(52, 199, 123, .15); color: #6FE3A5; }
-.pz-ton.is-watch { background: rgba(208, 154, 42, .18); color: #F2C46B; }
-.pz-ton.is-bad { background: rgba(222, 76, 86, .18); color: #FF9CA2; }
-.pitch-tuile.is-open .pz-ton.is-good { color: var(--gain); } .pitch-tuile.is-open .pz-ton.is-watch { color: #A6740F; } .pitch-tuile.is-open .pz-ton.is-bad { color: var(--loss); }
-.pz-chiffre { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-.pz-chiffre > b { font: 700 16px/1.2 var(--mono); letter-spacing: -.02em; color: var(--accent); }
-.pz-chiffre > b.is-bad { color: #FF9CA2; } .pz-chiffre > b.is-good { color: #6FE3A5; }
-.pitch-tuile.is-open .pz-chiffre > b { color: var(--ink); }
-.pz-chiffre > span { font-size: 12.5px; color: #A9ACA0; }
-.pz-dessin { margin-top: 10px; min-height: 8px; }
+
+  
+
+ 
+
 .pz-mini { display: block; width: 100%; height: 56px; }
 .pz-mini rect { fill: var(--accent); opacity: .85; transform-box: fill-box; transform-origin: 50% 100%; animation: rvl-grow .7s cubic-bezier(.2, .9, .25, 1.15) both; animation-delay: calc(var(--i) * .07s); }
 .pz-mini rect.is-neg { fill: #FF9CA2; }
 .pz-mini .pz-zero { stroke: rgba(255, 255, 255, .22); stroke-width: 1; }
 .pz-mini .pz-trait { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: 1; stroke-dashoffset: 1; animation: rvl-draw 1.2s ease-in-out .2s forwards; }
-.pitch-tuile.is-open .pz-mini rect { fill: var(--ink); } .pitch-tuile.is-open .pz-mini .pz-trait { stroke: var(--ink); } .pitch-tuile.is-open .pz-mini .pz-zero { stroke: var(--rule); }
+  
 .pz-jauge { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .1); overflow: hidden; margin-top: 18px; }
 .pz-jauge > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--accent); animation: sy-widen .8s var(--ease-soft) both; transform-origin: left; }
 .pz-jauge-rep { position: absolute; top: -2px; bottom: -2px; background: rgba(255, 255, 255, .22); border-radius: 3px; }
@@ -6833,8 +6467,7 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pz-parts > i.is-1 { background: #9FB42A; } .pz-parts > i.is-2 { background: #6E7B1F; } .pz-parts > i.is-3 { background: #454D17; }
 .pz-points { display: flex; gap: 6px; margin-top: 18px; }
 .pz-points > i { width: 12px; height: 12px; border-radius: 50%; background: #F2C46B; }
-.pz-verdict { margin: 10px 0 0; font: 600 13.5px/1.4 var(--sans); color: #E9EBE3; }
-.pitch-tuile.is-open .pz-verdict { color: var(--ink); }
+
 /* La fiche d'une tuile : métrique, valeur exacte, période ou base de calcul. */
 .pz-fiche { margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--rule); display: grid; gap: 7px; }
 .pz-fiche-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; }
@@ -6842,14 +6475,6 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pz-fiche dd { margin: 0; text-align: right; min-width: 0; }
 .pz-fiche dd b { font: 600 13px/1.3 var(--mono); color: var(--ink); white-space: nowrap; }
 .pz-fiche dd small { display: block; font-size: 11px; line-height: 1.35; color: var(--ink-4); }
-.pz-ouvrir {
-  align-self: flex-start; margin-top: 10px; padding: 6px 12px; border: 0; border-radius: 999px; cursor: pointer;
-  background: rgba(255, 255, 255, .08); color: #E9EBE3; font: 600 12px/1 var(--sans);
-}
-.pz-ouvrir:hover { background: var(--accent); color: var(--ink); }
-.pitch-tuile.is-open .pz-ouvrir { background: var(--ink); color: var(--accent); }
-.pz-cockpit .pitch-tuile.is-open .pitch-tuile-corps { margin-top: 14px; }
-.pz-cockpit .pitch-tuile-dit { display: none; }
 
 /* ═══════════ C · Diapos — le deck qu'on présentera ═══════════ */
 .pitch-deck { position: relative; }
@@ -6892,8 +6517,6 @@ html.is-bascule::view-transition-new(root) { animation: pz-entre .32s var(--ease
 .pz-barres { display: flex; align-items: flex-end; gap: 8px; height: 56px; }
 .pz-barres > i { flex: 1; max-width: 64px; border-radius: 5px 5px 2px 2px; background: var(--accent); opacity: .9; transform-origin: 50% 100%; animation: rvl-grow .7s cubic-bezier(.2, .9, .25, 1.15) both; animation-delay: calc(var(--i) * .07s); }
 .pz-barres > i.is-neg { background: #FF9CA2; }
-.pitch-tuile.is-open .pz-barres > i { background: var(--ink); }
-.pz-cockpit .pitch-tuile.is-open .pitch-chapeau { font-size: 18px; }
 
 /* ═══════════════════ Ce que ton banquier va vérifier ═══════════════════
    Cinq lignes, un état chacune. L'état se lit d'abord — une étiquette à
@@ -7171,35 +6794,8 @@ button.refinery-group-head { padding-top: 12px; padding-bottom: 12px; border-rad
    Les tuiles sont désormais des cartes blanches sur le papier de la page :
    le chiffre en encre, le dessin en encre et en vert, le verdict dans sa
    couleur. Seule la couverture, au-dessus, garde le noir. */
-.pz-cockpit { background: transparent; padding: 0; border-radius: 0; gap: 14px; }
-.pz-cockpit .pitch-tuile {
-  background: var(--surface); color: var(--ink); padding: 16px 18px 14px; border-radius: 18px;
-  box-shadow: inset 0 0 0 1px var(--rule), 0 18px 36px -32px rgba(14, 15, 12, .4);
-}
-.pz-cockpit .pitch-tuile:hover { box-shadow: inset 0 0 0 1px var(--ink-5), 0 18px 36px -28px rgba(14, 15, 12, .45); }
-.pz-cockpit .pitch-tuile.is-open { background: var(--surface); box-shadow: inset 0 0 0 2px var(--ink), 0 18px 36px -28px rgba(14, 15, 12, .45); }
-.pz-cockpit .pitch-tuile-head > b { background: var(--ink); color: var(--accent); }
-.pz-cockpit .pitch-tuile-head > h3 { color: var(--ink); font-size: 17px; }
-.pz-cockpit .pz-ton.is-good { background: var(--gain-wash); color: var(--gain); }
-.pz-cockpit .pz-ton.is-watch { background: var(--warn-wash); color: var(--warn); }
-.pz-cockpit .pz-ton.is-bad { background: var(--loss-wash); color: var(--loss); }
-.pz-cockpit .pz-chiffre > b { color: var(--ink); font-size: 20px; }
-.pz-cockpit .pz-chiffre > b.is-bad { color: var(--loss); }
-.pz-cockpit .pz-chiffre > b.is-good { color: var(--gain); }
-.pz-cockpit .pz-chiffre > span { color: var(--ink-4); }
-.pz-cockpit .pz-mini rect, .pz-cockpit .pz-barres > i { fill: var(--ink); background: var(--ink); opacity: 1; }
-.pz-cockpit .pz-barres > i.is-neg { background: var(--loss); }
-.pz-cockpit .pz-mini .pz-zero { stroke: var(--rule); }
-.pz-cockpit .pz-mini .pz-trait { stroke: var(--ink); }
-.pz-cockpit .pz-jauge { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--rule); }
-.pz-cockpit .pz-jauge > i { background: var(--ink); }
-.pz-cockpit .pz-jauge-rep { background: var(--accent); opacity: .7; }
-.pz-cockpit .pz-parts > i { background: var(--ink); }
-.pz-cockpit .pz-parts > i.is-1 { background: var(--ink-3); } .pz-cockpit .pz-parts > i.is-2 { background: var(--ink-5); } .pz-cockpit .pz-parts > i.is-3 { background: var(--accent-dim); }
-.pz-cockpit .pz-points > i { background: var(--warn); }
-.pz-cockpit .pz-verdict { color: var(--ink-2); }
-.pz-cockpit .pz-ouvrir { background: var(--surface-2); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule); }
-.pz-cockpit .pz-ouvrir:hover, .pz-cockpit .pitch-tuile.is-open .pz-ouvrir { background: var(--ink); color: var(--accent); box-shadow: none; }
+
+  
 
 /* ═══════════ Pitch · Diapos : des diapositives blanches ═══════════
    Passer du noir au blanc à chaque diapositive fatiguait l'œil. Toutes les

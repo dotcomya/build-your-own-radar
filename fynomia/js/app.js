@@ -6,13 +6,13 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
+import { quitterPage } from './ui/memoire.js'
 import { h, clear, setDrawerHost, toast, euro, narrow, ecrireEnAttente } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import { installEffet, reposerEffet, decrire as decrireSaisie, retrouverSaisie } from './ui/effet.js'
 import { cacherInfobulle } from './ui/charts.js'
 import { renderMethode } from './ui/pages/methode.js'
 import store from './state/store.js'
-import { getPersona } from './ui/personas.js'
 
 import { renderOnboarding } from './ui/pages/onboarding.js'
 import { renderHome } from './ui/pages/home.js'
@@ -28,7 +28,6 @@ import { renderTeam } from './ui/pages/team.js'
 import { renderCosts } from './ui/pages/costs.js'
 import { renderFinancing } from './ui/pages/financing.js'
 import { renderResults } from './ui/pages/results.js'
-import { renderBusinessCase } from './ui/pages/businesscase.js'
 import { renderSettings } from './ui/pages/settings.js'
 import { renderProject } from './ui/pages/project.js'
 import { renderSetup, resetSetup } from './ui/pages/setup.js'
@@ -38,7 +37,7 @@ import { buildState } from './engine/build.js'
 import { cloud, onCloud, syncLabel } from './state/cloud.js'
 
 /**
- * Les neuf modules.
+ * Les huit modules.
  *
  * L'ordre suit la construction d'un prévisionnel, pas l'organigramme d'un
  * cabinet comptable : on pose le cadre, on décrit ce qu'on vend, ce que ça
@@ -56,8 +55,7 @@ const PAGES = {
   financement: { no: '05', label: 'Financement', render: renderFinancing, build: true },
   'tableau-de-bord': { no: '06', label: 'Tableau de bord', render: renderDashboard },
   resultats: { no: '07', label: 'États financiers', render: renderResults },
-  'business-case': { no: '08', label: 'Business case', render: renderBusinessCase },
-  reglages: { no: '09', label: 'Réglages', render: renderSettings },
+  reglages: { no: '08', label: 'Réglages', render: renderSettings },
   // Hors du rail : on y arrive depuis chaque repère « dans ton métier ».
   methode: { no: '—', label: 'Méthode', render: renderMethode },
 }
@@ -71,12 +69,14 @@ const ALIASES = {
   clients: 'offre',
   compte: 'reglages',
   'mon-revenu': 'resultats',
+  // Le Business case a été retiré : son PowerPoint est dans la synthèse.
+  'business-case': 'tableau-de-bord',
   parcours: 'tableau-de-bord',
 }
 
 const GROUPS = [
   { title: 'Construire', keys: ['projet', 'offre', 'achats', 'equipe', 'financement'] },
-  { title: 'Lire', keys: ['tableau-de-bord', 'resultats', 'business-case'] },
+  { title: 'Lire', keys: ['tableau-de-bord', 'resultats'] },
   { title: '', keys: ['reglages'] },
 ]
 
@@ -118,6 +118,8 @@ function navigate(to, { move = true } = {}) {
 // La route courante, retenue pour que la barre du haut puisse annoncer ce que
 // chaque profondeur ajoute à cette page-ci.
 let currentKey = ''
+// La page du rail affichée : la quitter l'oublie (voir render).
+let pageOuverte = ''
 
 /**
  * Aucun redessin ne part sous le doigt de quelqu'un.
@@ -340,6 +342,14 @@ function render({ preserveScroll = false } = {}) {
   const page = PAGES[key] || PAGES['tableau-de-bord']
   if (!PAGES[key]) { navigate('#/tableau-de-bord'); return }
 
+  // Changer de page, c'est oublier celle qu'on quitte : on y reviendra sur
+  // son premier onglet, replié, en année 1. On oublie la page quittée et non
+  // celle où l'on arrive, pour respecter l'onglet qu'un lien vient de choisir.
+  if (key !== pageOuverte) {
+    if (pageOuverte) quitterPage(pageOuverte)
+    pageOuverte = key
+  }
+
   // Une page se redessine des dizaines de fois pendant la saisie — un clic sur
   // un pavé, une case cochée, une ligne ajoutée. Si ce redessin remonte en haut
   // de page, on perd l'endroit où l'on travaillait. Seule une vraie navigation
@@ -358,7 +368,7 @@ function render({ preserveScroll = false } = {}) {
     // par rapport à un instant que personne n'avait posé, avec un bouton
     // « nouveau repère » dont l'objet ne se devinait pas. Un tableau de bord
     // dit où l'on est ; il n'a pas à commenter le chemin sans qu'on demande.
-    rail(key), main, tabbar(key), coach(navigate))
+    rail(key), main, coach(navigate))
   // Le projecteur lit le DOM d'arrivée : il doit donc passer après le
   // remplacement, y compris quand celui-ci est différé par la transition.
   const swap = () => {
@@ -494,23 +504,6 @@ function progressTop(c) {
     ),
   )
 }
-
-function tabbar(active) {
-  const allowed = getPersona(store.persona).pages
-  const keys = Object.keys(PAGES).filter((k) => PAGES[k].tab && PAGES[k].levels.includes(store.level) && allowed.includes(k))
-  if (allowed.includes('business-case')) keys.push('business-case')
-  return h('nav', { class: 'tabbar' },
-    ...keys.map((k) => h('button', {
-      class: `tab ${active === k ? 'active' : ''}`,
-      // La barre du bas est le menu du téléphone : même règle que le rail.
-      onClick: () => navigate(`#/${k}`, { move: false }),
-    }, h('span', { class: 'ico' }, PAGES[k].icon), h('span', {}, shortLabel(PAGES[k].label)))),
-  )
-}
-
-const shortLabel = (l) => ({ 'Tableau de bord': 'Bilan', 'Mon modèle': 'Modèle',
-  'Offre et clients': 'Clients', 'États financiers': 'Comptes', 'Ce que je touche': 'Ma paie',
-  'Business case': 'Dossier' }[l] || l)
 
 // ───────────────────────────── Tiroir du glossaire ─────────────────────────
 /**

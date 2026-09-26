@@ -1,7 +1,7 @@
 /**
  * Les deux synthèses : elles bougent avec le plan, et disent la même chose.
  *
- * — la synthèse d'origine change quand on change une charge ou un salaire ;
+ * — la synthèse change quand on change une charge ou un salaire ;
  * — le détail du pitch suit l'ordre du récit : le chiffre d'affaires et le
  *   résultat d'abord, les six chiffres à connaître, puis une partie pour
  *   chacun ; ses chiffres sont ceux du moteur et du récit ;
@@ -12,13 +12,15 @@ export const nom = 'Synthèses — recalcul, texte partagé, défilement'
 const norm = (s) => String(s || '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim()
 
 export default async function (t) {
-  // 1. La synthèse d'origine suit les chiffres.
+  // 1. La synthèse suit les chiffres.
   {
     const p = await t.page('large')
     await t.exemple(p)
-    const lire = async () => { await t.aller(p, 'tableau-de-bord'); return p.evaluate(() => (document.querySelector('.plain') || {}).innerText || '') }
+    // La synthèse s'ouvre sur le récit, une scène à la fois : on lit toutes
+    // les scènes, pas seulement celle qui est à l'écran.
+    const lire = async () => { await t.aller(p, 'tableau-de-bord'); return p.evaluate(() => (document.querySelector('.pitch .as') || {}).textContent || '') }
     const a = await lire()
-    t.verifie(a.length > 200, 'la synthèse d’origine est rendue')
+    t.verifie(a.length > 200, 'la synthèse est rendue')
     await t.aller(p, 'achats')
     const f = p.locator('.cost-row input[inputmode=decimal], .cost-row input[inputmode=numeric]').first()
     await f.fill('35000'); await f.blur(); await t.pose(p)

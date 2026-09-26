@@ -16,7 +16,7 @@ export default async function (t) {
 
   // 1. Dans l'avis du pitch.
   await t.aller(p, 'tableau-de-bord')
-  await t.onglet(p, 'Pitch')
+  await t.onglet(p, 'Synthèse')
   await p.locator('.pitch-mise', { hasText: /R[ée]cit/ }).first().click({ timeout: 3000 }).catch(() => {})
   await p.locator('.pitch-mise.is-on', { hasText: /R[ée]cit/ }).first().waitFor({ timeout: 3000 }).catch(() => {})
   await t.pose(p)

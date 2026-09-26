@@ -715,7 +715,7 @@ export function moduleShell({ no, title, figure, views, view, onPick, actions = 
   const head = h('header', { class: 'module' },
     h('div', { class: 'module-tag' },
       h('span', { class: 'module-bar' }),
-      h('span', {}, `Module ${no} / 09`),
+      h('span', {}, `Module ${no} / 08`),
     ),
 
     // Une seule ligne : ce qu'on fait, de quoi il s'agit, où l'on en est.

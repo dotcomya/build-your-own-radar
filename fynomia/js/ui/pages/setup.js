@@ -1488,7 +1488,7 @@ function doneScreen(ctx) {
       }, 'Voir ma synthèse →'),
       h('button', {
         class: 'btn btn-lg',
-        onClick: () => { resetSetup(); ctx.navigate('#/business-case') },
+        onClick: () => { resetSetup(); ctx.navigate('#/tableau-de-bord') },
       }, 'Exporter le dossier'),
     ),
   )

@@ -55,7 +55,7 @@ export default async function (t) {
 
   // 3. La cascade du récit.
   await t.aller(p, 'tableau-de-bord')
-  await t.onglet(p, 'Pitch investisseur')
+  await t.onglet(p, 'Synthèse')
   await p.locator('.pitch-mise', { hasText: 'Récit' }).first().click()
   await t.pose(p)
   const cascade = await p.$$eval('.as-chap[data-chapitre="2"] .as-cascade-l', (e) => e.map((x) => [x.querySelector('.as-cascade-nom')?.textContent, x.querySelector('.as-cascade-val')?.textContent]))

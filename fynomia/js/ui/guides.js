@@ -51,11 +51,6 @@ export const PART_GUIDES = {
     why: "C'est le format que comprennent un expert-comptable, une banque et un investisseur. Rien n'est à saisir ici : tout est calculé à partir de tes pages de saisie, ce qui garantit qu'aucune ligne ne se contredit.",
     first: "Le passage de l'EBE au résultat net. C'est là qu'on voit ce que coûtent vraiment les amortissements, les intérêts et l'impôt.",
   },
-  'business-case': {
-    role: "Le dossier prêt à envoyer : ton projet, les chiffres qui le soutiennent, et l'export en PowerPoint ou en tableur.",
-    why: "Un prévisionnel juste mais impossible à transmettre ne sert à rien. Cette partie met en forme ce que tu as construit dans l'ordre où un lecteur extérieur l'attend.",
-    first: "La cohérence entre ce que tu racontes et ce que les chiffres montrent. Un écart entre les deux est ce qu'un investisseur remarque en premier.",
-  },
   reglages: {
     role: "Les hypothèses de fond : identité du projet, date de démarrage, taux et plafonds fiscaux, et tes scénarios enregistrés.",
     why: "Les valeurs fiscales sont revalorisées chaque année. Celles que Fynomia retient sont annoncées et modifiables : ton plan reste juste même quand la loi de finances bouge.",

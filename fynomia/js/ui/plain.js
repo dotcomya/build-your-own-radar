@@ -20,13 +20,11 @@
  */
 
 import { h, svg, euro, pct, num, monthLabel } from './dom.js'
-import { goToGap } from './spotlight.js'
 import { icon } from './icons.js'
 import { checklist } from './checklist.js'
 import { changed } from './motion.js'
 import store from '../state/store.js'
 import { vraisemblance, bloquantes } from '../engine/plausible.js'
-import { gardeBloc } from './garde.js'
 
 const n = (v) => Number(v) || 0
 
@@ -94,51 +92,6 @@ export const RELIRE = 'Ces lectures reposent sur les mêmes calculs que l’anal
 
 /** Combien de lignes du dossier restent à poser — pour le bouton qui y mène. */
 export const lignesRestantes = () => left()
-
-/** La synthèse complète. `r` est le résultat du moteur, `s` le scénario. */
-export function plainBoard(s, r, navigate, goRefine) {
-  if (!r) return null
-
-  // Trois actes, pas six lectures.
-  //
-  // Les six cartes disaient quatre fois la même chose sous quatre formes : le
-  // résultat net, le seuil non atteint, les dépenses pour cent euros facturés
-  // et la rémunération incluse dans la perte énoncent tous « tu perds de
-  // l'argent ». Un tableau de bord doit répondre à « qu'est-ce que je dois
-  // traiter », pas énumérer ce que le logiciel sait calculer.
-  //
-  // L'ordre de lecture porte donc la question à laquelle chaque groupe répond :
-  // est-ce que ça tient, d'où ça vient, où agir. C'est la même matière, rangée
-  // dans l'ordre où on se la pose.
-  const { actes } = synthese(s, r)
-
-  return h('div', { class: 'plain' },
-    ...actes.map((a) => h('section', { class: 'plain-act' },
-      h('div', { class: 'plain-act-head' },
-        h('h2', { class: 'plain-act-title' }, a.titre),
-        a.garde ? gardeBloc(a.garde, navigate, { classe: 'is-act' }) : null,
-        h('p', { class: 'plain-act-say' }, a.dit),
-      ),
-      h('div', { class: 'plain-cards' }, ...a.cartes.filter(Boolean).map(card)),
-    )),
-    h('div', { class: 'plain-foot' },
-      h('p', {}, RELIRE),
-      h('div', { class: 'plain-foot-go' },
-        // Une synthèse qui se lit au sortir du parcours doit dire la suite :
-        // il reste des lignes à poser, et chacune resserre ces trois phrases.
-        goRefine
-          ? h('button', { class: 'btn btn-primary btn-sm', onClick: goRefine }, left() > 0
-              ? `Affiner : ${left()} ligne${left() > 1 ? 's' : ''} à poser`
-              : 'Ce qu’il me reste à poser')
-          : null,
-        h('button', {
-          class: 'btn btn-quiet btn-sm',
-          onClick: () => goToGap({ route: 'resultats' }, navigate),
-        }, 'Voir les états financiers'),
-      ),
-    ),
-  )
-}
 
 /**
  * Les trois actes, dits pour la situation qu'on a sous les yeux.
@@ -692,7 +645,6 @@ function growthCard(r) {
     figure: { label: 'Chiffre d\u2019affaires \u2014 ann\u00e9e 5', value: euro(a5), good: a5 >= a1 },
   })
 }
-
 
 /* ──────────────────────────── La carte commune ──────────────────────────── */
 

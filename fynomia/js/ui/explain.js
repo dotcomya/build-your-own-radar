@@ -71,15 +71,6 @@ export function mixSentence(items) {
       : 'La dépendance à une seule offre reste mesurée.')
 }
 
-/** La masse salariale : ce que l'entreprise débourse, cotisations comprises. */
-export function payrollSentence(r, y = 0) {
-  const gross = yearly(r.payroll.gross)[y] || 0
-  const charges = yearly(r.payroll.employerCharges)[y] || 0
-  if (gross <= 0) return 'Aucun salaire n’est versé sur cet exercice.'
-  const ratio = charges / gross
-  return `En année ${y + 1}, ${euro(gross, { compact: true })} de salaires bruts coûtent ${euro(gross + charges, { compact: true })} à l'entreprise : ${pct(ratio, 0)} de cotisations patronales s'y ajoutent.`
-}
-
 /**
  * Le besoin en fonds de roulement.
  *

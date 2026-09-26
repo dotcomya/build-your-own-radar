@@ -10,6 +10,7 @@ import { refine } from '../dom.js'
 import { claim } from '../spotlight.js'
 import { referenceYear } from '../../format.js'
 import { section, exercices, grandsChiffres } from '../sections.js'
+import { telechargerCsv } from '../../export/fichiers.js'
 import { memoire } from '../memoire.js'
 
 const TABS = {
@@ -64,6 +65,8 @@ export function renderResults(navigate, refresh) {
     moduleShell({
       no: '07', title: 'États financiers',
       views, view, onPick: (k) => { memoire.resultats.tab = k; refresh() },
+      // Le tableur reprend ces lignes : il vit à côté d'elles.
+      actions: [h('button', { class: 'btn btn-sm', type: 'button', onClick: () => telechargerCsv() }, 'Exporter en tableur (.csv)')],
     }),
 
     tete,

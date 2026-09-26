@@ -7,39 +7,24 @@
  * pour qui veut vérifier.
  */
 
-import { h, euro, pct, num, narrow, yearLabel, refine, moduleShell, foldSign } from '../dom.js'
-import { barChart, areaChart, donut, stackedBar, waterfall, sparkline, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
-import { getPersona } from '../personas.js'
-import { metricBoard } from '../levers.js'
-import { trajectorySentence, revenueSentence, costsSentence, mixSentence, payrollSentence, bfrSentence, cashSentence, moneyFlowSentence } from '../explain.js'
+import { h, euro, pct, num, moduleShell } from '../dom.js'
 import { referenceYear } from '../../format.js'
 import { renderPitch } from './pitch.js'
 import { teteDossier } from './studio.js'
-import { storyline, gauge } from '../story.js'
+import { gauge } from '../story.js'
 import { renderSimulation } from './simulation.js'
 import { refinePanel } from '../refine-panel.js'
-import { plainBoard } from '../plain.js'
-import { deckBoard } from './deck.js'
 import { breakEvenBoard } from './model.js'
 import { vocabulaireDuPlan } from '../../state/sectors.js'
 import { suggestActions, applyAction } from '../../engine/simulate.js'
-import { nudges, nudgePanel, sectorTraps, sectorRegime } from '../nudges.js'
+import { nudges, nudgePanel } from '../nudges.js'
 import { getSector } from '../../state/sectors.js'
 import { mentionCourte } from '../../state/reperes.js'
 import { verdict } from '../../engine/verdict.js'
-import { lookup } from '../glossary.js'
-import { icon } from '../icons.js'
-import { goToGap } from '../spotlight.js'
-import { checklist } from '../checklist.js'
-import { journey } from '../../engine/journey.js'
 import { svg } from '../dom.js'
-import { figureSet, PAGE_NAME, avancement } from '../figures.js'
+import { avancement } from '../figures.js'
 import store from '../../state/store.js'
 import { memoire } from '../memoire.js'
-
-// Le jugement vient du moteur : l'écran et le PowerPoint exporté disent la
-// même chose parce qu'ils lisent la même fonction.
-export const assess = (r, s) => verdict(r, s)
 
 /**
  * Ouvrir le tableau de bord sur la synthèse.
@@ -50,7 +35,7 @@ export const assess = (r, s) => verdict(r, s)
  * d'avant.
  */
 export function openSynthesis() { memoire.tableau.view = 'synthese' }
-export function openPitch() { memoire.tableau.view = 'pitch' }
+
 export function openPilotage() { memoire.tableau.view = 'pilotage' }
 
 export function renderDashboard(navigate, refresh) {
@@ -58,37 +43,20 @@ export function renderDashboard(navigate, refresh) {
   const s = store.scenario
   if (!r) return h('div', { class: 'content' }, h('p', {}, 'Aucun résultat.'))
 
-  const persona = getPersona(store.persona)
   const sector = getSector(s.meta.sectorKey)
-  const level = store.level
-  const health = assess(r, s)
-  const j = journey(s, r)
-
-  // L'année regardée est un choix, pas une fatalité : les chiffres clés et la
-  // cascade suivent la puce qu'on sélectionne, et le tableau devient un
-  // instrument qu'on manipule au lieu d'une photographie.
   const y = memoire.tableau.year ?? referenceYear(r)
   memoire.tableau.year = y
-  const pickYearFn = (next) => { memoire.tableau.year = next; refresh() }
 
-  // Trois temps, trois onglets.
-  //
-  // « Synthèse » et « Analyse » n'en font plus qu'un : c'étaient deux lectures
-  // du même calcul, et passer de l'une à l'autre demandait de retrouver de
-  // quel exercice on parlait. La synthèse ouvre, en grand ; les six chiffres
-  // qui la fondent viennent dessous, dans l'ordre où on les interroge ; et
-  // l'analyse complète — courbes, cascade, présentation — attend dans un
-  // socle qu'on déplie quand on veut vérifier.
+  // La synthèse, c'est le pitch : récit, diapos, détail. L'ancienne synthèse
+  // — verdict, cartes de chiffres, analyse dépliable — doublonnait le récit
+  // et les états financiers ; elle est retirée, et le pitch prend son nom et
+  // la première place.
   const views = [
-    { key: 'synthese', read: true, label: 'Synthèse' },
+    { key: 'pitch', read: true, label: 'Synthèse' },
     { key: 'pilotage', read: true, label: 'Pilotage' },
-    // Pour un banquier, un business angel ou un fonds : l'essentiel du plan,
-    // sous quatre formes — dont « En détail », l'ancienne synthèse essai.
-    { key: 'pitch', read: true, label: 'Pitch investisseur' },
     { key: 'simulation', label: 'Simulation' },
   ]
-  if (memoire.tableau.view === 'studio') memoire.tableau.view = 'pitch'
-  const view = views.some((v) => v.key === memoire.tableau.view) ? memoire.tableau.view : 'synthese'
+  const view = views.some((v) => v.key === memoire.tableau.view) ? memoire.tableau.view : 'pitch'
   memoire.tableau.view = view
   const goView = (k) => { memoire.tableau.view = k; refresh() }
 
@@ -102,55 +70,7 @@ export function renderDashboard(navigate, refresh) {
 
     view === 'pitch' ? h('div', { class: 'view' }, renderPitch(navigate, refresh, goView)) : null,
 
-    view === 'synthese' ? h('div', { class: 'view board-stack' },
-      // Ce qui manque se dit avant ce qu'on a trouvé.
-      //
-      // Au sortir du parcours, douze réponses ont produit un modèle complet —
-      // et c'est exactement le piège : l'écran donne des chiffres nets, avec
-      // l'autorité d'un résultat, alors que la moitié des lignes vient encore
-      // des repères du métier. Le fondateur repart en croyant son dossier
-      // fini. Ce bandeau le dit avant tout le reste, et donne le geste suivant
-      // au lieu de le laisser chercher.
-      finishBanner(s, navigate),
-      // Le verdict ouvre la synthèse : c'est la phrase qui résume les six
-      // cartes qui suivent, et la lire après elles n'avait pas de sens.
-      verdictCard(health, navigate),
-      plainBoard(s, r, navigate, () => goView('pilotage')),
-      // Les six chiffres qu'un lecteur extérieur réclame, chacun repliable sur
-      // ce qu'il veut dire et sur la page où il se corrige.
-      kpiBoard(r, s, y, navigate),
-      // L'analyse entière, dans un socle — et sans un seul pli à l'intérieur.
-      //
-      // Elle en portait trois : la cascade, le cycle, les indicateurs. On
-      // ouvrait le socle pour avoir le détail, et il fallait encore ouvrir
-      // trois volets pour l'obtenir. Qui demande le détail le demande en
-      // entier ; le seul choix qui reste est de l'afficher ou non.
-      deepFold(
-        h('div', { class: 'board-stack' },
-          yearBar(y, r, pickYearFn),
-          netEquation(r, y),
-          moneyPanel(r, y),
-          h('section', { class: 'panel story-panel is-key' },
-            h('div', { class: 'card-head' },
-              h('div', {},
-                h('h2', {}, 'Trajectoire sur cinq ans'),
-                h('div', { class: 'tiny muted' }, 'Trésorerie mois par mois et moments qui comptent'),
-              ),
-              h('span', { class: 'spacer' }),
-              h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/resultats') }, 'Les comptes'),
-            ),
-            storyline(r, s, { compact: narrow() }),
-            h('p', { class: 'chart-note' }, trajectorySentence(r)),
-          ),
-          ...boardCharts(r, s, y, level, sector, navigate),
-          deckBoard(navigate, refresh),
-          detailBoard(persona, r, s, y, sector),
-        ),
-      ),
-    ) : null,
-
-    // Pilotage : non plus « où j'en suis », qui est désormais la synthèse, mais
-    // « qu'est-ce que je fais maintenant ». Ce qu'il reste à poser, le seuil à
+    // Pilotage : « qu'est-ce que je fais maintenant ». Ce qu'il reste à poser, le seuil à
     // franchir, les leviers classés par ce qu'ils rapportent, la position dans
     // le métier, et les points qui clochent.
     view === 'pilotage' ? h('div', { class: 'view board-stack' },
@@ -166,7 +86,7 @@ export function renderDashboard(navigate, refresh) {
       nudgesSection(s, r, navigate),
     ) : null,
 
-    view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(persona, refresh, navigate)) : null,
+    view === 'simulation' ? h('div', { class: 'view' }, renderSimulation(refresh, navigate)) : null,
 
   )
 }
@@ -240,359 +160,12 @@ function cockpit(j, r, navigate) {
   )
 }
 
-/** Les cinq exercices, en puces : l'écran suit celle qu'on choisit. */
-/**
- * Les cinq exercices, en pleine largeur.
- *
- * C'était une rangée de pastilles grises qu'on prenait pour une légende. Ce
- * sont pourtant cinq boutons : chacun rejoue toute la page sur son année. Ils
- * portent donc le millésime en clair, le chiffre d'affaires, et le résultat —
- * de quoi choisir l'année qu'on veut regarder sans avoir à la deviner.
- */
-function yearBar(y, r, pick) {
-  return h('div', { class: 'years' },
-    ...Array.from({ length: 5 }, (_, i) => {
-      const net = r.pnl.netResult[i]
-      return h('button', {
-        class: `year ${i === y ? 'active' : ''}`,
-        onClick: () => pick(i),
-      },
-        h('span', { class: 'year-no' }, `Année ${i + 1}`),
-        h('span', { class: 'year-ca num' }, euro(r.pnl.revenue[i], { compact: true })),
-        h('span', { class: `year-net num ${net >= 0 ? 'pos' : 'neg'}` },
-          `${net >= 0 ? '+' : '−'}${euro(Math.abs(net), { compact: true })} net`),
-      )
-    }),
-  )
-}
-
-/**
- * Du chiffre d'affaires au résultat, en une soustraction.
- *
- * La cascade dit tout, et demande d'être lue. L'opération, elle, se comprend
- * sans mode d'emploi : ce qui entre, ce qui sort, ce qui reste. Le détail des
- * dix lignes intermédiaires reste juste en dessous, pour qui veut vérifier.
- */
-function netEquation(r, y) {
-  const p = r.pnl
-  const revenue = p.revenue[y] || 0
-  const net = p.netResult[y] || 0
-  const charges = revenue - net
-  const marge = revenue > 0 ? net / revenue : 0
-  return h('section', { class: 'eq' },
-    h('div', { class: 'eq-terms' },
-      h('div', { class: 'eq-term' },
-        h('div', { class: 'eq-tag' }, 'Ce que tu encaisses'),
-        h('div', { class: 'eq-value num' }, euro(revenue, { compact: true })),
-        h('div', { class: 'eq-note' }, "Chiffre d'affaires de l'exercice"),
-      ),
-      h('span', { class: 'eq-op' }, '−'),
-      h('div', { class: 'eq-term' },
-        h('div', { class: 'eq-tag' }, 'Ce que ça coûte'),
-        h('div', { class: 'eq-value num' }, euro(charges, { compact: true })),
-        h('div', { class: 'eq-note' }, 'Achats, salaires, charges, impôts, amortissements'),
-      ),
-      h('span', { class: 'eq-op' }, '='),
-      h('div', { class: `eq-term is-result ${net >= 0 ? '' : 'is-loss'}` },
-        h('div', { class: 'eq-tag' }, net >= 0 ? 'Ce qu’il reste' : 'Ce que tu perds'),
-        h('div', { class: 'eq-value num' }, euro(net, { compact: true })),
-        h('div', { class: 'eq-note' }, `${pct(marge, 0)} du chiffre d'affaires`),
-      ),
-    ),
-  )
-}
-
-/* ────────────────────────── En-tête et verdict ────────────────────────── */
-
-/**
- * Le nom du projet, et le verdict à côté.
- *
- * Le verdict occupait auparavant un bandeau sombre pleine largeur : il volait
- * la vedette aux chiffres alors qu'il n'en est que le résumé. Il tient
- * désormais dans une carte étroite, posée à droite du titre — une pastille de
- * couleur, un mot, une ligne. Le détail est à un clic, pas à l'écran.
- */
-/**
- * Le dossier n'est pas fini, et ça se voit.
- *
- * Tant qu'il reste des lignes à poser, les chiffres affichés reposent en
- * partie sur les repères du métier. Les donner sans le dire, c'est laisser
- * quelqu'un présenter à sa banque un prévisionnel qu'il croit être le sien.
- * Le bandeau annonce ce qui manque, nomme la prochaine ligne, et emmène
- * dessus — un seul geste, pas une liste.
- */
-function finishBanner(s, navigate) {
-  const c = checklist(s)
-  if (!c.open || !c.next) return null
-  const reste = c.open
-  const t = avancement(c)
-  // Le bandeau disait ce qui manque ; il dit maintenant où l'on en est.
-  //
-  // « Ton dossier n'est pas terminé » ouvrait sur un reproche, et la promesse
-  // — un dossier qu'on présente à une banque ou à un fonds — n'apparaissait
-  // nulle part. L'avancement chiffré, l'enjeu nommé, l'étape suivante et son
-  // utilité : c'est ce qui donne envie de poser la ligne suivante.
-  return h('section', { class: 'finish' },
-    h('div', { class: 'finish-say' },
-      h('div', { class: 'finish-kicker' }, t.surtitre),
-      h('h2', { class: 'finish-big' }, t.titre),
-      h('p', { class: 'finish-body' }, t.texte),
-      h('div', { class: 'finish-next' },
-        h('span', { class: 'finish-next-tag' }, 'Prochaine étape'),
-        h('span', { class: 'finish-next-label' }, c.next.label),
-        c.next.why ? h('span', { class: 'finish-next-why' }, c.next.why) : null,
-      ),
-    ),
-    h('div', { class: 'finish-acts' },
-      h('button', {
-        class: 'btn btn-primary btn-lg finish-go',
-        onClick: (e) => goToGap(c.next.go, navigate, e.currentTarget),
-      }, `Renseigner « ${c.next.label} » →`),
-      h('button', {
-        class: 'btn btn-lg finish-list',
-        onClick: () => { memoire.tableau.view = 'pilotage'; navigate('#/tableau-de-bord') },
-      }, t.parcourir),
-    ),
-    h('div', { class: 'finish-meter', 'aria-hidden': 'true' },
-      h('i', { style: { width: `${Math.round((c.done / Math.max(1, c.total)) * 100)}%` } }),
-      h('span', {}, `${c.done} / ${c.total} posées`),
-    ),
-  )
-}
-
-function verdictCard(health, navigate) {
-  const detail = h('div', { class: 'verdict-body' }, health.body,
-    health.figure && h('div', { class: 'verdict-figure' },
-      h('span', {}, health.figure.label),
-      h('strong', { class: 'num' }, health.figure.value),
-    ),
-  )
-  const card = h('aside', { class: `verdict verdict-${health.tone}` },
-    h('button', {
-      class: 'verdict-head',
-      title: 'Voir le raisonnement',
-      onClick: () => { card.classList.toggle('open') },
-    },
-      h('span', { class: 'verdict-dot' }),
-      h('span', { class: 'spacer' },
-        h('span', { class: 'verdict-word' }, health.word),
-        h('span', { class: 'verdict-line' }, health.line),
-      ),
-      h('span', { class: 'verdict-more' }, '›'),
-    ),
-    detail,
-  )
-  return card
-}
-
-/* ────────────────────────────── Les chiffres ──────────────────────────── */
-
-/**
- * Le chiffre, puis ce qu'il veut dire, puis où on le corrige.
- *
- * C'étaient des tuiles qui emmenaient ailleurs d'un clic. Deux défauts : on
- * quittait la page sans savoir ce qu'on allait y faire, et celui qui ne
- * connaît pas le mot « EBE » n'avait qu'un « ? » à survoler pour
- * l'apprendre. Un clic déplie maintenant la définition, ce à quoi le chiffre
- * sert et le piège à connaître ; le déplacement vient après, par un bouton
- * qui dit où il mène.
- */
-function kpiBoard(r, s, y, navigate) {
-  const figures = figureSet(r, s, y)
-  const ink = { pos: STATUS.gain, neg: STATUS.loss, warn: STATUS.warn }
-  const memory = memoire.indicateurs.open || (memoire.indicateurs.open = new Set())
-
-  return h('section', { class: 'kpis6' },
-    h('header', { class: 'kpis6-head' },
-      h('h2', {}, 'Les six chiffres qu\u2019on te demandera'),
-      h('p', {}, 'Clique sur l\u2019un d\u2019eux : il dit ce qu\u2019il signifie avant d\u2019emmener l\u00e0 o\u00f9 il se corrige.'),
-    ),
-    h('div', { class: 'kpis6-grid' },
-      ...figures.map((f) => {
-        const g = lookup(f.help)
-        const el = h('details', { class: `kpi6 ${f.tone || ''}`, open: memory.has(f.help) || null },
-          h('summary', { class: 'kpi6-head' },
-            f.ico ? h('span', { class: 'kpi6-ico', 'aria-hidden': 'true', html: icon(f.ico) }) : null,
-            h('span', { class: 'kpi6-id' },
-              h('span', { class: 'kpi6-label' }, f.label),
-              h('span', { class: 'kpi6-value num' }, f.value),
-              h('span', { class: 'kpi6-note' }, f.note),
-            ),
-            f.spark && f.spark.some((v) => v)
-              ? h('span', { class: 'kpi6-spark' }, sparkline({ values: f.spark, width: 58, height: 20, color: ink[f.tone] || STATUS.signal }))
-              : null,
-            foldSign(),
-          ),
-          h('div', { class: 'kpi6-body' },
-            g ? h('p', { class: 'kpi6-what' }, g.what) : null,
-            g && g.use ? h('p', { class: 'kpi6-use' }, g.use) : null,
-            g && g.watch ? h('p', { class: 'kpi6-watch' }, h('b', {}, '\u00c0 surveiller \u2014 '), g.watch) : null,
-            h('button', {
-              class: 'btn btn-sm',
-              onClick: (e) => { e.preventDefault(); goToGap({ route: f.go }, navigate) },
-            }, `Aller voir \u2014 ${PAGE_NAME[f.go] || f.go}`),
-          ),
-        )
-        el.addEventListener('toggle', () => { el.open ? memory.add(f.help) : memory.delete(f.help) })
-        return el
-      }),
-    ),
-  )
-}
-
-
-
-/* ────────────────────── Le plan, en graphiques ───────────────────── */
-
-/**
- * Tout ce qu'un prévisionnel raconte, en images.
- *
- * L'ordre suit une question par graphique : où part l'argent, comment le
- * compte évolue, ce qui coûte, d'où vient le chiffre d'affaires, ce que pèse
- * l'équipe, ce que le cycle immobilise. Le niveau de détail choisi décide
- * combien de ces questions sont posées — pas si elles le sont graphiquement.
- */
-function boardCharts(r, s, y, level, sector, navigate) {
-  const k = r.kpis, p = r.pnl
-  const out = []
-
-  const trajectory = panel("Chiffre d'affaires et résultat", 'Les cinq exercices',
-    barChart({
-      categories: YEAR_CATEGORIES,
-      series: [
-        { label: "Chiffre d'affaires", values: p.revenue, color: PALETTE[0] },
-        { label: 'EBE', values: p.ebe, color: PALETTE[2] },
-        { label: 'Résultat net', values: p.netResult, color: PALETTE[5] },
-      ],
-      line: k.breakEven.some((v) => v)
-        ? { label: 'Point mort', values: k.breakEven.map((v) => v || 0), color: STATUS.loss, dashed: true }
-        : null,
-    }), chartNote(revenueSentence(r)))
-
-  const costs = panel('Structure des charges', 'Par exercice',
-    stackedBar({
-      categories: YEAR_CATEGORIES,
-      series: [
-        { label: 'Achats variables', values: p.variableCost, color: PALETTE[5] },
-        { label: 'Charges externes', values: p.external, color: PALETTE[1] },
-        { label: 'Personnel', values: p.payroll, color: PALETTE[0] },
-        { label: 'Impôts et taxes', values: p.duties, color: PALETTE[4] },
-        { label: 'Amortissements', values: p.amortisation, color: PALETTE[2] },
-      ],
-    }), chartNote(costsSentence(r, y)))
-  out.push(pair(trajectory, costs))
-
-  const activities = r.revenue.perActivity
-    .map((a, i) => ({ label: a.name, value: a.total.reduce((x, z) => x + z, 0), color: PALETTE[i % PALETTE.length] }))
-    .filter((a) => a.value > 0)
-  // Un camembert à une part ne dit rien : il ne s'affiche qu'à partir de deux
-  // sources de revenus.
-  const mix = activities.length > 1
-    ? panel('Répartition du chiffre d\'affaires', 'Cumul sur cinq ans', donut({ items: activities }), chartNote(mixSentence(activities)))
-    : null
-
-  const payrollY = yearly(r.payroll.gross)
-  const team = payrollY.some((v) => v > 0)
-    ? panel('Masse salariale', 'Brut, cotisations patronales et avantages',
-        barChart({
-          categories: YEAR_CATEGORIES,
-          series: [
-            { label: 'Salaires bruts', values: payrollY, color: PALETTE[0] },
-            { label: 'Cotisations patronales', values: yearly(r.payroll.employerCharges), color: PALETTE[1] },
-            ...(r.payroll.benefits && r.payroll.benefits.some((v) => v > 0)
-              ? [{ label: 'Avantages', values: yearly(r.payroll.benefits), color: PALETTE[4] }]
-              : []),
-          ],
-        }), chartNote(payrollSentence(r, y)))
-    : null
-
-  if (mix || team) out.push(pair(mix, team))
-
-  {
-    const bfr = panel('Besoin en fonds de roulement',
-      k.peakBfr > 0 ? "L'argent avancé aux clients et immobilisé dans les stocks" : 'Le cycle dégage de la ressource',
-      areaChart({ values: r.bfr.total, startDate: r.startDate, color: k.peakBfr > 0 ? PALETTE[1] : STATUS.gain }),
-      chartNote(bfrSentence(r)))
-    const cashPanel = panel('Trésorerie',
-      Number.isFinite(k.runwayMonths) && k.runwayMonths !== null ? `${num(k.runwayMonths, 0)} mois au rythme de consommation actuel` : 'La caisse ne se vide pas',
-      areaChart({ values: r.cash.balance, startDate: r.startDate, color: STATUS.signal }),
-      chartNote(cashSentence(r)))
-    // Ces deux dessins vivaient dans un volet « affiner ». Ils sont désormais
-    // à l'intérieur de l'analyse détaillée, qu'on n'ouvre que pour tout voir.
-    out.push(pair(bfr, cashPanel))
-  }
-
-  return out
-}
-
-
-/**
- * Du chiffre d'affaires au résultat net.
- *
- * La cascade est le seul dessin qui répond à « et il m'en reste combien » sans
- * qu'on ait à lire un compte de résultat. Elle sait se redessiner pendant
- * qu'un curseur bouge : c'est là que la manipulation devient parlante.
- */
-function moneyPanel(r, y) {
-  const host = h('div', { class: 'panel-body' })
-  const note = h('p', { class: 'chart-note' })
-  // Un rendu complet peut survenir entre deux images du geste : les nœuds de
-  // la passe précédente ne sont alors plus dans le document, et il n'y a plus
-  // rien à repeindre. On sort, plutôt que d'écrire dans le vide.
-  // Le premier rendu a lieu avant que le nœud ne rejoigne le document ; on ne
-  // s'abstient que pour les repeints suivants, quand un rendu complet est
-  // passé entre-temps et a détaché ce qu'on s'apprêtait à mettre à jour.
-  let painted = false
-  const paint = (res) => {
-    if (painted && !host.isConnected) return
-    painted = true
-    host.replaceChildren(waterfall({ items: moneyFlow(res, y) }))
-    note.textContent = moneyFlowSentence(res, y)
-  }
-  paint(r)
-  const section = h('section', { class: 'panel' },
-    h('div', { class: 'card-head' },
-      h('div', {},
-        h('h2', {}, 'Du chiffre d\'affaires au r\u00e9sultat net'),
-        h('div', { class: 'tiny muted' }, `Soldes interm\u00e9diaires de gestion \u2014 ${yearLabel(y).toLowerCase()}`),
-      ),
-    ),
-    host, note,
-  )
-  section.updateWith = paint
-  return section
-}
-
 /** Deux graphiques côte à côte, un seul s'il n'y en a qu'un. */
 function pair(a, b) {
   const cards = [a, b].filter(Boolean)
   if (cards.length === 0) return null
   return h('div', { class: 'board-pair' }, ...cards)
 }
-
-/**
- * La cascade du compte de résultat : chiffre d'affaires, ce qu'on en retire,
- * ce qu'il reste. Les paliers sont les soldes intermédiaires de gestion — ceux
- * qu'une banque lit en premier.
- */
-function moneyFlow(r, y) {
-  const p = r.pnl
-  const items = [{ label: "Chiffre d'affaires", value: p.revenue[y], total: true }]
-  if (p.grants[y]) items.push({ label: 'Subventions', value: p.grants[y] })
-  if (p.variableCost[y]) items.push({ label: 'Achats', value: -p.variableCost[y] })
-  if (p.external[y]) items.push({ label: 'Charges externes', value: -p.external[y] })
-  if (p.duties[y]) items.push({ label: 'Impôts et taxes', value: -p.duties[y] })
-  if (p.payroll[y]) items.push({ label: 'Personnel', value: -p.payroll[y] })
-  items.push({ label: 'EBE', value: p.ebe[y], total: true })
-  if (p.amortisation[y]) items.push({ label: 'Amortis.', value: -p.amortisation[y] })
-  if (p.badDebts?.[y]) items.push({ label: 'Impayés', value: -p.badDebts[y] })
-  if (p.interest[y]) items.push({ label: 'Frais fin.', value: -p.interest[y] })
-  if (p.corporateTax[y]) items.push({ label: 'Impôt sociétés', value: -p.corporateTax[y] })
-  if (p.credits[y]) items.push({ label: "Crédits impôt", value: p.credits[y] })
-  items.push({ label: 'Résultat net', value: p.netResult[y], total: true })
-  return items
-}
-
 
 /* ──────────────────────── Actions déjà chiffrées ──────────────────────── */
 
@@ -720,57 +293,6 @@ function nudgesSection(s, r, navigate) {
     advice.length > 0 && nudgePanel(advice, navigate),
   )
 }
-
-/* ────────────────────────────── Le détail ─────────────────────────────── */
-
-/**
- * Les graphiques sont désormais à l'écran, plus dans un pli. Ne restent ici
- * que les indicateurs détaillés, les leviers à tirer et les pièges propres au
- * métier — utiles, mais qu'on ne consulte pas à chaque visite.
- */
-function detailBoard(persona, r, s, y, sector) {
-  return h('section', { class: 'panel' },
-    h('div', { class: 'card-head' },
-      h('div', {},
-        h('h2', {}, 'Indicateurs détaillés'),
-        h('div', { class: 'tiny muted' }, `${persona.metrics.length} indicateurs et les pièges du métier`),
-      ),
-    ),
-    h('div', { class: 'panel-body' },
-      metricBoard(persona, r),
-      sector && h('div', { class: 'grid grid-2 mt', style: { alignItems: 'start' } },
-        sectorTraps(s), sectorRegime(s)),
-    ),
-  )
-}
-
-/**
- * Le socle de l'analyse détaillée : un bloc, pas une ligne de texte.
- *
- * Un volet ordinaire — un chevron et six mots en gris — se lisait comme une
- * note de bas de page. Ce qu'il ouvre est pourtant la moitié du tableau de
- * bord : tous les exercices, la cascade, les courbes, la présentation. Il lui
- * faut la taille de ce qu'il contient.
- */
-function deepFold(body) {
-  const memory = deepFold.open || (deepFold.open = new Set())
-  const el = h('details', { class: 'deepfold', open: memory.has('analyse') || null },
-    h('summary', { class: 'deepfold-head refine-head' },
-      h('span', { class: 'deepfold-id' },
-        h('span', { class: 'deepfold-title' }, 'Analyse détaillée'),
-        h('span', { class: 'deepfold-sub' },
-          'Les cinq exercices, la cascade du résultat, les courbes, la présentation — tout, d’un coup.'),
-      ),
-      foldSign(),
-    ),
-    h('div', { class: 'deepfold-body' }, body),
-  )
-  el.addEventListener('toggle', () => { el.open ? memory.add('analyse') : memory.delete('analyse') })
-  return el
-}
-
-/** La phrase qui dit ce que le dessin montre. */
-const chartNote = (text) => (text ? h('p', { class: 'chart-note' }, text) : null)
 
 function panel(title, subtitle, ...body) {
   return h('section', { class: 'panel' },

@@ -15,15 +15,15 @@
  * besoin de financement, la demande.
  */
 
-import { h, euro, pct, num, monthLabel, CHEVRON } from '../dom.js'
+import { h, euro, pct, num, monthLabel } from '../dom.js'
 import { barChart, areaChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { getSector, uniteOffre, vocabulaireDuPlan } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
 import { founderIncome } from '../../engine/founder.js'
-import { changed } from '../motion.js'
 import store from '../../state/store.js'
 
 const at = { i: 0 }
+/** La présentation repart de la première diapositive. */
 export function resetDeck() { at.i = 0 }
 
 /* ────────────────────────── Les briques d'un slide ───────────────────────── */
@@ -318,61 +318,6 @@ const totalRaised = (s) => {
     + (Number(f.openingCash) || 0)
 }
 
-/* ────────────────────────────── La navigation ────────────────────────────── */
-
-/**
- * La présentation, dans le tableau de bord.
- *
- * Elle vivait derrière un bouton, en plein écran, dans un autre module : on
- * ne la trouvait qu'en la cherchant, et la plupart ne savaient pas qu'elle
- * existait. C'est pourtant la même lecture que l'analyse, faite pour être
- * montrée à quelqu'un d'autre. Elle s'ouvre donc là où on lit ses chiffres,
- * un écran à la fois, avec deux chevrons pour avancer — et le plein écran
- * reste à un clic pour le jour de la soutenance.
- */
-export function deckBoard(navigate, refresh) {
-  const s = store.scenario
-  const r = store.result
-  if (!r) return null
-
-  const slides = build(s, r)
-  at.i = Math.max(0, Math.min(at.i, slides.length - 1))
-  const go = (d) => { at.i = Math.max(0, Math.min(at.i + d, slides.length - 1)); refresh() }
-
-  const arrow = (dir, label, disabled) => h('button', {
-    class: `deckin-arrow is-${dir}`, disabled: disabled || null,
-    'aria-label': label, title: label,
-    onClick: () => go(dir === 'prev' ? -1 : 1),
-    html: CHEVRON,
-  })
-
-  return h('section', { class: 'deckin' },
-    h('header', { class: 'deckin-head' },
-      h('div', {},
-        h('h2', {}, 'La présenter en quinze écrans'),
-        h('div', { class: 'tiny muted' }, 'Le même modèle, dit à quelqu’un qui ne le connaît pas'),
-      ),
-      h('span', { class: 'spacer' }),
-      h('span', { class: 'deckin-count num' }, `${at.i + 1} / ${slides.length}`),
-      h('button', { class: 'btn btn-sm btn-quiet', onClick: () => navigate('#/presentation') }, 'Plein écran'),
-    ),
-    h('div', { class: 'deckin-stage' },
-      arrow('prev', 'Écran précédent', at.i === 0),
-      // L'écran ne glisse que lorsqu'on en change, pas à chaque rendu du
-      // tableau de bord — sinon il repartirait de la droite à chaque recalcul.
-      h('div', { class: `deckin-slide ${changed('deckin', at.i) ? 'is-fresh' : ''}` }, slides[at.i]),
-      arrow('next', 'Écran suivant', at.i === slides.length - 1),
-    ),
-    h('div', { class: 'deckin-dots' },
-      ...slides.map((_, i) => h('button', {
-        class: `deck-dot ${i === at.i ? 'active' : ''} ${i < at.i ? 'seen' : ''}`,
-        title: `Écran ${i + 1}`, 'aria-label': `Écran ${i + 1}`,
-        onClick: () => { at.i = i; refresh() },
-      })),
-    ),
-  )
-}
-
 export function renderDeck(navigate, refresh) {
   const s = store.scenario
   const r = store.result
@@ -386,7 +331,7 @@ export function renderDeck(navigate, refresh) {
 
   const el = h('div', { class: 'deck', tabindex: '0' },
     h('header', { class: 'deck-bar' },
-      h('button', { class: 'deck-exit', onClick: () => navigate('#/business-case') }, '← Quitter'),
+      h('button', { class: 'deck-exit', onClick: () => navigate('#/tableau-de-bord') }, '← Quitter'),
       h('div', { class: 'deck-dots' },
         ...slides.map((_, i) => h('button', {
           class: `deck-dot ${i === at.i ? 'active' : ''} ${i < at.i ? 'seen' : ''}`,
@@ -408,7 +353,7 @@ export function renderDeck(navigate, refresh) {
   el.addEventListener('keydown', (e) => {
     if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(1) }
     else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(-1) }
-    else if (e.key === 'Escape') navigate('#/business-case')
+    else if (e.key === 'Escape') navigate('#/tableau-de-bord')
     else if (e.key === 'Home') { at.i = 0; refresh() }
     else if (e.key === 'End') { at.i = slides.length - 1; refresh() }
   })

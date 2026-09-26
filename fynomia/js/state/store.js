@@ -95,9 +95,6 @@ class Store {
     this.baselineLabel = label
   }
 
-  // Une seule vue : celle du fondateur. Un plan enregistré avec une autre vue
-  // (direction financière, marketing…) s'ouvre désormais dans celle-ci.
-  get persona() { return 'founder' }
   emit(reason = 'change') { for (const fn of this.listeners) fn(this, reason) }
 
   // ───────────────────────────── Profil ────────────────────────────────

@@ -8,6 +8,7 @@
  * vient juste dessous. Tout est lu dans le moteur, rien n'est recalculé ici.
  */
 
+import { aOublier } from './memoire.js'
 import { h, euro, pct, num, monthLabel } from './dom.js'
 import store from '../state/store.js'
 import { SECTORS } from '../state/schema.js'
@@ -138,6 +139,8 @@ export function chiffresDePage(route, refresh, navigate) {
 
 /** Le bandeau : une ligne de chiffres ; « Détail » déplie les cartes. */
 const bandeauxOuverts = new Set()
+// « Détail » se replie quand on quitte la page : on revient sur une ligne.
+aOublier(() => bandeauxOuverts.clear())
 function bandeau(route, cartes, an, choisir, r, garde, refresh) {
   const ouvert = bandeauxOuverts.has(route)
   const el = h('section', { class: `sx is-compact is-bandeau ${ouvert ? 'is-open' : ''}`, 'data-chiffres': route },

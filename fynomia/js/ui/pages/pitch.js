@@ -13,6 +13,9 @@
  * ce qu'on lui demandera d'expliquer.
  */
 
+import { aOublier } from '../memoire.js'
+import { telechargerPptx } from '../../export/fichiers.js'
+import { resetDeck } from './deck.js'
 import { mentionCourte } from '../../state/reperes.js'
 import { h, svg, euro, pct, num, monthLabel, narrow } from '../dom.js'
 import { barChart, entree } from '../charts.js'
@@ -61,9 +64,6 @@ const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des e
  *   « Récit »     — une explication accessible et convaincante : cinq
  *                   chapitres, un diagnostic et une courbe chacun, puis
  *                   l'essentiel en mots simples ;
- *   « Tableau »   — une lecture financière structurée : chaque partie en
- *                   métriques exactes, avec leur période et leur base de
- *                   calcul ;
  *   « Diapos »    — une synthèse immédiate : une phrase et un chiffre par
  *                   diapositive, de quoi tenir un elevator pitch ;
  *   « En détail » — l'analyse approfondie : chaque chiffre expliqué, les
@@ -71,15 +71,27 @@ const CLIENTS = { b2b: 'Des entreprises', b2c: 'Des particuliers', b2b2c: 'Des e
  *
  * Le choix est retenu sur cet appareil.
  */
+// « Tableau » a été retiré : sa lecture financière vit dans les états
+// financiers et dans « En détail ». Les diapos ferment la rangée, avec leur
+// téléchargement en PowerPoint juste à côté.
 const MISES = [
   { key: 'recit', label: 'Récit', dit: 'le projet expliqué' },
-  { key: 'tableau', label: 'Tableau', dit: 'la lecture financière' },
-  { key: 'diapos', label: 'Diapos', dit: 'l’essentiel à présenter' },
   { key: 'detail', label: 'En détail', dit: 'hypothèses et justifications' },
+  { key: 'diapos', label: 'Diapos', dit: 'l’essentiel à présenter' },
 ]
 const CLE_MISE = 'fynomia:pitch-mise'
 let mise = (() => { try { return localStorage.getItem(CLE_MISE) || 'recit' } catch { return 'recit' } })()
 const choisirMise = (k) => { mise = k; try { localStorage.setItem(CLE_MISE, k) } catch { /* rien à retenir */ } }
+// Revenir au tableau de bord, c'est revenir au récit : la première lecture.
+aOublier((route) => { if (route === 'tableau-de-bord') choisirMise('recit') })
+
+/** Le bouton se tait le temps de fabriquer le fichier : un second clic ne relance rien. */
+async function telecharger(bouton) {
+  if (bouton.disabled) return
+  bouton.disabled = true
+  bouton.classList.add('is-busy')
+  try { await telechargerPptx() } finally { bouton.disabled = false; bouton.classList.remove('is-busy') }
+}
 
 export function renderPitch(navigate, refresh, goView) {
   navigateur = navigate
@@ -112,6 +124,9 @@ export function renderPitch(navigate, refresh, goView) {
         onClick: () => basculer(m.key),
       }, h('b', {}, m.label), h('span', {}, m.dit))),
     ),
+    h('button', { class: 'pitch-pptx', type: 'button', title: 'Les diapositives, en fichier PowerPoint', onClick: (e) => telecharger(e.currentTarget) },
+      h('span', { class: 'pitch-pptx-ico', 'aria-hidden': 'true' }, '↓'),
+      h('span', {}, h('b', {}, 'PowerPoint'), h('span', {}, 'télécharger le .pptx'))),
   )
 
   // En détail : la synthèse complète, acte par acte — elle porte sa propre
@@ -127,13 +142,13 @@ export function renderPitch(navigate, refresh, goView) {
     // l'entreprise, pas la liste de ce qu'il reste à saisir.
     couverture(s, r, navigate),
     garde.length ? gardeBloc(garde, navigate, { classe: 'is-page' }) : null,
-    mise === 'tableau' ? tableau(parties)
-      : mise === 'diapos' ? diapos(parties)
-        : analyseStrategique(s, r, navigate, { source: () => sourceRepere() }),
+    mise === 'diapos' ? diapos(parties)
+      // Un garde-fou qui doute du plan éteint le vert : rien ne se lit en succès.
+      : analyseStrategique(s, r, navigate, { source: () => sourceRepere(), doute: garde.length > 0 }),
     h('div', { class: 'pitch-foot' },
       h('p', {}, 'Tous ces chiffres viennent du même calcul que les états financiers : un chiffre qui te surprend se corrige dans la page où il se saisit, et tout le pitch suit.'),
       h('div', { class: 'pitch-foot-go' },
-        h('button', { class: 'sy-btn is-accent is-sm', onClick: () => navigate('#/presentation') }, 'Présenter en plein écran'),
+        h('button', { class: 'sy-btn is-accent is-sm', onClick: () => { resetDeck(); navigate('#/presentation') } }, 'Présenter en plein écran'),
         h('button', { class: 'sy-btn is-line is-sm', onClick: () => goToGap({ route: 'resultats' }, navigate) }, 'Voir les états financiers'),
       ),
     ),
@@ -415,57 +430,6 @@ function fiche(lignes) {
 }
 
 /**
- * Tableau : la lecture financière.
- *
- * Chaque partie en métriques exactes — la valeur au plus près, sa période,
- * sa base de calcul — et le constat qui les résume, sans adjectif. Une tuile
- * s'ouvre au clic sur tout son contenu et se referme.
- *
- * Tout le pitch sur un écran, sur fond sombre : une tuile par partie, avec
- * son chiffre, sa courbe et le verdict en une ligne. Une tuile s'ouvre au
- * clic sur tout son contenu — le même que dans le récit — et se referme.
- */
-const tuilesOuvertes = new Set()
-function tableau(parties) {
-  return h('div', { class: 'pitch-bento pz-cockpit' },
-    ...parties.map((x, i) => {
-      const ouverte = tuilesOuvertes.has(x.cle)
-      const basculer = () => {
-        ouverte ? tuilesOuvertes.delete(x.cle) : tuilesOuvertes.add(x.cle)
-        const el = document.querySelector(`.pitch-tuile[data-partie="${x.cle}"]`)
-        if (el) el.replaceWith(tuile())
-      }
-      const tuile = () => {
-        const o = tuilesOuvertes.has(x.cle)
-        const ton = x.avis?.ton || 'good'
-        return h('article', {
-          class: `pitch-tuile ${o ? 'is-open' : ''}`, 'data-partie': x.cle,
-          style: { '--cols': String(o ? 12 : (x.tuile?.[0] || 6)), '--rows': String(o ? 1 : (x.tuile?.[1] || 1)), '--i': String(i) },
-        },
-          h('header', { class: 'pitch-tuile-head' },
-            h('b', {}, String(i + 1).padStart(2, '0')),
-            h('h3', {}, x.nom),
-            h('span', { class: `pz-ton is-${ton}` }, TONS[ton]),
-          ),
-          h('div', { class: 'pz-chiffre' },
-            h('b', { class: x.chiffre?.ton ? `is-${x.chiffre.ton}` : '' }, insecable(x.chiffre?.v ?? '—')),
-            h('span', {}, x.chiffre?.l || ''),
-          ),
-          x.mini ? h('div', { class: 'pz-dessin' }, x.mini()) : null,
-          h('p', { class: 'pz-verdict' }, insecable(x.constat || x.avis?.titre || '')),
-          fiche(x.fiche),
-          o ? h('div', { class: 'pitch-tuile-corps' },
-            h('p', { class: 'pitch-chapeau' }, insecable(x.recit)),
-            x.droite ? h('div', { class: 'pitch-tuile-droite' }, x.droite) : null, x.corps()) : null,
-          o ? conseil(x.avis, { court: true }) : null,
-          h('button', { class: 'pz-ouvrir', type: 'button', 'aria-expanded': String(o), onClick: basculer }, o ? 'Refermer' : 'Tout voir'),
-        )
-      }
-      return tuile()
-    }))
-}
-
-/**
  * Diapos : le deck qu'on présentera.
  *
  * Une idée par diapositive, au format d'un écran : le titre et la phrase en
@@ -587,7 +551,7 @@ function diapos(parties) {
  * pitch s'ouvre maintenant ainsi — et se joue quand on arrive dessus.
  */
 /** Ce que la couverture annonce : la forme qu'on lit, pas un lecteur. */
-const ACCROCHES = { recit: 'le projet expliqué', tableau: 'la lecture financière', diapos: 'l’essentiel à présenter' }
+const ACCROCHES = { recit: 'le projet expliqué', detail: 'le dossier complet', diapos: 'l’essentiel à présenter' }
 function couverture(s, r, navigate) {
   const nom = s.meta?.company || s.meta?.name || 'Ton projet'
   const phrase = String(s.meta?.pitch || '').trim()

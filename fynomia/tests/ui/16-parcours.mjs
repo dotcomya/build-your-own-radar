@@ -60,10 +60,12 @@ export default async function (t) {
     pieces: document.querySelectorAll('.rvl-piece').length,
   }))
   t.verifie(/Pizza/.test(rv.nom) && rv.barres === 5 && rv.courbe && rv.pieces === 5, 'la page montre le nom, cinq ans de chiffre d’affaires, la trésorerie et les pièces du dossier', rv)
+  const boutons = await p.locator('.rvl-go button').allInnerTexts()
+  t.verifie(boutons.length === 1 && /Continuer à structurer/.test(boutons[0]), 'la fin du parcours n’a qu’un bouton : « Continuer à structurer »', boutons)
   await p.locator('.rvl-cta').click()
   await p.waitForFunction(() => location.hash === '#/tableau-de-bord', null, { timeout: 4000 }).catch(() => {})
   await t.pose(p)
-  t.verifie(p.url().endsWith('#/tableau-de-bord') && await p.locator('.pitch').count() === 1, 'puis elle emmène au pitch investisseur')
+  t.verifie(p.url().endsWith('#/tableau-de-bord') && await p.locator('.pilote-dossier').count() === 1, '« Continuer à structurer » emmène au pilotage du dossier')
   await t.aller(p, 'ton-business')
   t.verifie(!p.url().includes('ton-business') && !(await p.locator('.rvl').count()), 'elle ne se revoit pas')
 

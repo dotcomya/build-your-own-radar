@@ -13,7 +13,7 @@ export default async function (t) {
   const p = await t.page('bureau')
   await t.exemple(p)
   await t.aller(p, 'tableau-de-bord')
-  await t.onglet(p, 'Pitch investisseur')
+  await t.onglet(p, 'Synthèse')
   await p.locator('.pitch-mise', { hasText: 'Récit' }).first().click()
   await t.pose(p)
   await t.defiler(p)

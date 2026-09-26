@@ -746,6 +746,13 @@ export async function exportPptx(scenario, result, profile) {
     { name: 'docProps/core.xml', data: coreProps(scenario, profile) },
     { name: 'ppt/presentation.xml', data: presentation(n) },
     { name: 'ppt/_rels/presentation.xml.rels', data: presentationRels(n) },
+    // PowerPoint refuse d'ouvrir un paquet sans propriétés de présentation :
+    // la norme (ECMA-376, partie 1, § 13.3.6) en exige exactement une.
+    // LibreOffice et Keynote s'en passaient, d'où un fichier qui s'ouvrait
+    // partout sauf là où on l'attendait.
+    { name: 'ppt/presProps.xml', data: PRES_PROPS },
+    { name: 'ppt/viewProps.xml', data: VIEW_PROPS },
+    { name: 'ppt/tableStyles.xml', data: TABLE_STYLES },
     { name: 'ppt/theme/theme1.xml', data: theme() },
     { name: 'ppt/slideMasters/slideMaster1.xml', data: slideMaster() },
     { name: 'ppt/slideMasters/_rels/slideMaster1.xml.rels', data: slideMasterRels() },
@@ -775,6 +782,9 @@ const contentTypes = (n) => `<?xml version="1.0" encoding="UTF-8" standalone="ye
 <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
 <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
 <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+<Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>
+<Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>
+<Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/>
 ${Array.from({ length: n }, (_, i) => `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
@@ -799,7 +809,25 @@ const presentationRels = (n) => `<?xml version="1.0" encoding="UTF-8" standalone
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
 ${Array.from({ length: n }, (_, i) => `<Relationship Id="rId${i + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`).join('')}
 <Relationship Id="rId${n + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+<Relationship Id="rId${n + 3}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps" Target="presProps.xml"/>
+<Relationship Id="rId${n + 4}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps" Target="viewProps.xml"/>
+<Relationship Id="rId${n + 5}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>
 </Relationships>`
+
+const NS_P = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+
+const PRES_PROPS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentationPr ${NS_P}/>`
+
+const VIEW_PROPS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:viewPr ${NS_P}><p:normalViewPr><p:restoredLeft sz="15620"/><p:restoredTop sz="94660"/></p:normalViewPr><p:gridSpacing cx="76200" cy="76200"/></p:viewPr>`
+
+const TABLE_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`
+
+// Les styles de texte du masque : PowerPoint les écrit toujours, et s'y
+// réfère quand une zone de texte n'en précise pas.
+const TX_STYLES = `<p:txStyles><p:titleStyle><a:lvl1pPr algn="l"><a:defRPr sz="4400" kern="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mj-lt"/><a:ea typeface="+mj-ea"/><a:cs typeface="+mj-cs"/></a:defRPr></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr marL="0" indent="0" algn="l"><a:buNone/><a:defRPr sz="2000" kern="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="+mn-cs"/></a:defRPr></a:lvl1pPr></p:bodyStyle><p:otherStyle><a:defPPr><a:defRPr lang="fr-FR"/></a:defPPr><a:lvl1pPr marL="0" algn="l"><a:defRPr sz="1800" kern="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="+mn-cs"/></a:defRPr></a:lvl1pPr></p:otherStyle></p:txStyles>`
 
 const slideRels = () => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -824,6 +852,7 @@ const slideMaster = () => `<?xml version="1.0" encoding="UTF-8" standalone="yes"
 <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
 ${EMPTY_TREE}${CLR_MAP}
 <p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>
+${TX_STYLES}
 </p:sldMaster>`
 
 const slideLayout = () => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

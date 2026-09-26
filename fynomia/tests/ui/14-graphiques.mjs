@@ -125,14 +125,15 @@ export default async function (t, { rapide } = {}) {
   await t.pose(p)
   t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, 'cliquer une barre choisit son exercice')
 
-  // L'exercice choisi suit sur les pages de saisie, qui ont leurs chiffres —
+  // Changer de page ramène à l'année 1 : on revenait sur une page en année 4
+  // sans s'en souvenir. Les pages de saisie ont leurs chiffres —
   // en bandeau d'une ligne partout : le titre à gauche, les chiffres, puis
   // l'exercice et « Détail », qui déplie les cartes.
   for (const route of ['offre', 'achats', 'equipe', 'financement']) {
     await t.aller(p, route)
     const n = await p.locator('.sx-ribbon-item').count()
     t.verifie(n >= 3, `${route} : la page montre ses chiffres en bandeau`, String(n))
-    t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A2' }).count() === 1, `${route} : l’exercice choisi a suivi`)
+    t.verifie(await p.locator('.sx-year.is-on', { hasText: 'A1' }).count() === 1, `${route} : la page s’ouvre en année 1`)
     const forme = await p.evaluate(() => {
       const r = document.querySelector('.sx-ribbon')
       const t = r?.querySelector('.sx-ribbon-title'), i = r?.querySelector('.sx-ribbon-item')
@@ -158,7 +159,7 @@ export default async function (t, { rapide } = {}) {
     t.verifie(!forme.reperes, `${route} : plus de section « Ce qu’il faut savoir ici »`)
   }
   // Les autres pages non plus : aucun titre de module ne porte de « i ».
-  for (const route of ['projet', 'tableau-de-bord', 'resultats', 'business-case', 'reglages']) {
+  for (const route of ['projet', 'tableau-de-bord', 'resultats', 'reglages']) {
     await t.aller(p, route)
     const titre = await p.locator('.module-title').count()
     t.verifie(titre === 1 && await p.locator('.module-top .info-point').count() === 0, `${route} : le titre de la page se suffit, sans « i »`)

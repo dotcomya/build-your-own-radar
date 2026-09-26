@@ -70,7 +70,7 @@ function changes(levers) {
 
 /* ─────────────────────────────── L'écran ────────────────────────────────── */
 
-export function renderSimulation(persona, refresh, navigate) {
+export function renderSimulation(refresh, navigate) {
   const s = store.scenario
   if (sandbox.forId !== s.meta.id) resetSandbox()
   sandbox.forId = s.meta.id

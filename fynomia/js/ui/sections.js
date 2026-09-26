@@ -13,7 +13,7 @@
 import { h, euro, pct, monthLabel } from './dom.js'
 import { hot, entree } from './charts.js'
 import { changed } from './motion.js'
-import { referenceYear } from '../format.js'
+import { aOublier } from './memoire.js'
 
 const n = (v) => Number(v) || 0
 
@@ -24,11 +24,14 @@ const n = (v) => Number(v) || 0
  * l'équipe de l'année 3 : un fondateur qui compare ne veut pas rechoisir
  * l'exercice à chaque page.
  */
+// …mais seulement sur la page où on l'a choisi. Changer de page ramène à
+// l'année 1 : revenir sur une page en année 4 sans s'en souvenir égarait.
 const lecture = { an: null }
-export function anneeLue(r) {
-  return Number.isInteger(lecture.an) && lecture.an >= 0 && lecture.an < 5 ? lecture.an : referenceYear(r)
+export function anneeLue() {
+  return Number.isInteger(lecture.an) && lecture.an >= 0 && lecture.an < 5 ? lecture.an : 0
 }
 export function lireAnnee(k) { lecture.an = k }
+aOublier(() => { lecture.an = null })
 
 /** Un montant en euros : abrégé en grand au-delà de cent mille, exact dessous. */
 export const EUROS = (v) => ({ court: euro(v, { compact: Math.abs(v) >= 100000 }), exact: euro(v) })

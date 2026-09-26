@@ -19,8 +19,8 @@ export const nom = 'Cohérence — un changement se lit partout, rien de périm�
 
 /** Les écrans où se lisent les chiffres du plan. */
 const ECRANS = [
-  ['tableau-de-bord', 'Synthèse'], ['tableau-de-bord', 'Pitch investisseur', 'Récit'], ['tableau-de-bord', 'Pitch investisseur', 'Tableau'],
-  ['resultats', 'Compte de résultat'], ['resultats', 'Trésorerie'], ['business-case'],
+  ['tableau-de-bord', 'Synthèse', 'Récit'], ['tableau-de-bord', 'Synthèse', 'Diapos'],
+  ['resultats', 'Compte de résultat'], ['resultats', 'Trésorerie'], ['financement'],
 ]
 
 /** Les montants qui comptent, au format de l'écran. */
@@ -151,7 +151,10 @@ export default async function (t) {
   await offre(t, p, 'Paramètres de base')
   await taper(p, champ(p, ABO), '59')
   await t.pose(p)
+  // Le tableau de bord se rouvre sur son premier onglet : on revient à la
+  // simulation, qui a gardé son bac à sable.
   await t.aller(p, 'tableau-de-bord')
+  await t.onglet(p, 'Simulation')
   const bac = await p.evaluate(() => ({
     note: document.querySelector('.sim-pending-note')?.textContent || '',
     marques: [...document.querySelectorAll('.knob-mark b')].map((x) => x.textContent),

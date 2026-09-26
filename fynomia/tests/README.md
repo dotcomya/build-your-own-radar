@@ -57,6 +57,8 @@ Chromium de Playwright dans `/opt/pw-browsers` ou `~/.cache/ms-playwright`.
 | `28-impayes` | un taux d'impayés saisi sur l'offre passe en pertes sur créances : sous l'EBE, dans l'EBITDA ; le compte de résultat le montre et dit ce qui sépare les deux ; la cascade du récit tombe sur le résultat net |
 | `29-saisonnalite` | un profil de saisonnalité d'un clic répartit les ventes sans changer le total ; un mois se règle à la main, « Aucune » ramène à plat ; passer en saisie mois par mois garde le chiffre d'affaires, et la grille commence au mois de démarrage |
 | `30-offre-suggeree` | une offre suggérée par le métier s'ajoute, sa carte s'ouvre seule, et le reflet se pose sur elle — pas sur la première offre de la liste |
+| `31-powerpoint` | le PowerPoint se télécharge juste à côté de « Diapos » ; le paquet porte toutes les parties d'un fichier PowerPoint (propriétés de présentation comprises), chaque relation mène à une partie qui existe, chaque partie a son type |
+| `32-retour` | changer de page repart de zéro : l'année 1, le premier onglet, le détail des bandeaux replié ; le tableau de bord revient sur la synthèse et le récit |
 
 ## Options
 

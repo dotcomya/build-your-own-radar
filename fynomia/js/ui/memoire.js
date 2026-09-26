@@ -9,6 +9,11 @@
  *
  * Rien n'est enregistré : elle dure le temps de la session, comme avant. Une
  * clé absente vaut « pas encore choisi » ; chaque page applique son défaut.
+ *
+ * Elle ne dure plus d'une page à l'autre. On revenait sur une page dans l'état
+ * où on l'avait laissée — troisième onglet, année 4, détail déplié — et l'on
+ * ne savait plus où l'on était. Quitter une page l'oublie : on y revient sur
+ * son premier onglet, replié, en année 1 (voir quitterPage).
  */
 export const memoire = {
   /** Les volets « affiner », sur toutes les pages : ceux qui sont ouverts (Set). */
@@ -33,4 +38,25 @@ export const memoire = {
   modele: {},
   /** États financiers : onglet, exercice, trésorerie annuelle ou mensuelle. */
   resultats: {},
+}
+
+/** Ce que chaque page retient, pour l'oublier quand on la quitte. */
+const PAR_PAGE = {
+  projet: ['modele'],
+  offre: ['offre', 'acquisition'],
+  achats: ['achats'],
+  equipe: ['equipe', 'coutPoste'],
+  financement: ['financement'],
+  'tableau-de-bord': ['tableau', 'indicateurs'],
+  resultats: ['resultats'],
+}
+const oublis = []
+
+/** Une page qui veut, elle aussi, oublier quelque chose en partant. */
+export function aOublier(fn) { oublis.push(fn) }
+
+/** On quitte `route` : elle repartira de son premier onglet, tout replié. */
+export function quitterPage(route) {
+  for (const k of PAR_PAGE[route] || []) for (const c of Object.keys(memoire[k])) delete memoire[k][c]
+  for (const fn of oublis) fn(route)
 }

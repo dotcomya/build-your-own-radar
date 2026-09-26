@@ -111,8 +111,11 @@ export default async function (t) {
   t.verifie(/vérifier/i.test(mot), 'le verdict dit « À vérifier »', mot.slice(0, 120))
 
   await t.onglet(q, 'Synthèse')
-  t.verifie(await q.locator('.plain .garde').count() === 1, 'la synthèse d’origine dit la même chose')
-  t.verifie(!(await q.locator('.plaincard.is-good').count()), 'la synthèse d’origine ne colore rien en succès')
+  await q.locator('.pitch-mise', { hasText: 'Récit' }).first().click()
+  await q.locator('.pitch-mise.is-on', { hasText: 'Récit' }).first().waitFor()
+  await t.pose(q)
+  t.verifie(await q.locator('.pitch .garde').count() === 1, 'le récit dit la même chose')
+  t.verifie(!(await q.locator('.pitch .as .is-good').count()), 'le récit ne colore rien en succès')
 
   // 5. « Corriger » ramène sur le champ.
   await t.onglet(q, 'Synthèse — essai')

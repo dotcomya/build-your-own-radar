@@ -15,7 +15,7 @@ export default async function (t, { rapide } = {}) {
   const p = await t.page('bureau')
   await t.exemple(p)
   await t.aller(p, 'tableau-de-bord')
-  await t.onglet(p, 'Pitch investisseur')
+  await t.onglet(p, 'Synthèse')
 
   // « Récit » (par défaut) : le projet expliqué en neuf chapitres, dans
   // l'ordre où on le demande — d'abord ce que tout le monde veut savoir, puis
@@ -91,28 +91,10 @@ export default async function (t, { rapide } = {}) {
   // Sans phrase d'accroche, la couverture le dit et y emmène.
   t.verifie(await p.locator('.pitch-cover .pitch-manque').count() === 1, 'sans description, la couverture propose de l’écrire')
 
-  // Tableau : en clair, huit tuiles.
-  await p.locator('.pitch-mise', { hasText: 'Tableau' }).click()
-  await p.locator('.pitch-mise.is-on', { hasText: 'Tableau' }).waitFor({ timeout: 3000 }).catch(() => {})
-  await t.pose(p)
-  const tuiles = await p.$$eval('.pz-cockpit .pitch-tuile', (e) => e.map((x) => ({
-    chiffre: (x.querySelector('.pz-chiffre b')?.textContent || '').trim(),
-    verdict: (x.querySelector('.pz-verdict')?.textContent || '').trim(),
-    ton: !!x.querySelector('.pz-ton'),
-    fond: getComputedStyle(x).backgroundColor,
-  })))
-  t.verifie(tuiles.length === 8 && tuiles.every((x) => x.chiffre && x.verdict && x.ton), 'tableau : huit tuiles, chacune avec son chiffre, son verdict et son ton', tuiles.length)
-  t.verifie(tuiles.every((x) => x.fond === 'rgb(255, 255, 255)'), 'tableau : des tuiles claires, plus de noir partout', tuiles.map((x) => x.fond))
-  await p.locator('.pz-cockpit .pz-ouvrir').nth(2).click()
-  await p.locator('.pz-cockpit .pitch-tuile.is-open').first().waitFor({ timeout: 3000 }).catch(() => {})
-  await t.pose(p)
-  t.verifie(await p.locator('.pz-cockpit .pitch-tuile.is-open .pitch-avis').count() === 1 && await p.locator('.pz-cockpit .pitch-tuile.is-open .sx-card').count() >= 1, 'tableau : une tuile s’ouvre sur tout son contenu, avis compris')
-  const avant = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText()
-  await p.locator('.pitch-tuile.is-open .sx-year', { hasText: 'A4' }).first().click()
-  await p.locator('.pitch-tuile.is-open .sx-year.is-on', { hasText: 'A4' }).first().waitFor({ timeout: 3000 }).catch(() => {})
-  await t.pose(p)
-  const apres = await p.locator('.pitch-tuile.is-open .sx-card .sx-big-val').first().innerText().catch(() => avant)
-  t.verifie(avant !== apres, 'choisir A4 change les chiffres affichés', `${avant} → ${apres}`)
+  // « Tableau » est retiré : sa lecture financière vit dans les états
+  // financiers et dans « En détail ».
+  const mises = await p.locator('.pitch-mise b').allTextContents()
+  t.verifie(JSON.stringify(mises) === JSON.stringify(['Récit', 'En détail', 'Diapos']), 'trois lectures : récit, détail, diapos — plus de « Tableau »', mises)
 
   // Diapos : blanches, et quatre intercalaires sombres entre les parties.
   await p.locator('.pitch-mise', { hasText: 'Diapos' }).click()

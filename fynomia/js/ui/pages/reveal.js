@@ -19,7 +19,7 @@ import { h, euro, num } from '../dom.js'
 import { barres, courbe, compter } from '../vitrine.js'
 import { uniteOffre } from '../../state/sectors.js'
 import { checklist, parAxe } from '../checklist.js'
-import { openPitch, openPilotage } from './dashboard.js'
+import { openPilotage } from './dashboard.js'
 import store from '../../state/store.js'
 
 const n = (v) => Number(v) || 0
@@ -75,7 +75,7 @@ export function renderReveal(navigate) {
     h('div', { class: 'rvl-glow', 'aria-hidden': 'true' }),
     h('header', { class: 'rvl-top' },
       h('span', { class: 'rvl-brand' }, 'Fynomia'),
-      h('button', { class: 'rvl-skip', onClick: () => partir(openPitch) }, 'Passer →'),
+      h('button', { class: 'rvl-skip', onClick: () => partir(openPilotage) }, 'Passer →'),
     ),
     h('main', { class: 'rvl-main' },
       h('p', { class: 'rvl-kicker', style: { '--d': '0s' } }, 'Ton business plan prend forme'),
@@ -112,9 +112,10 @@ export function renderReveal(navigate) {
         ),
       ),
 
+      // Un seul geste à la fin du parcours : continuer. Le pilotage dit
+      // ensuite quoi structurer, pièce par pièce.
       h('div', { class: 'rvl-go', style: { '--d': '4.3s' } },
-        h('button', { class: 'rvl-cta', onClick: () => partir(openPitch) }, 'Voir ce qu’un investisseur en retiendra →'),
-        h('button', { class: 'rvl-ghost', onClick: () => partir(openPilotage) }, 'Compléter mon dossier d’abord'),
+        h('button', { class: 'rvl-cta', onClick: () => partir(openPilotage) }, 'Continuer à structurer →'),
       ),
     ),
   )

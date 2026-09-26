@@ -31,8 +31,8 @@ const SHELL = [
   './js/ui/pages/costs.js',
   './js/ui/pages/financing.js',
   './js/ui/pages/results.js',
-  './js/ui/pages/businesscase.js',
   './js/ui/pages/settings.js',
+  './js/export/fichiers.js',
   './js/export/pptx.js',
   './js/export/zip.js',
 ]

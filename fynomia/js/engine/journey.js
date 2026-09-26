@@ -223,7 +223,7 @@ export const STEPS = [
   {
     key: 'dossier',
     act: 'plus',
-    page: 'business-case',
+    page: 'tableau-de-bord',
     label: 'Mon dossier',
     question: 'Prêt à le présenter ?',
     promise: "La synthèse rédigée à partir de tes chiffres, et le PowerPoint qui dit exactement la même chose que ton écran.",

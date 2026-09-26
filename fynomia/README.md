@@ -60,12 +60,6 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   ce que tu vends, à quel prix, ce que ça te coûte, et si l'argent revient une
   fois ou tous les mois — et répond immédiatement à la seule question qui compte
   à ce stade : combien de clients il faut pour couvrir les charges.
-- **Des micro-tutos partout.** Chaque étape porte ce qu'un fondateur seul face à
-  son tableur n'a pas : la question qu'on lui posera, l'erreur que tout le monde
-  fait, et l'ordre de grandeur qui sépare un chiffre crédible d'un chiffre
-  inventé. « Un salaire brut coûte 1,25 à 1,45 fois plus. » « 10 % de croissance
-  mensuelle triple les volumes en un an. » « Une banque prête rarement plus que
-  les fonds propres. »
 
 - **Quinze types d'activité.** Logiciel, développeur indépendant, conseil,
   avocat, cabinet médical, kinésithérapie, dentaire, restaurant, e-commerce,
@@ -138,8 +132,9 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   chaque notion s'ouvre sur une fiche qui dit ce que c'est, comment Fynomia la
   calcule, à quoi elle sert, et rappelle la valeur du scénario en cours.
 - **Exports.** Une présentation PowerPoint d'une douzaine de diapositives prête
-  à présenter, le prévisionnel complet en CSV, et une sauvegarde JSON du
-  scénario. Le document dit exactement ce que dit l'écran, parce qu'il lit les
+  à présenter, téléchargée à côté des diapos dans la synthèse ; le prévisionnel
+  complet en CSV, depuis les états financiers ; une sauvegarde JSON du scénario,
+  depuis les réglages. Le document dit exactement ce que dit l'écran, parce qu'il lit les
   mêmes fonctions : il s'ouvre sur le verdict, pose les mêmes repères sur la
   même courbe de trésorerie, chiffre les mêmes actions et se termine sur ce que
   touche le dirigeant. Le fichier est écrit sans bibliothèque : un .pptx est une

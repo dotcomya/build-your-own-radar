@@ -148,7 +148,7 @@ export function outils(browser, base, journal) {
   async function onglet(p, texte) {
     // La synthèse essai vit désormais dans le pitch, sous « En détail ».
     if (/essai/i.test(texte)) {
-      await p.locator('.module-nav .hnav-tab', { hasText: 'Pitch' }).first().click()
+      await p.locator('.module-nav .hnav-tab', { hasText: 'Synthèse' }).first().click()
       await p.locator('.pitch-mise', { hasText: 'En détail' }).first().click()
       await p.locator('.pitch-mise.is-on', { hasText: 'En détail' }).first().waitFor()
       await pose(p)
@@ -231,4 +231,4 @@ export async function debordements(p, selecteurs = '.metric-value,.kpi-value,.fi
 /** Les métiers et les pages sur lesquels on rejoue tout. */
 export const METIERS = ['Pizzeria', 'Cabinet de conseil', 'Médecin généraliste', 'Restaurant', 'E-commerce', 'Association', 'Dentiste',
   'Salon de coiffure', 'Glacier', 'Spa / Centre de bien-être', 'Location Airbnb', 'Boulangerie', 'Plombier', 'Aide à domicile']
-export const PAGES = ['projet', 'offre', 'achats', 'equipe', 'financement', 'tableau-de-bord', 'resultats', 'business-case', 'reglages']
+export const PAGES = ['projet', 'offre', 'achats', 'equipe', 'financement', 'tableau-de-bord', 'resultats', 'reglages']

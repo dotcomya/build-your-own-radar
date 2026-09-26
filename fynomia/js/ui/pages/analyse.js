@@ -53,11 +53,12 @@ const RE_FONDATEUR = new RegExp('fondat|dirigeant|gérant|président|associé', 
 /* ─────────────────────────────── Les pièces ─────────────────────────────── */
 
 /** Un chiffre de premier niveau : l'intitulé, la valeur, une note courte — souvent la définition. */
-function chiffre(c) {
+function chiffre(c, doute = false) {
   if (!c) return null
+  const ton = c.ton === 'good' && doute ? null : c.ton
   return h('div', { class: 'as-chiffre' },
     h('span', { class: 'as-chiffre-l' }, c.l),
-    h('b', { class: `as-chiffre-v ${c.ton ? `is-${c.ton}` : ''}` }, c.v),
+    h('b', { class: `as-chiffre-v ${ton ? `is-${ton}` : ''}` }, c.v),
     c.note ? h('small', { class: 'as-chiffre-n' }, c.note) : null,
   )
 }
@@ -94,6 +95,7 @@ export function tableau(tetes, lignes) {
 }
 const tetesAns = (premier) => [premier, 'Année 1', 'Année 2', 'Année 3', 'Année 4', 'Année 5']
 
+let doute = false
 function chapitre({ no, titre, sousTitre, rupture = null, conclusion, repere = null, chiffres = [], dessin = null, clair = [], plus = null }) {
   return h('section', { class: 'as-chap', 'data-chapitre': String(no), id: `as-chap-${no}` },
     rupture ? h('p', { class: 'as-rupture' }, rupture) : null,
@@ -105,7 +107,7 @@ function chapitre({ no, titre, sousTitre, rupture = null, conclusion, repere = n
     h('p', { class: 'as-conclusion' }, conclusion),
     chiffres.filter(Boolean).length ? h('div', { class: 'as-chiffres-bloc' },
       repere ? h('span', { class: 'as-repere' }, repere) : null,
-      h('div', { class: 'as-chiffres' }, ...chiffres.filter(Boolean).slice(0, 4).map(chiffre)),
+      h('div', { class: 'as-chiffres' }, ...chiffres.filter(Boolean).slice(0, 4).map((c) => chiffre(c, doute))),
     ) : null,
     dessin ? h('div', { class: 'as-dessin' }, dessin) : null,
     clair.filter(Boolean).length ? h('p', { class: 'as-clair' }, ...phrases(clair)) : null,
@@ -425,7 +427,8 @@ export function lignesDeCouts(s, r, an) {
 
 /* ─────────────────────────────── Le récit ─────────────────────────────── */
 
-export function analyseStrategique(s, r, navigate, { source = null } = {}) {
+export function analyseStrategique(s, r, navigate, { source = null, doute: garde = false } = {}) {
+  doute = garde
   const p = r.pnl, k = r.kpis
   const debut = r.startDate
   const bm = SECTORS[s.meta?.sectorKey]?.benchmarks || {}

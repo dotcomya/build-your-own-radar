@@ -4,7 +4,7 @@
  * Un restaurant emprunte 90 000 €. On vérifie que le dossier dit ce que le
  * banquier recalculera lui-même, avec l'échéancier réel :
  *
- *   1. le dossier du banquier parle d'EBE ; les états financiers donnent
+ *   1. le plan de financement parle d'EBE ; les états financiers donnent
  *      l'EBE puis l'EBITDA, chacun par son calcul — l'un par le haut, depuis
  *      la valeur ajoutée, l'autre par le bas, depuis le résultat
  *      d'exploitation — et chacun avec sa définition ;
@@ -62,9 +62,9 @@ export default async function (t) {
   t.verifie(differe.grace === 6 && differe.capital === 0 && differe.interets && differe.apres && /Différé de 6 mois/.test(resume),
     'six mois sans capital, les intérêts payés, puis l’échéancier démarre — et la note le dit', { differe, resume: resume.slice(0, 120) })
 
-  await t.aller(p, 'business-case')
-  const texte = await p.locator('.content').innerText()
-  t.verifie(!/EBITDA/.test(texte) && /EBE/.test(texte), 'le business case parle d’EBE, pas d’EBITDA')
+  // Le Business case retiré, le bloc du banquier se lit dans Financement :
+  // les vérifications sous les sources, le tableau dans le plan de financement.
+  await t.aller(p, 'financement')
   const bk = p.locator('[data-banquier]').first()
   t.verifie(await bk.count() === 1, 'le bloc « Ce que ton banquier va vérifier » est là')
   const lignes = await bk.locator('.bk-ligne').evaluateAll((els) => els.map((e) => ({ cle: e.dataset.cle, etat: e.querySelector('.bk-etat')?.textContent, valeur: e.querySelector('.bk-valeur')?.textContent })))
@@ -84,11 +84,14 @@ export default async function (t) {
   t.verifie(Math.abs(calc.cap - calc.echeancier) < 1 && Math.abs(calc.cap - calc.septieme) > 100, 'le capital remboursé vient de l’échéancier, pas de la dette divisée par sept', calc)
   t.verifie(Math.abs(calc.caf - (calc.net + calc.amort)) < 1 && Math.abs(calc.ratio - calc.caf / calc.cap) < 0.001, 'capacité d’autofinancement = résultat net + amortissements, couverture = capacité ÷ capital', calc)
 
+  await t.onglet(p, 'Plan de financement')
+  const texte = await p.locator('.content').innerText()
+  t.verifie(!/EBITDA/.test(texte) && /EBE/.test(texte), 'le plan de financement parle d’EBE, pas d’EBITDA')
   const tableau = await p.locator('.bk-table').first().innerText().catch(() => '')
   t.verifie(/Capacité d.autofinancement/.test(tableau) && !/\bCAF\b/.test(tableau) && /Échéances de prêt/.test(tableau) && /Couverture/.test(tableau) && /Dette bancaire restante/.test(tableau), 'le tableau du banquier donne EBE, capacité d’autofinancement (jamais « CAF »), échéances, couverture, dette', tableau.slice(0, 160))
 
   // Le financement : le même bloc, là où l'on règle l'apport et le prêt.
-  await t.aller(p, 'financement')
+  await t.onglet(p, 'Sources')
   t.verifie(await p.locator('[data-banquier]').count() === 1, 'le bloc se lit aussi dans Financement')
   const avant = await p.evaluate(async () => (await import('./js/state/store.js')).default.result.bank.apportShare)
   await p.locator('.source', { hasText: 'Prêt d’honneur' }).or(p.locator('.source', { hasText: "Prêt d'honneur" })).first().locator('.source-act').click()

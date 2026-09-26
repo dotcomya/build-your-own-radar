@@ -41,7 +41,7 @@ export const STAGES = [
     says: "Ton modèle existe. Ce qui manque, c'est ce qu'un lecteur extérieur vérifiera : ton coût de revient, tes charges, ta rémunération.",
     lift: ['cout', 'salaire', 'charges', 'acquisition', 'pitch'],
     goLabel: 'Voir mon business plan',
-    go: { route: 'business-case' },
+    go: { route: 'tableau-de-bord' },
   },
   {
     key: 'demarches',

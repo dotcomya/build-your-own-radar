@@ -14,7 +14,7 @@ export function renderSettings(navigate, refresh) {
 
   return h('div', { class: 'content' },
     moduleShell({
-      no: '09', title: 'Réglages',
+      no: '08', title: 'Réglages',
     }),
 
     h('div', { class: 'card mb' },
