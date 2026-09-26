@@ -24,6 +24,7 @@ import { newOpex, newCapex, newActivity } from '../state/schema.js'
 import { tradeFor, chargeShape } from '../state/trade.js'
 import { getSector, vocabulary, tradeName } from '../state/sectors.js'
 import { goToGap } from './spotlight.js'
+import { aOublier } from './memoire.js'
 import { celebrate } from './burst.js'
 import { focusOffer } from './pages/offer.js'
 import store from '../state/store.js'
@@ -55,35 +56,88 @@ export function tradeSuggest(kind, navigate, refresh) {
   // Tout est posé : le bloc n'a plus rien à dire, il s'efface.
   if (!items.length) return null
 
-  // Une rangée de pastilles, en tête de page.
+  // Un titre, un compteur, trois pastilles — puis « +3 ».
   //
-  // C'était une carte : un en-tête, un glyphe, un sous-titre de métier, puis
-  // des lignes à trois étages. Elle pesait autant qu'une offre alors qu'elle ne
-  // fait que proposer. Ce qui reste est le geste — le nom, ce qu'il rapporte,
-  // un « + » — sur une ligne qui se survole et se clique sans réfléchir.
-  return h('section', { class: `tradetip is-${kind}`, 'data-gap': `metier-${kind}` },
-    h('div', { class: 'tradetip-kicker' },
-      h('span', { class: 'tradetip-spark', 'aria-hidden': 'true' }, sector.glyph),
-      `Suggestions rapides à intégrer — ${tradeName(s)}`,
+  // Les pastilles disaient leur montant à côté du nom, sur toute la largeur :
+  // six ou huit propositions faisaient deux lignes serrées qu'on lisait comme
+  // une liste de prix. On nomme le métier, on compte ce qui est proposé, on en
+  // montre trois ; le montant est dans l'infobulle, et le reste se déplie.
+  const tout = deplies.has(kind)
+  const caches = Math.max(0, items.length - VISIBLES)
+  const bloc = h('section', { class: `tradetip is-${kind}${tout ? ' is-all' : ''}`, 'data-gap': `metier-${kind}` },
+    h('div', { class: 'tradetip-head' },
+      h('h3', { class: 'tradetip-title' }, pourLeMetier(s, sector)),
+      h('span', { class: 'tradetip-count num' }, `${items.length} disponible${items.length > 1 ? 's' : ''}`),
+      caches ? h('button', { class: 'tradetip-all', type: 'button', 'aria-expanded': String(tout), onClick: () => deplier() },
+        tout ? 'Voir moins' : 'Voir toutes les suggestions') : null,
     ),
 
     h('div', { class: 'tradetip-items' },
-      ...items.map((it) => h('button', {
-        class: 'tradetip-item',
-        title: it.why || it.note || 'Ajouter au modèle',
-        onClick: (e) => added(kind, it, vocab, navigate, refresh, e.currentTarget.getBoundingClientRect()),
-      },
-        h('span', { class: 'tradetip-plus', 'aria-hidden': 'true', html: PLUS }),
-        h('span', { class: 'tradetip-label' }, it.label),
-        h('span', { class: 'tradetip-amount num' }, amountOf(kind, it, vocab)),
-      )),
+      ...items.map((it, i) => {
+        const montant = amountOf(kind, it, vocab)
+        return h('button', {
+          class: `tradetip-item${i >= VISIBLES ? ' is-extra' : ''}`,
+          type: 'button',
+          title: [montant, it.why || it.note].filter(Boolean).join(' — '),
+          'aria-label': `Ajouter ${it.label} : ${montant}`,
+          onClick: (e) => added(kind, it, vocab, navigate, refresh, e.currentTarget.getBoundingClientRect()),
+        },
+          h('span', { class: 'tradetip-plus', 'aria-hidden': 'true', html: PLUS }),
+          h('span', { class: 'tradetip-label' }, it.label),
+        )
+      }),
+      caches ? h('button', { class: 'tradetip-more num', type: 'button', title: `Voir les ${caches} autres suggestions`, onClick: () => deplier(true) }, `+${caches}`) : null,
     ),
-
-    // Une phrase de métier suivait les pastilles (« matière plus personnel
-    // sous 65 % », « compte tes jours facturables »…). Elle a été retirée :
-    // des généralités qu'on lit une fois, qui n'aident à rien saisir, sous un
-    // bloc dont le seul rôle est d'ajouter une ligne en un clic.
   )
+  // Déplier se fait sur place : la page ne se redessine pas, et le choix tient
+  // jusqu'au changement de page — une suggestion ajoutée ne referme pas la liste.
+  const deplier = (ouvrir = !bloc.classList.contains('is-all')) => {
+    if (ouvrir) deplies.add(kind); else deplies.delete(kind)
+    bloc.classList.toggle('is-all', ouvrir)
+    const lien = bloc.querySelector('.tradetip-all')
+    if (lien) { lien.textContent = ouvrir ? 'Voir moins' : 'Voir toutes les suggestions'; lien.setAttribute('aria-expanded', String(ouvrir)) }
+  }
+  return bloc
+}
+
+/* ───────────────────────── Le titre du bloc ─────────────────────────────── */
+
+/** Trois pastilles d'abord ; les autres derrière « +N ». */
+const VISIBLES = 3
+/** Les natures dépliées, oubliées au changement de page. */
+const deplies = new Set()
+aOublier(() => deplies.clear())
+
+/*
+ * « Suggestions pour un glacier », « pour une pizzeria ».
+ *
+ * Le métier vient du catalogue ou du modèle économique : on connaît son
+ * premier mot, donc son genre. Les métiers au féminin sont listés ici ; les
+ * autres sont au masculin. Un métier tapé à la main, un pluriel (« Cours
+ * particuliers ») ou une activité plutôt qu'un établissement (« Nettoyage
+ * professionnel ») ne prennent pas d'article : le titre les cite tels quels.
+ */
+const FEMININS = new Set(['agence', 'animalerie', 'application', 'association', 'auberge', 'auto-ecole', 'bijouterie', 'boucherie',
+  'boulangerie', 'boutique', 'box', 'brasserie', 'cantine', 'chambre', 'chocolaterie', 'conciergerie', 'creperie', 'dark',
+  'ecole', 'epicerie', 'extension', 'fromagerie', 'librairie', 'location', 'marketplace', 'onglerie', 'papeterie', 'pizzeria',
+  'poissonnerie', 'patisserie', 'sage-femme', 'salle', 'superette'])
+const SANS_ARTICLE = new Set(['a', 'affiliation', 'aide', 'assistance', 'batiment', 'beaute', 'chaussures', 'coaching', 'cours',
+  'cybersecurite', 'data', 'decoration', 'digital', 'dropshipping', 'formation', 'garde', 'infogerance', 'infoproduit', 'isolation',
+  'jardinage', 'massage', 'menage', 'nettoyage', 'renovation', 'restauration', 'revente', 'sante', 'seconde', 'securite', 'services',
+  'sport', 'terrassement', 'toilettage', 'travaux'])
+
+// Construites depuis des chaînes : l'apostrophe typographique et les capitales
+// accentuées ne doivent pas entrer telles quelles dans un littéral.
+const ESPACE = new RegExp("[\\s\\u2019']")
+const SIGLE = new RegExp('^[A-Z\\u00C0-\\u00DD]{2}')
+
+function pourLeMetier(s, sector) {
+  const nom = String(tradeName(s) || sector.label || '').split(' / ')[0].trim()
+  const premier = norm(nom.split(ESPACE)[0]).replace(/ /g, '-')
+  if (!nom || s.meta?.customActivity || SANS_ARTICLE.has(premier)) return nom ? `Suggestions — ${nom}` : 'Suggestions'
+  // La minuscule, sauf pour un sigle ou un nom propre écrit en capitales.
+  const dit = SIGLE.test(nom) ? nom : nom.charAt(0).toLowerCase() + nom.slice(1)
+  return `Suggestions pour ${FEMININS.has(premier) ? 'une' : 'un'} ${dit}`
 }
 
 /* ───────────────────────── Ce qui est déjà posé ─────────────────────────── */

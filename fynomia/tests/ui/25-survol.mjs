@@ -33,7 +33,9 @@ export default async function (t) {
 
   /** Survoler une zone et lire l'infobulle : sa tête, puis ses lignes. */
   async function lire(zone) {
-    await zone.scrollIntoViewIfNeeded()
+    // Au centre de l'écran : ni sous l'en-tête collant, ni sous la carte
+    // flottante du coin inférieur.
+    await zone.evaluate((e) => e.scrollIntoView({ block: 'center' }))
     await zone.hover({ force: true })
     await p.locator('.ctip.is-on').waitFor({ timeout: 2000 }).catch(() => {})
     return p.evaluate(() => {
@@ -65,13 +67,22 @@ export default async function (t) {
   t.verifie(treso.every((b, i) => bien(b) && b.tete.includes(attendu.mois[mois[i]]) && b.lignes[0][1] === attendu.treso[mois[i]]),
     'chaque mois : sa date, la trésorerie exacte en fin de mois', treso.map((b) => b && `${b.tete} ${b.lignes[0]?.join(' ')}`))
 
-  // La trajectoire du chiffre d'affaires (chapitre 1).
-  const traj = p.locator('.as-chap[data-chapitre="1"] .as-dessin .chart').first().locator('.chart-hot')
+  // Une scène à la fois : on ouvre celle qu'on survole.
+  const scene = async (no) => {
+    await p.locator('.as-etape').nth(no - 1).click()
+    await p.locator(`.as-scene.is-on[data-chapitre="${no}"]`).waitFor({ timeout: 3000 })
+    await t.pose(p)
+  }
+
+  // La trajectoire du chiffre d'affaires (scène 1).
+  await scene(1)
+  const traj = p.locator('.as-chap[data-chapitre="1"] .as-scene-dessin .chart').first().locator('.chart-hot')
   const a3 = await lire(traj.nth(2))
   t.verifie(bien(a3) && a3.tete.includes('Année 3') && a3.lignes.some(([l, v]) => /Chiffre/.test(l) && v === attendu.ca[2]),
     'la trajectoire : l’année 3 et son chiffre d’affaires exact', a3)
 
-  // La cascade du résultat (chapitre 2) : chaque étape, son montant exact.
+  // La cascade du résultat (scène 2) : chaque étape, son montant exact.
+  await scene(2)
   const etapes = p.locator('.as-chap[data-chapitre="2"] .as-cascade-l')
   const ne = await etapes.count()
   const derniere = ne ? await lire(etapes.nth(ne - 1)) : null
@@ -79,8 +90,9 @@ export default async function (t) {
   t.verifie(ne >= 5 && bien(premiere) && premiere.lignes[0][1] === attendu.ca[0] && bien(derniere) && /Résultat net/.test(derniere.lignes[0][0]) && derniere.lignes[0][1] === attendu.net[0],
     'la cascade : du chiffre d’affaires au résultat net, montants exacts', { premiere, derniere })
 
-  // La trésorerie (chapitre 7) : un mois par zone, le solde exact.
-  const j = p.locator('.as-chap[data-chapitre="7"] > .as-dessin svg.as-j .chart-hot')
+  // La trésorerie (scène 7) : un mois par zone, le solde exact.
+  await scene(7)
+  const j = p.locator('.as-chap[data-chapitre="7"] .as-scene-dessin svg.as-j .chart-hot')
   const nj = await j.count()
   const j0 = nj ? await lire(j.nth(0)) : null
   const jn = nj ? await lire(j.nth(nj - 1)) : null
@@ -88,13 +100,17 @@ export default async function (t) {
     && /Trésorerie/.test(j0.lignes[0][0]) && j0.lignes[0][1] === attendu.treso[0] && jn.lignes[0][1] === attendu.treso[nj - 1],
     'la trésorerie : chaque mois de la fenêtre, sa date et son solde exact', { nj, j0, jn })
 
-  // Chaque barre visible des chapitres ; le détail replié attend qu'on l'ouvre.
-  const barres = p.locator('.as-chap .as-barre:visible')
-  const nb = await barres.count()
+  // Chaque barre des scènes qui en portent : les offres, les coûts, les hypothèses.
   const lues = []
-  for (let i = 0; i < nb; i++) lues.push(await lire(barres.nth(i)))
+  for (const no of [3, 6, 9]) {
+    await scene(no)
+    const barres = p.locator('.as-scene.is-on .as-barre')
+    const n = await barres.count()
+    for (let i = 0; i < n; i++) lues.push(await lire(barres.nth(i)))
+  }
+  const nb = lues.length
   const muettes = lues.map((b, i) => (bien(b) ? null : i)).filter((x) => x !== null)
-  t.verifie(nb >= 10 && muettes.length === 0, 'chaque barre des chapitres a son infobulle : période, intitulé, valeur', { nb, muettes })
+  t.verifie(nb >= 10 && muettes.length === 0, 'chaque barre des scènes a son infobulle : période, intitulé, valeur', { nb, muettes })
   t.verifie(lues.every((b) => !b || /\d{2}/.test(b.tete) || /Année|mois|M\d/.test(b.tete)), 'chaque infobulle nomme sa période', lues.map((b) => b?.tete))
 
   // Quitter la zone éteint l'infobulle.

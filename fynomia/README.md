@@ -131,6 +131,12 @@ de roulement, l'impôt et la trésorerie — immédiatement.
   d'autofinancement, autonomie, LTV/CAC :
   chaque notion s'ouvre sur une fiche qui dit ce que c'est, comment Fynomia la
   calcule, à quoi elle sert, et rappelle la valeur du scénario en cours.
+- **Le récit, en scènes.** La synthèse raconte le plan en neuf scènes, une à
+  la fois : une question, le chiffre qui y répond, la conclusion, trois
+  repères, et le dessin sur un panneau sombre. « Comprendre ce chiffre » ouvre
+  un tiroir — les chiffres commentés, leur évolution sur cinq ans, la lecture,
+  et le chemin vers le champ où il se règle ; « Voir les données » pose
+  par-dessus la page la partie des états financiers qui le porte.
 - **Exports.** Une présentation PowerPoint d'une douzaine de diapositives prête
   à présenter, téléchargée à côté des diapos dans la synthèse ; le prévisionnel
   complet en CSV, depuis les états financiers ; une sauvegarde JSON du scénario,

@@ -44,7 +44,11 @@ export default async function (t) {
 
   // Une charge par vente : la commission de paiement du métier.
   const sugg = p.locator('.tradetip-item', { hasText: 'Commission de paiement' }).first()
-  if (await sugg.count()) { await sugg.click(); await t.pose(p) }
+  if (await sugg.count()) {
+    // Trois pastilles d'abord : la commission peut être derrière « +N ».
+    if (!(await sugg.isVisible())) await p.locator('.tradetip.is-opex .tradetip-more').click()
+    await sugg.click(); await t.pose(p)
+  }
   const ligne = p.locator('.costblock.is-variable .cost-row:not(.is-revient)').first()
   await ligne.waitFor({ timeout: 3000 })
 

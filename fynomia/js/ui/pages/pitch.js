@@ -124,7 +124,7 @@ export function renderPitch(navigate, refresh, goView) {
         onClick: () => basculer(m.key),
       }, h('b', {}, m.label), h('span', {}, m.dit))),
     ),
-    h('button', { class: 'pitch-pptx', type: 'button', title: 'Les diapositives, en fichier PowerPoint', onClick: (e) => telecharger(e.currentTarget) },
+    h('button', { class: 'pitch-pptx', type: 'button', title: 'Les diapositives, en fichier PowerPoint', 'aria-label': 'Télécharger le PowerPoint', onClick: (e) => telecharger(e.currentTarget) },
       h('span', { class: 'pitch-pptx-ico', 'aria-hidden': 'true' }, '↓'),
       h('span', {}, h('b', {}, 'PowerPoint'), h('span', {}, 'télécharger le .pptx'))),
   )

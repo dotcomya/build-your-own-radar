@@ -15,9 +15,16 @@
  *   08  Besoin de financement    — ce que le business consomme, ce qu'il faut réunir ;
  *   09  Principales hypothèses   — ce qui fait le plus bouger le scénario.
  *
- * Chaque chapitre : une conclusion, deux à quatre chiffres, un dessin quand
- * il aide, une phrase qui l'interprète, puis « Voir le détail », replié. La
- * première lecture tient en deux ou trois minutes.
+ * Le récit se lit en scènes, une à la fois, comme une présentation : une
+ * barre de neuf étapes en haut, « Précédent » et « Suivant » en bas. Chaque
+ * scène pose une question, y répond par un grand chiffre et une conclusion,
+ * donne trois repères, et montre son dessin sur un panneau sombre à droite.
+ *
+ * Deux gestes par scène. « Comprendre ce chiffre » ouvre un tiroir sur le
+ * côté : les chiffres commentés, leur évolution sur cinq ans, la lecture, et
+ * le chemin vers le module où le chiffre se règle. « Voir les données » pose
+ * par-dessus la page, fond flouté, la partie des états financiers qui porte
+ * ce chiffre, lignes concernées en surbrillance.
  *
  * Les phrases sont courtes, une idée chacune, sans personnage : le même texte
  * doit servir à un fondateur, un directeur d'incubateur, un expert-comptable
@@ -36,6 +43,7 @@ import { lignesBanquier } from '../banquier.js'
 import { SECTORS } from '../../state/schema.js'
 import { uniteOffre, vocabulaireDuPlan } from '../../state/sectors.js'
 import { periodeAnnee, periodeMois } from '../../format.js'
+import { aOublier } from '../memoire.js'
 
 const n = (v) => Number(v) || 0
 const ANS = [0, 1, 2, 3, 4]
@@ -49,6 +57,9 @@ const signe = (v) => `${v >= 0 ? '+' : '−'}${pct(Math.abs(v), 0)}`
 /** Un taux lisible : ni un chiffre d'affaires nul, ni un rapport absurde. */
 const taux = (a, b) => (n(b) > 0 && Math.abs(n(a) / n(b)) <= 10 ? n(a) / n(b) : null)
 const RE_FONDATEUR = new RegExp('fondat|dirigeant|gérant|président|associé', 'i')
+/** Le vert acide de la maison : les barres des scènes, sur leur panneau sombre. */
+const ACCENT = '#D6F034'
+const deux = (no) => String(no).padStart(2, '0')
 
 /* ─────────────────────────────── Les pièces ─────────────────────────────── */
 
@@ -73,17 +84,13 @@ function phrases(xs) {
   return out
 }
 
-/** « Voir le détail » : replié, il garde la première lecture courte. */
-function detail(contenu, lien, navigate) {
-  const corps = (contenu || []).filter(Boolean)
-  if (!corps.length && !lien) return null
-  return h('details', { class: 'as-detail' },
-    h('summary', {}, 'Voir le détail'),
-    h('div', { class: 'as-detail-corps' },
-      ...corps,
-      lien ? h('button', { class: 'as-lien', type: 'button', onClick: (e) => goToGap(lien.go, navigate, e.currentTarget) }, `${lien.label} →`) : null,
-    ),
-  )
+/**
+ * Les données d'un chapitre — ses tableaux, ses notes — et le module où ses
+ * chiffres se règlent. Elles ne s'affichent plus sous la scène : « Voir les
+ * données » les pose par-dessus la page.
+ */
+function detail(contenu, lien) {
+  return { contenu: (contenu || []).filter(Boolean), lien: lien || null }
 }
 
 /** Un tableau de détail : une ligne d'en-têtes, puis les lignes. */
@@ -95,24 +102,26 @@ export function tableau(tetes, lignes) {
 }
 const tetesAns = (premier) => [premier, 'Année 1', 'Année 2', 'Année 3', 'Année 4', 'Année 5']
 
-let doute = false
-function chapitre({ no, titre, sousTitre, rupture = null, conclusion, repere = null, chiffres = [], dessin = null, clair = [], plus = null }) {
-  return h('section', { class: 'as-chap', 'data-chapitre': String(no), id: `as-chap-${no}` },
-    rupture ? h('p', { class: 'as-rupture' }, rupture) : null,
-    h('header', { class: 'as-chap-tete' },
-      h('span', { class: 'as-no' }, String(no).padStart(2, '0')),
-      h('h3', { class: 'as-titre' }, titre),
-      h('p', { class: 'as-sous-titre' }, sousTitre),
-    ),
-    h('p', { class: 'as-conclusion' }, conclusion),
-    chiffres.filter(Boolean).length ? h('div', { class: 'as-chiffres-bloc' },
-      repere ? h('span', { class: 'as-repere' }, repere) : null,
-      h('div', { class: 'as-chiffres' }, ...chiffres.filter(Boolean).slice(0, 4).map((c) => chiffre(c, doute))),
-    ) : null,
-    dessin ? h('div', { class: 'as-dessin' }, dessin) : null,
-    clair.filter(Boolean).length ? h('p', { class: 'as-clair' }, ...phrases(clair)) : null,
-    plus,
-  )
+/**
+ * Un chapitre, en données : la scène le montre, le tiroir l'explique, la
+ * surimpression en donne les chiffres.
+ *
+ *   court      son nom dans la barre des étapes ;
+ *   question   ce à quoi la scène répond ;
+ *   une        le grand chiffre : l'indice d'un des chiffres, ou une valeur,
+ *              et ce qu'il mesure (« de chiffre d'affaires en année 1 ») ;
+ *   evolution  quelques lignes sur cinq ans, pour le tiroir ;
+ *   etat       la partie des états financiers qui porte ces chiffres.
+ */
+function chapitre({ no, titre, court, question, sousTitre, rupture = null, conclusion, une = null, repere = null, chiffres = [], dessin = null, clair = [], evolution = null, etat = null, source = null, plus = null }) {
+  const cs = chiffres.filter(Boolean).slice(0, 4)
+  const grand = une && Number.isInteger(une.i) ? (cs[une.i] ? { v: cs[une.i].v, l: une.l, ton: cs[une.i].ton } : null) : une
+  return {
+    no, titre, court: court || titre, question, sousTitre, rupture, conclusion, repere,
+    une: grand, chiffres: cs, reperes: cs.filter((_, i) => !(une && une.i === i)).slice(0, 3),
+    dessin, clair: clair.filter(Boolean), evolution: (evolution || []).filter(Boolean), etat,
+    contenu: plus?.contenu || [], lien: source || plus?.lien || null,
+  }
 }
 
 /* ─────────────────────────────── Les dessins ─────────────────────────────── */
@@ -427,8 +436,7 @@ export function lignesDeCouts(s, r, an) {
 
 /* ─────────────────────────────── Le récit ─────────────────────────────── */
 
-export function analyseStrategique(s, r, navigate, { source = null, doute: garde = false } = {}) {
-  doute = garde
+export function analyseStrategique(s, r, navigate, { source = null, doute = false } = {}) {
   const p = r.pnl, k = r.kpis
   const debut = r.startDate
   const bm = SECTORS[s.meta?.sectorKey]?.benchmarks || {}
@@ -442,6 +450,23 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
   const offres = lesOffres(s, r).sort((x, z) => z.ca[yv] - x.ca[yv])
   const top = offres[0] || null
   const chapitres = []
+  // Le module où se règle un chiffre, au plus près : la carte de l'offre
+  // principale, ouverte sur son prix, ses volumes ou ses délais.
+  const versOffre = (label, sec, anchor) => (top?.a?.id
+    ? va(label, { route: 'offre', view: 'offres', sec, ouvrir: top.a.id, anchor, dans: `[data-row="${top.a.id}"]` })
+    : va('Modifier les offres', { route: 'offre', view: 'offres' }))
+  const sourceDe = (cle) => ({
+    volumes: () => versOffre('Régler les volumes', 'volumes', 'volumes'),
+    croissance: () => versOffre('Régler la croissance', 'volumes', 'volumes'),
+    lancement: () => versOffre('Régler la date de lancement', 'volumes', 'volumes'),
+    prix: () => versOffre('Régler le prix', 'offre', 'prix'),
+    delais: () => versOffre('Régler les délais de paiement', 'affiner', 'paiement'),
+    marge: () => va('Régler les coûts', { route: 'achats', view: 'charges', anchor: 'charges' }),
+    cac: () => va('Régler l’acquisition', { route: 'offre', view: 'acquisition' }),
+    salaires: () => va('Modifier l’équipe', { route: 'equipe', view: 'postes', anchor: 'equipe' }),
+    pret: () => va('Modifier le financement', { route: 'financement', view: 'sources', anchor: 'sources' }),
+    levee: () => va('Modifier le financement', { route: 'financement', view: 'sources', anchor: 'sources' }),
+  }[cle]?.() || null)
 
   /* 01 — Chiffre d'affaires ─────────────────────────────────────────────── */
   {
@@ -465,7 +490,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
                 : 'La croissance vient à parts comparables des volumes et des prix.'
     const ralentit = variation[4] !== null && variation[1] !== null && variation[1] > 0 && variation[4] < variation[1] / 2
     chapitres.push(chapitre({
-      no: 1, titre: 'Chiffre d’affaires', sousTitre: 'Le niveau de revenus généré par l’activité et son évolution sur cinq ans.',
+      no: 1, titre: 'Chiffre d’affaires', court: 'Chiffre d’affaires', question: 'Combien l’activité va-t-elle facturer ?',
+      sousTitre: 'Le niveau de revenus généré par l’activité et son évolution sur cinq ans.',
+      une: { i: 0, l: a1 > 0 ? 'de chiffre d’affaires en année 1' : `de chiffre d’affaires en année 1 — les ventes commencent en année ${yv + 1}` },
       conclusion: aucuneVente ? 'Le plan ne prévoit pas encore de ventes.'
         : a1 > 0 ? `L’entreprise réalise ${eur(a1)} de chiffre d’affaires la première année et atteint ${eur(a3)} en année 3.`
           : `Les premières ventes arrivent en année ${yv + 1}. Le chiffre d’affaires atteint ${eur(a3)} en année 3.`,
@@ -476,8 +503,8 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         recurrent ? { l: 'Revenu récurrent mensuel', v: euro(mrr1), note: `MRR en fin d’année ${yv + 1}, soit ${eur(mrr1 * 12)} par an (ARR).` } : null,
       ],
       dessin: aucuneVente ? null : barChart({
-        series: [{ label: 'Chiffre d’affaires', values: ca, color: '#0E0F0C' }],
-        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 190, largeur: 560,
+        series: [{ label: 'Chiffre d’affaires', values: ca, color: ACCENT }],
+        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 260, largeur: 560,
         periodes: ANS.map((i) => periodeAnnee(i, debut)),
       }),
       clair: aucuneVente ? ['Fixe un prix et un volume dans Offre et revenus : ce chapitre se remplira.'] : [
@@ -486,6 +513,13 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         ralentit ? `La croissance ralentit ensuite : ${signe(variation[4])} entre l’année 4 et l’année 5.` : null,
         recurrent ? `${pct(partRec, 0)} du chiffre d’affaires est récurrent : il revient chaque mois sans nouvelle vente.` : null,
       ],
+      evolution: aucuneVente ? null : [
+        ['Chiffre d’affaires', ...ca.map((v) => eur(v))],
+        ['Variation', ...variation.map((v) => (v === null ? '—' : signe(v)))],
+        recurrent ? ['Part récurrente', ...ANS.map((y) => (ca[y] > 0 ? pct(parAn(recM, y) / ca[y], 0) : '—'))] : null,
+      ],
+      etat: { cle: 'resultat', vises: ['revenue'] },
+      source: top ? versOffre(`Régler les volumes de « ${top.nom} »`, 'volumes', 'volumes') : null,
       plus: aucuneVente ? null : detail([
         tableau(tetesAns(''), [
           ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
@@ -494,7 +528,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           recM.some((v) => v > 0) ? ['En rythme annuel (ARR)', ...ANS.map((y) => euro(recM[y * 12 + 11] * 12))] : null,
           recM.some((v) => v > 0) ? ['Part récurrente', ...ANS.map((y) => (ca[y] > 0 ? pct(parAn(recM, y) / ca[y], 0) : '—'))] : null,
         ]),
-      ], va('Modifier les offres', { route: 'offre', view: 'offres' }), navigate),
+      ], va('Modifier les offres', { route: 'offre', view: 'offres' })),
     }))
   }
 
@@ -507,7 +541,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const ebe = n(p.ebe[y])
     const an = `En année ${y + 1}`
     chapitres.push(chapitre({
-      no: 2, titre: 'Résultat et rentabilité', sousTitre: 'Ce qu’il reste après les coûts nécessaires au fonctionnement de l’entreprise.',
+      no: 2, titre: 'Résultat et rentabilité', court: 'Résultat', question: 'Que reste-t-il une fois tout payé ?',
+      sousTitre: 'Ce qu’il reste après les coûts nécessaires au fonctionnement de l’entreprise.',
+      une: { i: 2, l: `de résultat net en année ${y + 1}` },
       conclusion: [
         aucuneVente ? `${an}, l’entreprise dépense ${eur(depense)} sans chiffre d’affaires.`
           : net >= 0 ? `${an}, l’entreprise facture ${eur(ca[y])}, dépense ${eur(depense)} et dégage un résultat net de ${eur(net)}.`
@@ -542,6 +578,12 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         taux(p.netResult[2], ca[2]) !== null ? `En année 3, la rentabilité nette est de ${pct(taux(p.netResult[2], ca[2]), 1)}.` : null,
         n(p.credits[y]) > 0 && net > ebe ? `Le résultat net dépasse l’EBE grâce aux crédits d’impôt (${eur(n(p.credits[y]))}).` : null,
       ],
+      evolution: [
+        ['Résultat net', ...p.netResult.map((v) => eur(v))],
+        ['EBE', ...p.ebe.map((v) => eur(v))],
+        ['Rentabilité nette', ...ANS.map((i) => (taux(p.netResult[i], ca[i]) !== null ? pct(taux(p.netResult[i], ca[i]), 1) : '—'))],
+      ],
+      etat: { cle: 'resultat', vises: ['grossMargin', 'ebe', 'netResult'] },
       plus: detail([
         tableau(tetesAns(''), [
           ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
@@ -555,7 +597,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         h('p', { class: 'as-note' }, (p.badDebts || []).some((v) => v)
           ? 'L’EBE se calcule depuis la valeur ajoutée ; l’EBITDA, depuis le résultat d’exploitation. L’écart entre les deux, ce sont les impayés prévus : l’EBITDA les retranche, l’EBE non.'
           : 'L’EBE se calcule depuis la valeur ajoutée ; l’EBITDA, depuis le résultat d’exploitation. Ils ne diffèrent que par les provisions et les pertes sur créances, absentes de ce plan.'),
-      ], va('Voir les états financiers', { route: 'resultats' }), navigate),
+      ], va('Voir les états financiers', { route: 'resultats' })),
     }))
   }
 
@@ -569,7 +611,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
       ? `Elle génère ${eur(o.ca[y])} grâce à ${num(o.volume[y], 0)} mensualités à ${prixTxt(o.prixMoyen[y])}.`
       : `Elle génère ${eur(o.ca[y])} grâce à ${num(o.volume[y], 0)} ${o.u.many} à ${prixTxt(o.prixMoyen[y])}.`)
     chapitres.push(chapitre({
-      no: 3, titre: 'Répartition des ventes', sousTitre: 'La contribution de chaque offre au chiffre d’affaires.',
+      no: 3, titre: 'Répartition des ventes', court: 'Ventes', question: 'D’où vient le chiffre d’affaires ?',
+      sousTitre: 'La contribution de chaque offre au chiffre d’affaires.',
+      une: top ? { i: 0, l: `du chiffre d’affaires vient de « ${top.nom} », en année ${y + 1}` } : null,
       conclusion: !top ? 'Aucune offre ne génère encore de chiffre d’affaires.'
         : offres.length === 1 ? `Une seule offre porte tout le chiffre d’affaires : « ${top.nom} ». ${genere(top)}`
           : `En année ${y + 1}, ${pct(part, 0)} du chiffre d’affaires vient de l’offre « ${top.nom} ». ${genere(top)}`,
@@ -592,12 +636,15 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         offres.length === 1 ? 'Tout le plan repose sur cette offre.'
           : part > 0.7 ? `La dépendance à cette offre est forte : elle pèse encore ${pct(part5, 0)} en année 5.` : null,
       ],
+      evolution: !top ? null : offres.slice(0, 4).map((o) => [o.nom, ...o.ca.map((v) => eur(v))]),
+      etat: { cle: 'resultat', vises: ['revenue'] },
+      source: top ? versOffre(`Régler le prix de « ${top.nom} »`, 'offre', 'prix') : null,
       plus: !top ? null : detail([
         tableau(tetesAns('Chiffre d’affaires'), offres.map((o) => [o.nom, ...o.ca.map((v) => euro(v))])),
         tableau(tetesAns('Volumes'), offres.map((o) => [`${o.nom} (${o.modeRec ? 'mensualités' : o.u.many})`, ...o.volume.map((v) => num(v, 0))])),
         tableau(tetesAns('Prix moyen'), offres.map((o) => [o.nom, ...o.prixMoyen.map((v) => (v > 0 ? prixTxt(v) : '—'))])),
         tableau(tetesAns('Contribution'), offres.map((o) => [o.nom, ...ANS.map((i) => { const t = offres.reduce((a, z) => a + z.ca[i], 0); return t > 0 ? pct(o.ca[i] / t, 0) : '—' })])),
-      ], va('Modifier les offres', { route: 'offre', view: 'offres' }), navigate),
+      ], va('Modifier les offres', { route: 'offre', view: 'offres' })),
     }))
   }
 
@@ -622,7 +669,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const moisPM = anPM >= 0 ? anPM * 12 + n(k.breakEvenMonth[anPM]) - 1 : null
     const lignes = cv ? [cv.propre > 0 ? { l: 'Coût de revient', v: cv.propre } : null, ...cv.lignes.map((x) => ({ l: x.label, v: x.v }))].filter(Boolean) : []
     chapitres.push(chapitre({
-      no: 4, titre: 'Économie d’une vente', sousTitre: 'La marge générée par chaque vente avant absorption des charges fixes.',
+      no: 4, titre: 'Économie d’une vente', court: 'Économie d’une vente', question: 'Que laisse une vente, et combien en faut-il ?',
+      sousTitre: 'La marge générée par chaque vente avant absorption des charges fixes.',
+      une: top ? { i: 1, l: `de marge ${par}, sur « ${top.nom} »` } : null,
       conclusion: !top ? 'Sans prix de vente, l’économie d’une vente ne se calcule pas encore.'
         : `« ${top.nom} » : ${prixTxt(prix)} ${par} − ${prixTxt(cout)} de coût direct = ${prixTxt(marge)} de marge.`,
       chiffres: !top ? [] : [
@@ -638,6 +687,13 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         marge > 0 && parMois !== null ? `Il faut ${num(parMois, 0)} ${mot} par mois pour les couvrir ; au-delà, chaque vente augmente le résultat.` : null,
         moisPM !== null ? `Le plan atteint son point mort en ${monthLabel(moisPM, debut)}.` : 'Le plan n’atteint pas son point mort sur cinq ans.',
       ],
+      evolution: !top ? null : [
+        ['Point mort', ...ANS.map((i) => (n(k.breakEven?.[i]) > 0 ? eur(k.breakEven[i]) : '—'))],
+        ['Chiffre d’affaires', ...ca.map((v) => eur(v))],
+        ['Taux de marge', ...ANS.map((i) => (taux(p.grossMargin[i], ca[i]) !== null ? pct(taux(p.grossMargin[i], ca[i]), 0) : '—'))],
+      ],
+      etat: { cle: 'resultat', vises: ['variableCost', 'grossMargin'] },
+      source: top ? versOffre(`Régler le prix et le coût de « ${top.nom} »`, 'offre', 'prix') : null,
       plus: !top ? null : detail([
         tableau(['Offre', 'Prix', 'Coût de revient', 'Charges par vente', 'Marge', 'Taux'], offres.map((o) => {
           const c = coutDUneVente(s, o.a)
@@ -651,7 +707,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
         ]),
         h('p', { class: 'as-note' }, 'Point mort = charges fixes ÷ taux de marge brute. Les charges fixes comprennent la masse salariale, les charges externes, les impôts et taxes, les amortissements et les intérêts.'),
-      ], va('Régler les coûts', { route: 'achats', view: 'charges', anchor: 'charges' }), navigate),
+      ], va('Régler les coûts', { route: 'achats', view: 'charges', anchor: 'charges' })),
     }))
   }
 
@@ -670,7 +726,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const bmr = bm.payrollRatio
     const r3 = ratio[2]
     chapitres.push(chapitre({
-      no: 5, titre: 'Masse salariale', sousTitre: 'Le coût total de l’équipe et son poids dans le modèle économique.',
+      no: 5, titre: 'Masse salariale', court: 'Équipe', question: 'Quel poids l’équipe représente-t-elle dans le modèle ?',
+      sousTitre: 'Le coût total de l’équipe et son poids dans le modèle économique.',
+      une: { i: 1, l: 'de masse salariale en année 1, cotisations patronales comprises' },
       conclusion: masse[0] <= 0 ? 'Le plan ne prévoit aucune rémunération en année 1.'
         : ratio[0] !== null ? `L’équipe coûte ${eur(masse[0])} en année 1, soit ${pct(ratio[0], 0)} du chiffre d’affaires.`
           : `L’équipe coûte ${eur(masse[0])} en année 1, avant l’essentiel des ventes.`,
@@ -682,10 +740,10 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
       ],
       dessin: masse.some((v) => v > 0) ? barChart({
         series: [
-          { label: 'Équipe salariée', values: salaries, color: '#0E0F0C' },
-          ...(coutF.some((v) => v > 0) ? [{ label: 'Fondateurs', values: coutF, color: '#9BA59A' }] : []),
+          { label: 'Équipe salariée', values: salaries, color: ACCENT },
+          ...(coutF.some((v) => v > 0) ? [{ label: 'Fondateurs', values: coutF, color: '#8E968C' }] : []),
         ],
-        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 180, largeur: 560,
+        categories: ['A1', 'A2', 'A3', 'A4', 'A5'], height: 250, largeur: 560,
         periodes: ANS.map((i) => periodeAnnee(i, debut)),
       }) : null,
       clair: [
@@ -697,6 +755,12 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         bmr && r3 !== null ? (r3 < bmr[0] ? 'C’est en dessous de la fourchette : l’équipe prévue paraît réduite pour le volume d’activité visé.'
           : r3 > bmr[1] ? 'C’est au-dessus de la fourchette : chaque embauche doit être couverte par des ventes.' : 'C’est dans la fourchette du métier.') : null,
       ],
+      evolution: [
+        ['Masse salariale', ...masse.map((v) => eur(v))],
+        ['Part du chiffre d’affaires', ...ratio.map((v) => (v === null ? '—' : pct(v, 0)))],
+        ['Effectif en fin d’année', ...ANS.map((y) => num(hc(y * 12 + 11), 0))],
+      ],
+      etat: { cle: 'resultat', vises: ['payroll'] },
       plus: detail([
         team.length ? tableau(['Poste', 'Contrat', 'Brut mensuel', 'Arrivée', 'Coût employeur A1', 'Coût employeur A5'], team.map((m) => [
           `${m.role || 'Poste'}${n(m.count) > 1 ? ` ×${m.count}` : ''}${estFondateur(m) ? ' — fondateur' : ''}`,
@@ -709,7 +773,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           ['Part du chiffre d’affaires', ...ratio.map((v) => (v === null ? '—' : pct(v, 0)))],
           ['Effectif en fin d’année', ...ANS.map((y) => num(hc(y * 12 + 11), 0))],
         ]),
-      ], va('Modifier l’équipe', { route: 'equipe', view: 'postes', anchor: 'equipe' }), navigate),
+      ], va('Modifier l’équipe', { route: 'equipe', view: 'postes', anchor: 'equipe' })),
     }))
   }
 
@@ -732,7 +796,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const hors = n(p.payroll[y]) > 0 ? 'Après l’équipe' : 'Hors équipe'
     const total5 = lignesDe(4).reduce((t, l) => t + l.v, 0)
     chapitres.push(chapitre({
-      no: 6, titre: 'Structure des coûts', sousTitre: 'Les dépenses de l’entreprise hors équipe, et les postes qui pèsent le plus.',
+      no: 6, titre: 'Structure des coûts', court: 'Coûts', question: 'Où part l’argent, en dehors de l’équipe ?',
+      sousTitre: 'Les dépenses de l’entreprise hors équipe, et les postes qui pèsent le plus.',
+      une: postes.length ? { i: 0, l: `de coûts hors équipe en année ${y + 1}` } : null,
       conclusion: !postes.length ? 'Aucune charge n’est encore saisie en dehors de l’équipe.'
         : tete.length === 1 ? `${hors}, le principal coût est ${dire}.`
           : `${hors}, les ${tete.length === 2 ? 'deux' : 'trois'} principaux coûts sont ${dire}.`,
@@ -750,13 +816,19 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         `Les charges fixes hors équipe représentent ${euro(fixe / 12)} par mois en année ${y + 1}.`,
         total5 > 0 && taux(total5, ca[4]) !== null ? `En année 5, les coûts hors équipe atteignent ${eur(total5)}, soit ${pct(taux(total5, ca[4]), 0)} du chiffre d’affaires.` : null,
       ],
+      evolution: !postes.length ? null : [
+        ['Coûts hors équipe', ...ANS.map((i) => eur(lignesDe(i).reduce((t, l) => t + l.v, 0)))],
+        ['dont charges fixes', ...ANS.map((i) => eur(lignesDe(i).filter((l) => l.nature === 'fixe').reduce((t, l) => t + l.v, 0)))],
+        ['Part du chiffre d’affaires', ...ANS.map((i) => { const t = taux(lignesDe(i).reduce((a, l) => a + l.v, 0), ca[i]); return t === null ? '—' : pct(t, 0) })],
+      ],
+      etat: { cle: 'resultat', vises: ['variableCost', 'external', 'duties'] },
       plus: !postes.length ? null : detail([
         tableau(['Ligne', 'Poste', 'Nature', 'Année 1', 'Année 3', 'Année 5'], [...lignes].sort((a, b) => b.v - a.v).map((l) => {
           const v3 = lignesDe(2).find((z) => z.nom === l.nom)?.v || 0
           const v5 = lignesDe(4).find((z) => z.nom === l.nom)?.v || 0
           return [l.nom, l.poste.nom, l.nature === 'fixe' ? 'Fixe' : 'Variable', euro(l.v), euro(v3), euro(v5)]
         })),
-      ], va('Modifier les charges', { route: 'achats', view: 'charges', anchor: 'charges' }), navigate),
+      ], va('Modifier les charges', { route: 'achats', view: 'charges', anchor: 'charges' })),
     }))
   }
 
@@ -777,7 +849,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const fenetre = vBas < 0 ? Math.min(60, Math.max(24, Math.ceil(((remonte >= 0 ? remonte : 59) + 7) / 12) * 12)) : 60
     const credits0 = n(p.credits[0])
     chapitres.push(chapitre({
-      no: 7, titre: 'Trésorerie', sousTitre: 'L’évolution du solde disponible et le point bas atteint par le plan.',
+      no: 7, titre: 'Trésorerie', court: 'Trésorerie', question: 'L’argent en caisse suffit-il, mois après mois ?',
+      sousTitre: 'L’évolution du solde disponible et le point bas atteint par le plan.',
+      une: { i: 0, l: `de trésorerie au point bas, en ${monthLabel(bas, debut)}` },
       rupture: 'Être rentable et avoir de la trésorerie sont deux choses différentes.',
       conclusion: vBas >= 0
         ? `Le point bas de trésorerie est atteint en ${monthLabel(bas, debut)}, à ${eur(vBas)}. La trésorerie reste positive sur les cinq ans.`
@@ -803,6 +877,13 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         capex0 > 0 ? `Les investissements pèsent ${eur(capex0)} la première année ; ils ne passent en charge que petit à petit.` : null,
         credits0 > 1000 ? `Les crédits d’impôt (${eur(credits0)}) comptent dans le résultat de l’année 1, mais ne sont encaissés que l’année suivante.` : null,
       ],
+      evolution: [
+        ['Trésorerie en fin d’année', ...ANS.map((y) => eur(n(r.cash.yearEnd[y])))],
+        ['Flux de l’activité', ...conso.activiteAn.map((v) => eur(v))],
+        ['Résultat net', ...p.netResult.map((v) => eur(v))],
+      ],
+      etat: { cle: 'tresorerie', vises: ['fin'] },
+      source: va('Voir le tableau de trésorerie', { route: 'resultats', view: 'tresorerie' }),
       plus: detail([
         fenetre < 60 ? h('figure', { class: 'as-figure' }, courbeTreso(bal, debut, { bas, sousZero, remonte: remonte >= 0 ? remonte : null }), h('figcaption', {}, 'Les cinq ans, mois par mois.')) : null,
         tableau(tetesAns(''), [
@@ -812,7 +893,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           ['Trésorerie en fin d’année', ...ANS.map((y) => euro(n(r.cash.yearEnd[y])))],
           ['Résultat net', ...p.netResult.map((v) => euro(v))],
         ]),
-      ], va('Voir le tableau de trésorerie', { route: 'resultats' }), navigate),
+      ], va('Voir le tableau de trésorerie', { route: 'resultats' })),
     }))
   }
 
@@ -828,7 +909,9 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const apport = bank.find((l) => l.cle === 'apport')
     const avecMarge = Math.ceil((besoin * 1.2) / 1000) * 1000
     chapitres.push(chapitre({
-      no: 8, titre: 'Besoin de financement', sousTitre: 'Les ressources nécessaires pour couvrir le besoin de trésorerie du scénario.',
+      no: 8, titre: 'Besoin de financement', court: 'Financement', question: 'Combien faut-il réunir pour lancer le projet ?',
+      sousTitre: 'Les ressources nécessaires pour couvrir le besoin de trésorerie du scénario.',
+      une: { i: 2, l: besoin > 0 ? `à financer, ${eur(avecMarge)} avec une marge de sécurité` : 'à financer : les ressources prévues couvrent le besoin' },
       conclusion: conso.besoin <= 0
         ? `Le business ne consomme pas de trésorerie : les ventes financent l’activité dès le départ. Aucun financement supplémentaire n’est nécessaire dans ce scénario.`
         : [`Le business consomme ${eur(conso.besoin)} jusqu’à son point bas, en ${quand}.`,
@@ -854,6 +937,12 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
         comptees.length && somme(f.loans) > 0 ? `${valides} contrôle${valides > 1 ? 's' : ''} bancaire${valides > 1 ? 's' : ''} sur ${comptees.length} ${valides > 1 ? 'sont validés' : 'est validé'}.` : null,
         besoin > 0 ? 'Le montant à demander se lit au point bas : c’est le mois où il manque le plus.' : conso.besoin > 0 ? `Au point bas, il reste ${eur(-conso.reste)} en caisse.` : null,
       ],
+      evolution: [
+        ['Financement reçu', ...ANS.map((y) => eur(n(r.cash.yearEnd[y]) - (y === 0 ? n(conso.parts.depart) : n(r.cash.yearEnd[y - 1])) - conso.activiteAn[y]))],
+        ['Flux de l’activité', ...conso.activiteAn.map((v) => eur(v))],
+        ['Trésorerie en fin d’année', ...ANS.map((y) => eur(n(r.cash.yearEnd[y])))],
+      ],
+      etat: { cle: 'tresorerie', vises: ['apports', 'emprunts', 'remboursements', 'subventions'] },
       plus: detail([
         tableau(['Ressource', 'Montant sur le plan', 'Versée'], [
           n(f.openingCash) > 0 ? ['Trésorerie de départ', euro(n(f.openingCash)), monthLabel(0, debut)] : null,
@@ -870,7 +959,7 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           h('span', { class: 'as-bk-titre' }, l.titre),
           h('b', { class: 'as-bk-val' }, l.valeur),
         ))) : null,
-      ], va('Modifier le financement', { route: 'financement', view: 'sources', anchor: 'sources' }), navigate),
+      ], va('Modifier le financement', { route: 'financement', view: 'sources', anchor: 'sources' })),
     }))
   }
 
@@ -889,7 +978,12 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
     const resultat = surBesoin ? ordre.filter((x) => !neutre(x) && x.dNet < 0) : []
     const compte = (q) => (q === 1 ? 'Une hypothèse' : q === 2 ? 'Deux hypothèses' : q === 3 ? 'Trois hypothèses' : `${q} hypothèses`)
     chapitres.push(chapitre({
-      no: 9, titre: 'Principales hypothèses', sousTitre: 'Les paramètres qui font le plus varier le besoin de financement et le résultat.',
+      no: 9, titre: 'Principales hypothèses', court: 'Hypothèses', question: 'Qu’est-ce qui ferait le plus bouger le plan ?',
+      sousTitre: 'Les paramètres qui font le plus varier le besoin de financement et le résultat.',
+      une: !lead ? null : surBesoin
+        ? { v: `+${eur(lead.dBesoin)}`, l: `de besoin de financement avec ${lead.dit}`, ton: 'bad' }
+        : { v: `−${eur(Math.max(0, -lead.dNet))}`, l: `de résultat net en année 3 avec ${lead.dit}` },
+      source: lead ? sourceDe(lead.cle) : null,
       conclusion: !lead ? 'Les hypothèses se liront ici dès que le plan aura des ventes.'
         : surBesoin ? `Avec ${lead.dit}, le besoin de financement augmente de ${eur(lead.dBesoin)}. C’est l’hypothèse la plus sensible du plan.`
           : `Aucune des hypothèses testées ne crée de besoin de financement. La plus sensible, ${lead.dit}, réduit le résultat net de l’année 3 de ${eur(-lead.dNet)}.`,
@@ -921,15 +1015,337 @@ export function analyseStrategique(s, r, navigate, { source = null, doute: garde
           x.nom, x.plan, x.test, euro(x.besoin), euro(x.dBesoin, { sign: true }), euro(x.net), euro(x.dNet, { sign: true }),
         ])),
         h('p', { class: 'as-note' }, 'Chaque hypothèse est modifiée seule, tout le reste égal. Le moteur recalcule la paie, la TVA, l’impôt et la trésorerie de chaque variante.'),
-      ], null, navigate),
+      ]),
     }))
   }
 
-  const sommaire = h('nav', { class: 'as-sommaire', 'aria-label': 'Chapitres du récit' },
-    ...chapitres.map((c, i) => h('button', {
-      type: 'button',
-      onClick: () => c.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }),
-    }, h('b', {}, String(i + 1).padStart(2, '0')), c.querySelector('.as-titre')?.textContent || '')))
+  const etat = etats(s, r)
+  for (const c of chapitres) c.etat = c.etat && etat[c.etat.cle] ? { ...etat[c.etat.cle], vises: c.etat.vises } : null
+  return recit(chapitres, navigate, { doute })
+}
 
-  return h('div', { class: 'as' }, sommaire, ...chapitres)
+/* ──────────────────────────── Les états financiers ────────────────────────── */
+
+/**
+ * Les deux états que « Voir les données » pose par-dessus la page : le compte
+ * de résultat, ligne à ligne, et la trésorerie de l'exercice, de l'ouverture
+ * à la clôture. Chaque ligne a une clé : un chapitre surligne les siennes.
+ *
+ * La trésorerie reprend les flux que lit `consommation` — ceux du moteur,
+ * TVA comprise : l'ouverture, plus l'activité, plus le financement, donne
+ * exactement la trésorerie à la clôture.
+ */
+function etats(s, r) {
+  const p = r.pnl, R = r.cash.rows, F = r.financing || {}
+  const L = (cle, l, v, o = {}) => ({ cle, l, v: v.map(n), ...o })
+  const moins = (v) => (v || []).map((x) => -n(x))
+  const an = (m) => ANS.map((y) => parAn(m, y))
+  const plus = (...xs) => ANS.map((y) => xs.reduce((t, x) => t + n(x[y]), 0))
+  const existe = (v) => (v || []).some((x) => Math.abs(n(x)) >= 0.5)
+
+  const ouverture = ANS.map((y) => (y === 0 ? n(F.openingCash ?? s.financing?.openingCash) : n(r.cash.yearEnd[y - 1])))
+  const encaisse = plus(an(R.sales), an(R.vatCollected))
+  const achats = moins(plus(an(R.purchases), an(R.opex), an(R.lease), an(R.stockChange)))
+  const personnel = moins(an(R.payroll))
+  const impots = plus(an(R.vatRefunded), an(R.credits), moins(plus(an(R.vatDeductible), an(R.vatPaid), an(R.duties), an(R.corporateTax))))
+  const invest = moins(an(R.capex))
+  const prelev = moins(an(R.draws))
+  const activite = plus(encaisse, achats, personnel, impots, invest, prelev)
+  const apports = plus(an(F.equity), an(F.honour), an(F.investors))
+  const emprunts = plus(an(F.loanDrawdown), an(F.shareholderLoans))
+  const rembourse = moins(plus(an(F.repayment), an(F.interest)))
+  const subventions = plus(an(F.grants), an(F.advances), moins(an(F.advanceRepayment)))
+
+  return {
+    resultat: {
+      nom: 'Compte de résultat', vue: 'resultat',
+      dit: 'Ce que l’activité gagne ou perd, exercice par exercice, hors taxes. Les lignes de ce chapitre sont surlignées.',
+      lignes: [
+        L('revenue', 'Chiffre d’affaires', p.revenue, { fort: true }),
+        L('variableCost', 'Achats et charges variables', moins(p.variableCost)),
+        L('grossMargin', 'Marge brute', p.grossMargin, { fort: true }),
+        L('external', 'Charges externes', moins(p.external)),
+        L('valueAdded', 'Valeur ajoutée', p.valueAdded),
+        L('duties', 'Impôts et taxes', moins(p.duties)),
+        existe(p.grants) ? L('grants', 'Subventions d’exploitation', p.grants) : null,
+        L('payroll', 'Charges de personnel', moins(p.payroll)),
+        L('ebe', 'EBE — excédent brut d’exploitation', p.ebe, { fort: true }),
+        L('amortisation', 'Dotations aux amortissements', moins(p.amortisation)),
+        existe(p.badDebts) ? L('badDebts', 'Pertes sur créances', moins(p.badDebts)) : null,
+        L('ebit', 'Résultat d’exploitation', p.ebit),
+        L('interest', 'Charges financières', moins(p.interest)),
+        existe(p.credits) ? L('credits', 'Crédits d’impôt', p.credits) : null,
+        L('corporateTax', 'Impôt sur les sociétés', moins(p.corporateTax)),
+        L('netResult', 'Résultat net', p.netResult, { total: true }),
+      ].filter(Boolean),
+    },
+    tresorerie: {
+      nom: 'Tableau de trésorerie', vue: 'tresorerie',
+      dit: 'Ce qui entre sur le compte et ce qui en sort, exercice par exercice, TVA comprise. Les lignes de ce chapitre sont surlignées.',
+      lignes: [
+        L('debut', 'Trésorerie à l’ouverture', ouverture, { fort: true }),
+        L('encaissements', 'Encaissements des clients', encaisse),
+        L('achats', 'Achats, charges et loyers', achats),
+        L('personnel', 'Salaires et cotisations', personnel),
+        L('impots', 'TVA et impôts, crédits déduits', impots),
+        existe(invest) ? L('invest', 'Investissements', invest) : null,
+        existe(prelev) ? L('prelevements', 'Prélèvements du dirigeant', prelev) : null,
+        L('activite', 'Flux de l’activité', activite, { fort: true }),
+        existe(apports) ? L('apports', 'Apports et levée de fonds', apports) : null,
+        existe(emprunts) ? L('emprunts', 'Emprunts reçus', emprunts) : null,
+        existe(rembourse) ? L('remboursements', 'Remboursements et intérêts', rembourse) : null,
+        existe(subventions) ? L('subventions', 'Subventions et avances', subventions) : null,
+        L('fin', 'Trésorerie à la clôture', r.cash.yearEnd, { total: true }),
+      ].filter(Boolean),
+    },
+  }
+}
+
+function tableEtat(etat) {
+  return h('div', { class: 'as-table-wrap' },
+    h('table', { class: 'data as-table as-etat' },
+      h('thead', {}, h('tr', {}, h('th', {}, ''), ...ANS.map((y) => h('th', {}, `Année ${y + 1}`)))),
+      h('tbody', {}, ...etat.lignes.map((l) => h('tr', {
+        class: [l.fort && 'is-fort', l.total && 'is-total', etat.vises.includes(l.cle) && 'is-vise'].filter(Boolean).join(' ') || null,
+        'data-ligne': l.cle,
+      }, h('td', {}, l.l), ...l.v.map((v) => h('td', { class: 'num' }, euro(v))))))))
+}
+
+/* ─────────────────────────────── Les scènes ─────────────────────────────── */
+
+/** La scène ouverte : elle tient d'un redessin à l'autre, et repart de la première quand on quitte le tableau de bord. */
+const lecture = { scene: 0 }
+aOublier((route) => {
+  fermerCouche()
+  if (route === 'tableau-de-bord') lecture.scene = 0
+})
+
+const reduit = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+function recit(chapitres, navigate, { doute = false } = {}) {
+  // Un redessin repart d'une page nette : pas de tiroir resté ouvert sur
+  // des chiffres qui ne sont plus les bons.
+  fermerCouche()
+  const total = chapitres.length
+  lecture.scene = Math.max(0, Math.min(total - 1, lecture.scene))
+
+  const etapes = chapitres.map((c, i) => h('button', { class: 'as-etape', type: 'button', title: c.titre, onClick: () => aller(i) },
+    h('i', { 'aria-hidden': 'true' }),
+    h('span', {}, h('b', { class: 'num' }, deux(c.no)), ' ', c.court)))
+  const scenes = chapitres.map((c) => scene(c, {
+    doute,
+    comprendre: (el) => comprendre(c, navigate, doute, el),
+    donnees: (el) => donnees(c, navigate, el),
+  }))
+  const precedent = h('button', { class: 'as-nav-btn is-prec', type: 'button', onClick: () => aller(lecture.scene - 1) }, '← Précédent')
+  const suivant = h('button', { class: 'as-nav-btn is-suiv', type: 'button', onClick: () => aller(lecture.scene + 1) }, 'Suivant →')
+  const compteur = h('span', { class: 'as-nav-compteur num', 'aria-live': 'polite' })
+  const piste = h('div', { class: 'as-piste' }, ...scenes)
+  const racine = h('div', { class: 'as as-recit' },
+    h('nav', { class: 'as-progres', 'aria-label': 'Les étapes du récit' }, ...etapes),
+    piste,
+    h('div', { class: 'as-nav' }, precedent, compteur, suivant),
+  )
+
+  const montrer = (anime) => {
+    const i = lecture.scene
+    scenes.forEach((el, k) => {
+      el.classList.toggle('is-on', k === i)
+      el.classList.toggle('is-entree', !!anime && k === i)
+      if (k === i) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', 'true')
+    })
+    etapes.forEach((b, k) => {
+      b.classList.toggle('is-fait', k < i)
+      b.classList.toggle('is-on', k === i)
+      if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current')
+    })
+    precedent.disabled = i === 0
+    suivant.disabled = i === total - 1
+    compteur.textContent = `${deux(i + 1)} / ${deux(total)}`
+  }
+  const aller = (i) => {
+    const j = Math.max(0, Math.min(total - 1, i))
+    if (j === lecture.scene) return
+    lecture.scene = j
+    montrer(true)
+    // La scène suivante commence en haut : si on avait lu la précédente en
+    // défilant, on remonte à la barre des étapes.
+    if (racine.getBoundingClientRect().top < 0) racine.scrollIntoView({ block: 'start', behavior: reduit() ? 'auto' : 'smooth' })
+  }
+  montrer(false)
+
+  // Au doigt : un glissement horizontal change de scène.
+  let x0 = null, y0 = null
+  piste.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY }, { passive: true })
+  piste.addEventListener('touchend', (e) => {
+    if (x0 === null) return
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0
+    x0 = null
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 40) aller(lecture.scene + (dx < 0 ? 1 : -1))
+  }, { passive: true })
+
+  clavier.racine = racine
+  clavier.aller = aller
+  ecouterClavier()
+  return racine
+}
+
+/** Les flèches du clavier tournent les scènes, tant qu'on n'écrit nulle part. */
+const clavier = { racine: null, aller: null }
+let ecoute = false
+function ecouterClavier() {
+  if (ecoute) return
+  ecoute = true
+  document.addEventListener('keydown', (e) => {
+    const { racine, aller } = clavier
+    if (!racine || !racine.isConnected || couche || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+    const t = e.target
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+    if (e.key === 'ArrowRight') { e.preventDefault(); aller(lecture.scene + 1) }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); aller(lecture.scene - 1) }
+  })
+}
+
+/**
+ * Une scène : à gauche, la question, le grand chiffre, la conclusion, trois
+ * repères et les deux gestes ; à droite, le dessin sur son panneau sombre.
+ */
+function scene(c, { doute, comprendre: surComprendre, donnees: surDonnees }) {
+  const ton = (t) => (t === 'good' && doute ? null : t)
+  return h('section', { class: 'as-chap as-scene', 'data-chapitre': String(c.no), id: `as-chap-${c.no}`, role: 'group', 'aria-label': `${deux(c.no)} — ${c.titre}` },
+    h('div', { class: 'as-scene-texte' },
+      h('p', { class: 'as-kicker' }, h('b', { class: 'as-no num' }, deux(c.no)), h('span', { 'aria-hidden': 'true' }, ' — '), h('span', { class: 'as-titre' }, c.titre)),
+      h('h3', { class: 'as-question' }, c.question),
+      c.rupture ? h('p', { class: 'as-rupture' }, c.rupture) : null,
+      c.une ? h('div', { class: 'as-une' },
+        h('b', { class: `as-une-v num ${ton(c.une.ton) ? `is-${ton(c.une.ton)}` : ''}` }, c.une.v),
+        h('span', { class: 'as-une-l' }, c.une.l)) : null,
+      h('p', { class: 'as-conclusion' }, c.conclusion),
+      c.reperes.length ? h('dl', { class: 'as-reperes' }, ...c.reperes.map((x) => h('div', { class: 'as-repere-case' },
+        h('dt', {}, x.l),
+        h('dd', { class: `num ${ton(x.ton) ? `is-${ton(x.ton)}` : ''}` }, x.v)))) : null,
+      h('div', { class: 'as-scene-gestes' },
+        h('button', { class: 'as-geste is-comprendre', type: 'button', onClick: (e) => surComprendre(e.currentTarget) }, 'Comprendre ce chiffre'),
+        h('button', { class: 'as-geste is-donnees', type: 'button', onClick: (e) => surDonnees(e.currentTarget) }, 'Voir les données')),
+    ),
+    h('div', { class: 'as-scene-dessin' },
+      c.dessin || h('p', { class: 'as-scene-vide' }, 'Le dessin apparaîtra dès que le plan aura des ventes.')),
+  )
+}
+
+/* ───────────────────────── Le tiroir et la surimpression ───────────────────── */
+
+/** La couche ouverte — tiroir ou surimpression —, une seule à la fois. */
+let couche = null
+function fermerCouche() {
+  const c = couche
+  couche = null
+  if (c) c.fermer()
+}
+
+/**
+ * Un voile et un panneau, posés sur la page. Échap, le voile ou la croix
+ * ferment ; la touche Tab reste dans le panneau ; le focus revient au
+ * bouton qui l'a ouvert.
+ */
+function ouvrirCouche({ classe, label, depuis, corps }) {
+  fermerCouche()
+  const voile = h('div', { class: `as-voile ${classe}`, onClick: () => fermerCouche() })
+  const panneau = h('aside', { class: `as-couche ${classe}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': label, tabindex: '-1' },
+    ...corps(() => fermerCouche()))
+  const surTouche = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); fermerCouche(); return }
+    if (e.key !== 'Tab') return
+    const f = [...panneau.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])')].filter((x) => !x.disabled && x.getClientRects().length)
+    if (!f.length) return
+    const premier = f[0], dernier = f[f.length - 1]
+    if (e.shiftKey && (document.activeElement === premier || document.activeElement === panneau)) { e.preventDefault(); dernier.focus() }
+    else if (!e.shiftKey && document.activeElement === dernier) { e.preventDefault(); premier.focus() }
+  }
+  document.addEventListener('keydown', surTouche)
+  document.body.append(voile, panneau)
+  requestAnimationFrame(() => { voile.classList.add('is-on'); panneau.classList.add('is-on') })
+  panneau.focus({ preventScroll: true })
+  couche = {
+    fermer: () => {
+      document.removeEventListener('keydown', surTouche)
+      voile.remove()
+      panneau.remove()
+      if (depuis?.isConnected) depuis.focus({ preventScroll: true })
+    },
+  }
+}
+
+const croix = (fermer) => h('button', { class: 'as-couche-fermer', type: 'button', 'aria-label': 'Fermer', onClick: fermer }, '✕')
+
+/** Vers le module où le chiffre se règle : la page s'ouvre sur le champ, éclairé. */
+function versLaSource(lien, navigate, el) {
+  goToGap(lien.go, navigate, el)
+  fermerCouche()
+}
+
+/**
+ * « Comprendre ce chiffre » : le tiroir, sur le côté. Les chiffres du
+ * chapitre avec ce qu'ils mesurent, leur évolution sur cinq ans, la lecture,
+ * puis le chemin vers le module source.
+ */
+function comprendre(c, navigate, doute, depuis) {
+  ouvrirCouche({
+    classe: 'is-tiroir', label: `Comprendre — ${c.titre}`, depuis,
+    corps: (fermer) => [
+      h('header', { class: 'as-couche-tete' },
+        h('p', { class: 'as-couche-kicker' }, 'Comprendre', h('span', { 'aria-hidden': 'true' }, ' / '), 'Analyse'),
+        croix(fermer)),
+      h('div', { class: 'as-couche-corps' },
+        h('h2', { class: 'as-couche-titre' }, c.titre),
+        h('p', { class: 'as-couche-lede' }, c.sousTitre),
+        c.chiffres.length ? h('div', { class: 'as-tuiles' },
+          c.repere ? h('span', { class: 'as-repere' }, c.repere) : null,
+          h('div', { class: 'as-chiffres' }, ...c.chiffres.map((x) => chiffre(x, doute)))) : null,
+        c.evolution.length ? h('section', { class: 'as-couche-bloc' },
+          h('h3', {}, 'Évolution'),
+          tableau(['', 'A1', 'A2', 'A3', 'A4', 'A5'], c.evolution)) : null,
+        c.clair.length ? h('section', { class: 'as-couche-bloc' },
+          h('h3', {}, 'Lecture'),
+          h('p', { class: 'as-clair' }, ...phrases(c.clair))) : null,
+      ),
+      h('footer', { class: 'as-couche-pied' },
+        h('button', { class: 'as-couche-btn is-ghost', type: 'button', onClick: () => donnees(c, navigate, depuis) }, 'Voir les données'),
+        c.lien ? h('button', { class: 'as-couche-btn is-accent', type: 'button', title: c.lien.label, onClick: (e) => versLaSource(c.lien, navigate, e.currentTarget) }, 'Ouvrir le module source →') : null,
+      ),
+    ],
+  })
+}
+
+/**
+ * « Voir les données » : par-dessus la page, fond flouté, la partie des
+ * états financiers qui porte ce chiffre — ses lignes surlignées —, puis les
+ * tableaux du chapitre.
+ */
+function donnees(c, navigate, depuis) {
+  const etat = c.etat
+  ouvrirCouche({
+    classe: 'is-donnees', label: `Données — ${c.titre}`, depuis,
+    corps: (fermer) => [
+      h('header', { class: 'as-couche-tete' },
+        h('div', {},
+          h('p', { class: 'as-couche-kicker' }, 'Données', h('span', { 'aria-hidden': 'true' }, ' · '), etat ? 'États financiers' : 'Le détail du chapitre'),
+          h('h2', { class: 'as-couche-titre' }, `${deux(c.no)} — ${c.titre}`)),
+        croix(fermer)),
+      h('div', { class: 'as-couche-corps' },
+        etat ? h('section', { class: 'as-couche-bloc' },
+          h('h3', {}, etat.nom),
+          h('p', { class: 'as-note' }, etat.dit),
+          tableEtat(etat)) : null,
+        c.contenu.length ? h('section', { class: 'as-couche-bloc as-detail-corps' },
+          h('h3', {}, 'Le détail du chapitre'),
+          ...c.contenu) : null,
+      ),
+      h('footer', { class: 'as-couche-pied' },
+        h('button', { class: 'as-couche-btn is-ghost', type: 'button', onClick: fermer }, 'Fermer'),
+        etat ? h('button', { class: 'as-couche-btn is-accent', type: 'button', onClick: (e) => versLaSource({ go: { route: 'resultats', view: etat.vue } }, navigate, e.currentTarget) }, 'Ouvrir dans les états financiers →')
+          : c.lien ? h('button', { class: 'as-couche-btn is-accent', type: 'button', title: c.lien.label, onClick: (e) => versLaSource(c.lien, navigate, e.currentTarget) }, 'Ouvrir le module source →') : null,
+      ),
+    ],
+  })
 }

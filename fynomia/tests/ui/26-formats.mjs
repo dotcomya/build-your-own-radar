@@ -11,7 +11,7 @@
  *   2. que les faits clés — le besoin de financement, le mois du point bas,
  *      le premier exercice bénéficiaire, le chiffre d'affaires de l'année 5 —
  *      se lisent dans chacune, identiques ;
- *   3. que chacune a son registre : l'essentiel en clair dans le récit, une
+ *   3. que chacune a son registre : une question et sa réponse par scène dans le récit, une
  *      phrase courte par diapositive, les hypothèses et leurs justifications dans le détail.
  */
 export const nom = 'Formats du pitch — mêmes faits, trois écritures, aucun personnage'
@@ -50,7 +50,10 @@ export default async function (t) {
     // les titres, les accroches et les questions.
     return p.evaluate(() => {
       const racine = document.querySelector('.pitch')
-      return { texte: racine.innerText, titres: [...racine.querySelectorAll('h1, h2, h3, h4, .rvl-kicker, .as-dire-titre, .avis-question span, .sy-act-say')].map((x) => x.textContent).join('\n') }
+      // Le récit se lit scène par scène : toutes sont dans la page, une seule
+      // à l'écran. On lit donc le texte de toutes.
+      const recit = racine.querySelector('.as-recit')
+      return { texte: recit ? racine.innerText + ' ' + recit.textContent : racine.innerText, titres: [...racine.querySelectorAll('h1, h2, h3, h4, .rvl-kicker, .as-dire-titre, .avis-question span, .sy-act-say')].map((x) => x.textContent).join('\n') }
     })
   }
   const formes = {}
@@ -75,10 +78,10 @@ export default async function (t) {
 
   // 3. Chaque forme a son registre.
   await choisir('Récit')
-  const clairs = await p.$$eval('.as-chap > .as-clair', (e) => e.map((x) => x.textContent.trim()))
-  const conclusions = await p.$$eval('.as-chap > .as-conclusion', (e) => e.map((x) => x.textContent.trim()))
-  t.verifie(clairs.length === 9 && conclusions.length === 9 && clairs.every((c) => c.length > 40 && !/\bje\b|\bj’|\bnous\b|\bnotre\b/i.test(c)),
-    'récit : une conclusion et une phrase d’interprétation par chapitre, sans « je » ni « nous »', clairs.map((c) => c.slice(0, 50)))
+  const conclusions = await p.$$eval('.as-chap .as-conclusion', (e) => e.map((x) => x.textContent.trim()))
+  const questions = await p.$$eval('.as-chap .as-question', (e) => e.map((x) => x.textContent.trim()))
+  t.verifie(conclusions.length === 9 && questions.length === 9 && questions.every((q) => /\?$/.test(q)) && conclusions.every((c) => !/\bje\b|\bj’|\bnous\b|\bnotre\b/i.test(c)),
+    'récit : une question et une conclusion par scène, sans « je » ni « nous »', questions)
   t.verifie(conclusions.every((c) => c.split(/[.!?](\s|$)/).filter((x) => x && x.trim()).every((ph) => ph.split(/\s+/).length <= 34)),
     'récit : des phrases courtes, une idée chacune', conclusions.map((c) => c.slice(0, 40)))
 
