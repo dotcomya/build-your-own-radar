@@ -56,6 +56,7 @@ Chromium de Playwright dans `/opt/pw-browsers` ou `~/.cache/ms-playwright`.
 | `27-achats` | couper, rallumer ou rechiffrer une charge par vente déplace le coût des ventes, la marge brute et le coût d'une vente affiché sur l'offre, pas les charges externes ; le coût de revient se saisit dans les charges par vente ; une charge générale déplace l'EBE, pas la marge ; le budget d'une campagne se lit avec les charges générales et compte |
 | `28-impayes` | un taux d'impayés saisi sur l'offre passe en pertes sur créances : sous l'EBE, dans l'EBITDA ; le compte de résultat le montre et dit ce qui sépare les deux ; la cascade du récit tombe sur le résultat net |
 | `29-saisonnalite` | un profil de saisonnalité d'un clic répartit les ventes sans changer le total ; un mois se règle à la main, « Aucune » ramène à plat ; passer en saisie mois par mois garde le chiffre d'affaires, et la grille commence au mois de démarrage |
+| `30-offre-suggeree` | une offre suggérée par le métier s'ajoute, sa carte s'ouvre seule, et le reflet se pose sur elle — pas sur la première offre de la liste |
 
 ## Options
 
