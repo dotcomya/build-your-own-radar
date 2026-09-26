@@ -26,8 +26,7 @@ import { h, euro, euro as euroEntier, pct, num, numberField, textField, selectFi
 import { newActivity } from '../../state/schema.js'
 import { sparkline, areaChart, PALETTE } from '../charts.js'
 import { vocabulary, uniteOffre, UNITES } from '../../state/sectors.js'
-import { tutorial, stepGuide } from '../tutorial.js'
-import { journey } from '../../engine/journey.js'
+import { tutorial } from '../tutorial.js'
 import { valueForYear, baseVolumes, moisDebut } from '../../engine/revenue.js'
 import { SAISONS, SAISON_METIER, MOIS, profilDe } from '../../state/saisons.js'
 import { coutDUneVente } from '../../engine/engine.js'
@@ -109,9 +108,7 @@ export function renderOffer(navigate, refresh) {
 
     moduleShell({
       no: '02', title: 'Offre et revenus',
-      lede: "Tes offres : leur prix, leurs volumes et leurs conditions de paiement.",
       figure: chiffres ? null : revenueFigure(s, r),
-      guide: stepGuide('clients', journey(store.scenario, store.result), 'offre'),
       views, view, onPick: (k) => { memoire.offre.view = k; refresh() },
       actions: [view === 'offres' ? h('button', { class: 'btn btn-primary btn-sm', 'data-gap': 'ajout-offre', onClick: addActivity }, '＋ Ajouter une offre') : null],
     }),

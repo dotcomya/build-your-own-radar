@@ -16,7 +16,6 @@ import { referenceYear } from '../../format.js'
 import { renderPitch } from './pitch.js'
 import { teteDossier } from './studio.js'
 import { storyline, gauge } from '../story.js'
-import { stepGuide } from '../tutorial.js'
 import { renderSimulation } from './simulation.js'
 import { refinePanel } from '../refine-panel.js'
 import { plainBoard } from '../plain.js'
@@ -98,8 +97,6 @@ export function renderDashboard(navigate, refresh) {
 
     moduleShell({
       no: '06', title: 'Tableau de bord',
-      lede: "La synthèse de tout ce que tu as saisi. Rien ne s’écrit ici.",
-      guide: stepGuide(null, null, 'tableau-de-bord'),
       views, view, onPick: goView,
     }),
 

@@ -8,7 +8,7 @@
  * vient juste dessous. Tout est lu dans le moteur, rien n'est recalculé ici.
  */
 
-import { h, euro, pct, num, monthLabel, infoPoint } from './dom.js'
+import { h, euro, pct, num, monthLabel } from './dom.js'
 import store from '../state/store.js'
 import { SECTORS } from '../state/schema.js'
 import { getActivity } from '../state/activities.js'
@@ -101,12 +101,6 @@ const CARTES = {
   },
 }
 
-// Le « i » à côté du titre, là où il apprend quelque chose. Sur Offre, Achats
-// et Équipe, le titre du bandeau se suffit : la bulle a été retirée.
-const DIT = {
-  financement: 'Ce que tu apportes et empruntes au départ, et ce que devient le compte de la société ensuite.',
-}
-
 const NOMS = {
   offre: 'Ce que tes offres rapportent',
   achats: 'Ce que tu dépenses',
@@ -121,8 +115,8 @@ const NOMS = {
  * bandeau d'une ligne qui se déplie — et le bandeau l'a emporté : il laisse
  * toute la largeur aux champs et se lit pareil sur un téléphone.
  *
- * Le titre se pose à gauche des chiffres qu'il nomme, sur la même ligne ; sur
- * Financement, un « i » à côté de lui dit ce qu'il couvre. À droite, dans
+ * Le titre se pose à gauche des chiffres qu'il nomme, sur la même ligne, sans
+ * « i » : il se suffit. À droite, dans
  * cet ordre : l'avertissement (s'il y en a un), l'exercice lu, et le bouton
  * qui déplie les cartes et leurs graphiques. Rien ne s'empile.
  *
@@ -150,7 +144,6 @@ function bandeau(route, cartes, an, choisir, r, garde, refresh) {
     h('div', { class: 'sx-ribbon' },
       h('div', { class: 'sx-ribbon-head' },
         h('h2', { class: 'sx-ribbon-title' }, NOMS[route]),
-        DIT[route] ? infoPoint(DIT[route]) : null,
       ),
       h('div', { class: 'sx-ribbon-items' },
         ...cartes.map((c) => {

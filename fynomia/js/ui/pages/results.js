@@ -4,7 +4,6 @@ import { h, euro, pct, num, helpButton, monthLabel, yearLabel, moduleShell } fro
 import { areaChart, barChart, stackedBar, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import store from '../../state/store.js'
 import { renderFounder } from './founder.js'
-import { stepGuide } from '../tutorial.js'
 import { founderIncome } from '../../engine/founder.js'
 import { bfrSentence } from '../explain.js'
 import { refine } from '../dom.js'
@@ -64,8 +63,6 @@ export function renderResults(navigate, refresh) {
   return h('div', { class: 'content fin' },
     moduleShell({
       no: '07', title: 'États financiers',
-      lede: "Le format que comprennent un comptable, une banque et un investisseur. Tout est calculé à partir de ce que tu as saisi : aucune ligne n’est à remplir ici.",
-      guide: stepGuide(null, null, 'resultats'),
       views, view, onPick: (k) => { memoire.resultats.tab = k; refresh() },
     }),
 

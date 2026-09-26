@@ -451,15 +451,6 @@ table.data .rowlabel { display: flex; align-items: center; gap: 6px; }
 .drawer-body h4 { margin: 18px 0 5px; color: var(--ink-4); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; font-weight: 500; }
 .drawer-body h4:first-child { margin-top: 0; }
 .drawer-body p { line-height: 1.62; color: var(--ink-2); }
-/* La phrase d'ouverture d'une note de module : c'est elle qu'on lisait au bout
-   du titre, et elle reste en tête du tiroir pour faire la jonction. */
-.drawer-lede {
-  margin: 0 0 16px; font-size: 15px; line-height: 1.55; color: var(--ink);
-  padding-bottom: 14px; border-bottom: 1px solid var(--rule);
-}
-.drawer-body .module-guide-q { margin-bottom: 16px; }
-.drawer-body .guide-grid { display: block; }
-.drawer-body .guide-cell + .guide-cell { margin-top: 14px; }
 
 .formula { font-family: var(--mono); font-size: 12px; background: var(--ink); color: #E6EAED; padding: 11px 13px; line-height: 1.6; overflow-x: auto; }
 
@@ -3705,17 +3696,6 @@ details[open] > .refine-head .foldsign {
 }
 .module-figure-note { font-size: 11px; color: #A9ACA0; line-height: 1.35; }
 
-/* Ce qui était le bandeau d'étape, déplié sous le lede. */
-.module-guide-body { padding: 2px 0; }
-.module-guide-q { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
-.module-guide-mark {
-  width: 20px; height: 20px; flex: none; border-radius: 50%; margin-top: 1px;
-  display: grid; place-items: center; font-size: 10px;
-  background: var(--surface-2); color: var(--ink-4); border: 1px solid var(--rule);
-}
-.module-guide-q.done .module-guide-mark { background: var(--ink); border-color: var(--ink); color: var(--accent); }
-.module-guide-ask { font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
-.module-guide-why { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-4); line-height: 1.55; max-width: 76ch; }
 
 /* La barre de navigation porte aussi l'action : elle appartient à l'onglet
    ouvert, pas à un bandeau séparé au-dessus. */
@@ -6523,11 +6503,6 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
   opacity: 0; transform: translate(-50%, -4px); pointer-events: none; transition: opacity .16s, transform .16s;
 }
 .info-point:hover::after, .info-point:focus-visible::after, .info-point.is-open::after { opacity: 1; transform: translate(-50%, 0); }
-.info-point.is-module { width: 28px; height: 28px; font-size: 16px; align-self: center; box-shadow: 0 0 0 0 rgba(27, 59, 255, .35); animation: info-nudge 1.6s var(--ease-soft) .6s 2; }
-.info-point.is-module::after { left: 0; transform: translate(0, -4px); }
-.info-point.is-module:hover::after, .info-point.is-module:focus-visible::after, .info-point.is-module.is-open::after { transform: translate(0, 0); }
-@keyframes info-nudge { 0% { box-shadow: 0 0 0 0 rgba(27, 59, 255, .35); } 70% { box-shadow: 0 0 0 10px rgba(27, 59, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(27, 59, 255, 0); } }
-@media (prefers-reduced-motion: reduce) { .info-point.is-module { animation: none; } }
 .module-top { align-items: center; }
 
 /* ═══════════ Une seule typographie : celle du tableau de bord ═══════════
@@ -6767,7 +6742,7 @@ table.data.sy-hyp-table td.num { font-family: var(--mono); font-size: 13px; }
    bas, sur toute la largeur. */
 .info-point:not(:hover):not(:focus-visible):not(.is-open)::after { display: none; }
 @media (max-width: 720px) {
-  .info-point::after, .info-point.is-module::after {
+  .info-point::after {
     position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-width: none; transform: none !important;
   }
 }

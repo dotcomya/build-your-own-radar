@@ -8,8 +8,7 @@ import { resetDeck } from './deck.js'
 import { barChart, areaChart, PALETTE, YEAR_CATEGORIES, STATUS } from '../charts.js'
 import { exportPptx } from '../../export/pptx.js'
 import { download } from '../../export/zip.js'
-import { tutorial, stepGuide } from '../tutorial.js'
-import { journey } from '../../engine/journey.js'
+import { tutorial } from '../tutorial.js'
 import store from '../../state/store.js'
 import { pickYear } from './dashboard.js'
 import { lignesBanquier, banquierVerifie, tableauBanquier } from '../banquier.js'
@@ -52,8 +51,6 @@ export function renderBusinessCase(navigate, refresh) {
   return h('div', { class: 'content' },
     moduleShell({
       no: '08', title: 'Business case',
-      lede: "Le dossier prêt à envoyer, relu par trois lecteurs.",
-      guide: stepGuide('dossier', journey(store.scenario, store.result), 'business-case'),
       actions: [
         // La présentation se lance d'ici : c'est la page du dossier, et
         // présenter est ce qu'on fait d'un dossier une fois qu'il tient.

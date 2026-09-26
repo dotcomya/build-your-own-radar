@@ -112,36 +112,6 @@ export function stepBanner(stepKey, journeyState, navigate, pageKey = stepKey) {
   return el
 }
 
-/**
- * Le contenu du bandeau d'étape, sans son enveloppe.
- *
- * `stepBanner` produisait un bloc replié de plus, posé sous le titre du module.
- * La tête de module l'absorbe désormais derrière le « + » de son lede : la
- * question du parcours et le mode d'emploi sont toujours là, mais ils ne
- * coûtent plus une ligne à l'écran tant qu'on ne les demande pas.
- */
-export function stepGuide(stepKey, journeyState, pageKey = stepKey) {
-  const step = STEPS.find((x) => x.key === stepKey)
-  const guide = guideFor(pageKey)
-  if (!step && !guide) return null
-  const live = step ? journeyState?.steps?.find((x) => x.key === stepKey) : null
-
-  return h('div', { class: 'module-guide-body' },
-    step ? h('div', { class: `module-guide-q ${live?.status || 'todo'}` },
-      h('span', { class: 'module-guide-mark', 'aria-hidden': 'true' }, live?.status === 'done' ? '✓' : '?'),
-      h('div', {},
-        h('div', { class: 'module-guide-ask' }, step.question),
-        h('p', { class: 'module-guide-why' }, step.promise),
-      ),
-    ) : null,
-    guide ? h('div', { class: 'guide-grid' },
-      guideCell('Ce que fait cette partie', guide.role),
-      guideCell('Pourquoi ça compte', guide.why),
-      guideCell('Ce qu’on regarde en premier', guide.first),
-    ) : null,
-  )
-}
-
 const guideCell = (title, body) => h('div', { class: 'guide-cell' },
   h('div', { class: 'guide-cell-tag' }, title),
   h('p', {}, body),

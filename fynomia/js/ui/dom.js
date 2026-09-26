@@ -323,19 +323,6 @@ let drawerHost = null
 export function setDrawerHost(fn) { drawerHost = fn }
 
 /**
- * Le tiroir libre.
- *
- * `setDrawerHost` n'ouvre qu'une entrée du glossaire, repérée par sa clé. La
- * note d'un module — ce qu'on y fait, pourquoi ça compte, ce qu'on regarde en
- * premier — n'a pas de clé : elle est fabriquée par la page. D'où ce second
- * point d'entrée, qui prend un titre et des nœuds et les pose dans le même
- * panneau latéral, pour que « en savoir plus » soit partout le même geste.
- */
-let panelHost = null
-export function setPanelHost(fn) { panelHost = fn }
-export function openPanel(spec) { if (panelHost) panelHost(spec) }
-
-/**
  * L'interrupteur bascule tout de suite ; le glissement continue sur le nouveau
  * nœud.
  *
@@ -703,19 +690,13 @@ export function infoPoint(texte, { onClick = null, classe = '' } = {}) {
   return b
 }
 
-export function moduleShell({ no, title, lede, figure, guide, views, view, onPick, actions = [] }) {
+export function moduleShell({ no, title, figure, views, view, onPick, actions = [] }) {
   const acts = (actions || []).filter(Boolean)
   const nav = views ? tabs(views, view, onPick) : null
 
-  // La note du module devient un « i », sans texte à côté.
-  //
-  // La phrase se posait au bout du titre, en gris : elle prenait la ligne, se
-  // coupait sur un écran moyen, et se lisait mal. Il reste un point bleu bien
-  // visible : la phrase apparaît au survol, et le clic ouvre le tiroir qui
-  // explique le module en entier.
-  const note = lede
-    ? infoPoint(lede, { classe: 'is-module', onClick: () => openPanel({ title, lede, body: guide }) })
-    : null
+  // Le titre se suffit. La note du module a été une phrase grise au bout du
+  // titre, puis un « i » qui ouvrait un tiroir ; elle est retirée de tous les
+  // titres, à la demande : le nom du module dit déjà ce qu'on y fait.
 
   // Le titre ne bouge plus, et c'est tout le sujet.
   //
@@ -740,7 +721,6 @@ export function moduleShell({ no, title, lede, figure, guide, views, view, onPic
     // Une seule ligne : ce qu'on fait, de quoi il s'agit, où l'on en est.
     h('div', { class: 'module-top' },
       h('h1', { class: 'module-title' }, title),
-      note,
       figure ? h('div', { class: 'module-figure' },
         h('span', { class: 'module-figure-value num' }, figure.value),
         figure.note ? h('span', { class: 'module-figure-note' }, figure.note) : null,

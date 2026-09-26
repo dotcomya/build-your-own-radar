@@ -15,7 +15,6 @@
 import { h, euro, textField, selectField, switchField, refine, moduleShell, confirmDialog, infoPoint } from '../dom.js'
 import { SECTORS, getSector } from '../../state/sectors.js'
 import { LEGAL_FORMS } from '../../state/schema.js'
-import { stepGuide } from '../tutorial.js'
 import { todoPanel } from '../todo.js'
 import store from '../../state/store.js'
 import { FAMILIES as ACTIVITY_FAMILIES, activitiesOf, getActivity } from '../../state/activities.js'
@@ -70,8 +69,6 @@ export function renderProject(navigate, refresh) {
   return h('div', { class: 'content' },
     moduleShell({
       no: '01', title: 'Mon projet',
-      lede: "Ce qui cadre le modèle avant tout chiffrage : le métier, le client, le calendrier, la forme juridique.",
-      guide: stepGuide(null, null, 'projet'),
     }),
 
     h('section', { class: 'slab' },

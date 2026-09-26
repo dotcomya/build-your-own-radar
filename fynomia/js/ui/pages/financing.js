@@ -3,8 +3,7 @@
 import { h, euro, num, numberField, textField, selectField, monthField, helpButton, monthLabel, moduleShell, PLUS, MINUS, saisieDifferee, lireNombre } from '../dom.js'
 import { uid } from '../../state/schema.js'
 import { areaChart, YEAR_CATEGORIES, STATUS, A_PLAT } from '../charts.js'
-import { tutorial, stepGuide } from '../tutorial.js'
-import { journey } from '../../engine/journey.js'
+import { tutorial } from '../tutorial.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
@@ -222,14 +221,12 @@ export function renderFinancing(navigate, refresh) {
 
     moduleShell({
       no: '05', title: 'Financement',
-      lede: "Ce que tu réunis, et ce qu’il manque au point bas de trésorerie.",
       figure: chiffres ? null : {
         value: euro(totalRaised, { compact: true }),
         note: r && r.kpis.fundingNeed > 0
           ? `réunis · il manque ${euro(r.kpis.fundingNeed)} avant ${monthLabel(r.kpis.cashLow.month, r.startDate)}`
           : 'réunis · trésorerie couverte',
       },
-      guide: stepGuide('financement', journey(store.scenario, store.result), 'financement'),
       views, view, onPick: (k) => { memoire.financement.view = k; refresh() },
       actions: [view === 'sources' && source && (f[source.key] || []).length
         ? h('button', { class: 'btn btn-primary btn-sm', onClick: () => add(source) }, '＋ Une ligne de plus') : null],

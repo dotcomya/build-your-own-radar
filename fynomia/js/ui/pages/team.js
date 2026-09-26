@@ -12,9 +12,8 @@ import { newTeamMember } from '../../state/schema.js'
 import { monthlyCost, CONTRACT_TYPES, STATUSES, BENEFITS, MANDATAIRES } from '../../engine/payroll.js'
 import { isMicro } from '../../engine/micro.js'
 import { barChart, PALETTE, YEAR_CATEGORIES, A_PLAT } from '../charts.js'
-import { tutorial, stepGuide } from '../tutorial.js'
+import { tutorial } from '../tutorial.js'
 import { enableToggle, svg, tabs, fold, unitAmount } from '../dom.js'
-import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim } from '../spotlight.js'
 import store from '../../state/store.js'
@@ -69,11 +68,9 @@ export function renderTeam(navigate, refresh) {
 
     moduleShell({
       no: '04', title: 'Équipe',
-      lede: "Les postes salariés, leur brut annuel et ce qu’ils coûtent vraiment.",
       figure: !chiffres && r && s.team.length
         ? { value: euro(payrollY), note: 'la première année, avantages compris' }
         : null,
-      guide: stepGuide('equipe', journey(store.scenario, store.result)),
       views, view, onPick: (k) => { memoire.equipe.view = k; refresh() },
       actions: [view === 'postes' ? h('button', { class: 'btn btn-primary btn-sm', onClick: add }, '＋ Ajouter un poste') : null],
     }),

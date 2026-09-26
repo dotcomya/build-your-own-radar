@@ -4,9 +4,8 @@ import { h, euro, pct, num, numberField, textField, switchField, monthField, hel
 import { newOpex, newCapex } from '../../state/schema.js'
 import { OPEX_TEMPLATES } from '../../engine/engine.js'
 import { donut, barChart, PALETTE, YEAR_CATEGORIES } from '../charts.js'
-import { tutorial, stepGuide } from '../tutorial.js'
+import { tutorial } from '../tutorial.js'
 import { enableToggle } from '../dom.js'
-import { journey } from '../../engine/journey.js'
 import { todoPanel } from '../todo.js'
 import { claim, goToGap } from '../spotlight.js'
 import { tradeSuggest } from '../trade-suggest.js'
@@ -85,11 +84,9 @@ export function renderCosts(navigate, refresh) {
 
     moduleShell({
       no: '03', title: 'Achats et coûts',
-      lede: "Les charges qui tombent chaque mois, et le matériel amorti sur sa durée d’usage.",
       figure: !chiffres && monthlyTotal > 0
         ? { value: `${euro(monthlyTotal)}/mois`, note: `soit ${euro(monthlyTotal * 12)} par an` }
         : null,
-      guide: stepGuide('charges', journey(store.scenario, store.result), 'achats'),
       views, view, onPick: (k) => { memoire.achats.view = k; refresh() },
       actions: [
         view === 'charges' ? h('button', { class: 'btn btn-primary btn-sm', onClick: addCustom }, '＋ Ajouter une charge') : null,

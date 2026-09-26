@@ -149,10 +149,16 @@ export default async function (t, { rapide } = {}) {
     t.verifie(forme.haut < 120, `${route} : les chiffres tiennent sur une ligne`, `${Math.round(forme.haut)} px`)
     t.verifie(forme.titreAGauche, `${route} : le titre est à gauche des chiffres, sur la même ligne`)
     t.verifie(!forme.pastille && !forme.cote, `${route} : ni pastille de total répétée, ni colonne à droite`)
-    t.verifie(forme.info && !forme.texteInfo, `${route} : l’explication du module est un « i », sans texte à côté du titre`)
-    // « Supprime cette infobulle, également dans Offre et revenus et Équipe » :
-    // le titre du bandeau se suffit ; seul Financement garde la sienne.
-    t.verifie(forme.bulle === (route === 'financement'), `${route} : ${route === 'financement' ? 'le bandeau garde son « i »' : 'le bandeau n’a plus de « i » à côté de son titre'}`)
+    // « Delete cette infobulle dans tous les titres » : ni le titre de la page
+    // ni celui du bandeau ne portent de « i ».
+    t.verifie(!forme.info && !forme.texteInfo, `${route} : le titre de la page se suffit, sans « i » ni texte à côté`)
+    t.verifie(!forme.bulle, `${route} : le titre du bandeau non plus`)
+  }
+  // Les autres pages non plus : aucun titre de module ne porte de « i ».
+  for (const route of ['projet', 'tableau-de-bord', 'resultats', 'business-case', 'reglages']) {
+    await t.aller(p, route)
+    const titre = await p.locator('.module-title').count()
+    t.verifie(titre === 1 && await p.locator('.module-top .info-point').count() === 0, `${route} : le titre de la page se suffit, sans « i »`)
   }
   await t.aller(p, 'achats')
   await p.locator('.sx-ribbon-more').click()

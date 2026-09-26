@@ -6,7 +6,7 @@
  * ne perd rien : l'état survit aux changements de page comme aux rechargements.
  */
 
-import { h, clear, setDrawerHost, setPanelHost, toast, euro, narrow, ecrireEnAttente } from './ui/dom.js'
+import { h, clear, setDrawerHost, toast, euro, narrow, ecrireEnAttente } from './ui/dom.js'
 import { GLOSSARY } from './ui/glossary.js'
 import { installEffet, reposerEffet, decrire as decrireSaisie, retrouverSaisie } from './ui/effet.js'
 import { cacherInfobulle } from './ui/charts.js'
@@ -546,13 +546,6 @@ setDrawerHost((key) => {
     entry.use && [h('h4', {}, 'À quoi ça sert'), h('p', {}, entry.use)],
     entry.watch && [h('h4', {}, 'Point de vigilance'), h('div', { class: 'note warn' }, entry.watch)],
     currentValue(key),
-  )
-})
-
-setPanelHost(({ title, lede, body }) => {
-  openDrawer(title || 'À propos de cette partie',
-    lede ? h('p', { class: 'drawer-lede' }, lede) : null,
-    body || null,
   )
 })
 

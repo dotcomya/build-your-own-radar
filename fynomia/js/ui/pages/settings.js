@@ -1,7 +1,6 @@
 /** Réglages : projet, scénarios, paramètres fiscaux, données. */
 
 import { h, euro, pct, num, textField, selectField, numberField, switchField, toast, confirmDialog, moduleShell } from '../dom.js'
-import { stepGuide } from '../tutorial.js'
 import { PARAMS, paramsToVerify, FISCAL_YEAR, LAST_ENACTED_YEAR } from '../../engine/fiscal-fr-2026.js'
 import { SECTORS, SECTOR_KEYS } from '../../state/sectors.js'
 import { relative } from './onboarding.js'
@@ -17,8 +16,6 @@ export function renderSettings(navigate, refresh) {
   return h('div', { class: 'content' },
     moduleShell({
       no: '09', title: 'Réglages',
-      lede: "Les hypothèses de fond, les valeurs fiscales et tes scénarios enregistrés.",
-      guide: stepGuide(null, null, 'reglages'),
     }),
 
     teamViews(navigate, refresh),
