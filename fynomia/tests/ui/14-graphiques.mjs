@@ -143,12 +143,16 @@ export default async function (t, { rapide } = {}) {
         info: !!document.querySelector('.module-top .info-point'),
         texteInfo: !!document.querySelector('.module-why-text'),
         cote: !!document.querySelector('.saisie-aside'),
+        bulle: !!r?.querySelector('.sx-ribbon-head .info-point'),
       }
     })
     t.verifie(forme.haut < 120, `${route} : les chiffres tiennent sur une ligne`, `${Math.round(forme.haut)} px`)
     t.verifie(forme.titreAGauche, `${route} : le titre est à gauche des chiffres, sur la même ligne`)
     t.verifie(!forme.pastille && !forme.cote, `${route} : ni pastille de total répétée, ni colonne à droite`)
     t.verifie(forme.info && !forme.texteInfo, `${route} : l’explication du module est un « i », sans texte à côté du titre`)
+    // « Supprime cette infobulle, également dans Offre et revenus et Équipe » :
+    // le titre du bandeau se suffit ; seul Financement garde la sienne.
+    t.verifie(forme.bulle === (route === 'financement'), `${route} : ${route === 'financement' ? 'le bandeau garde son « i »' : 'le bandeau n’a plus de « i » à côté de son titre'}`)
   }
   await t.aller(p, 'achats')
   await p.locator('.sx-ribbon-more').click()

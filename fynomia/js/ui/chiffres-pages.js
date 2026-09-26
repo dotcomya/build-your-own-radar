@@ -101,10 +101,9 @@ const CARTES = {
   },
 }
 
+// Le « i » à côté du titre, là où il apprend quelque chose. Sur Offre, Achats
+// et Équipe, le titre du bandeau se suffit : la bulle a été retirée.
 const DIT = {
-  offre: 'Ce que tes prix et tes volumes rapportent, année par année. Modifie un prix ou un volume plus bas : ces chiffres suivent aussitôt.',
-  achats: 'Ce que coûte l’activité avant même de payer l’équipe. Plus ces charges sont basses, plus vite tu es rentable.',
-  equipe: 'Ce que coûte l’équipe à l’entreprise, cotisations comprises — pas seulement les salaires bruts.',
   financement: 'Ce que tu apportes et empruntes au départ, et ce que devient le compte de la société ensuite.',
 }
 
@@ -122,8 +121,8 @@ const NOMS = {
  * bandeau d'une ligne qui se déplie — et le bandeau l'a emporté : il laisse
  * toute la largeur aux champs et se lit pareil sur un téléphone.
  *
- * Le titre se pose à gauche des chiffres qu'il nomme, sur la même ligne ; la
- * phrase qui l'explique passe dans le « i » à côté de lui. À droite, dans
+ * Le titre se pose à gauche des chiffres qu'il nomme, sur la même ligne ; sur
+ * Financement, un « i » à côté de lui dit ce qu'il couvre. À droite, dans
  * cet ordre : l'avertissement (s'il y en a un), l'exercice lu, et le bouton
  * qui déplie les cartes et leurs graphiques. Rien ne s'empile.
  *
@@ -151,7 +150,7 @@ function bandeau(route, cartes, an, choisir, r, garde, refresh) {
     h('div', { class: 'sx-ribbon' },
       h('div', { class: 'sx-ribbon-head' },
         h('h2', { class: 'sx-ribbon-title' }, NOMS[route]),
-        infoPoint(DIT[route]),
+        DIT[route] ? infoPoint(DIT[route]) : null,
       ),
       h('div', { class: 'sx-ribbon-items' },
         ...cartes.map((c) => {
