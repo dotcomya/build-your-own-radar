@@ -479,7 +479,7 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
       }),
       clair: aucuneVente ? ['Fixe un prix et un volume dans Offre et revenus : ce chapitre se remplira.'] : [
         origine,
-        variation[1] !== null ? `Il ${variation[1] >= 0 ? 'progresse' : 'recule'} de ${pct(Math.abs(variation[1]), 0)} entre l’année 1 et l’année 2.` : null,
+        variation[1] !== null ? `Le chiffre d’affaires ${variation[1] >= 0 ? 'progresse' : 'recule'} de ${pct(Math.abs(variation[1]), 0)} entre l’année 1 et l’année 2.` : null,
         ralentit ? `La croissance ralentit ensuite : ${signe(variation[4])} entre l’année 4 et l’année 5.` : null,
         recurrent ? `${pct(partRec, 0)} du chiffre d’affaires est récurrent : il revient chaque mois sans nouvelle vente.` : null,
       ],
@@ -631,7 +631,7 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
       dessin: top ? equation({ prix, cout, marge, par, lignes, periode: `Une vente de « ${top.nom} »` }) : null,
       clair: !top ? [] : [
         marge <= 0 ? 'Chaque vente coûte plus qu’elle ne rapporte : vendre davantage creuse la perte.'
-          : `Les charges fixes de l’année ${y + 1} s’élèvent à ${eur(fixes)}.`,
+          : `Les charges fixes de l’année ${y + 1}, amortissements et intérêts d’emprunt compris, s’élèvent à ${eur(fixes)}.`,
         marge > 0 && parMois !== null ? `Il faut ${num(parMois, 0)} ${mot} par mois pour les couvrir ; au-delà, chaque vente augmente le résultat.` : null,
         moisPM !== null ? `Le plan atteint son point mort en ${monthLabel(moisPM, debut)}.` : 'Le plan n’atteint pas son point mort sur cinq ans.',
       ],
@@ -642,7 +642,7 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
           return [o.nom, prixTxt(px), prixTxt(c.propre), c.charges > 0 ? `${prixTxt(c.charges)} (${c.lignes.map((x) => x.label.toLowerCase()).join(', ')})` : '—', prixTxt(px - c.total), px > 0 ? pct((px - c.total) / px, 0) : '—']
         })),
         tableau(tetesAns(''), [
-          ['Charges fixes', ...ANS.map((i) => euro(n(k.fixedCosts?.[i])))],
+          ['Charges fixes, amortissements et intérêts compris', ...ANS.map((i) => euro(n(k.fixedCosts?.[i])))],
           ['Taux de marge', ...ANS.map((i) => (taux(p.grossMargin[i], ca[i]) !== null ? pct(taux(p.grossMargin[i], ca[i]), 1) : '—'))],
           ['Point mort', ...ANS.map((i) => (n(k.breakEven?.[i]) > 0 ? euro(k.breakEven[i]) : '—'))],
           ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
@@ -881,6 +881,10 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
     const lead = surBesoin ? parBesoin[0] : parNet[0]
     const ordre = (surBesoin ? parBesoin : parNet).filter((x) => (surBesoin ? x.dBesoin >= 1000 : x.dNet <= -1000))
     const peu = sens.filter((x) => Math.abs(x.dBesoin) < 1000 && Math.abs(x.dNet) < Math.max(1000, Math.abs(net0) * 0.02))
+    const neutre = (x) => Math.abs(x.dNet) < Math.max(1000, Math.abs(net0) * 0.02)
+    const tresoSeule = surBesoin ? ordre.filter(neutre) : []
+    const resultat = surBesoin ? ordre.filter((x) => !neutre(x) && x.dNet < 0) : []
+    const compte = (q) => (q === 1 ? 'Une hypothèse' : q === 2 ? 'Deux hypothèses' : q === 3 ? 'Trois hypothèses' : `${q} hypothèses`)
     chapitres.push(chapitre({
       no: 9, titre: 'Principales hypothèses', sousTitre: 'Les paramètres qui font le plus varier le besoin de financement et le résultat.',
       conclusion: !lead ? 'Les hypothèses se liront ici dès que le plan aura des ventes.'
@@ -902,7 +906,11 @@ export function analyseStrategique(s, r, navigate, { source = null } = {}) {
         ],
       }) : null,
       clair: !lead ? [] : [
-        ordre[1] ? `Ensuite : ${ordre.slice(1, 3).map((x) => `${x.dit}, ${surBesoin ? `+${eur(x.dBesoin)} de besoin` : `${eur(x.dNet)} de résultat`}`).join(' ; puis ')}.` : null,
+        // Les barres classent déjà les hypothèses ; la phrase dit ce qu'elles
+        // ne montrent pas : lesquelles ne touchent que la trésorerie, et
+        // lesquelles pèsent aussi sur le résultat.
+        surBesoin && tresoSeule.length ? `${compte(tresoSeule.length)} ${tresoSeule.length > 1 ? 'déplacent' : 'déplace'} la trésorerie sans toucher au résultat : ${tresoSeule.map((x) => x.nom.toLowerCase()).join(', ')}. ${tresoSeule.length > 1 ? 'Elles se règlent' : 'Elle se règle'} par le financement ou les conditions de paiement.` : null,
+        surBesoin && resultat.length ? `${resultat.length > 1 ? 'Celles qui changent' : 'Celle qui change'} aussi le résultat de l’année 3 ${resultat.length > 1 ? 'sont à étayer' : 'est à étayer'} en priorité : ${resultat.slice(0, 3).map((x) => x.nom.toLowerCase()).join(', ')}.` : null,
         peu.length ? `${peu.length > 1 ? 'Ces hypothèses changent' : 'Cette hypothèse change'} peu le plan : ${peu.map((x) => x.nom.toLowerCase()).join(', ')}.` : null,
       ],
       plus: !sens.length ? null : detail([

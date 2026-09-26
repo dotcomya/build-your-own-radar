@@ -505,21 +505,20 @@ function introDetail(s, r, garde, prudence, navigate) {
       h('span', {}, 'Le plan en trois chiffres'),
       garde?.length ? h('div', { class: 'sx-right-row' }, gardeBloc(garde, navigate, { classe: 'sy-garde' })) : null,
     ),
-    h('h2', { class: 'sy-act-title' }, titre(sansCA
-      ? 'Le plan ne prévoit pas encore de ventes'
-      : `${eurC(ca)} de chiffre d’affaires en année 1`)),
+    // Le titre conclut ; les trois chiffres dessous le prouvent. Il redisait
+    // le chiffre d'affaires juste au-dessus du même chiffre.
+    h('h2', { class: 'sy-act-title' }, titre(sansCA ? 'Le plan ne prévoit pas encore de ventes'
+      : premier === 0 ? 'Bénéficiaire dès l’année 1'
+        : premier > 0 ? `Bénéficiaire à partir de l’année ${premier + 1}`
+          : 'Pas de bénéfice sur les cinq ans du plan')),
     h('div', { class: 'sy-intro-figs' },
       h('div', { class: 'sy-intro-fig' }, h('b', {}, eurC(ca)), h('span', {}, 'de chiffre d’affaires en année 1')),
       h('div', { class: `sy-intro-fig is-${ton(net)}` }, h('b', {}, eurC(net)), h('span', {}, 'de résultat net')),
       h('div', { class: `sy-intro-fig is-${ton(net)}` }, h('b', {}, marge === null ? '—' : pct(marge, 1)), h('span', {}, 'de marge nette')),
     ),
-    h('p', { class: 'sy-intro-suite' }, titre([
-      premier === null || premier === undefined ? 'Le plan ne dégage pas de bénéfice sur cinq ans.'
-        : premier === 0 ? 'L’entreprise est bénéficiaire dès l’année 1.' : `Le premier bénéfice arrive en année ${premier + 1}.`,
-      besoin > 0
-        ? `Pour y arriver, il faut financer ${euro(besoin)} : c’est le point bas de la trésorerie, en ${monthLabel(k.cashLow.month, r.startDate)}.`
-        : 'La trésorerie reste positive : aucun financement supplémentaire n’est nécessaire dans ce scénario.',
-    ].join(' '))),
+    h('p', { class: 'sy-intro-suite' }, titre(besoin > 0
+      ? `${premier === 0 ? 'Il faut tout de même financer' : premier > 0 ? 'Pour y arriver, il faut financer' : 'Le plan demande de financer'} ${euro(besoin)} : c’est le point bas de la trésorerie, en ${monthLabel(k.cashLow.month, r.startDate).replace(' ', '\u00a0')}.`
+      : 'La trésorerie reste positive : aucun financement supplémentaire n’est nécessaire dans ce scénario.')),
   ), 'intro')
 }
 
@@ -576,16 +575,19 @@ function partiesDetail(s, r, prudence, navigate) {
   {
     const net = p.netResult.map(n)
     const cagr = ca[0] > 0 && ca[4] > 0 && ca[4] / ca[0] <= 1000 ? Math.pow(ca[4] / ca[0], 1 / 4) - 1 : null
+    const premierAn = Number.isInteger(k.firstProfitableYear) ? k.firstProfitableYear : null
     parts.push(partie({
       cle: 'ca',
       titre: aucune ? 'Pas encore de chiffre d’affaires' : `${eurC(ca[0])} en année 1, ${eurC(ca[4])} en année 5`,
       dit: aucune ? 'Fixe un prix et un volume dans Offre et revenus : cette partie se remplira.'
-        : `Le résultat net passe de ${eurC(net[0])} en année 1 à ${eurC(net[4])} en année 5.${cagr !== null ? ` Le chiffre d’affaires progresse de ${pct(cagr, 0)} par an en moyenne.` : ''}`,
+        : `Le résultat net passe de ${eurC(net[0])} en année 1 à ${eurC(net[4])} en année 5.`,
+      // L'ouverture a posé l'année 1 ; cette partie dit la trajectoire.
       chiffres: aucune ? [] : [
-        { l: 'Chiffre d’affaires, année 1', v: eurC(ca[0]) },
-        { l: 'Résultat net, année 1', v: eurC(net[0]), ton: ton(net[0]) },
-        { l: 'Marge nette, année 1', v: tauxDe(net[0], ca[0]) === null ? '—' : pct(tauxDe(net[0], ca[0]), 1), note: 'Le résultat net rapporté au chiffre d’affaires.' },
-      ],
+        cagr !== null ? { l: 'Croissance annuelle moyenne', v: `${cagr >= 0 ? '+' : '−'}${pct(Math.abs(cagr), 0)}`, note: 'Du chiffre d’affaires, de l’année 1 à l’année 5.' } : null,
+        { l: 'Premier bénéfice', v: premierAn === null ? 'Aucun' : `Année ${premierAn + 1}`, ton: premierAn === null ? 'bad' : null,
+          note: premierAn === null ? 'Sur les cinq ans du plan.' : `${eurC(net[premierAn])} de résultat net.` },
+        { l: 'Marge nette, année 5', v: tauxDe(net[4], ca[4]) === null ? '—' : pct(tauxDe(net[4], ca[4]), 1), ton: ton(net[4]), note: 'Le résultat net rapporté au chiffre d’affaires.' },
+      ].filter(Boolean),
       dessin: aucune ? null : barChart({
         series: [{ label: 'Chiffre d’affaires', values: ca, color: '#0E0F0C' }],
         line: { label: 'Résultat net', values: net, color: '#1B7F4B' },
@@ -660,7 +662,7 @@ function partiesDetail(s, r, prudence, navigate) {
           return [o.nom, prixTxt(px), prixTxt(c.propre), c.charges > 0 ? prixTxt(c.charges) : '—', prixTxt(px - c.total), px > 0 ? pct((px - c.total) / px, 0) : '—']
         })),
         asTableau(tetes(''), [
-          ['Charges fixes', ...ANS.map((y) => euro(n(k.fixedCosts?.[y])))],
+          ['Charges fixes, amortissements et intérêts compris', ...ANS.map((y) => euro(n(k.fixedCosts?.[y])))],
           ['Taux de marge brute', ...ANS.map((y) => (tauxDe(p.grossMargin[y], ca[y]) === null ? '—' : pct(tauxDe(p.grossMargin[y], ca[y]), 1)))],
           ['Point mort', ...ANS.map((y) => (n(k.breakEven?.[y]) > 0 ? euro(k.breakEven[y]) : '—'))],
           ['Chiffre d’affaires', ...ca.map((v) => euro(v))],
@@ -1008,13 +1010,17 @@ function sixDuDetail(r, y) {
   const mr = ca > 0 ? n(k.marginRate?.[y]) : null
   const pm = n(k.breakEven?.[y])
   const franchi = pm > 0 && ca >= pm
+  // Pas franchi cette année : le mois où il le sera, s'il l'est un jour.
+  const anPM = (k.breakEvenMonth || []).findIndex((m) => m)
+  const notePM = franchi ? 'franchi cette année'
+    : anPM > y ? `franchi en ${monthLabel(anPM * 12 + n(k.breakEvenMonth[anPM]) - 1, r.startDate)}` : 'pas franchi cette année'
   const besoin = n(k.fundingNeed)
   const C = (v) => euro(v, { compact: true })
   return [
     { label: 'Chiffre d’affaires', value: C(ca), note: `année ${y + 1}`, tone: 'pos', go: 'offre', help: 'chiffreAffaires', cible: 'ca' },
     { label: 'Résultat net', value: C(net), note: ca > 0 ? `${pct(net / ca, 1)} du chiffre d’affaires` : `année ${y + 1}`, tone: net >= 0 ? 'pos' : 'neg', go: 'resultats', help: 'resultatNet', cible: 'ca' },
     { label: 'Marge brute', value: mr === null ? '—' : pct(mr, 0), note: `${C(n(p.grossMargin[y]))} après les coûts directs`, tone: mr === null ? '' : mr >= 0.4 ? 'pos' : mr >= 0.15 ? 'warn' : 'neg', go: 'offre', help: 'margeBrute', cible: 'vente' },
-    { label: 'Point mort', value: pm > 0 ? C(pm) : '—', note: franchi ? 'franchi cette année' : 'pas encore franchi', tone: franchi ? 'pos' : 'warn', go: 'resultats', help: 'pointMort', cible: 'vente' },
+    { label: 'Point mort', value: pm > 0 ? C(pm) : '—', note: notePM, tone: franchi ? 'pos' : 'warn', go: 'resultats', help: 'pointMort', cible: 'vente' },
     { label: 'Cash minimum', value: C(k.cashLow.value), note: `au plus bas en ${monthLabel(k.cashLow.month, r.startDate)}`, tone: k.cashLow.value < 0 ? 'neg' : 'pos', go: 'financement', help: 'tresorerie', cible: 'treso' },
     { label: 'Besoin de financement', value: besoin > 0 ? C(besoin) : 'Aucun', note: besoin > 0 ? `à réunir avant ${monthLabel(k.cashLow.month, r.startDate)}` : 'la trésorerie se suffit', tone: besoin > 0 ? 'warn' : 'pos', go: 'financement', help: 'besoinFinancement', cible: 'finance' },
   ]
